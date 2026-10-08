@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Archive, ImageUp, MapPin, Pencil, Plus, Trash2, User } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Label, TextInput } from '@/components/Field'
+import { FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBranches, listManagerOptions, saveBusiness } from './api'
@@ -145,18 +145,20 @@ export function BusinessDrawer({
       title={business ? 'Edit Business' : 'Add Business'}
       footer={
         <>
-          {error && <p className="mr-auto self-center text-sm text-red-600">{error}</p>}
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" form="business-form" disabled={busy || !branchesLoaded}>
-            {busy ? 'Saving…' : business ? 'Save changes' : 'Create Business'}
-          </Button>
+          <div className="flex min-w-0 items-center gap-3">
+            {error && <p className="text-right text-sm text-red-600">{error}</p>}
+            <Button type="submit" form="business-form" disabled={busy || !branchesLoaded} className="shrink-0">
+              {busy ? 'Saving…' : business ? 'Save changes' : 'Create Business'}
+            </Button>
+          </div>
         </>
       }
     >
       <form id="business-form" onSubmit={submit} className="space-y-7">
-        <Section title="Basic details">
+        <FormSection title="Basic details">
           <div className="flex items-center gap-4">
             <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50">
               {logoPreview ? (
@@ -189,7 +191,7 @@ export function BusinessDrawer({
                   </Button>
                 )}
               </div>
-              <p className="mt-1 text-xs text-gray-500">PNG, JPG, WEBP or SVG, up to 2 MB.</p>
+              <Hint>PNG, JPG, WEBP or SVG, up to 2 MB.</Hint>
             </div>
           </div>
           <div>
@@ -197,10 +199,11 @@ export function BusinessDrawer({
               Business name
             </Label>
             <TextInput id="bz-name" placeholder="e.g. Studio Rental" value={input.name} onChange={set('name')} />
+            <Hint>Shown in the business switcher and on every record of this business.</Hint>
           </div>
-        </Section>
+        </FormSection>
 
-        <Section title="Contact">
+        <FormSection title="Contact" description="How customers and your team reach this business.">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="bz-phone">Phone</Label>
@@ -211,17 +214,17 @@ export function BusinessDrawer({
               <TextInput id="bz-email" type="email" value={input.email ?? ''} onChange={set('email')} />
             </div>
           </div>
-        </Section>
+        </FormSection>
 
-        <Section title="Address">
+        <FormSection title="Address">
           <div>
             <Label htmlFor="bz-address">Full address</Label>
-            <textarea
+            <TextArea
               id="bz-address"
               rows={2}
+              placeholder="Optional"
               value={input.address ?? ''}
               onChange={set('address')}
-              className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -234,9 +237,9 @@ export function BusinessDrawer({
               <TextInput id="bz-state" value={input.state ?? ''} onChange={set('state')} />
             </div>
           </div>
-        </Section>
+        </FormSection>
 
-        <Section title="GST / legal details">
+        <FormSection title="GST / legal details" description="Used on invoices and receipts later.">
           <div>
             <Label htmlFor="bz-legal">Legal name</Label>
             <TextInput
@@ -255,14 +258,15 @@ export function BusinessDrawer({
               onChange={set('gst_number')}
               className="uppercase placeholder:normal-case"
             />
+            <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
           </div>
-        </Section>
+        </FormSection>
 
-        <Section title="Branches">
+        <FormSection title="Branches" description="For businesses that run from more than one location.">
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3">
             <div>
               <div className="text-sm font-medium">Has multiple branches?</div>
-              <div className="text-xs text-gray-500">
+              <div className="text-[13px] text-gray-500">
                 When on, team members added to this business must be given a branch.
               </div>
             </div>
@@ -351,7 +355,7 @@ export function BusinessDrawer({
               )}
             </div>
           )}
-        </Section>
+        </FormSection>
       </form>
 
       {editing && (
@@ -368,14 +372,5 @@ export function BusinessDrawer({
         />
       )}
     </Drawer>
-  )
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section>
-      <h3 className="mb-3 text-[11px] font-bold tracking-wider text-brand uppercase">{title}</h3>
-      <div className="space-y-4">{children}</div>
-    </section>
   )
 }

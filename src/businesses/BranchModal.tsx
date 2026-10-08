@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/Button'
-import { Label, TextInput } from '@/components/Field'
+import { Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { isValidEmail, type BranchDraft, type ManagerOption } from './types'
 
@@ -30,7 +30,7 @@ export function BranchModal({
 
   return (
     <Modal open onClose={onClose}>
-      <h2 className="text-lg font-bold">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
+      <h2 className="text-xl font-bold tracking-tight">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
       <form onSubmit={submit} className="mt-4 space-y-4">
         <div>
           <Label htmlFor="br-name" required>
@@ -50,13 +50,7 @@ export function BranchModal({
         </div>
         <div>
           <Label htmlFor="br-address">Full address</Label>
-          <textarea
-            id="br-address"
-            rows={2}
-            value={draft.address}
-            onChange={set('address')}
-            className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
-          />
+          <TextArea id="br-address" rows={2} placeholder="Optional" value={draft.address} onChange={set('address')} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -70,11 +64,10 @@ export function BranchModal({
         </div>
         <div>
           <Label htmlFor="br-manager">Branch manager</Label>
-          <select
+          <Select
             id="br-manager"
             value={draft.manager_member_id ?? ''}
             onChange={(e) => setDraft((d) => ({ ...d, manager_member_id: e.target.value || null }))}
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
           >
             <option value="">{managers.length ? 'Not assigned' : 'No team members yet'}</option>
             {managers.map((m) => (
@@ -82,17 +75,15 @@ export function BranchModal({
                 {m.name}
               </option>
             ))}
-          </select>
-          {!managers.length && (
-            <p className="mt-1 text-xs text-gray-500">You can assign a manager once team members are added.</p>
-          )}
+          </Select>
+          {!managers.length && <Hint>You can assign a manager once team members are added.</Hint>}
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="grid grid-cols-2 gap-3 pt-2">
+        <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit">Done</Button>
+          <Button type="submit">{branch.name ? 'Save branch' : 'Add branch'}</Button>
         </div>
       </form>
     </Modal>
