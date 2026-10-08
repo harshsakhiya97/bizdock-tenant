@@ -12,7 +12,7 @@ export const releases: Release[] = [
     version: '0.1',
     date: '8 October 2026',
     title: 'Login, Dashboard, Profile and What’s New',
-    summary: 'The first version of BizDock.',
+    summary: 'The first version of the app.',
     added: [
       'Login with email and password, plus “Forgot Password?” to get a reset link by email.',
       'Dashboard with a welcome message and stat cards for Leads, Follow-ups, Payments and Profit (numbers come later).',

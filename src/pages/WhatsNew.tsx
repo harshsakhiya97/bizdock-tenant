@@ -1,12 +1,14 @@
 import { Sparkles } from 'lucide-react'
 import { releases } from '@/data/releases'
+import { useTenant } from '@/tenant/useTenant'
 import { cn } from '@/lib/cn'
 
 export function WhatsNewPage() {
+  const tenant = useTenant()
   return (
     <div>
       <h2 className="text-lg font-semibold">What&apos;s New</h2>
-      <p className="mt-0.5 text-sm text-gray-600">Every version of the BizDock app and what it added.</p>
+      <p className="mt-0.5 text-sm text-gray-600">Every version of the {tenant.app_name} app and what it added.</p>
 
       <ol className="relative mt-5 max-w-[940px] space-y-6 pl-[34px]">
         <span aria-hidden className="absolute top-2 bottom-0 left-[9px] w-px bg-gray-200" />

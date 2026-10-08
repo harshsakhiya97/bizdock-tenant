@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { LayoutGrid } from 'lucide-react'
+import { BusinessProvider } from '@/business/BusinessProvider'
 import { pageMeta } from './nav'
 import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
@@ -18,7 +19,7 @@ function readCollapsed() {
 export function AppLayout() {
   const { pathname } = useLocation()
   const [collapsed, setCollapsed] = useState(readCollapsed)
-  const meta = pageMeta[pathname] ?? { title: 'BizDock', crumb: 'Overview', icon: LayoutGrid }
+  const meta = pageMeta[pathname] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
 
   function toggle() {
     setCollapsed((c) => {
@@ -32,14 +33,16 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex min-h-svh">
-      <Sidebar collapsed={collapsed} onToggle={toggle} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar {...meta} />
-        <main className="flex-1 px-6 py-6">
-          <Outlet />
-        </main>
+    <BusinessProvider>
+      <div className="flex min-h-svh">
+        <Sidebar collapsed={collapsed} onToggle={toggle} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar {...meta} />
+          <main className="flex-1 px-6 py-6">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </BusinessProvider>
   )
 }

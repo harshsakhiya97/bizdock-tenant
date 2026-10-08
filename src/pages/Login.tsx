@@ -1,18 +1,20 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 import { ArrowLeft, Lock, Mail } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Label, PasswordInput, TextInput } from '@/components/Field'
-import { LogoMark } from '@/components/Logo'
+import { DevelopedBy } from '@/components/DevelopedBy'
+import { TenantLogo } from '@/components/Logo'
 import { Splash } from '@/components/Splash'
 import { APP_VERSION } from '@/config'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/supabase'
+import { useTenant } from '@/tenant/useTenant'
 
 type Mode = 'login' | 'forgot'
 
 export function LoginPage() {
-  const { session, loading } = useAuth()
-  const navigate = useNavigate()
+  const { session, loading, accessError } = useAuth()
+  const tenant = useTenant()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
 
@@ -36,11 +38,11 @@ export function LoginPage() {
     setNotice(null)
 
     if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      // on success the auth provider checks membership, then <Navigate> above redirects
+      const { error } = await db().auth.signInWithPassword({ email: email.trim(), password })
       if (error) setError(error.message)
-      else navigate(from, { replace: true })
     } else {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      const { error } = await db().auth.resetPasswordForEmail(email.trim(), {
         redirectTo: `${window.location.origin}/profile?tab=password`,
       })
       if (error) setError(error.message)
@@ -61,9 +63,10 @@ export function LoginPage() {
       <div className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-[378px]">
           <div className="mb-8 flex flex-col items-center">
-            <LogoMark size={84} className="shadow-sm" />
-            <div className="mt-3 text-[22px] leading-none font-extrabold tracking-tight">BIZDOCK</div>
-            <div className="mt-1.5 text-[10px] font-bold tracking-[0.25em] text-brand">BUSINESS SUITE</div>
+            <TenantLogo size={84} className="shadow-sm" />
+            <div className="mt-3 text-center text-[22px] leading-tight font-extrabold tracking-tight uppercase">
+              {tenant.app_name}
+            </div>
           </div>
 
           <div className="mb-6 text-center">
@@ -119,7 +122,7 @@ export function LoginPage() {
               </div>
             )}
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {(error ?? accessError) && <p className="text-sm text-red-600">{error ?? accessError}</p>}
             {notice && <p className="text-sm text-gray-600">{notice}</p>}
 
             <button
@@ -142,6 +145,7 @@ export function LoginPage() {
           </form>
 
           <p className="mt-5 text-center text-xs text-gray-500">Version {APP_VERSION}</p>
+          <DevelopedBy className="mt-1 text-center" />
         </div>
       </div>
 
@@ -154,7 +158,7 @@ export function LoginPage() {
           backgroundSize: '28px 28px',
         }}
       >
-        <LogoMark size={44} className="absolute top-5 right-5 shadow-sm" />
+        <TenantLogo size={44} className="absolute top-5 right-5 shadow-sm" />
         <PreviewCard />
       </div>
     </div>
@@ -162,12 +166,13 @@ export function LoginPage() {
 }
 
 function PreviewCard() {
+  const tenant = useTenant()
   return (
     <div className="ml-12 flex w-full translate-x-0 overflow-hidden rounded-l-xl border border-r-0 border-gray-200 bg-white shadow-xl">
       <div className="w-[170px] shrink-0 border-r border-gray-200 p-3">
         <div className="mb-4 flex items-center gap-2">
-          <LogoMark size={20} />
-          <span className="text-[11px] font-extrabold">BIZDOCK</span>
+          <TenantLogo size={20} />
+          <span className="truncate text-[11px] font-extrabold uppercase">{tenant.app_name}</span>
         </div>
         <div className="mb-4 h-1.5 w-24 rounded-full bg-gray-200" />
         <div className="mb-4 h-5 rounded bg-brand" />

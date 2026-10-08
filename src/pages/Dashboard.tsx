@@ -1,5 +1,6 @@
 import { CalendarClock, TrendingUp, Users, Wallet, type LucideIcon } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
+import { useBusiness } from '@/business/useBusiness'
 
 type Stat = { label: string; icon: LucideIcon; tint: string }
 
@@ -13,12 +14,15 @@ const stats: Stat[] = [
 
 export function DashboardPage() {
   const { profile, user } = useAuth()
+  const { selected } = useBusiness()
   const name = displayName(profile?.full_name, user?.email)
 
   return (
     <div>
       <h2 className="text-lg font-semibold">Welcome, {name}</h2>
-      <p className="mt-0.5 text-sm text-gray-600">Here's an overview of your businesses.</p>
+      <p className="mt-0.5 text-sm text-gray-600">
+        {selected ? `Overview of ${selected.name}.` : 'Overview of all your businesses.'}
+      </p>
 
       <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(158px,1fr))] gap-4">
         {stats.map(({ label, icon: Icon, tint }) => (

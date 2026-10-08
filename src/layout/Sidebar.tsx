@@ -3,7 +3,8 @@ import { Link, NavLink, useLocation } from 'react-router'
 import { LogOut, PanelLeft } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { Avatar } from '@/components/Avatar'
-import { LogoLockup } from '@/components/Logo'
+import { DevelopedBy } from '@/components/DevelopedBy'
+import { TenantLockup } from '@/components/Logo'
 import { LogoutDialog } from '@/components/LogoutDialog'
 import { APP_VERSION } from '@/config'
 import { cn } from '@/lib/cn'
@@ -25,7 +26,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
     >
       {/* header */}
       <div className={cn('flex h-[58px] items-center', collapsed ? 'justify-center' : 'justify-between px-3.5')}>
-        {!collapsed && <LogoLockup />}
+        {!collapsed && <TenantLockup />}
         <button
           onClick={onToggle}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -103,6 +104,7 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
             >
               Version {APP_VERSION} · What&apos;s new
             </Link>
+            <DevelopedBy className="mt-0.5 pl-[42px]" />
           </>
         )}
       </div>

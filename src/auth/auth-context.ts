@@ -6,14 +6,30 @@ export type Profile = {
   email: string | null
   full_name: string | null
   phone: string | null
-  role: 'admin' | 'staff'
 }
+
+export type Permissions = Record<string, { view?: boolean; add?: boolean; edit?: boolean; delete?: boolean }>
+
+/** This user's membership in the current tenant. */
+export type Membership = {
+  id: string
+  all_businesses: boolean
+  is_support: boolean
+  role: { name: string; permissions: Permissions; is_system: boolean }
+}
+
+export type Business = { id: string; name: string }
 
 export type AuthState = {
   session: Session | null
   user: User | null
   profile: Profile | null
+  membership: Membership | null
+  /** businesses this user can work with in this tenant */
+  businesses: Business[]
   loading: boolean
+  /** set when someone who isn't a member of this tenant tried to log in */
+  accessError: string | null
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }

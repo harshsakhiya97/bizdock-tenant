@@ -7,7 +7,7 @@ import { Label, PasswordInput, TextInput } from '@/components/Field'
 import { LogoutDialog } from '@/components/LogoutDialog'
 import { Modal } from '@/components/Modal'
 import { cn } from '@/lib/cn'
-import { supabase } from '@/lib/supabase'
+import { db } from '@/lib/supabase'
 
 type Tab = 'profile' | 'password'
 
@@ -43,7 +43,7 @@ export function ProfilePage() {
 }
 
 function ProfileDetails() {
-  const { profile, user } = useAuth()
+  const { profile, user, membership } = useAuth()
   const [editOpen, setEditOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
   const name = displayName(profile?.full_name, user?.email)
@@ -54,9 +54,9 @@ function ProfileDetails() {
     ['Phone', profile?.phone || '—'],
     [
       'My Role',
-      profile ? (
-        <span key="role" className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand capitalize">
-          {profile.role}
+      membership ? (
+        <span key="role" className="rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-semibold text-brand">
+          {membership.role.name}
         </span>
       ) : (
         '—'
@@ -112,7 +112,7 @@ function EditProfileModal({ open, onClose }: { open: boolean; onClose: () => voi
     if (!profile) return
     setBusy(true)
     setError(null)
-    const { error } = await supabase
+    const { error } = await db()
       .from('profiles')
       .update({ full_name: fullName.trim() || null, phone: phone.trim() || null })
       .eq('id', profile.id)
@@ -172,7 +172,7 @@ function ResetPassword() {
     if (password.length < 6) return setError('Password must be at least 6 characters.')
     if (password !== confirm) return setError('Passwords do not match.')
     setBusy(true)
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await db().auth.updateUser({ password })
     setBusy(false)
     if (error) return setError(error.message)
     setPassword('')

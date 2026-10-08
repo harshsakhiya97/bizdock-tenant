@@ -1,49 +1,115 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { AuthContext, type Profile } from './auth-context'
+import { db } from '@/lib/supabase'
+import { useTenant } from '@/tenant/useTenant'
+import { AuthContext, type Business, type Membership, type Profile } from './auth-context'
+
+type MemberRow = {
+  id: string
+  all_businesses: boolean
+  is_support: boolean
+  roles: Membership['role'] | null
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const tenant = useTenant()
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [membership, setMembership] = useState<Membership | null>(null)
+  const [businesses, setBusinesses] = useState<Business[]>([])
   const [loading, setLoading] = useState(true)
+  const [accessError, setAccessError] = useState<string | null>(null)
 
-  const loadProfile = useCallback(async (userId?: string) => {
-    if (!userId) return setProfile(null)
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, email, full_name, phone, role')
-      .eq('id', userId)
-      .maybeSingle()
-    setProfile((data as Profile | null) ?? null)
+  const clear = useCallback(() => {
+    setSession(null)
+    setProfile(null)
+    setMembership(null)
+    setBusinesses([])
   }, [])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session)
-      await loadProfile(data.session?.user.id)
-      setLoading(false)
-    })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+  /** Loads profile, membership and businesses. Signs out anyone who isn't a member of this tenant. */
+  const loadUser = useCallback(
+    async (next: Session | null) => {
+      if (!next) return clear()
+      const userId = next.user.id
+
+      const { data: member } = await db()
+        .from('tenant_members')
+        .select('id, all_businesses, is_support, roles(name, permissions, is_system)')
+        .eq('tenant_id', tenant.id)
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle<MemberRow>()
+
+      if (!member || !member.roles) {
+        setAccessError(`This account doesn't have access to ${tenant.app_name}.`)
+        await db().auth.signOut()
+        return clear()
+      }
+
+      const [{ data: prof }, { data: bizRows }, { data: allowed }] = await Promise.all([
+        db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
+        db()
+          .from('businesses')
+          .select('id, name')
+          .eq('tenant_id', tenant.id)
+          .eq('is_active', true)
+          .order('sort_order'),
+        member.all_businesses
+          ? Promise.resolve({ data: null })
+          : db().from('member_businesses').select('business_id').eq('member_id', member.id),
+      ])
+
+      const allowedIds = allowed ? new Set(allowed.map((r: { business_id: string }) => r.business_id)) : null
+      const list = ((bizRows ?? []) as Business[]).filter((b) => !allowedIds || allowedIds.has(b.id))
+
+      setAccessError(null)
+      setProfile(prof ?? null)
+      setMembership({
+        id: member.id,
+        all_businesses: member.all_businesses,
+        is_support: member.is_support,
+        role: member.roles,
+      })
+      setBusinesses(list)
       setSession(next)
+    },
+    [tenant.id, tenant.app_name, clear],
+  )
+
+  useEffect(() => {
+    db()
+      .auth.getSession()
+      .then(async ({ data }) => {
+        await loadUser(data.session)
+        setLoading(false)
+      })
+    const { data: sub } = db().auth.onAuthStateChange((event, next) => {
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        if (next) setSession(next)
+        return
+      }
       // run outside the auth callback (Supabase recommendation)
-      setTimeout(() => void loadProfile(next?.user.id), 0)
+      setTimeout(() => void loadUser(next), 0)
     })
     return () => sub.subscription.unsubscribe()
-  }, [loadProfile])
+  }, [loadUser])
 
   const value = useMemo(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
+      membership,
+      businesses,
       loading,
-      refreshProfile: () => loadProfile(session?.user.id),
+      accessError,
+      refreshProfile: () => loadUser(session),
       signOut: async () => {
-        await supabase.auth.signOut()
+        await db().auth.signOut()
       },
     }),
-    [session, profile, loading, loadProfile],
+    [session, profile, membership, businesses, loading, accessError, loadUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

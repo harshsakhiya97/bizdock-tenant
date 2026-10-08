@@ -1,19 +1,21 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
 
-/* BizDock theme — same structure as Muzic Lover, colors from the BizDock icon */
+/*
+ * Tenant theme. --color-brand is replaced at runtime with the tenant's colour
+ * (see src/tenant/branding.ts); every other shade is mixed from it, so any colour works.
+ */
 @theme {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand: #2b5fe8;        /* primary blue (was Muzic Lover red) */
-  --color-brand-hover: #2352d1;
-  --color-brand-light: #3fb2fb;  /* the lighter "Dock" blue */
-  --color-brand-soft: #e8effd;   /* selected tab / avatar / badge background (was cream) */
-  --color-brand-muted: #93b0f5;  /* disabled primary button */
-  --color-navy: #0b1229;         /* dark buttons + icon background */
+  --color-brand: #2b5fe8;
+  --color-brand-hover: color-mix(in oklab, var(--color-brand) 88%, black);
+  --color-brand-soft: color-mix(in oklab, var(--color-brand) 10%, white);
+  --color-brand-muted: color-mix(in oklab, var(--color-brand) 45%, white);
+  --color-navy: #0b1229;
   --color-navy-hover: #1b2440;
-  --color-canvas: #eef3fc;       /* login panel + splash background */
-  --color-grid: #dbe5f7;         /* login panel grid lines */
+  --color-canvas: color-mix(in oklab, var(--color-brand) 7%, white);
+  --color-grid: color-mix(in oklab, var(--color-brand) 16%, white);
 }
 
 html,
