@@ -15,6 +15,7 @@ export function Modal({ open, onClose, children }: { open: boolean; onClose: () 
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4" onMouseDown={onClose}>
       <div
         role="dialog"
+        data-modal
         aria-modal="true"
         className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
         onMouseDown={(e) => e.stopPropagation()}

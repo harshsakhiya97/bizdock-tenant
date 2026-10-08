@@ -20,6 +20,8 @@ export type Membership = {
 
 export type Business = { id: string; name: string }
 
+export type PermissionAction = 'view' | 'add' | 'edit' | 'delete'
+
 export type AuthState = {
   session: Session | null
   user: User | null
@@ -30,7 +32,10 @@ export type AuthState = {
   loading: boolean
   /** set when someone who isn't a member of this tenant tried to log in */
   accessError: string | null
+  /** reloads profile, membership and the business list (e.g. after editing businesses) */
   refreshProfile: () => Promise<void>
+  /** permission check for the current user in this tenant */
+  can: (module: string, action: PermissionAction) => boolean
   signOut: () => Promise<void>
 }
 

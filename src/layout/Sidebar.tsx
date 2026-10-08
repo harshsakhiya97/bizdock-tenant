@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn'
 import { navSections } from './nav'
 
 export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
-  const { profile, user } = useAuth()
+  const { profile, user, can } = useAuth()
   const { pathname } = useLocation()
   const [logoutOpen, setLogoutOpen] = useState(false)
   const name = displayName(profile?.full_name, user?.email)
@@ -38,36 +38,41 @@ export function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle:
 
       {/* nav */}
       <nav className={cn('flex-1 overflow-y-auto', collapsed ? 'pt-2' : 'pt-4')}>
-        {navSections.map((section) => (
-          <div key={section.title} className={cn(!collapsed && 'mb-3')}>
-            {!collapsed && (
-              <div className="px-4 pb-2 text-[11px] font-bold tracking-wider text-gray-900 uppercase">
-                {section.title}
-              </div>
-            )}
-            {section.items.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                title={collapsed ? label : undefined}
-                className={({ isActive }) =>
-                  cn(
-                    'flex h-[38px] items-center gap-3 text-[14px] font-medium transition-colors',
-                    collapsed ? 'justify-center' : 'px-4',
-                    isActive ? 'bg-brand text-white' : 'text-gray-800 hover:bg-gray-50',
-                  )
-                }
-              >
-                <Icon className="size-[17px]" strokeWidth={1.9} />
-                {!collapsed && label}
-              </NavLink>
-            ))}
-          </div>
-        ))}
+        {navSections
+          .map((section) => ({ ...section, items: section.items.filter((i) => !i.module || can(i.module, 'view')) }))
+          .filter((section) => section.items.length > 0)
+          .map((section) => (
+            <div key={section.title} className={cn(!collapsed && 'mb-3')}>
+              {!collapsed && (
+                <div className="px-4 pb-2 text-[11px] font-bold tracking-wider text-gray-900 uppercase">
+                  {section.title}
+                </div>
+              )}
+              {section.items.map(({ to, label, icon: Icon }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  title={collapsed ? label : undefined}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex h-[38px] items-center gap-3 text-[14px] font-medium transition-colors',
+                      collapsed ? 'justify-center' : 'px-4',
+                      isActive ? 'bg-brand text-white' : 'text-gray-800 hover:bg-gray-50',
+                    )
+                  }
+                >
+                  <Icon className="size-[17px]" strokeWidth={1.9} />
+                  {!collapsed && label}
+                </NavLink>
+              ))}
+            </div>
+          ))}
       </nav>
 
       {/* footer */}
-      <div className={cn('border-t border-gray-200', collapsed ? 'grid justify-items-center gap-2 py-3' : 'px-3.5 py-3')}>
+      <div
+        className={cn('border-t border-gray-200', collapsed ? 'grid justify-items-center gap-2 py-3' : 'px-3.5 py-3')}
+      >
         {collapsed ? (
           <>
             <Avatar name={name} />

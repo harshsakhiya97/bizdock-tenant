@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { Session } from '@supabase/supabase-js'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { AuthContext, type Business, type Membership, type Profile } from './auth-context'
+import { AuthContext, type Business, type Membership, type PermissionAction, type Profile } from './auth-context'
 
 type MemberRow = {
   id: string
@@ -49,12 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const [{ data: prof }, { data: bizRows }, { data: allowed }] = await Promise.all([
         db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
-        db()
-          .from('businesses')
-          .select('id, name')
-          .eq('tenant_id', tenant.id)
-          .eq('is_active', true)
-          .order('sort_order'),
+        db().from('businesses').select('id, name').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
           : db().from('member_businesses').select('business_id').eq('member_id', member.id),
@@ -95,6 +90,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [loadUser])
 
+  const can = useCallback(
+    (module: string, action: PermissionAction) => {
+      if (!membership) return false
+      // Tech Support Team (and other system roles) can do everything
+      if (membership.is_support || membership.role.is_system) return true
+      return Boolean(membership.role.permissions?.[module]?.[action])
+    },
+    [membership],
+  )
+
   const value = useMemo(
     () => ({
       session,
@@ -105,11 +110,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       accessError,
       refreshProfile: () => loadUser(session),
+      can,
       signOut: async () => {
         await db().auth.signOut()
       },
     }),
-    [session, profile, membership, businesses, loading, accessError, loadUser],
+    [session, profile, membership, businesses, loading, accessError, loadUser, can],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
