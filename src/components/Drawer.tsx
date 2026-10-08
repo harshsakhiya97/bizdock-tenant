@@ -39,15 +39,15 @@ export function Drawer({
         style={{ maxWidth: width }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
+          <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>
           <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-gray-500 hover:bg-gray-100">
             <X className="size-5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
         {footer && (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-6 py-4">{footer}</div>
+          <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-5 py-3.5">{footer}</div>
         )}
       </div>
     </div>,

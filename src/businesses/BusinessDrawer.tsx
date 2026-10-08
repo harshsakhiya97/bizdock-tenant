@@ -140,7 +140,7 @@ export function BusinessDrawer({
   return (
     <Drawer
       open
-      width={560}
+      width={480}
       onClose={onClose}
       title={business ? 'Edit Business' : 'Add Business'}
       footer={
@@ -157,7 +157,7 @@ export function BusinessDrawer({
         </>
       }
     >
-      <form id="business-form" onSubmit={submit} className="space-y-7">
+      <form id="business-form" onSubmit={submit} className="space-y-6">
         <FormSection title="Basic details">
           <div className="flex items-center gap-4">
             <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50">
@@ -265,8 +265,8 @@ export function BusinessDrawer({
         <FormSection title="Branches" description="For businesses that run from more than one location.">
           <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3">
             <div>
-              <div className="text-sm font-medium">Has multiple branches?</div>
-              <div className="text-[13px] text-gray-500">
+              <div className="text-[13px] font-semibold">Has multiple branches?</div>
+              <div className="text-xs text-gray-500">
                 When on, team members added to this business must be given a branch.
               </div>
             </div>
@@ -303,7 +303,7 @@ export function BusinessDrawer({
                   {branches.map((b) => (
                     <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{b.name}</div>
+                        <div className="truncate text-[13px] font-semibold">{b.name}</div>
                         <div className="flex flex-wrap gap-x-3 text-xs text-gray-500">
                           {b.city && (
                             <span className="inline-flex items-center gap-1">

@@ -20,7 +20,7 @@ export function Button({
     <button
       {...props}
       className={cn(
-        'inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-4',
+        'inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:size-4',
         styles[variant],
         className,
       )}

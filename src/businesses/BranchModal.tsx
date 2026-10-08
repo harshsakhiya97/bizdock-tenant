@@ -30,8 +30,8 @@ export function BranchModal({
 
   return (
     <Modal open onClose={onClose}>
-      <h2 className="text-xl font-bold tracking-tight">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
-      <form onSubmit={submit} className="mt-4 space-y-4">
+      <h2 className="text-[17px] font-bold tracking-tight">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
+      <form onSubmit={submit} className="mt-4 space-y-3.5">
         <div>
           <Label htmlFor="br-name" required>
             Branch name

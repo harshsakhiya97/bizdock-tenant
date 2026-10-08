@@ -14,11 +14,11 @@ import { cn } from '@/lib/cn'
  */
 
 const fieldBase =
-  'w-full rounded-lg border border-gray-300 bg-white text-[15px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
+  'w-full rounded-lg border border-gray-300 bg-white text-[13px] text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand focus:ring-1 focus:ring-brand disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500'
 
 export function Label({ htmlFor, required, children }: { htmlFor: string; required?: boolean; children: ReactNode }) {
   return (
-    <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-semibold text-gray-900">
+    <label htmlFor={htmlFor} className="mb-1.5 block text-[13px] font-semibold text-gray-900">
       {children}
       {required && <span className="text-brand">*</span>}
     </label>
@@ -27,7 +27,7 @@ export function Label({ htmlFor, required, children }: { htmlFor: string; requir
 
 /** Grey helper text under a field. */
 export function Hint({ children }: { children: ReactNode }) {
-  return <p className="mt-1.5 text-[13px] leading-snug text-gray-500">{children}</p>
+  return <p className="mt-1 text-xs leading-snug text-gray-500">{children}</p>
 }
 
 /** Grey uppercase group title with an optional one-line description, e.g. "SONG SUGGESTIONS". */
@@ -42,9 +42,9 @@ export function FormSection({
 }) {
   return (
     <section>
-      <h3 className="text-[13px] font-semibold tracking-wide text-gray-500 uppercase">{title}</h3>
-      {description && <p className="mt-1 text-[13px] text-gray-500">{description}</p>}
-      <div className="mt-3 space-y-4">{children}</div>
+      <h3 className="text-xs font-semibold tracking-wide text-gray-500 uppercase">{title}</h3>
+      {description && <p className="mt-0.5 text-xs text-gray-500">{description}</p>}
+      <div className="mt-3 space-y-3.5">{children}</div>
     </section>
   )
 }
@@ -59,23 +59,23 @@ export function TextInput({ icon, className, ...props }: InputProps) {
           {icon}
         </span>
       )}
-      <input {...props} className={cn(fieldBase, 'h-10 px-3.5', icon ? 'pl-10' : '', className)} />
+      <input {...props} className={cn(fieldBase, 'h-10 px-3', icon ? 'pl-10' : '', className)} />
     </div>
   )
 }
 
 export function TextArea({ className, rows = 3, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea rows={rows} {...props} className={cn(fieldBase, 'block px-3.5 py-2.5', className)} />
+  return <textarea rows={rows} {...props} className={cn(fieldBase, 'block px-3 py-2', className)} />
 }
 
 /** Native select with the custom chevron used in Muzic Lover. */
 export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <div className="relative">
-      <select {...props} className={cn(fieldBase, 'h-10 appearance-none pr-10 pl-3.5', className)}>
+      <select {...props} className={cn(fieldBase, 'h-10 appearance-none pr-9 pl-3', className)}>
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-gray-500" />
+      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-gray-500" />
     </div>
   )
 }
