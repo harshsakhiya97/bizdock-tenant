@@ -17,7 +17,7 @@ export function Modal({ open, onClose, children }: { open: boolean; onClose: () 
         role="dialog"
         data-modal
         aria-modal="true"
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+        className="max-h-[90svh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {children}

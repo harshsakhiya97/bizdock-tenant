@@ -96,3 +96,34 @@ export function PasswordInput({ icon, className, ...props }: Omit<InputProps, 't
     </div>
   )
 }
+
+/** Checkbox with a label and optional grey description, e.g. "Registered for GST?". */
+export function Checkbox({
+  id,
+  checked,
+  onChange,
+  label,
+  description,
+}: {
+  id: string
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label: string
+  description?: string
+}) {
+  return (
+    <label htmlFor={id} className="flex cursor-pointer items-start gap-2.5">
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-gray-300 accent-[var(--color-brand)]"
+      />
+      <span>
+        <span className="block text-[13px] font-semibold text-gray-900">{label}</span>
+        {description && <span className="block text-xs text-gray-500">{description}</span>}
+      </span>
+    </label>
+  )
+}

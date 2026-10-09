@@ -4,7 +4,10 @@ import type { BranchDraft, BranchRow, BusinessInput, BusinessListRow, BusinessRo
 const BUCKET = 'business-logos'
 
 function fail(error: { message: string } | null): asserts error is null {
-  if (error) throw new Error(error.message)
+  if (!error) return
+  if (error.message.includes('branches_tenant_code_key'))
+    throw new Error('That branch code is already used by another branch. Pick a different code.')
+  throw new Error(error.message)
 }
 
 export async function listBusinesses(tenantId: string) {
@@ -73,8 +76,9 @@ export async function saveBusiness(opts: {
     address: clean(input.address),
     city: clean(input.city),
     state: clean(input.state),
-    gst_number: clean(input.gst_number)?.toUpperCase() ?? null,
-    legal_name: clean(input.legal_name),
+    has_gst: input.has_gst,
+    gst_number: input.has_gst ? (clean(input.gst_number)?.toUpperCase() ?? null) : null,
+    legal_name: input.has_gst ? clean(input.legal_name) : null,
     has_branches: input.has_branches,
   }
 
@@ -121,12 +125,17 @@ export async function saveBusiness(opts: {
     const keep = new Set<string>()
     for (const [i, b] of branches.entries()) {
       const row = {
+        code: b.code.trim().toUpperCase(),
         name: b.name.trim(),
+        short_name: b.short_name.trim(),
         city: clean(b.city),
         address: clean(b.address),
         phone: clean(b.phone),
         email: clean(b.email),
         manager_member_id: b.manager_member_id,
+        own_gst: b.own_gst,
+        legal_name: b.own_gst ? clean(b.legal_name) : null,
+        gst_number: b.own_gst ? (clean(b.gst_number)?.toUpperCase() ?? null) : null,
         sort_order: i,
       }
       if (b.id) {

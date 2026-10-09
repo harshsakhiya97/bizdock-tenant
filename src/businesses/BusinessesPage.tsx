@@ -1,22 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Archive, ArchiveRestore, MapPin, Pencil, Plus, Search } from 'lucide-react'
+import { Archive, MapPin, Pencil, Plus, Search } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Modal } from '@/components/Modal'
-import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBusinesses, setBusinessArchived } from './api'
 import { BusinessDrawer } from './BusinessDrawer'
 import type { BusinessListRow, BusinessRow } from './types'
-
-type Tab = 'active' | 'archived'
 
 export function BusinessesPage() {
   const tenant = useTenant()
   const { can, refreshProfile } = useAuth()
   const [rows, setRows] = useState<BusinessListRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('active')
   const [query, setQuery] = useState('')
   const [drawer, setDrawer] = useState<{ business: BusinessRow | null } | null>(null)
   const [archiving, setArchiving] = useState<BusinessListRow | null>(null)
@@ -35,19 +31,12 @@ export function BusinessesPage() {
     void refreshProfile()
   }, [load, refreshProfile])
 
-  const counts = useMemo(
-    () => ({
-      active: rows?.filter((b) => b.is_active).length ?? 0,
-      archived: rows?.filter((b) => !b.is_active).length ?? 0,
-    }),
-    [rows],
-  )
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     return (rows ?? [])
-      .filter((b) => (tab === 'active' ? b.is_active : !b.is_active))
+      .filter((b) => b.is_active)
       .filter((b) => !q || b.name.toLowerCase().includes(q) || (b.city ?? '').toLowerCase().includes(q))
-  }, [rows, tab, query])
+  }, [rows, query])
 
   async function toggleArchive(b: BusinessListRow, archived: boolean) {
     setBusy(true)
@@ -70,28 +59,12 @@ export function BusinessesPage() {
       <div className="mt-4 rounded-xl border border-gray-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
           <div className="flex items-center gap-2">
-            {(['active', 'archived'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-3 py-1 text-sm font-medium',
-                  tab === t
-                    ? 'border border-brand text-brand'
-                    : 'border border-transparent text-gray-600 hover:bg-gray-50',
-                )}
-              >
-                {t === 'active' ? 'Active' : 'Archived'}
-                <span
-                  className={cn(
-                    'rounded-md px-1.5 py-0.5 text-xs font-semibold',
-                    tab === t ? 'bg-brand-soft text-brand' : 'bg-gray-100 text-gray-600',
-                  )}
-                >
-                  {counts[t]}
-                </span>
-              </button>
-            ))}
+            <span className="rounded-lg border border-brand px-3 py-1 text-sm font-medium text-brand">
+              All Businesses
+            </span>
+            <span className="rounded-md bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand">
+              {rows?.filter((b) => b.is_active).length ?? 0} Businesses
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -118,11 +91,7 @@ export function BusinessesPage() {
           <p className="px-4 py-10 text-center text-sm text-gray-500">Loading businesses…</p>
         ) : visible.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-gray-500">
-            {query
-              ? 'No businesses match your search.'
-              : tab === 'active'
-                ? 'No businesses yet. Add your first one.'
-                : 'No archived businesses.'}
+            {query ? 'No businesses match your search.' : 'No businesses yet. Add your first one.'}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -176,34 +145,24 @@ export function BusinessesPage() {
                       <td className="px-4 py-3 font-mono text-xs text-gray-700">{b.gst_number || '—'}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
-                          {b.is_active ? (
-                            <>
-                              {can('businesses', 'edit') && (
-                                <Button
-                                  variant="ghost"
-                                  onClick={() => setDrawer({ business: b })}
-                                  aria-label={`Edit ${b.name}`}
-                                >
-                                  <Pencil /> Edit
-                                </Button>
-                              )}
-                              {can('businesses', 'delete') && can('businesses', 'edit') && (
-                                <Button
-                                  variant="ghost"
-                                  className="text-red-600"
-                                  onClick={() => setArchiving(b)}
-                                  aria-label={`Archive ${b.name}`}
-                                >
-                                  <Archive />
-                                </Button>
-                              )}
-                            </>
-                          ) : (
-                            can('businesses', 'edit') && (
-                              <Button variant="ghost" disabled={busy} onClick={() => toggleArchive(b, false)}>
-                                <ArchiveRestore /> Restore
-                              </Button>
-                            )
+                          {can('businesses', 'edit') && (
+                            <Button
+                              variant="ghost"
+                              onClick={() => setDrawer({ business: b })}
+                              aria-label={`Edit ${b.name}`}
+                            >
+                              <Pencil /> Edit
+                            </Button>
+                          )}
+                          {can('businesses', 'delete') && can('businesses', 'edit') && (
+                            <Button
+                              variant="ghost"
+                              className="text-red-600"
+                              onClick={() => setArchiving(b)}
+                              aria-label={`Archive ${b.name}`}
+                            >
+                              <Archive />
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -230,8 +189,7 @@ export function BusinessesPage() {
       <Modal open={!!archiving} onClose={() => setArchiving(null)}>
         <h2 className="text-lg font-bold">Archive {archiving?.name}?</h2>
         <p className="mt-1 text-sm text-gray-600">
-          It will be hidden from the business switcher and lists. All its data, branches and history are kept, and you
-          can restore it any time from the Archived tab.
+          It will be hidden from the business switcher and lists. All its data, branches and history are kept.
         </p>
         <div className="mt-6 grid grid-cols-2 gap-3">
           <Button variant="outline" onClick={() => setArchiving(null)}>

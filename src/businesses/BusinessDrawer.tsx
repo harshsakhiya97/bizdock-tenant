@@ -3,7 +3,7 @@ import { Archive, ImageUp, MapPin, Pencil, Plus, Trash2, User } from 'lucide-rea
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBranches, listManagerOptions, saveBusiness } from './api'
@@ -25,6 +25,7 @@ const emptyInput: BusinessInput = {
   address: '',
   city: '',
   state: '',
+  has_gst: false,
   gst_number: '',
   legal_name: '',
   has_branches: false,
@@ -32,12 +33,17 @@ const emptyInput: BusinessInput = {
 let tempKey = 0
 const newBranch = (): BranchDraft => ({
   key: `new-${++tempKey}`,
+  code: '',
   name: '',
+  short_name: '',
   city: '',
   address: '',
   phone: '',
   email: '',
   manager_member_id: null,
+  own_gst: false,
+  legal_name: '',
+  gst_number: '',
 })
 
 /** Create or edit a business, including its branches. Nothing is saved until "Save". */
@@ -62,6 +68,7 @@ export function BusinessDrawer({
           address: business.address ?? '',
           city: business.city ?? '',
           state: business.state ?? '',
+          has_gst: business.has_gst,
           gst_number: business.gst_number ?? '',
           legal_name: business.legal_name ?? '',
           has_branches: business.has_branches,
@@ -87,12 +94,17 @@ export function BusinessDrawer({
           rows.map((r) => ({
             key: r.id,
             id: r.id,
+            code: r.code,
             name: r.name,
+            short_name: r.short_name,
             city: r.city ?? '',
             address: r.address ?? '',
             phone: r.phone ?? '',
             email: r.email ?? '',
             manager_member_id: r.manager_member_id,
+            own_gst: r.own_gst,
+            legal_name: r.legal_name ?? '',
+            gst_number: r.gst_number ?? '',
           })),
         )
         setSavedBranchIds(rows.map((r) => r.id))
@@ -118,7 +130,8 @@ export function BusinessDrawer({
     const gst = (input.gst_number ?? '').trim().toUpperCase()
     if (!input.name.trim()) return setError('Business name is required.')
     if (email && !isValidEmail(email)) return setError('Enter a valid business email.')
-    if (gst && !isValidGst(gst)) return setError('GST number should be 15 characters, like 24ABCDE1234F1Z5.')
+    if (input.has_gst && !gst) return setError('Enter the GST number, or untick "Registered for GST?".')
+    if (input.has_gst && !isValidGst(gst)) return setError('GST number should be 15 characters, like 24ABCDE1234F1Z5.')
     if (input.has_branches && branches.length === 0)
       return setError('Add at least one branch, or turn off "Has multiple branches?".')
     if (!input.has_branches && business?.has_branches && savedBranchIds.length > 0)
@@ -239,27 +252,40 @@ export function BusinessDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="GST / legal details" description="Used on invoices and receipts later.">
-          <div>
-            <Label htmlFor="bz-legal">Legal name</Label>
-            <TextInput
-              id="bz-legal"
-              placeholder="Registered company name"
-              value={input.legal_name ?? ''}
-              onChange={set('legal_name')}
-            />
-          </div>
-          <div>
-            <Label htmlFor="bz-gst">GST number</Label>
-            <TextInput
-              id="bz-gst"
-              placeholder="e.g. 24ABCDE1234F1Z5"
-              value={input.gst_number ?? ''}
-              onChange={set('gst_number')}
-              className="uppercase placeholder:normal-case"
-            />
-            <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
-          </div>
+        <FormSection title="GST / legal details" description="Optional. Used on invoices and receipts later.">
+          <Checkbox
+            id="bz-has-gst"
+            checked={input.has_gst}
+            onChange={(v) => setInput((d) => ({ ...d, has_gst: v }))}
+            label="Registered for GST?"
+            description="Tick to add the GST number and legal name."
+          />
+          {input.has_gst && (
+            <>
+              <div>
+                <Label htmlFor="bz-legal">Legal name</Label>
+                <TextInput
+                  id="bz-legal"
+                  placeholder="Registered company name"
+                  value={input.legal_name ?? ''}
+                  onChange={set('legal_name')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="bz-gst" required>
+                  GST number
+                </Label>
+                <TextInput
+                  id="bz-gst"
+                  placeholder="e.g. 24ABCDE1234F1Z5"
+                  value={input.gst_number ?? ''}
+                  onChange={set('gst_number')}
+                  className="uppercase placeholder:normal-case"
+                />
+                <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
+              </div>
+            </>
+          )}
         </FormSection>
 
         <FormSection title="Branches" description="For businesses that run from more than one location.">
@@ -303,7 +329,13 @@ export function BusinessDrawer({
                   {branches.map((b) => (
                     <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0">
-                        <div className="truncate text-[13px] font-semibold">{b.name}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-gray-700">
+                            {b.code}
+                          </span>
+                          <span className="truncate text-[13px] font-semibold">{b.name}</span>
+                          <span className="shrink-0 text-xs text-gray-500">({b.short_name})</span>
+                        </div>
                         <div className="flex flex-wrap gap-x-3 text-xs text-gray-500">
                           {b.city && (
                             <span className="inline-flex items-center gap-1">
@@ -315,6 +347,7 @@ export function BusinessDrawer({
                               <User className="size-3" /> {managerName(b.manager_member_id)}
                             </span>
                           )}
+                          {b.own_gst && <span>Own GST</span>}
                           {!b.id && <span className="text-brand">New</span>}
                         </div>
                       </div>
@@ -362,6 +395,8 @@ export function BusinessDrawer({
         <BranchModal
           branch={editing}
           managers={managers}
+          businessHasGst={input.has_gst}
+          otherCodes={branches.filter((x) => x.key !== editing.key).map((x) => x.code)}
           onClose={() => setEditing(null)}
           onSave={(b) => {
             setBranches((list) =>
