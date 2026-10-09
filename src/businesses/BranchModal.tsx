@@ -47,9 +47,26 @@ export function BranchModal({
   }
 
   return (
-    <Modal open onClose={onClose} width={640}>
-      <h2 className="text-[17px] font-bold tracking-tight">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
-      <form onSubmit={submit} className="mt-4 space-y-3.5">
+    <Modal
+      open
+      onClose={onClose}
+      width={640}
+      title={branch.name ? 'Edit branch' : 'Add branch'}
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <div className="flex min-w-0 items-center gap-3">
+            {error && <p className="text-right text-sm text-red-600">{error}</p>}
+            <Button type="submit" form="branch-form" className="shrink-0">
+              {branch.name ? 'Save branch' : 'Add branch'}
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <form id="branch-form" onSubmit={submit} className="space-y-3.5">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
           <div>
             <Label htmlFor="br-code" required>
@@ -160,13 +177,6 @@ export function BranchModal({
               </div>
             </div>
           )}
-        </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit">{branch.name ? 'Save branch' : 'Add branch'}</Button>
         </div>
       </form>
     </Modal>
