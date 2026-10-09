@@ -129,6 +129,7 @@ export async function saveBusiness(opts: {
         name: b.name.trim(),
         short_name: b.short_name.trim(),
         city: clean(b.city),
+        state: clean(b.state),
         address: clean(b.address),
         phone: clean(b.phone),
         email: clean(b.email),

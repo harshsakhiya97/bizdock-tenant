@@ -22,7 +22,7 @@ export function Drawer({
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       // a pop-up open on top of the drawer handles Esc itself
-      if (e.key === 'Escape' && !document.querySelector('[data-modal]')) onClose()
+      if (e.key === 'Escape' && !document.querySelector('[data-modal], [data-popover]')) onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

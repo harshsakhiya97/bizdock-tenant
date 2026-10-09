@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/Button'
-import { Checkbox, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
+import { AddressFields } from '@/components/AddressFields'
+import { Checkbox, Hint, Label, TextInput } from '@/components/Field'
+import { SearchSelect } from '@/components/SearchSelect'
 import { Modal } from '@/components/Modal'
 import { isValidBranchCode, isValidEmail, isValidGst, type BranchDraft, type ManagerOption } from './types'
 
@@ -45,10 +47,10 @@ export function BranchModal({
   }
 
   return (
-    <Modal open onClose={onClose}>
+    <Modal open onClose={onClose} width={640}>
       <h2 className="text-[17px] font-bold tracking-tight">{branch.name ? 'Edit branch' : 'Add branch'}</h2>
       <form onSubmit={submit} className="mt-4 space-y-3.5">
-        <div className="grid grid-cols-[130px_1fr] gap-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
           <div>
             <Label htmlFor="br-code" required>
               Branch code
@@ -79,21 +81,33 @@ export function BranchModal({
           </div>
         </div>
         <Hint>The code is unique across all your branches. The short name is used where space is tight.</Hint>
-        <div>
-          <Label htmlFor="br-name" required>
-            Branch name
-          </Label>
-          <TextInput id="br-name" placeholder="e.g. Mumbai Studio" value={draft.name} onChange={set('name')} />
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+          <div>
+            <Label htmlFor="br-name" required>
+              Branch name
+            </Label>
+            <TextInput id="br-name" placeholder="e.g. Mumbai Studio" value={draft.name} onChange={set('name')} />
+          </div>
+          <div>
+            <Label htmlFor="br-manager">Branch manager</Label>
+            <SearchSelect
+              id="br-manager"
+              value={draft.manager_member_id}
+              onChange={(v) => setDraft((d) => ({ ...d, manager_member_id: v }))}
+              options={managers.map((m) => ({ value: m.id, label: m.name }))}
+              placeholder={managers.length ? 'Not assigned' : 'No team members yet'}
+              searchPlaceholder="Search team members"
+              disabled={!managers.length}
+            />
+            {!managers.length && <Hint>You can assign a manager once team members are added.</Hint>}
+          </div>
         </div>
-        <div>
-          <Label htmlFor="br-city">City</Label>
-          <TextInput id="br-city" placeholder="e.g. Mumbai" value={draft.city} onChange={set('city')} />
-        </div>
-        <div>
-          <Label htmlFor="br-address">Full address</Label>
-          <TextArea id="br-address" rows={2} placeholder="Optional" value={draft.address} onChange={set('address')} />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+        <AddressFields
+          idPrefix="br"
+          value={{ address: draft.address, state: draft.state, city: draft.city }}
+          onChange={(a) => setDraft((d) => ({ ...d, ...a }))}
+        />
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
           <div>
             <Label htmlFor="br-phone">Phone</Label>
             <TextInput id="br-phone" type="tel" value={draft.phone} onChange={set('phone')} />
@@ -122,7 +136,7 @@ export function BranchModal({
             />
           )}
           {draft.own_gst && (
-            <>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
               <div>
                 <Label htmlFor="br-legal">Legal name</Label>
                 <TextInput
@@ -144,24 +158,8 @@ export function BranchModal({
                   className="uppercase placeholder:normal-case"
                 />
               </div>
-            </>
+            </div>
           )}
-        </div>
-        <div>
-          <Label htmlFor="br-manager">Branch manager</Label>
-          <Select
-            id="br-manager"
-            value={draft.manager_member_id ?? ''}
-            onChange={(e) => setDraft((d) => ({ ...d, manager_member_id: e.target.value || null }))}
-          >
-            <option value="">{managers.length ? 'Not assigned' : 'No team members yet'}</option>
-            {managers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
-          {!managers.length && <Hint>You can assign a manager once team members are added.</Hint>}
         </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <div className="flex items-center justify-between gap-3 border-t border-gray-200 pt-4">

@@ -3,7 +3,8 @@ import { Archive, ImageUp, MapPin, Pencil, Plus, Trash2, User } from 'lucide-rea
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { AddressFields } from '@/components/AddressFields'
+import { Checkbox, FormSection, Hint, Label, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBranches, listManagerOptions, saveBusiness } from './api'
@@ -37,6 +38,7 @@ const newBranch = (): BranchDraft => ({
   name: '',
   short_name: '',
   city: '',
+  state: '',
   address: '',
   phone: '',
   email: '',
@@ -98,6 +100,7 @@ export function BusinessDrawer({
             name: r.name,
             short_name: r.short_name,
             city: r.city ?? '',
+            state: r.state ?? '',
             address: r.address ?? '',
             phone: r.phone ?? '',
             email: r.email ?? '',
@@ -153,7 +156,7 @@ export function BusinessDrawer({
   return (
     <Drawer
       open
-      width={480}
+      width={640}
       onClose={onClose}
       title={business ? 'Edit Business' : 'Add Business'}
       footer={
@@ -217,7 +220,7 @@ export function BusinessDrawer({
         </FormSection>
 
         <FormSection title="Contact" description="How customers and your team reach this business.">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
             <div>
               <Label htmlFor="bz-phone">Phone</Label>
               <TextInput id="bz-phone" type="tel" value={input.phone ?? ''} onChange={set('phone')} />
@@ -230,26 +233,11 @@ export function BusinessDrawer({
         </FormSection>
 
         <FormSection title="Address">
-          <div>
-            <Label htmlFor="bz-address">Full address</Label>
-            <TextArea
-              id="bz-address"
-              rows={2}
-              placeholder="Optional"
-              value={input.address ?? ''}
-              onChange={set('address')}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label htmlFor="bz-city">City</Label>
-              <TextInput id="bz-city" value={input.city ?? ''} onChange={set('city')} />
-            </div>
-            <div>
-              <Label htmlFor="bz-state">State</Label>
-              <TextInput id="bz-state" value={input.state ?? ''} onChange={set('state')} />
-            </div>
-          </div>
+          <AddressFields
+            idPrefix="bz"
+            value={{ address: input.address ?? '', state: input.state ?? '', city: input.city ?? '' }}
+            onChange={(a) => setInput((d) => ({ ...d, ...a }))}
+          />
         </FormSection>
 
         <FormSection title="GST / legal details" description="Optional. Used on invoices and receipts later.">
@@ -261,7 +249,7 @@ export function BusinessDrawer({
             description="Tick to add the GST number and legal name."
           />
           {input.has_gst && (
-            <>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
               <div>
                 <Label htmlFor="bz-legal">Legal name</Label>
                 <TextInput
@@ -284,7 +272,7 @@ export function BusinessDrawer({
                 />
                 <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
               </div>
-            </>
+            </div>
           )}
         </FormSection>
 

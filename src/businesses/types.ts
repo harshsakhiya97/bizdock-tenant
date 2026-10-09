@@ -26,6 +26,7 @@ export type BranchRow = {
   name: string
   short_name: string
   city: string | null
+  state: string | null
   address: string | null
   phone: string | null
   email: string | null
@@ -55,6 +56,7 @@ export type BranchDraft = {
   name: string
   short_name: string
   city: string
+  state: string
   address: string
   phone: string
   email: string
