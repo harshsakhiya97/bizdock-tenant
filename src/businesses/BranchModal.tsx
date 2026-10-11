@@ -93,7 +93,7 @@ export function BranchModal({
             onChange={set('short_name')}
           />
         </div>
-        <div className="span-2" style={{ marginTop: -10 }}>
+        <div className="span-2" style={{ marginTop: -6 }}>
           <Hint>The code is unique across all your branches. The short name is used where space is tight.</Hint>
         </div>
         <div>

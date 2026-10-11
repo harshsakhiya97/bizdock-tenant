@@ -172,7 +172,7 @@ export function BusinessDrawer({
         </>
       }
     >
-      <form id="business-form" onSubmit={submit} className="stack" style={{ gap: 24 }}>
+      <form id="business-form" onSubmit={submit} className="stack">
         <FormSection title="Basic details">
           <div className="upload">
             <div className="upload-box">{logoPreview ? <img src={logoPreview} alt="" /> : <ImageUp size={20} />}</div>
