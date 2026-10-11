@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import type { Permissions } from '@/access/catalog'
 
 export type Profile = {
   id: string
@@ -8,19 +9,20 @@ export type Profile = {
   phone: string | null
 }
 
-export type Permissions = Record<string, { view?: boolean; add?: boolean; edit?: boolean; delete?: boolean }>
 
 /** This user's membership in the current tenant. */
 export type Membership = {
   id: string
   all_businesses: boolean
   is_support: boolean
-  role: { name: string; permissions: Permissions; is_system: boolean }
+  /** custom access for this person; null = follows the role */
+  permissions: Permissions | null
+  role: { name: string; permissions: Permissions; is_system: boolean; level: number }
 }
 
 export type Business = { id: string; name: string }
 
-export type PermissionAction = 'view' | 'add' | 'edit' | 'delete'
+export type PermissionAction = string
 
 export type AuthState = {
   session: Session | null
@@ -36,6 +38,8 @@ export type AuthState = {
   refreshProfile: () => Promise<void>
   /** permission check for the current user in this tenant */
   can: (module: string, action: PermissionAction) => boolean
+  /** this user's role level in the tenant (0 Tech Support, 1 Owner, ...). They manage levels above it. */
+  level: number
   signOut: () => Promise<void>
 }
 

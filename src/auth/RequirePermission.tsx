@@ -3,10 +3,18 @@ import { Lock } from 'lucide-react'
 import { Empty } from '@/components/ui'
 import { useAuth } from './useAuth'
 
-/** Shows the page only if the user can View this module. */
-export function RequirePermission({ module, children }: { module: string; children: ReactNode }) {
+/** Shows the page only if the user has this permission (View by default). */
+export function RequirePermission({
+  module,
+  action = 'view',
+  children,
+}: {
+  module: string
+  action?: string
+  children: ReactNode
+}) {
   const { can } = useAuth()
-  if (!can(module, 'view')) {
+  if (!can(module, action)) {
     return (
       <div className="card">
         <Empty icon={Lock}>

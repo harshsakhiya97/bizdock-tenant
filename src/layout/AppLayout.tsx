@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { LayoutGrid, LogOut, Menu, PanelLeft } from 'lucide-react'
+import { LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
@@ -36,9 +36,11 @@ export function AppLayout() {
   const email = profile?.email ?? user?.email ?? ''
 
   const sections = navSections
-    .map((s) => ({ ...s, items: s.items.filter((i) => !i.module || can(i.module, 'view')) }))
+    .map((s) => ({ ...s, items: s.items.filter((i) => !i.module || can(i.module, i.action ?? 'view')) }))
     .filter((s) => s.items.length > 0)
-  const tabs = sections.flatMap((s) => s.items).filter((i) => tabNames[i.to])
+  const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(
+    (i) => tabNames[i.to],
+  )
 
   function toggle() {
     setCollapsed((c) => {
@@ -77,11 +79,13 @@ export function AppLayout() {
           </nav>
 
           <div className="sidebar-user">
-            <Avatar name={name} size={32} />
-            <div className="user-meta">
-              <b>{name}</b>
-              <small>{email}</small>
-            </div>
+            <NavLink to="/profile" className="user-link" title="My Profile" onClick={() => setMobileOpen(false)}>
+              <Avatar name={name} size={32} />
+              <div className="user-meta">
+                <b>{name}</b>
+                <small>{email}</small>
+              </div>
+            </NavLink>
             <button
               type="button"
               className="btn btn-ghost btn-icon"

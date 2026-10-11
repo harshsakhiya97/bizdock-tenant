@@ -8,6 +8,7 @@ type MemberRow = {
   id: string
   all_businesses: boolean
   is_support: boolean
+  permissions: Membership['permissions']
   roles: Membership['role'] | null
 }
 
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: member } = await db()
         .from('tenant_members')
-        .select('id, all_businesses, is_support, roles(name, permissions, is_system)')
+        .select('id, all_businesses, is_support, permissions, roles(name, permissions, is_system, level)')
         .eq('tenant_id', tenant.id)
         .eq('user_id', userId)
         .eq('status', 'active')
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: member.id,
         all_businesses: member.all_businesses,
         is_support: member.is_support,
+        permissions: member.permissions,
         role: member.roles,
       })
       setBusinesses(list)
@@ -93,9 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const can = useCallback(
     (module: string, action: PermissionAction) => {
       if (!membership) return false
-      // Tech Support Team (and other system roles) can do everything
-      if (membership.is_support || membership.role.is_system) return true
-      return Boolean(membership.role.permissions?.[module]?.[action])
+      // Tech Support Team, system roles and the Owner (level 1) can do everything
+      if (membership.is_support || membership.role.is_system || membership.role.level <= 1) return true
+      const p = membership.permissions ?? membership.role.permissions
+      if (action !== 'view' && p?.mode?.view_only) return false
+      return Boolean(p?.[module]?.[action])
     },
     [membership],
   )
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessError,
       refreshProfile: () => loadUser(session),
       can,
+      level: membership ? (membership.is_support ? 0 : membership.role.level) : Number.MAX_SAFE_INTEGER,
       signOut: async () => {
         await db().auth.signOut()
       },

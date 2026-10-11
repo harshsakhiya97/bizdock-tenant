@@ -19,24 +19,37 @@ const tabs: { id: Tab; label: string }[] = [
 export function ProfilePage() {
   const [params, setParams] = useSearchParams()
   const tab: Tab = params.get('tab') === 'password' ? 'password' : 'profile'
+  const { user } = useAuth()
+  const onDefault = Boolean(user?.user_metadata?.must_change_password)
 
   return (
-    <div className="settings">
-      <nav className="settings-nav">
-        <div className="label">SETTINGS</div>
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={cn(tab === t.id && 'is-active')}
-            onClick={() => setParams(t.id === 'profile' ? {} : { tab: t.id })}
-          >
-            {t.label}
+    <>
+      {onDefault && (
+        <div className="alert alert-error">
+          You are still using the default password.{' '}
+          <button type="button" className="link-btn" onClick={() => setParams({ tab: 'password' })}>
+            Please change it
           </button>
-        ))}
-      </nav>
-      <div className="settings-body">{tab === 'profile' ? <ProfileView /> : <ResetPasswordView />}</div>
-    </div>
+          .
+        </div>
+      )}
+      <div className="settings">
+        <nav className="settings-nav">
+          <div className="label">SETTINGS</div>
+          {tabs.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className={cn(tab === t.id && 'is-active')}
+              onClick={() => setParams(t.id === 'profile' ? {} : { tab: t.id })}
+            >
+              {t.label}
+            </button>
+          ))}
+        </nav>
+        <div className="settings-body">{tab === 'profile' ? <ProfileView /> : <ResetPasswordView />}</div>
+      </div>
+    </>
   )
 }
 
@@ -138,7 +151,7 @@ function ResetPasswordView() {
     if (password.length < 6) return setMsg({ error: 'Password must be at least 6 characters.' })
     if (password !== confirm) return setMsg({ error: "Passwords don't match." })
     setBusy(true)
-    const { error } = await db().auth.updateUser({ password })
+    const { error } = await db().auth.updateUser({ password, data: { must_change_password: false } })
     setBusy(false)
     if (error) return setMsg({ error: error.message })
     setPassword('')
