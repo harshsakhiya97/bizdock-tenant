@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Archive, MapPin, Pencil, Plus } from 'lucide-react'
+import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { ConfirmModal, DataTable, PageHead, SearchInput, Tabs, type Column } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
@@ -130,11 +130,11 @@ export function BusinessesPage() {
             <button
               type="button"
               className="btn btn-ghost btn-icon danger-text"
-              title="Archive"
-              aria-label={`Archive ${b.name}`}
+              title="Delete"
+              aria-label={`Delete ${b.name}`}
               onClick={() => setArchiving(b)}
             >
-              <Archive size={15} />
+              <Trash2 size={15} />
             </button>
           )}
         </div>
@@ -186,11 +186,11 @@ export function BusinessesPage() {
 
       <ConfirmModal
         open={!!archiving}
-        icon={Archive}
+        icon={Trash2}
         danger
-        title={`Archive ${archiving?.name ?? ''}?`}
-        message="It will be hidden from the business switcher and lists. All its data, branches and history are kept."
-        confirmLabel={busy ? 'Archiving…' : 'Archive'}
+        title={`Delete ${archiving?.name ?? ''}?`}
+        message="It will be removed from the business switcher and lists. Its data, branches and history are kept, so it can be restored later if needed."
+        confirmLabel={busy ? 'Deleting…' : 'Delete'}
         busy={busy}
         onCancel={() => setArchiving(null)}
         onConfirm={() => archiving && toggleArchive(archiving, true)}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Archive, ImageUp, MapPin, Pencil, Plus, Trash2, User } from 'lucide-react'
+import { ImageUp, MapPin, Pencil, Plus, Trash2, User } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -327,11 +327,11 @@ export function BusinessDrawer({
                           <button
                             type="button"
                             className="btn btn-ghost btn-icon danger-text"
-                            title={b.id ? 'Archive' : 'Remove'}
-                            aria-label={`Remove ${b.name}`}
+                            title="Delete"
+                            aria-label={`Delete ${b.name}`}
                             onClick={() => setBranches((list) => list.filter((x) => x.key !== b.key))}
                           >
-                            {b.id ? <Archive size={15} /> : <Trash2 size={15} />}
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       )}
@@ -347,7 +347,7 @@ export function BusinessDrawer({
                 </div>
               )}
               {business && savedBranchIds.some((id) => !branches.find((b) => b.id === id)) && (
-                <div className="alert alert-warning">Removed branches are archived when you save. Their data is kept.</div>
+                <div className="alert alert-warning">Deleted branches are removed when you save. Their data is kept, so they can be restored later if needed.</div>
               )}
             </>
           )}
