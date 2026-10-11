@@ -5,7 +5,6 @@ import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { AddressFields } from '@/components/AddressFields'
 import { Checkbox, FormSection, Hint, Label, TextInput } from '@/components/Field'
-import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBranches, listManagerOptions, saveBusiness } from './api'
 import { BranchModal } from './BranchModal'
@@ -164,32 +163,26 @@ export function BusinessDrawer({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <div className="flex min-w-0 items-center gap-3">
-            {error && <p className="text-right text-sm text-red-600">{error}</p>}
-            <Button type="submit" form="business-form" disabled={busy || !branchesLoaded} className="shrink-0">
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button type="submit" form="business-form" disabled={busy || !branchesLoaded}>
               {busy ? 'Saving…' : business ? 'Save changes' : 'Create Business'}
             </Button>
           </div>
         </>
       }
     >
-      <form id="business-form" onSubmit={submit} className="space-y-6">
+      <form id="business-form" onSubmit={submit} className="stack" style={{ gap: 24 }}>
         <FormSection title="Basic details">
-          <div className="flex items-center gap-4">
-            <div className="grid size-16 shrink-0 place-items-center overflow-hidden rounded-xl border border-dashed border-gray-300 bg-gray-50">
-              {logoPreview ? (
-                <img src={logoPreview} alt="" className="size-full object-contain" />
-              ) : (
-                <ImageUp className="size-5 text-gray-400" />
-              )}
-            </div>
+          <div className="upload">
+            <div className="upload-box">{logoPreview ? <img src={logoPreview} alt="" /> : <ImageUp size={20} />}</div>
             <div>
-              <div className="flex gap-2">
+              <div className="row" style={{ gap: 8 }}>
                 <input
                   ref={fileInput}
                   type="file"
                   accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  className="hidden"
+                  hidden
                   onChange={(e) => {
                     const f = e.target.files?.[0]
                     e.target.value = ''
@@ -198,11 +191,11 @@ export function BusinessDrawer({
                     setLogo(f)
                   }}
                 />
-                <Button type="button" variant="outline" onClick={() => fileInput.current?.click()}>
+                <Button variant="outline" size="sm" onClick={() => fileInput.current?.click()}>
                   <ImageUp /> {logoPreview ? 'Replace logo' : 'Upload logo'}
                 </Button>
                 {logoPreview && (
-                  <Button type="button" variant="ghost" className="text-red-600" onClick={() => setLogo(null)}>
+                  <Button variant="ghost" size="sm" className="danger-text" onClick={() => setLogo(null)}>
                     <Trash2 /> Remove
                   </Button>
                 )}
@@ -220,7 +213,7 @@ export function BusinessDrawer({
         </FormSection>
 
         <FormSection title="Contact" description="How customers and your team reach this business.">
-          <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+          <div className="form-grid">
             <div>
               <Label htmlFor="bz-phone">Phone</Label>
               <TextInput id="bz-phone" type="tel" value={input.phone ?? ''} onChange={set('phone')} />
@@ -233,148 +226,130 @@ export function BusinessDrawer({
         </FormSection>
 
         <FormSection title="Address">
-          <AddressFields
-            idPrefix="bz"
-            value={{ address: input.address ?? '', state: input.state ?? '', city: input.city ?? '' }}
-            onChange={(a) => setInput((d) => ({ ...d, ...a }))}
-          />
+          <div className="form-grid">
+            <AddressFields
+              idPrefix="bz"
+              value={{ address: input.address ?? '', state: input.state ?? '', city: input.city ?? '' }}
+              onChange={(a) => setInput((d) => ({ ...d, ...a }))}
+            />
+          </div>
         </FormSection>
 
         <FormSection title="GST / legal details" description="Optional. Used on invoices and receipts later.">
-          <Checkbox
-            id="bz-has-gst"
-            checked={input.has_gst}
-            onChange={(v) => setInput((d) => ({ ...d, has_gst: v }))}
-            label="Registered for GST?"
-            description="Tick to add the GST number and legal name."
-          />
-          {input.has_gst && (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-              <div>
-                <Label htmlFor="bz-legal">Legal name</Label>
-                <TextInput
-                  id="bz-legal"
-                  placeholder="Registered company name"
-                  value={input.legal_name ?? ''}
-                  onChange={set('legal_name')}
-                />
+          <div className="check-box">
+            <Checkbox
+              id="bz-has-gst"
+              checked={input.has_gst}
+              onChange={(v) => setInput((d) => ({ ...d, has_gst: v }))}
+              label="Registered for GST?"
+              description="Tick to add the GST number and legal name."
+            />
+            {input.has_gst && (
+              <div className="form-grid">
+                <div>
+                  <Label htmlFor="bz-legal">Legal name</Label>
+                  <TextInput
+                    id="bz-legal"
+                    placeholder="Registered company name"
+                    value={input.legal_name ?? ''}
+                    onChange={set('legal_name')}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="bz-gst" required>
+                    GST number
+                  </Label>
+                  <TextInput
+                    id="bz-gst"
+                    placeholder="e.g. 24ABCDE1234F1Z5"
+                    value={input.gst_number ?? ''}
+                    onChange={set('gst_number')}
+                    className="input-upper"
+                  />
+                  <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="bz-gst" required>
-                  GST number
-                </Label>
-                <TextInput
-                  id="bz-gst"
-                  placeholder="e.g. 24ABCDE1234F1Z5"
-                  value={input.gst_number ?? ''}
-                  onChange={set('gst_number')}
-                  className="uppercase placeholder:normal-case"
-                />
-                <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </FormSection>
 
         <FormSection title="Branches" description="For businesses that run from more than one location.">
-          <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 px-4 py-3">
-            <div>
-              <div className="text-[13px] font-semibold">Has multiple branches?</div>
-              <div className="text-xs text-gray-500">
-                When on, team members added to this business must be given a branch.
-              </div>
-            </div>
-            <input
-              type="checkbox"
-              className="peer sr-only"
+          <div className="check-box">
+            <Checkbox
+              id="bz-has-branches"
               checked={input.has_branches}
-              onChange={(e) => setInput((d) => ({ ...d, has_branches: e.target.checked }))}
+              onChange={(v) => setInput((d) => ({ ...d, has_branches: v }))}
+              label="Has multiple branches?"
+              description="When on, team members added to this business must be given a branch."
             />
-            <span
-              aria-hidden
-              className={cn(
-                'relative h-6 w-11 shrink-0 rounded-full transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40',
-                input.has_branches ? 'bg-brand' : 'bg-gray-300',
-              )}
-            >
-              <span
-                className={cn(
-                  'absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform',
-                  input.has_branches && 'translate-x-5',
-                )}
-              />
-            </span>
-          </label>
+          </div>
 
           {input.has_branches && (
-            <div>
+            <>
               {branches.length === 0 ? (
-                <p className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                  {branchesLoaded ? 'No branches yet.' : 'Loading branches…'}
-                </p>
+                <div className="empty-box">{branchesLoaded ? 'No branches yet.' : 'Loading branches…'}</div>
               ) : (
-                <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200">
+                <div className="link-rows">
                   {branches.map((b) => (
-                    <li key={b.key} className="flex items-center justify-between gap-3 px-4 py-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-gray-700">
-                            {b.code}
-                          </span>
-                          <span className="truncate text-[13px] font-semibold">{b.name}</span>
-                          <span className="shrink-0 text-xs text-gray-500">({b.short_name})</span>
+                    <div key={b.key}>
+                      <div className="lr-main">
+                        <div className="lr-title">
+                          <span className="code-chip">{b.code}</span>
+                          <span className="cell-clip">{b.name}</span>
+                          <span className="muted small nowrap">({b.short_name})</span>
+                          {!b.id && <span className="badge badge-brand">New</span>}
                         </div>
-                        <div className="flex flex-wrap gap-x-3 text-xs text-gray-500">
+                        <div className="lr-meta">
                           {b.city && (
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="size-3" /> {b.city}
+                            <span>
+                              <MapPin size={12} /> {b.city}
                             </span>
                           )}
                           {managerName(b.manager_member_id) && (
-                            <span className="inline-flex items-center gap-1">
-                              <User className="size-3" /> {managerName(b.manager_member_id)}
+                            <span>
+                              <User size={12} /> {managerName(b.manager_member_id)}
                             </span>
                           )}
                           {b.own_gst && <span>Own GST</span>}
-                          {!b.id && <span className="text-brand">New</span>}
                         </div>
                       </div>
                       {canEditBranches && (
-                        <div className="flex shrink-0 gap-1">
-                          <Button
+                        <div className="row-actions">
+                          <button
                             type="button"
-                            variant="ghost"
-                            onClick={() => setEditing(b)}
+                            className="btn btn-ghost btn-icon"
+                            title="Edit"
                             aria-label={`Edit ${b.name}`}
+                            onClick={() => setEditing(b)}
                           >
-                            <Pencil />
-                          </Button>
-                          <Button
+                            <Pencil size={15} />
+                          </button>
+                          <button
                             type="button"
-                            variant="ghost"
-                            className="text-red-600"
+                            className="btn btn-ghost btn-icon danger-text"
+                            title={b.id ? 'Archive' : 'Remove'}
                             aria-label={`Remove ${b.name}`}
                             onClick={() => setBranches((list) => list.filter((x) => x.key !== b.key))}
                           >
-                            {b.id ? <Archive /> : <Trash2 />}
-                          </Button>
+                            {b.id ? <Archive size={15} /> : <Trash2 size={15} />}
+                          </button>
                         </div>
                       )}
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
               {canEditBranches && (
-                <Button type="button" variant="outline" className="mt-3" onClick={() => setEditing(newBranch())}>
-                  <Plus /> Add branch
-                </Button>
+                <div className="add-chips">
+                  <button type="button" className="add-chip" onClick={() => setEditing(newBranch())}>
+                    <Plus size={14} /> Add branch
+                  </button>
+                </div>
               )}
               {business && savedBranchIds.some((id) => !branches.find((b) => b.id === id)) && (
-                <p className="mt-2 text-xs text-amber-700">
-                  Removed branches are archived when you save. Their data is kept.
-                </p>
+                <div className="alert alert-warning">Removed branches are archived when you save. Their data is kept.</div>
               )}
-            </div>
+            </>
           )}
         </FormSection>
       </form>

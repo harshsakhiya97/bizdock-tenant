@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { Loader2, TriangleAlert } from 'lucide-react'
 import { registry, selectTenantDatabase } from '@/lib/supabase'
 import { applyBranding } from './branding'
 import { TenantContext, type Tenant } from './tenant-context'
@@ -37,17 +38,20 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
   if (state.status === 'loading') {
     return (
-      <div className="grid min-h-svh place-items-center bg-gray-50">
-        <div className="size-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+      <div className="center-screen">
+        <Loader2 size={28} className="spin muted" />
       </div>
     )
   }
   if (state.status === 'not-found') {
     return (
-      <div className="grid min-h-svh place-items-center bg-gray-50 p-6 text-center">
-        <div>
-          <h1 className="text-xl font-bold">Workspace not found</h1>
-          <p className="mt-2 text-sm text-gray-600">
+      <div className="center-screen">
+        <div className="card card-pad center-card">
+          <div className="modal-icon">
+            <TriangleAlert size={22} />
+          </div>
+          <h2>Workspace not found</h2>
+          <p className="muted">
             This address isn&apos;t linked to an active workspace. Please check the link you were given.
           </p>
         </div>

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Archive, MapPin, Pencil, Plus, Search } from 'lucide-react'
+import { Archive, MapPin, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { Button } from '@/components/Button'
-import { Modal } from '@/components/Modal'
+import { ConfirmModal, DataTable, PageHead, SearchInput, Tabs, type Column } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { listBusinesses, setBusinessArchived } from './api'
 import { BusinessDrawer } from './BusinessDrawer'
@@ -38,6 +37,8 @@ export function BusinessesPage() {
       .filter((b) => !q || b.name.toLowerCase().includes(q) || (b.city ?? '').toLowerCase().includes(q))
   }, [rows, query])
 
+  const visibleCount = rows?.filter((b) => b.is_active).length ?? 0
+
   async function toggleArchive(b: BusinessListRow, archived: boolean) {
     setBusy(true)
     try {
@@ -51,127 +52,124 @@ export function BusinessesPage() {
     }
   }
 
-  return (
-    <div>
-      <h2 className="text-lg font-semibold">Businesses</h2>
-      <p className="mt-0.5 text-sm text-gray-600">Your businesses, their branches and details.</p>
-
-      <div className="mt-4 rounded-xl border border-gray-200 bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="rounded-lg border border-brand px-3 py-1 text-sm font-medium text-brand">
-              All Businesses
-            </span>
-            <span className="rounded-md bg-brand-soft px-2 py-0.5 text-xs font-semibold text-brand">
-              {rows?.filter((b) => b.is_active).length ?? 0} Businesses
-            </span>
+  const columns: Column<BusinessListRow>[] = [
+    {
+      key: 'business',
+      label: 'Business',
+      render: (b) => (
+        <div className="cell-main">
+          <BusinessIcon business={b} />
+          <div>
+            <span className="strong">{b.name}</span>
+            {b.legal_name && <small>{b.legal_name}</small>}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Search businesses"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="h-9 w-60 rounded-lg border border-gray-300 pr-3 pl-9 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
-              />
-            </div>
+        </div>
+      ),
+    },
+    {
+      key: 'city',
+      label: 'City',
+      render: (b) =>
+        b.city ? (
+          <span className="row nowrap" style={{ gap: 4 }}>
+            <MapPin size={13} className="muted" />
+            {b.city}
+            {b.state ? `, ${b.state}` : ''}
+          </span>
+        ) : (
+          <span className="muted">—</span>
+        ),
+    },
+    {
+      key: 'branches',
+      label: 'Branches',
+      render: (b) => {
+        const n = b.branches.filter((x) => x.is_active).length
+        return b.has_branches ? (
+          <span className="badge badge-brand">
+            {n} {n === 1 ? 'branch' : 'branches'}
+          </span>
+        ) : (
+          <span className="muted">Single location</span>
+        )
+      },
+    },
+    {
+      key: 'contact',
+      label: 'Contact',
+      render: (b) => (
+        <>
+          <div>{b.phone || '—'}</div>
+          {b.email && <div className="muted small">{b.email}</div>}
+        </>
+      ),
+    },
+    {
+      key: 'gst',
+      label: 'GST',
+      render: (b) => (b.gst_number ? <span className="code-chip">{b.gst_number}</span> : <span className="muted">—</span>),
+    },
+    {
+      key: 'actions',
+      label: '',
+      align: 'right',
+      render: (b) => (
+        <div className="row-actions">
+          {can('businesses', 'edit') && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon"
+              title="Edit"
+              aria-label={`Edit ${b.name}`}
+              onClick={() => setDrawer({ business: b })}
+            >
+              <Pencil size={15} />
+            </button>
+          )}
+          {can('businesses', 'delete') && can('businesses', 'edit') && (
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon danger-text"
+              title="Archive"
+              aria-label={`Archive ${b.name}`}
+              onClick={() => setArchiving(b)}
+            >
+              <Archive size={15} />
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <>
+      <PageHead title="Businesses" subtitle="Your businesses, their branches and details." />
+
+      <div className="panel">
+        <div className="panel-bar">
+          <Tabs tabs={['All Businesses']} value="All Businesses" count={`${visibleCount} Businesses`} />
+          <div className="row">
+            <SearchInput placeholder="Search businesses" value={query} onChange={setQuery} />
             {can('businesses', 'add') && (
-              <Button onClick={() => setDrawer({ business: null })}>
-                <Plus /> Add Business
-              </Button>
+              <button type="button" className="btn btn-primary" onClick={() => setDrawer({ business: null })}>
+                <Plus size={16} /> Add Business
+              </button>
             )}
           </div>
         </div>
 
         {error ? (
-          <p className="px-4 py-10 text-center text-sm text-red-600">{error}</p>
+          <div className="empty danger-text">{error}</div>
         ) : !rows ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-500">Loading businesses…</p>
-        ) : visible.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-500">
-            {query ? 'No businesses match your search.' : 'No businesses yet. Add your first one.'}
-          </p>
+          <div className="empty">Loading businesses…</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-xs font-semibold tracking-wide text-gray-500 uppercase">
-                  <th className="px-4 py-2.5">Business</th>
-                  <th className="px-4 py-2.5">City</th>
-                  <th className="px-4 py-2.5">Branches</th>
-                  <th className="px-4 py-2.5">Contact</th>
-                  <th className="px-4 py-2.5">GST</th>
-                  <th className="px-4 py-2.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((b) => {
-                  const activeBranches = b.branches.filter((x) => x.is_active).length
-                  return (
-                    <tr key={b.id} className="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <BusinessIcon business={b} />
-                          <div>
-                            <div className="font-semibold text-gray-900">{b.name}</div>
-                            {b.legal_name && <div className="text-xs text-gray-500">{b.legal_name}</div>}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {b.city ? (
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="size-3.5 text-gray-400" />
-                            {b.city}
-                            {b.state ? `, ${b.state}` : ''}
-                          </span>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {b.has_branches ? (
-                          `${activeBranches} ${activeBranches === 1 ? 'branch' : 'branches'}`
-                        ) : (
-                          <span className="text-gray-400">Single location</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        <div>{b.phone || '—'}</div>
-                        {b.email && <div className="text-xs text-gray-500">{b.email}</div>}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs text-gray-700">{b.gst_number || '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1">
-                          {can('businesses', 'edit') && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => setDrawer({ business: b })}
-                              aria-label={`Edit ${b.name}`}
-                            >
-                              <Pencil /> Edit
-                            </Button>
-                          )}
-                          {can('businesses', 'delete') && can('businesses', 'edit') && (
-                            <Button
-                              variant="ghost"
-                              className="text-red-600"
-                              onClick={() => setArchiving(b)}
-                              aria-label={`Archive ${b.name}`}
-                            >
-                              <Archive />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            bare
+            columns={columns}
+            rows={visible}
+            empty={query ? 'No businesses match your search.' : 'No businesses yet. Add your first one.'}
+          />
         )}
       </div>
 
@@ -186,37 +184,28 @@ export function BusinessesPage() {
         />
       )}
 
-      <Modal open={!!archiving} onClose={() => setArchiving(null)}>
-        <h2 className="text-lg font-bold">Archive {archiving?.name}?</h2>
-        <p className="mt-1 text-sm text-gray-600">
-          It will be hidden from the business switcher and lists. All its data, branches and history are kept.
-        </p>
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button variant="outline" onClick={() => setArchiving(null)}>
-            Cancel
-          </Button>
-          <Button variant="danger" disabled={busy} onClick={() => archiving && toggleArchive(archiving, true)}>
-            {busy ? 'Archiving…' : 'Archive'}
-          </Button>
-        </div>
-      </Modal>
-    </div>
+      <ConfirmModal
+        open={!!archiving}
+        icon={Archive}
+        danger
+        title={`Archive ${archiving?.name ?? ''}?`}
+        message="It will be hidden from the business switcher and lists. All its data, branches and history are kept."
+        confirmLabel={busy ? 'Archiving…' : 'Archive'}
+        busy={busy}
+        onCancel={() => setArchiving(null)}
+        onConfirm={() => archiving && toggleArchive(archiving, true)}
+      />
+    </>
   )
 }
 
 function BusinessIcon({ business }: { business: Pick<BusinessRow, 'name' | 'logo_url'> }) {
   if (business.logo_url) {
     return (
-      <img
-        src={business.logo_url}
-        alt=""
-        className="size-9 shrink-0 rounded-lg border border-gray-200 bg-white object-contain"
-      />
+      <span className="thumb has-img">
+        <img src={business.logo_url} alt="" />
+      </span>
     )
   }
-  return (
-    <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand-soft text-sm font-bold text-brand">
-      {business.name.trim().charAt(0).toUpperCase()}
-    </div>
-  )
+  return <span className="thumb thumb-letter">{business.name.trim().charAt(0).toUpperCase()}</span>
 }

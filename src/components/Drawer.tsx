@@ -2,14 +2,14 @@ import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
-/** Right-side panel, like Muzic Lover's "Add Playlist". */
+/** Theme-kit right-side slide-over panel (Add / Edit forms). */
 export function Drawer({
   open,
   onClose,
   title,
   children,
   footer,
-  width = 440,
+  width = 620,
 }: {
   open: boolean
   onClose: () => void
@@ -30,26 +30,24 @@ export function Drawer({
 
   if (!open) return null
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onMouseDown={onClose}>
-      <div
+    <div className="drawer-backdrop" onMouseDown={onClose}>
+      <aside
+        className="drawer"
+        style={{ width: `min(${width}px, 100vw)` }}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="flex h-full w-full flex-col bg-white shadow-xl"
-        style={{ maxWidth: width }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-md p-1 text-gray-500 hover:bg-gray-100">
-            <X className="size-5" />
+        <div className="drawer-head">
+          <h3>{title}</h3>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Close">
+            <X size={18} />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-5">{children}</div>
-        {footer && (
-          <div className="flex items-center justify-between gap-3 border-t border-gray-200 px-5 py-3.5">{footer}</div>
-        )}
-      </div>
+        <div className="drawer-body">{children}</div>
+        {footer && <div className="drawer-foot">{footer}</div>}
+      </aside>
     </div>,
     document.body,
   )

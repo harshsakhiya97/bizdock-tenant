@@ -16,3 +16,10 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/profile': { title: 'My Profile', crumb: 'Overview', icon: User },
   '/whats-new': { title: "What's New", crumb: 'Version history', icon: Sparkles },
 }
+
+/** Phone tab bar: short names for the main pages. */
+export const tabNames: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/businesses': 'Businesses',
+  '/profile': 'Profile',
+}

@@ -54,87 +54,81 @@ export function BranchModal({
       title={branch.name ? 'Edit branch' : 'Add branch'}
       footer={
         <>
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <div className="flex min-w-0 items-center gap-3">
-            {error && <p className="text-right text-sm text-red-600">{error}</p>}
-            <Button type="submit" form="branch-form" className="shrink-0">
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button type="submit" form="branch-form">
               {branch.name ? 'Save branch' : 'Add branch'}
             </Button>
           </div>
         </>
       }
     >
-      <form id="branch-form" onSubmit={submit} className="space-y-3.5">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-          <div>
-            <Label htmlFor="br-code" required>
-              Branch code
-            </Label>
-            <TextInput
-              id="br-code"
-              placeholder="MUM-01"
-              maxLength={12}
-              value={draft.code}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, code: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') }))
-              }
-              className="font-mono"
-              autoFocus
-            />
-          </div>
-          <div>
-            <Label htmlFor="br-short" required>
-              Short name
-            </Label>
-            <TextInput
-              id="br-short"
-              placeholder="e.g. Mumbai"
-              maxLength={20}
-              value={draft.short_name}
-              onChange={set('short_name')}
-            />
-          </div>
+      <form id="branch-form" onSubmit={submit} className="form-grid">
+        <div>
+          <Label htmlFor="br-code" required>
+            Branch code
+          </Label>
+          <TextInput
+            id="br-code"
+            placeholder="MUM-01"
+            maxLength={12}
+            value={draft.code}
+            onChange={(e) => setDraft((d) => ({ ...d, code: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '') }))}
+            className="input-mono"
+            autoFocus
+          />
         </div>
-        <Hint>The code is unique across all your branches. The short name is used where space is tight.</Hint>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-          <div>
-            <Label htmlFor="br-name" required>
-              Branch name
-            </Label>
-            <TextInput id="br-name" placeholder="e.g. Mumbai Studio" value={draft.name} onChange={set('name')} />
-          </div>
-          <div>
-            <Label htmlFor="br-manager">Branch manager</Label>
-            <SearchSelect
-              id="br-manager"
-              value={draft.manager_member_id}
-              onChange={(v) => setDraft((d) => ({ ...d, manager_member_id: v }))}
-              options={managers.map((m) => ({ value: m.id, label: m.name }))}
-              placeholder={managers.length ? 'Not assigned' : 'No team members yet'}
-              searchPlaceholder="Search team members"
-              disabled={!managers.length}
-            />
-            {!managers.length && <Hint>You can assign a manager once team members are added.</Hint>}
-          </div>
+        <div>
+          <Label htmlFor="br-short" required>
+            Short name
+          </Label>
+          <TextInput
+            id="br-short"
+            placeholder="e.g. Mumbai"
+            maxLength={20}
+            value={draft.short_name}
+            onChange={set('short_name')}
+          />
+        </div>
+        <div className="span-2" style={{ marginTop: -10 }}>
+          <Hint>The code is unique across all your branches. The short name is used where space is tight.</Hint>
+        </div>
+        <div>
+          <Label htmlFor="br-name" required>
+            Branch name
+          </Label>
+          <TextInput id="br-name" placeholder="e.g. Mumbai Studio" value={draft.name} onChange={set('name')} />
+        </div>
+        <div>
+          <Label htmlFor="br-manager">Branch manager</Label>
+          <SearchSelect
+            id="br-manager"
+            value={draft.manager_member_id}
+            onChange={(v) => setDraft((d) => ({ ...d, manager_member_id: v }))}
+            options={managers.map((m) => ({ value: m.id, label: m.name }))}
+            placeholder={managers.length ? 'Not assigned' : 'No team members yet'}
+            searchPlaceholder="Search team members"
+            disabled={!managers.length}
+          />
+          {!managers.length && <Hint>You can assign a manager once team members are added.</Hint>}
         </div>
         <AddressFields
           idPrefix="br"
           value={{ address: draft.address, state: draft.state, city: draft.city }}
           onChange={(a) => setDraft((d) => ({ ...d, ...a }))}
         />
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
-          <div>
-            <Label htmlFor="br-phone">Phone</Label>
-            <TextInput id="br-phone" type="tel" value={draft.phone} onChange={set('phone')} />
-          </div>
-          <div>
-            <Label htmlFor="br-email">Email</Label>
-            <TextInput id="br-email" type="email" value={draft.email} onChange={set('email')} />
-          </div>
+        <div>
+          <Label htmlFor="br-phone">Phone</Label>
+          <TextInput id="br-phone" type="tel" value={draft.phone} onChange={set('phone')} />
         </div>
-        <div className="space-y-3 rounded-xl border border-gray-200 p-3.5">
+        <div>
+          <Label htmlFor="br-email">Email</Label>
+          <TextInput id="br-email" type="email" value={draft.email} onChange={set('email')} />
+        </div>
+        <div className="span-2 check-box">
           {businessHasGst ? (
             <Checkbox
               id="br-same-gst"
@@ -153,7 +147,7 @@ export function BranchModal({
             />
           )}
           {draft.own_gst && (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-3.5">
+            <div className="form-grid">
               <div>
                 <Label htmlFor="br-legal">Legal name</Label>
                 <TextInput
@@ -172,7 +166,7 @@ export function BranchModal({
                   placeholder="e.g. 24ABCDE1234F1Z5"
                   value={draft.gst_number}
                   onChange={set('gst_number')}
-                  className="uppercase placeholder:normal-case"
+                  className="input-upper"
                 />
               </div>
             </div>

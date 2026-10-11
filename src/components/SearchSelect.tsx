@@ -6,7 +6,7 @@ import { useClickOutside } from '@/lib/useClickOutside'
 export type SearchOption = { value: string; label: string }
 
 /**
- * Dropdown with a search box. Looks like the other fields (slim, thin brand border on focus).
+ * Dropdown with a search box: the trigger is a theme-kit .input, the list is the kit's .multi-menu.
  * - `allowCustom`: if nothing matches, offer to use what was typed (e.g. a small town not in the list)
  */
 export function SearchSelect({
@@ -69,7 +69,7 @@ export function SearchSelect({
   }
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="ss">
       <button
         id={id}
         type="button"
@@ -81,54 +81,49 @@ export function SearchSelect({
           setActive(0)
           setOpen((o) => !o)
         }}
-        className={cn(
-          'flex h-10 w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white pr-3 pl-3 text-left text-[13px] outline-none transition-colors',
-          'focus-visible:border-brand focus-visible:ring-1 focus-visible:ring-brand disabled:cursor-not-allowed disabled:bg-gray-50',
-          open && 'border-brand ring-1 ring-brand',
-        )}
+        className={cn('input ss-trigger', open && 'is-open')}
       >
-        <span className={cn('truncate', label ? 'text-gray-900' : 'text-gray-400')}>{label || placeholder}</span>
-        <ChevronDown className={cn('size-4 shrink-0 text-gray-500 transition-transform', open && 'rotate-180')} />
+        <span className={cn('ss-value', !label && 'ss-placeholder')}>{label || placeholder}</span>
+        <ChevronDown size={15} />
       </button>
 
       {open && (
-        <div
-          data-popover
-          className="absolute top-11 right-0 left-0 z-50 rounded-lg border border-gray-200 bg-white shadow-lg"
-        >
-          <div className="relative border-b border-gray-100 p-2">
-            <Search className="pointer-events-none absolute top-1/2 left-4.5 size-4 -translate-y-1/2 text-gray-400" />
-            <input
-              autoFocus
-              value={query}
-              placeholder={searchPlaceholder}
-              onChange={(e) => {
-                setQuery(e.target.value)
-                setActive(0)
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault()
-                  setActive((a) => Math.min(a + 1, items.length - 1))
-                } else if (e.key === 'ArrowUp') {
-                  e.preventDefault()
-                  setActive((a) => Math.max(a - 1, 0))
-                } else if (e.key === 'Enter') {
-                  e.preventDefault()
-                  if (items[active]) pick(items[active])
-                } else if (e.key === 'Escape') {
-                  // close only this dropdown, not the panel / pop-up it sits in
-                  e.preventDefault()
-                  e.stopPropagation()
-                  close()
-                }
-              }}
-              className="h-8 w-full rounded-md border border-gray-200 pr-2 pl-8 text-[13px] outline-none focus:border-brand"
-            />
+        <div data-popover className="multi-menu ss-menu">
+          <div className="ss-search">
+            <div className="input-wrap">
+              <Search size={15} />
+              <input
+                autoFocus
+                className="input input-sm"
+                value={query}
+                placeholder={searchPlaceholder}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setActive(0)
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setActive((a) => Math.min(a + 1, items.length - 1))
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setActive((a) => Math.max(a - 1, 0))
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault()
+                    if (items[active]) pick(items[active])
+                  } else if (e.key === 'Escape') {
+                    // close only this dropdown, not the panel / pop-up it sits in
+                    e.preventDefault()
+                    e.stopPropagation()
+                    close()
+                  }
+                }}
+              />
+            </div>
           </div>
-          <ul ref={listRef} id={listId} role="listbox" className="max-h-56 overflow-y-auto py-1">
+          <ul ref={listRef} id={listId} role="listbox" className="ss-list">
             {items.length === 0 ? (
-              <li className="px-3 py-2 text-[13px] text-gray-500">{emptyText}</li>
+              <li className="ss-empty">{emptyText}</li>
             ) : (
               items.map((o, i) => {
                 const isSelected = o.value === value
@@ -138,14 +133,10 @@ export function SearchSelect({
                       type="button"
                       onMouseEnter={() => setActive(i)}
                       onClick={() => pick(o)}
-                      className={cn(
-                        'flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px]',
-                        i === active && 'bg-gray-50',
-                        isSelected && 'font-semibold text-brand',
-                      )}
+                      className={cn('multi-opt', i === active && 'is-active', isSelected && 'is-on')}
                     >
-                      <span className="truncate">{o.label}</span>
-                      {isSelected && <Check className="size-4 shrink-0" />}
+                      <span className="cell-clip">{o.label}</span>
+                      {isSelected && <Check size={14} />}
                     </button>
                   </li>
                 )
