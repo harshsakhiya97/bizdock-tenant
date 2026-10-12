@@ -281,3 +281,8 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 
 /* drawer content keeps its full height so the drawer body scrolls (cards with overflow:hidden were being squashed) */
 .drawer-body > *, .modal-body > * { flex-shrink: 0; }
+
+/* Leads: stage tabs on their own row under the funnel picker */
+.panel-tabs { padding: 10px 16px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.panel-tabs .tabs { flex-wrap: nowrap; }
+.panel-tabs .tab { white-space: nowrap; }

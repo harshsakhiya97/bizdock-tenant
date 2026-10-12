@@ -292,7 +292,10 @@ export function LeadsPage() {
               </button>
             </div>
           </div>
-          {view === 'list' && (
+        </div>
+
+        {view === 'list' && (
+          <div className="panel-tabs">
             <div className="tabs">
               {tabs.map((t) => (
                 <button key={t.id} type="button" className={cn('tab', stageTab === t.id && 'is-active')} onClick={() => setStageTab(t.id)}>
@@ -300,8 +303,8 @@ export function LeadsPage() {
                 </button>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
