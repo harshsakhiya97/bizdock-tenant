@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Coffee, LogIn, LogOut, Utensils } from 'lucide-react'
+import { ConfirmModal } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { breakAction, checkIn, checkOut, clock, hm, mins, workedMinutes, type AttRow, type AttSettings } from './api'
 
@@ -23,6 +24,7 @@ export function TodayCard({
   const tenant = useTenant()
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
+  const [askOut, setAskOut] = useState(false)
   const [, tick] = useState(0)
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 30000)
@@ -100,13 +102,31 @@ export function TodayCard({
                   </button>
                 </>
               )}
-              <button type="button" className="btn btn-dark" disabled={busy} onClick={() => run(() => checkOut(tenant.id), 'Checked out. See you tomorrow!')}>
+              <button type="button" className="btn btn-dark" disabled={busy} onClick={() => setAskOut(true)}>
                 <LogOut size={15} /> Check out · {now}
               </button>
             </div>
           )}
         </>
       )}
+
+      <ConfirmModal
+        open={askOut}
+        icon={LogOut}
+        title="Check out for today?"
+        message={
+          <>
+            You've worked <b>{row ? hm(workedMinutes(row)) : '—'}</b> today{openBreak ? ` and your ${openBreak.kind} break will end` : ''}. You can't check in again today once you check out.
+          </>
+        }
+        confirmLabel={`Check out · ${now}`}
+        busy={busy}
+        onCancel={() => setAskOut(false)}
+        onConfirm={() => {
+          setAskOut(false)
+          run(() => checkOut(tenant.id), 'Checked out. See you tomorrow!')
+        }}
+      />
     </div>
   )
 }
