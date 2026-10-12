@@ -22,7 +22,7 @@ export async function listPayments(saleIds: string[]): Promise<PaymentRow[]> {
   if (!saleIds.length) return []
   const { data, error } = await db()
     .from('payments')
-    .select('id, sale_id, amount, paid_on, payment_mode_id, reference, note, status, received_by, due_id, tds_amount, gateway_charge, verified')
+    .select('id, sale_id, amount, paid_on, payment_mode_id, reference, note, status, received_by, due_id, tds_amount, gateway_charge, verified, kind')
     .in('sale_id', saleIds)
     .order('paid_on')
   if (error) throw error

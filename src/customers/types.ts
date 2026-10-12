@@ -70,6 +70,18 @@ export type PaymentRow = {
   tds_amount: number
   gateway_charge: number
   verified: boolean
+  kind: 'initial' | 'collection'
+}
+
+/** A payment with everything the Payments page shows. */
+export type PaymentFull = PaymentRow & {
+  tenant_id: string
+  customer_id: string
+  billing_company_id: string | null
+  gateway_order_id: string | null
+  remark: string | null
+  cancel_reason: string | null
+  created_at: string
 }
 
 /** What the New sale form sends to create_sale(). */

@@ -338,3 +338,11 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .reminder-list li { padding: 10px 16px; border-bottom: 1px solid var(--line); font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
 .reminder-list li:last-child { border-bottom: 0; }
 .pay-sale-box { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-muted); }
+
+/* ---------- Payments ---------- */
+.pay-table { min-width: 980px; }
+.pay-table tr.is-off td { opacity: .55; }
+.table-split th, .table-split td { padding: 8px 14px; font-size: 13px; }
+.alert.row-between { display: flex; align-items: center; gap: 12px; }
+.split-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .split-grid { grid-template-columns: minmax(0, 1fr); } }

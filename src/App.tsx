@@ -17,6 +17,7 @@ import { MyDayPage } from '@/pages/MyDay'
 import { CustomersPage } from '@/customers/CustomersPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
+import { PaymentsPage } from '@/collections/PaymentsPage'
 
 export default function App() {
   return (
@@ -45,6 +46,14 @@ export default function App() {
                   element={
                     <RequirePermission module="collections">
                       <CollectionsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/payments"
+                  element={
+                    <RequirePermission module="payments">
+                      <PaymentsPage />
                     </RequirePermission>
                   }
                 />
