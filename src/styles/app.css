@@ -398,3 +398,37 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .member-pick input { accent-color: var(--brand); }
 .member-pick.is-on { border-color: var(--brand); background: var(--brand-soft); }
 @media (max-width: 640px) { .cal-item { flex-wrap: wrap; } .cal-item-side { width: 100%; padding-left: 14px; white-space: normal; } }
+
+/* calendar: nav + day / week time grid */
+.cal-nav { gap: 6px; }
+.cal-label { font-size: 17px; margin-left: 6px; white-space: nowrap; }
+.tg { display: flex; flex-direction: column; }
+.tg-row { display: grid; }
+.tg-head { position: sticky; top: 0; z-index: 2; background: var(--surface); border-bottom: 1px solid var(--line); }
+.tg-dayhead { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; background: none; border: 0; border-left: 1px solid var(--line); cursor: pointer; }
+.tg-dayhead small { font-size: 11.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.tg-dayhead b { font-size: 18px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 999px; }
+.tg-dayhead.is-today b { background: var(--brand); color: #fff; }
+.tg-allday { border-bottom: 1px solid var(--line); background: var(--surface-muted); }
+.tg-label { font-size: 11px; color: var(--text-muted); padding: 6px 6px; text-align: right; }
+.tg-allday-cell { border-left: 1px solid var(--line); padding: 4px; display: flex; flex-direction: column; gap: 3px; min-height: 32px; min-width: 0; }
+.tg-hours { border-right: 0; }
+.tg-hour-label { font-size: 11px; color: var(--text-muted); text-align: right; padding: 0 6px; transform: translateY(-7px); }
+.tg-col { position: relative; border-left: 1px solid var(--line); min-width: 0; }
+.tg-slot { border-bottom: 1px solid var(--line); }
+.tg-slot.is-clickable { cursor: pointer; }
+.tg-slot.is-clickable:hover { background: var(--surface-muted); }
+.tg-event { position: absolute; z-index: 1; overflow: hidden; text-align: left; padding: 4px 6px; border: 0; border-left: 3px solid var(--c); border-radius: 6px; cursor: pointer;
+  background: color-mix(in srgb, var(--c) 16%, var(--surface)); color: color-mix(in srgb, var(--c) 75%, #000); display: flex; flex-direction: column; gap: 1px; font-size: 11.5px; line-height: 1.3; }
+.tg-event b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-event span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85; }
+.tg-event:hover { background: color-mix(in srgb, var(--c) 26%, var(--surface)); }
+.tg-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--danger); z-index: 2; pointer-events: none; }
+.tg-now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
+button.cal-day { border: 0; background: none; cursor: pointer; padding: 0; }
+button.cal-day:hover { background: var(--surface-muted); }
+button.cal-day.is-today:hover { background: var(--brand); }
+.tg-body { padding-top: 10px; }
+.tg-event.is-short { padding: 1px 6px; justify-content: center; }
+.tg-event .tg-line { opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tg-event .tg-line b { font-size: 11.5px; }

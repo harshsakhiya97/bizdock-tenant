@@ -14,6 +14,7 @@ import { cancelEvent, createEvent, seriesDates, updateEvent, type EventInput, ty
 export function EventDrawer({
   event,
   defaultDate,
+  defaultTime,
   types,
   webinarTypes,
   members,
@@ -23,6 +24,8 @@ export function EventDrawer({
 }: {
   event: EventRow | null
   defaultDate: string
+  /** clicked hour in day / week view */
+  defaultTime?: string
   types: EventType[]
   webinarTypes: Option[]
   members: MemberOption[]
@@ -40,8 +43,8 @@ export function EventDrawer({
     topic: event?.topic ?? '',
     event_date: event?.event_date ?? defaultDate,
     end_date: event?.end_date ?? '',
-    start_time: event?.start_time?.slice(0, 5) ?? '',
-    end_time: event?.end_time?.slice(0, 5) ?? '',
+    start_time: event?.start_time?.slice(0, 5) ?? defaultTime ?? '',
+    end_time: event?.end_time?.slice(0, 5) ?? (defaultTime ? `${String(Math.min(23, Number(defaultTime.slice(0, 2)) + 1)).padStart(2, '0')}:00` : ''),
     webinar_type_id: event?.webinar_type_id ?? '',
     location: event?.location ?? '',
     meeting_link: event?.meeting_link ?? '',
