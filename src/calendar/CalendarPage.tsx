@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, MapPin, Plus, Video } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -56,7 +56,45 @@ export function CalendarPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [typeFilter, setTypeFilter] = useState('')
   const [person, setPerson] = useState('')
-  const [drawer, setDrawer] = useState<{ event: EventRow | null; date: string; time?: string } | null>(null)
+  const [drawer, setDrawer] = useState<{ event: EventRow | null; date: string; endDate?: string; time?: string; endTime?: string } | null>(null)
+  // drag to pick a time range (day / week) or a date range (month); releasing opens New event
+  const [timeSel, setTimeSel] = useState<{ day: string; a: number; b: number } | null>(null)
+  const [daySel, setDaySel] = useState<{ a: string; b: string } | null>(null)
+  const drag = useRef<{ kind: 'time'; day: string; top: number; from: number; a: number; b: number } | { kind: 'day'; a: string; b: string } | null>(null)
+  const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+  useEffect(() => {
+    const move = (ev: PointerEvent) => {
+      const d = drag.current
+      if (!d || d.kind !== 'time') return
+      const m = Math.max(0, Math.min(24 * 60 - 15, d.from * 60 + Math.floor(((ev.clientY - d.top) / HOUR_PX) * 4) * 15))
+      if (m !== d.b) {
+        d.b = m
+        setTimeSel({ day: d.day, a: d.a, b: m })
+      }
+    }
+    const up = () => {
+      const d = drag.current
+      if (!d) return
+      drag.current = null
+      if (d.kind === 'time') {
+        const start = Math.min(d.a, d.b)
+        const end = d.a === d.b ? start + 60 : Math.max(d.a, d.b) + 15
+        setTimeSel(null)
+        setDrawer({ event: null, date: d.day, time: hhmm(start), endTime: hhmm(Math.min(end, 23 * 60 + 59)) })
+      } else {
+        const [x, y] = d.a <= d.b ? [d.a, d.b] : [d.b, d.a]
+        setDaySel(null)
+        setDrawer({ event: null, date: x, endDate: y !== x ? y : undefined })
+      }
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+    }
+  }, [])
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
   const pickView = (v: View) => {
@@ -160,8 +198,26 @@ export function CalendarPage() {
             return (
               <div
                 key={day}
-                className={cn('cal-cell', day.slice(0, 7) !== month && 'is-out', holiday && 'is-holiday', canEdit && 'is-clickable')}
-                onClick={() => canEdit && setDrawer({ event: null, date: day })}
+                className={cn(
+                  'cal-cell',
+                  day.slice(0, 7) !== month && 'is-out',
+                  holiday && 'is-holiday',
+                  canEdit && 'is-clickable',
+                  daySel && day >= (daySel.a < daySel.b ? daySel.a : daySel.b) && day <= (daySel.a < daySel.b ? daySel.b : daySel.a) && 'is-selecting',
+                )}
+                onPointerDown={(ev) => {
+                  if (!canEdit || ev.button !== 0 || (ev.target as HTMLElement).closest('button')) return
+                  ev.preventDefault()
+                  drag.current = { kind: 'day', a: day, b: day }
+                  setDaySel({ a: day, b: day })
+                }}
+                onPointerEnter={() => {
+                  const d = drag.current
+                  if (d?.kind === 'day' && d.b !== day) {
+                    d.b = day
+                    setDaySel({ a: d.a, b: day })
+                  }
+                }}
               >
                 <button
                   type="button"
@@ -242,15 +298,33 @@ export function CalendarPage() {
               ))}
             </div>
             {days.map((d) => (
-              <div key={d} className="tg-col" style={{ height: hours.length * HOUR_PX }}>
+              <div
+                key={d}
+                className={cn('tg-col', canEdit && 'is-clickable')}
+                style={{ height: hours.length * HOUR_PX }}
+                onPointerDown={(ev) => {
+                  if (!canEdit || ev.button !== 0 || (ev.target as HTMLElement).closest('.tg-event')) return
+                  ev.preventDefault()
+                  const top = ev.currentTarget.getBoundingClientRect().top
+                  const m = from * 60 + Math.floor(((ev.clientY - top) / HOUR_PX) * 4) * 15
+                  drag.current = { kind: 'time', day: d, top, from, a: m, b: m }
+                  setTimeSel({ day: d, a: m, b: m })
+                }}
+              >
                 {hours.map((h) => (
-                  <div
-                    key={h}
-                    className={cn('tg-slot', canEdit && 'is-clickable')}
-                    style={{ height: HOUR_PX }}
-                    onClick={() => canEdit && setDrawer({ event: null, date: d, time: `${String(h).padStart(2, '0')}:00` })}
-                  />
+                  <div key={h} className="tg-slot" style={{ height: HOUR_PX }} />
                 ))}
+                {timeSel?.day === d && (
+                  <div
+                    className="tg-select"
+                    style={{
+                      top: ((Math.min(timeSel.a, timeSel.b) - from * 60) / 60) * HOUR_PX,
+                      height: ((Math.abs(timeSel.b - timeSel.a) + 15) / 60) * HOUR_PX,
+                    }}
+                  >
+                    {timeText({ start_time: hhmm(Math.min(timeSel.a, timeSel.b)), end_time: hhmm(Math.max(timeSel.a, timeSel.b) + 15) })}
+                  </div>
+                )}
                 {d === today && nowMin >= from * 60 && nowMin <= to * 60 && (
                   <div className="tg-now" style={{ top: ((nowMin - from * 60) / 60) * HOUR_PX }} />
                 )}
@@ -432,10 +506,12 @@ export function CalendarPage() {
 
       {drawer && (
         <EventDrawer
-          key={drawer.event?.id ?? `${drawer.date}-${drawer.time ?? ''}`}
+          key={drawer.event?.id ?? `${drawer.date}-${drawer.endDate ?? ''}-${drawer.time ?? ''}-${drawer.endTime ?? ''}`}
           event={drawer.event}
           defaultDate={drawer.date}
+          defaultEndDate={drawer.endDate}
           defaultTime={drawer.time}
+          defaultEndTime={drawer.endTime}
           types={types}
           webinarTypes={webinarTypes}
           members={members}
