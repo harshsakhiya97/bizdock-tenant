@@ -112,6 +112,7 @@ export function MyDayPage() {
             ) : (
               <FollowUpTable
                 compact
+                hideAssigned={mine}
                 rows={[...overdue, ...today]}
                 stageById={data.stageById}
                 members={data.members}

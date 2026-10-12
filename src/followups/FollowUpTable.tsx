@@ -15,6 +15,7 @@ export function FollowUpTable({
   outcomes,
   canAct,
   compact,
+  hideAssigned,
   onDone,
   onReschedule,
 }: {
@@ -24,6 +25,8 @@ export function FollowUpTable({
   outcomes: Option[]
   canAct: boolean
   compact?: boolean
+  /** e.g. My Day → Mine: every row is the viewer's own */
+  hideAssigned?: boolean
   onDone: (f: FollowUpRow) => void
   onReschedule: (f: FollowUpRow) => void
 }) {
@@ -39,7 +42,7 @@ export function FollowUpTable({
             <th>Mode</th>
             <th>{compact ? 'Purpose' : 'Purpose / result'}</th>
             {!compact && <th>Status</th>}
-            <th>Assigned to</th>
+            {!hideAssigned && <th>Assigned to</th>}
             <th />
           </tr>
         </thead>
@@ -106,7 +109,7 @@ export function FollowUpTable({
                     )}
                   </td>
                 )}
-                <td className="nowrap">{member(f.assigned_to) ?? <span className="muted">—</span>}</td>
+                {!hideAssigned && <td className="nowrap">{member(f.assigned_to) ?? <span className="muted">—</span>}</td>}
                 <td>
                   <div className="row-actions" style={{ alignItems: 'center', gap: 4 }}>
                     {l && (
