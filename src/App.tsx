@@ -20,6 +20,7 @@ import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
 import { LedgerPage } from '@/collections/LedgerPage'
 import { CalendarPage } from '@/calendar/CalendarPage'
+import { AttendancePage } from '@/attendance/AttendancePage'
 
 export default function App() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/attendance" element={<AttendancePage />} />
                 <Route
                   path="/collections"
                   element={

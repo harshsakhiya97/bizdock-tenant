@@ -4,6 +4,7 @@ import { AlarmClock, CalendarCheck, CalendarX, Sparkles } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { Empty, PageHead, StatCard } from '@/components/ui'
 import { CompleteModal } from '@/followups/CompleteModal'
+import { MyDayCheckIn } from '@/attendance/MyDayCheckIn'
 import { DuesCard } from '@/collections/DuesCard'
 import { FollowUpTable } from '@/followups/FollowUpTable'
 import { dayBounds, modeOf } from '@/followups/labels'
@@ -82,6 +83,7 @@ export function MyDayPage() {
         }
       />
       {notice && <div className="alert alert-info">{notice}</div>}
+      <MyDayCheckIn onNotice={setNotice} />
       {data.error && <div className="alert alert-error">{data.error}</div>}
 
       <div className="stat-grid">

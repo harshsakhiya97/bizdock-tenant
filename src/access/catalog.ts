@@ -63,6 +63,7 @@ export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
     rows: [
       { module: 'tasks', action: 'view', label: 'Tasks' },
       { module: 'calendar', action: 'add', label: 'Create company events', hint: 'Add / edit events, holidays and assign people' },
+      { module: 'attendance', action: 'edit', label: 'Correct attendance', hint: 'Fix check-in / out, weekly offs and attendance rules' },
       { module: 'team', action: 'view', label: 'See the team' },
       { module: 'team', action: 'add', label: 'Add team members' },
       { module: 'team', action: 'edit', label: 'Edit team members', hint: 'Role, businesses, reset password, deactivate' },
