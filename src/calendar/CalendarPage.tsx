@@ -58,19 +58,31 @@ export function CalendarPage() {
   const [person, setPerson] = useState('')
   const [drawer, setDrawer] = useState<{ event: EventRow | null; date: string; endDate?: string; time?: string; endTime?: string } | null>(null)
   // drag to pick a time range (day / week) or a date range (month); releasing opens New event
-  const [timeSel, setTimeSel] = useState<{ day: string; a: number; b: number } | null>(null)
+  // a = where the drag started, b = where the pointer is (day + minute); can cross days in week view
+  const [timeSel, setTimeSel] = useState<{ aDay: string; a: number; bDay: string; b: number } | null>(null)
   const [daySel, setDaySel] = useState<{ a: string; b: string } | null>(null)
-  const drag = useRef<{ kind: 'time'; day: string; top: number; from: number; a: number; b: number } | { kind: 'day'; a: string; b: string } | null>(null)
+  const drag = useRef<
+    { kind: 'time'; top: number; from: number; aDay: string; a: number; bDay: string; b: number } | { kind: 'day'; a: string; b: string } | null
+  >(null)
+  /** the drag's start and end in time order */
+  const orderSel = (x: { aDay: string; a: number; bDay: string; b: number }) => {
+    const p1 = { day: x.aDay, m: x.a }
+    const p2 = { day: x.bDay, m: x.b }
+    return p1.day < p2.day || (p1.day === p2.day && p1.m <= p2.m) ? [p1, p2] : [p2, p1]
+  }
   const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
   useEffect(() => {
     const move = (ev: PointerEvent) => {
       const d = drag.current
       if (!d || d.kind !== 'time') return
+      const col = (document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null)?.closest<HTMLElement>('.tg-col')
+      const bDay = col?.dataset.day ?? d.bDay
       const m = Math.max(0, Math.min(24 * 60 - 15, d.from * 60 + Math.floor(((ev.clientY - d.top) / HOUR_PX) * 4) * 15))
-      if (m !== d.b) {
+      if (m !== d.b || bDay !== d.bDay) {
         d.b = m
-        setTimeSel({ day: d.day, a: d.a, b: m })
+        d.bDay = bDay
+        setTimeSel({ aDay: d.aDay, a: d.a, bDay, b: m })
       }
     }
     const up = () => {
@@ -78,14 +90,20 @@ export function CalendarPage() {
       if (!d) return
       drag.current = null
       if (d.kind === 'time') {
-        const start = Math.min(d.a, d.b)
-        const end = d.a === d.b ? start + 60 : Math.max(d.a, d.b) + 15
+        const [s1, s2] = orderSel(d)
+        const end = s1.day === s2.day && s1.m === s2.m ? s1.m + 60 : s2.m + 15
         setTimeSel(null)
-        setDrawer({ event: null, date: d.day, time: hhmm(start), endTime: hhmm(Math.min(end, 23 * 60 + 59)) })
+        setDrawer({
+          event: null,
+          date: s1.day,
+          endDate: s2.day,
+          time: hhmm(s1.m),
+          endTime: hhmm(Math.min(end, 23 * 60 + 59)),
+        })
       } else {
         const [x, y] = d.a <= d.b ? [d.a, d.b] : [d.b, d.a]
         setDaySel(null)
-        setDrawer({ event: null, date: x, endDate: y !== x ? y : undefined })
+        setDrawer({ event: null, date: x, endDate: y })
       }
     }
     window.addEventListener('pointermove', move)
@@ -300,6 +318,7 @@ export function CalendarPage() {
             {days.map((d) => (
               <div
                 key={d}
+                data-day={d}
                 className={cn('tg-col', canEdit && 'is-clickable')}
                 style={{ height: hours.length * HOUR_PX }}
                 onPointerDown={(ev) => {
@@ -307,24 +326,31 @@ export function CalendarPage() {
                   ev.preventDefault()
                   const top = ev.currentTarget.getBoundingClientRect().top
                   const m = from * 60 + Math.floor(((ev.clientY - top) / HOUR_PX) * 4) * 15
-                  drag.current = { kind: 'time', day: d, top, from, a: m, b: m }
-                  setTimeSel({ day: d, a: m, b: m })
+                  drag.current = { kind: 'time', top, from, aDay: d, a: m, bDay: d, b: m }
+                  setTimeSel({ aDay: d, a: m, bDay: d, b: m })
                 }}
               >
                 {hours.map((h) => (
                   <div key={h} className="tg-slot" style={{ height: HOUR_PX }} />
                 ))}
-                {timeSel?.day === d && (
-                  <div
-                    className="tg-select"
-                    style={{
-                      top: ((Math.min(timeSel.a, timeSel.b) - from * 60) / 60) * HOUR_PX,
-                      height: ((Math.abs(timeSel.b - timeSel.a) + 15) / 60) * HOUR_PX,
-                    }}
-                  >
-                    {timeText({ start_time: hhmm(Math.min(timeSel.a, timeSel.b)), end_time: hhmm(Math.max(timeSel.a, timeSel.b) + 15) })}
-                  </div>
-                )}
+                {timeSel &&
+                  (() => {
+                    const [p1, p2] = orderSel(timeSel)
+                    if (d < p1.day || d > p2.day) return null
+                    const top = d === p1.day ? p1.m : from * 60
+                    const bottom = d === p2.day ? p2.m + 15 : to * 60
+                    return (
+                      <div
+                        className="tg-select"
+                        style={{ top: ((top - from * 60) / 60) * HOUR_PX, height: ((bottom - top) / 60) * HOUR_PX }}
+                      >
+                        {d === p1.day &&
+                          (p1.day === p2.day
+                            ? timeText({ start_time: hhmm(p1.m), end_time: hhmm(p2.m + 15) })
+                            : `${timeText({ start_time: hhmm(p1.m), end_time: null })} → ${fmt(p2.day, { day: 'numeric', month: 'short' })} ${timeText({ start_time: hhmm(p2.m + 15), end_time: null })}`)}
+                      </div>
+                    )
+                  })()}
                 {d === today && nowMin >= from * 60 && nowMin <= to * 60 && (
                   <div className="tg-now" style={{ top: ((nowMin - from * 60) / 60) * HOUR_PX }} />
                 )}

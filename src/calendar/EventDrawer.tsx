@@ -78,7 +78,7 @@ export function EventDrawer({
     if (!f.type_id) return setError('Pick the event type.')
     if (!f.event_date) return setError('Pick the date.')
     if (f.end_date && f.end_date < f.event_date) return setError('The end date is before the start date.')
-    if (f.start_time && f.end_time && f.end_time <= f.start_time && !f.end_date) return setError('The end time is before the start time.')
+    if (f.start_time && f.end_time && f.end_time <= f.start_time && (!f.end_date || f.end_date === f.event_date)) return setError('The end time is before the start time.')
     if (kind === 'leave' && !f.members.length) return setError('Pick who is on leave.')
     if (!event && f.recurring && !f.until) return setError('Pick until when it repeats.')
     setBusy(true)
