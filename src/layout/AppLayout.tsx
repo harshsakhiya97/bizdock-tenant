@@ -36,7 +36,9 @@ export function AppLayout() {
   const email = profile?.email ?? user?.email ?? ''
 
   const sections = navSections
-    .map((s) => ({ ...s, items: s.items.filter((i) => !i.module || can(i.module, i.action ?? 'view')) }))
+    .map((s) => ({ ...s, items: s.items.filter(
+        (i) => !i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action)),
+      ) }))
     .filter((s) => s.items.length > 0)
   const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],

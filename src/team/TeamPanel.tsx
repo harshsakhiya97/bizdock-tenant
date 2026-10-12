@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { Download, KeyRound, Pencil, Plus, Power, ShieldCheck } from 'lucide-react'
+import { PersonAccessDrawer } from '@/access/PersonAccessDrawer'
 import { useAuth } from '@/auth/useAuth'
 import { Avatar } from '@/components/Avatar'
 import { PasswordInput } from '@/components/Field'
-import { ConfirmModal, DataTable, PageHead, SearchInput, type Column } from '@/components/ui'
+import { ConfirmModal, DataTable, SearchInput, type Column } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import {
@@ -25,7 +25,8 @@ type Tab = (typeof TABS)[number]
 
 type Confirm = { kind: 'reset' | 'status'; member: MemberRow }
 
-export function TeamPage() {
+/** The Team tab of Access Control: members, logins, role, businesses and per-person access. */
+export function TeamPanel() {
   const tenant = useTenant()
   const { can, level, membership } = useAuth()
   const [members, setMembers] = useState<MemberRow[] | null>(null)
@@ -36,12 +37,14 @@ export function TeamPage() {
   const [tab, setTab] = useState<Tab>('Active')
   const [query, setQuery] = useState('')
   const [drawer, setDrawer] = useState<{ member: MemberRow | null } | null>(null)
+  const [accessFor, setAccessFor] = useState<MemberRow | null>(null)
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [busy, setBusy] = useState(false)
 
   const canAdd = can('team', 'add')
   const canEdit = can('team', 'edit')
+  const canAccess = can('access', 'edit')
 
   const load = useCallback(() => {
     Promise.all([listMembers(tenant.id), listRoles(tenant.id), listBusinessOptions(tenant.id)])
@@ -79,8 +82,8 @@ export function TeamPage() {
   }, [members, tab, query])
 
   /** I can change people whose role sits below my level (never myself). */
-  const canManage = (m: MemberRow) =>
-    canEdit && m.id !== membership?.id && (roleById.get(m.role_id)?.level ?? 0) > level
+  const below = (m: MemberRow) => m.id !== membership?.id && (roleById.get(m.role_id)?.level ?? 0) > level
+  const canManage = (m: MemberRow) => canEdit && below(m)
 
   function businessText(m: MemberRow) {
     if (m.all_businesses) return <span className="badge badge-muted">All businesses</span>
@@ -147,35 +150,50 @@ export function TeamPage() {
       label: '',
       align: 'right',
       render: (m) =>
-        canManage(m) ? (
+        canManage(m) || (canAccess && below(m)) ? (
           <div className="row-actions">
-            <button
-              type="button"
-              className="btn btn-ghost btn-icon"
-              title="Edit"
-              aria-label={`Edit ${m.name}`}
-              onClick={() => setDrawer({ member: m })}
-            >
-              <Pencil size={15} />
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-icon"
-              title="Reset password to default"
-              aria-label={`Reset password for ${m.name}`}
-              onClick={() => setConfirm({ kind: 'reset', member: m })}
-            >
-              <KeyRound size={15} />
-            </button>
-            <button
-              type="button"
-              className={cn('btn btn-ghost btn-icon', m.status === 'active' && 'danger-text')}
-              title={m.status === 'active' ? 'Deactivate' : 'Activate'}
-              aria-label={`${m.status === 'active' ? 'Deactivate' : 'Activate'} ${m.name}`}
-              onClick={() => setConfirm({ kind: 'status', member: m })}
-            >
-              <Power size={15} />
-            </button>
+            {canAccess && below(m) && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                title="Access (role, reports to, custom access)"
+                aria-label={`Access for ${m.name}`}
+                onClick={() => setAccessFor(m)}
+              >
+                <ShieldCheck size={15} />
+              </button>
+            )}
+            {canManage(m) && (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-icon"
+                  title="Edit"
+                  aria-label={`Edit ${m.name}`}
+                  onClick={() => setDrawer({ member: m })}
+                >
+                  <Pencil size={15} />
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-icon"
+                  title="Reset password to default"
+                  aria-label={`Reset password for ${m.name}`}
+                  onClick={() => setConfirm({ kind: 'reset', member: m })}
+                >
+                  <KeyRound size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={cn('btn btn-ghost btn-icon', m.status === 'active' && 'danger-text')}
+                  title={m.status === 'active' ? 'Deactivate' : 'Activate'}
+                  aria-label={`${m.status === 'active' ? 'Deactivate' : 'Activate'} ${m.name}`}
+                  onClick={() => setConfirm({ kind: 'status', member: m })}
+                >
+                  <Power size={15} />
+                </button>
+              </>
+            )}
           </div>
         ) : null,
     },
@@ -238,8 +256,6 @@ export function TeamPage() {
 
   return (
     <>
-      <PageHead title="Team" subtitle="Everyone who logs in to this workspace, their role and where they work." />
-
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
 
@@ -257,11 +273,6 @@ export function TeamPage() {
             <button type="button" className="btn btn-outline" onClick={exportCsv} disabled={!visible.length}>
               <Download size={15} /> Login list (CSV)
             </button>
-            {can('access', 'edit') && (
-              <Link to="/access-control" className="btn btn-outline">
-                <ShieldCheck size={15} /> Access control
-              </Link>
-            )}
             {canAdd && (
               <button type="button" className="btn btn-primary" onClick={() => setDrawer({ member: null })}>
                 <Plus size={16} /> Add team member
@@ -309,10 +320,24 @@ export function TeamPage() {
           </div>
           <p className="muted small" style={{ lineHeight: 1.5 }}>
             New members log in with their email and this password, and are asked to change it on My Profile. Use the
-            key button on a row to set someone’s password back to this one. Roles decide what each person can see; you
-            can fine-tune one person in <Link to="/access-control" className="link">Access Control</Link>.
+            key button on a row to set someone’s password back to this one. Roles decide what each person can see; use
+            the shield button to change one person’s access.
           </p>
         </div>
+      )}
+
+      {accessFor && (
+        <PersonAccessDrawer
+          member={accessFor}
+          roles={roles.filter((r) => !r.is_system && r.level > level)}
+          members={members ?? []}
+          onClose={() => setAccessFor(null)}
+          onSaved={() => {
+            setNotice({ ok: `${accessFor.name}'s access saved.` })
+            setAccessFor(null)
+            load()
+          }}
+        />
       )}
 
       {drawer && (

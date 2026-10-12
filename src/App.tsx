@@ -9,7 +9,6 @@ import { DashboardPage } from '@/pages/Dashboard'
 import { LoginPage } from '@/pages/Login'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
-import { TeamPage } from '@/team/TeamPage'
 import { AccessControlPage } from '@/access/AccessControlPage'
 
 export default function App() {
@@ -30,18 +29,11 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route
-                  path="/team"
-                  element={
-                    <RequirePermission module="team">
-                      <TeamPage />
-                    </RequirePermission>
-                  }
-                />
+                <Route path="/team" element={<Navigate to="/access-control" replace />} />
                 <Route
                   path="/access-control"
                   element={
-                    <RequirePermission module="access" action="edit">
+                    <RequirePermission module="team" orModule="access" orAction="edit">
                       <AccessControlPage />
                     </RequirePermission>
                   }

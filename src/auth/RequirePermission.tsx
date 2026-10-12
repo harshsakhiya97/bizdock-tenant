@@ -7,14 +7,19 @@ import { useAuth } from './useAuth'
 export function RequirePermission({
   module,
   action = 'view',
+  orModule,
+  orAction = 'view',
   children,
 }: {
   module: string
   action?: string
+  /** also allowed with this permission */
+  orModule?: string
+  orAction?: string
   children: ReactNode
 }) {
   const { can } = useAuth()
-  if (!can(module, action)) {
+  if (!can(module, action) && !(orModule && can(orModule, orAction))) {
     return (
       <div className="card">
         <Empty icon={Lock}>
