@@ -69,6 +69,15 @@ export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
     ],
   },
   {
+    title: 'Funnels',
+    rows: [
+      { module: 'funnels', action: 'view', label: 'See funnels', hint: 'Funnels of the businesses they work in are always visible' },
+      { module: 'funnels', action: 'add', label: 'Add funnels' },
+      { module: 'funnels', action: 'edit', label: 'Edit funnels & stages' },
+      { module: 'funnels', action: 'delete', label: 'Delete funnels' },
+    ],
+  },
+  {
     title: 'Admin',
     rows: [
       { module: 'businesses', action: 'view', label: 'See businesses' },

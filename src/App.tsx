@@ -10,6 +10,7 @@ import { LoginPage } from '@/pages/Login'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
+import { FunnelsPage } from '@/funnels/FunnelsPage'
 
 export default function App() {
   return (
@@ -26,6 +27,14 @@ export default function App() {
                   element={
                     <RequirePermission module="businesses">
                       <BusinessesPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/funnels"
+                  element={
+                    <RequirePermission module="funnels">
+                      <FunnelsPage />
                     </RequirePermission>
                   }
                 />
