@@ -22,6 +22,8 @@ const SIMPLE: Record<SimpleTable, { title: string; purpose: string }> = {
   lead_sources: { title: 'Lead sources', purpose: 'Where a lead came from.' },
   lost_reasons: { title: 'Lost reasons', purpose: 'Why a lead was lost.' },
   follow_up_outcomes: { title: 'Follow-up outcomes', purpose: 'The result of a call or follow-up.' },
+  event_types: { title: 'Calendar event types', purpose: 'Kinds of events on the calendar; the kind decides the form (webinar, holiday, leave).' },
+  webinar_types: { title: 'Webinar types', purpose: 'Kinds of webinars.' },
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -33,6 +35,8 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'lead_sources', label: 'Lead sources' },
   { id: 'lost_reasons', label: 'Lost reasons' },
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
+  { id: 'event_types', label: 'Event types' },
+  { id: 'webinar_types', label: 'Webinar types' },
 ]
 
 /** Masters: the editable lists every module picks from. */

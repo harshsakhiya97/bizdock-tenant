@@ -4,6 +4,7 @@ export type SimpleRow = {
   is_active: boolean
   sort_order: number
   color?: string
+  kind?: string
 }
 
 export type ProductRow = {
@@ -37,6 +38,20 @@ export type BillingCompanyRow = {
 }
 
 /** The simple lists: a name, an order and on/off (stages also have a colour). */
-export type SimpleTable = 'customer_stages' | 'payment_modes' | 'lead_sources' | 'lost_reasons' | 'follow_up_outcomes'
+export type SimpleTable =
+  | 'customer_stages'
+  | 'payment_modes'
+  | 'lead_sources'
+  | 'lost_reasons'
+  | 'follow_up_outcomes'
+  | 'event_types'
+  | 'webinar_types'
+
+export const EVENT_KINDS = [
+  { value: 'event', label: 'Event' },
+  { value: 'webinar', label: 'Webinar' },
+  { value: 'holiday', label: 'Holiday' },
+  { value: 'leave', label: 'Leave / day off' },
+]
 
 export const GST_RATES = [0, 5, 12, 18, 28]

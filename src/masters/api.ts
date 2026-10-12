@@ -2,7 +2,12 @@ import { db } from '@/lib/supabase'
 import type { BillingCompanyRow, ProductRow, SimpleRow, SimpleTable } from './types'
 
 export async function listSimple(table: SimpleTable, tenantId: string): Promise<SimpleRow[]> {
-  const cols = table === 'customer_stages' ? 'id, name, is_active, sort_order, color' : 'id, name, is_active, sort_order'
+  const cols =
+    table === 'customer_stages'
+      ? 'id, name, is_active, sort_order, color'
+      : table === 'event_types'
+        ? 'id, name, is_active, sort_order, color, kind'
+        : 'id, name, is_active, sort_order'
   const { data, error } = await db().from(table).select(cols).eq('tenant_id', tenantId).order('sort_order').order('name')
   if (error) throw error
   return (data ?? []) as unknown as SimpleRow[]
@@ -14,7 +19,8 @@ export async function saveSimple(table: SimpleTable, tenantId: string, row: Omit
     is_active: row.is_active,
     sort_order: row.sort_order,
   }
-  if (table === 'customer_stages') body.color = row.color ?? '#64748b'
+  if (table === 'customer_stages' || table === 'event_types') body.color = row.color ?? '#64748b'
+  if (table === 'event_types') body.kind = row.kind ?? 'event'
   const q = row.id
     ? db().from(table).update(body).eq('id', row.id)
     : db().from(table).insert({ ...body, tenant_id: tenantId })

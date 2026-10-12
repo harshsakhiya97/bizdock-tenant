@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { listSimple, saveSimple } from './api'
-import type { SimpleRow, SimpleTable } from './types'
+import { EVENT_KINDS, type SimpleRow, type SimpleTable } from './types'
 
 type Draft = SimpleRow & { dirty?: boolean }
 
@@ -22,9 +22,10 @@ export function SimpleList({
 }) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Draft[] | null>(null)
-  const [adding, setAdding] = useState({ name: '', color: '#64748b' })
+  const [adding, setAdding] = useState({ name: '', color: '#64748b', kind: 'event' })
   const [busy, setBusy] = useState<string | null>(null)
-  const hasColor = table === 'customer_stages'
+  const hasColor = table === 'customer_stages' || table === 'event_types'
+  const hasKind = table === 'event_types'
 
   const load = useCallback(() => {
     listSimple(table, tenant.id)
@@ -55,9 +56,9 @@ export function SimpleList({
     setBusy('new')
     try {
       const next = Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1
-      await saveSimple(table, tenant.id, { name: adding.name, color: adding.color, is_active: true, sort_order: next })
+      await saveSimple(table, tenant.id, { name: adding.name, color: adding.color, kind: adding.kind, is_active: true, sort_order: next })
       onNotice({ ok: `${adding.name.trim()} added.` })
-      setAdding({ name: '', color: '#64748b' })
+      setAdding({ name: '', color: '#64748b', kind: 'event' })
       load()
     } catch (e) {
       onNotice({ error: (e as Error).message })
@@ -83,6 +84,7 @@ export function SimpleList({
               <tr>
                 <th style={{ width: 80 }}>Order</th>
                 <th>Name</th>
+                {hasKind && <th style={{ width: 170 }}>Kind</th>}
                 {hasColor && <th style={{ width: 80 }}>Colour</th>}
                 <th style={{ width: 80 }}>Active</th>
                 {canEdit && <th style={{ width: 100 }} />}
@@ -110,6 +112,17 @@ export function SimpleList({
                       aria-label="Name"
                     />
                   </td>
+                  {hasKind && (
+                    <td>
+                      <select className="input input-sm" value={r.kind ?? 'event'} disabled={!canEdit} onChange={(e) => edit(r.id, { kind: e.target.value })} aria-label={`Kind of ${r.name}`}>
+                        {EVENT_KINDS.map((k) => (
+                          <option key={k.value} value={k.value}>
+                            {k.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
                   {hasColor && (
                     <td>
                       <input
@@ -156,6 +169,17 @@ export function SimpleList({
                       aria-label="New entry"
                     />
                   </td>
+                  {hasKind && (
+                    <td>
+                      <select className="input input-sm" value={adding.kind} onChange={(e) => setAdding((a) => ({ ...a, kind: e.target.value }))} aria-label="Kind of the new entry">
+                        {EVENT_KINDS.map((k) => (
+                          <option key={k.value} value={k.value}>
+                            {k.label}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
                   {hasColor && (
                     <td>
                       <input

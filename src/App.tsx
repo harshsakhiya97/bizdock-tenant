@@ -19,6 +19,7 @@ import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
 import { LedgerPage } from '@/collections/LedgerPage'
+import { CalendarPage } from '@/calendar/CalendarPage'
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
                 <Route
                   path="/collections"
                   element={
