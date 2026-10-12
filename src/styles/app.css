@@ -361,3 +361,6 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
   .panel, .stat { box-shadow: none !important; break-inside: avoid; }
   .badge { border: 1px solid currentColor; }
 }
+
+/* an open dropdown inside a panel must not be clipped (panels hide overflow for their rounded corners) */
+.panel:has([data-popover]), .card:has([data-popover]) { overflow: visible; }
