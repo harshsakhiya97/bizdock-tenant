@@ -16,7 +16,7 @@ export function LoginPage() {
   const { session, loading, accessError } = useAuth()
   const tenant = useTenant()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
+  const from = (location.state as { from?: string } | null)?.from ?? '/my-day'
 
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')

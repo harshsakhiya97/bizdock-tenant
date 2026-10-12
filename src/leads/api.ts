@@ -71,7 +71,6 @@ function toRow(input: LeadInput) {
       .map((t) => t.trim())
       .filter(Boolean),
     notes: clean(input.notes),
-    next_follow_up_at: input.next_follow_up_at ? new Date(input.next_follow_up_at).toISOString() : null,
   }
 }
 

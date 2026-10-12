@@ -6,6 +6,7 @@ import { FormSection, Hint, Label, Select, TextArea, TextInput } from '@/compone
 import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { ago } from '@/team/time'
+import { clearLeadFollowUps, scheduleFollowUp } from '@/followups/api'
 import { createLead, listActivities, logActivity, phoneExists, updateLead } from './api'
 import { TEMPERATURES, toLocalInput } from './labels'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
@@ -103,13 +104,23 @@ export function LeadDrawer({
           return setError('A lead with this phone number already exists in this business.')
         }
       }
-      if (lead) {
-        await updateLead(tenant.id, me, lead, input, { note: stageNote, lost_reason_id: lostReason || null })
-        onSaved(`${input.first_name.trim()} saved.`)
-      } else {
-        await createLead(tenant.id, funnel.business_id, me, input)
-        onSaved(`${input.first_name.trim()} added.`)
+      const leadId = lead
+        ? (await updateLead(tenant.id, me, lead, input, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
+        : await createLead(tenant.id, funnel.business_id, me, input)
+      // the follow-up date lives in Follow-ups: a new date schedules one, clearing it cancels the pending one
+      const before = toLocalInput(lead?.next_follow_up_at ?? null)
+      if (canFollowUp && input.next_follow_up_at !== before) {
+        if (input.next_follow_up_at)
+          await scheduleFollowUp(tenant.id, me, {
+            lead_id: leadId,
+            due_at: input.next_follow_up_at,
+            mode: 'call',
+            purpose: '',
+            assigned_to: input.owner_id,
+          })
+        else if (lead) await clearLeadFollowUps(lead.id)
       }
+      onSaved(`${input.first_name.trim()} ${lead ? 'saved' : 'added'}.`)
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)

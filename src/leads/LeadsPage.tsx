@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
+import { scheduleFollowUp } from '@/followups/api'
 import { Columns3, Download, List, Plus, RotateCcw, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -68,6 +70,19 @@ export function LeadsPage() {
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id])
   useEffect(load, [load])
+
+  // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
+  const [params, setParams] = useSearchParams()
+  const openId = params.get('open')
+  useEffect(() => {
+    if (!openId || !leads) return
+    const l = leads.find((x) => x.id === openId)
+    if (l) setDrawer({ lead: l })
+    setParams((p) => {
+      p.delete('open')
+      return p
+    }, { replace: true })
+  }, [openId, leads, setParams])
 
   // funnels of the business picked in the top bar (or all businesses)
   const scopedFunnels = useMemo(
@@ -403,8 +418,10 @@ export function LeadsPage() {
                   disabled={!bulk.followUp}
                   onClick={() =>
                     run(async () => {
-                      await updateLeads(pickedIds, { next_follow_up_at: new Date(bulk.followUp).toISOString() })
-                      await logActivity(tenant.id, me, pickedIds, { kind: 'follow_up', note: new Date(bulk.followUp).toLocaleString('en-IN') })
+                      for (const id of pickedIds) {
+                        const l = (leads ?? []).find((x) => x.id === id)
+                        await scheduleFollowUp(tenant.id, me, { lead_id: id, due_at: bulk.followUp, mode: 'call', purpose: '', assigned_to: l?.owner_id ?? '' })
+                      }
                     }, 'Follow-up scheduled.')
                   }
                 >

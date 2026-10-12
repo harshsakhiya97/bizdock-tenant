@@ -12,6 +12,8 @@ import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
 import { FunnelsPage } from '@/funnels/FunnelsPage'
 import { LeadsPage } from '@/leads/LeadsPage'
+import { FollowUpsPage } from '@/followups/FollowUpsPage'
+import { MyDayPage } from '@/pages/MyDay'
 
 export default function App() {
   return (
@@ -22,6 +24,7 @@ export default function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route element={<RequireAuth />}>
               <Route element={<AppLayout />}>
+                <Route path="/my-day" element={<MyDayPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route
                   path="/businesses"
@@ -32,6 +35,7 @@ export default function App() {
                   }
                 />
                 <Route path="/leads" element={<LeadsPage />} />
+                <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route
                   path="/funnels"
                   element={
@@ -53,7 +57,7 @@ export default function App() {
                 <Route path="/whats-new" element={<WhatsNewPage />} />
               </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/my-day" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
