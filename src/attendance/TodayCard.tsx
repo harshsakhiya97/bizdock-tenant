@@ -138,7 +138,7 @@ export function TodayCard({
         onCancel={() => setAskOut(false)}
         onConfirm={() => {
           setAskOut(false)
-          run(() => checkOut(tenant.id), 'Checked out. See you tomorrow!')
+          run(() => checkOut(tenant.id), row?.check_out ? 'Check-out time updated.' : 'Checked out. See you tomorrow!')
         }}
       />
     </div>
