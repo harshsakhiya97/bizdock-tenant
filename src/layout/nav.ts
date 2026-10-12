@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarClock, Database, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -22,6 +22,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
       { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid },
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
+      { to: '/customers', label: 'Customers', icon: Star, area: 'customers' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
     ],
   },
@@ -29,6 +30,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
     title: 'Admin',
     items: [
       { to: '/businesses', label: 'Businesses', icon: Building2, module: 'businesses' },
+      { to: '/masters', label: 'Masters', icon: Database, module: 'masters', action: 'edit' },
       {
         to: '/access-control',
         label: 'Access Control',
@@ -45,6 +47,8 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/my-day': { title: 'My Day', crumb: 'Today', icon: Sun },
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
+  '/customers': { title: 'Customers', crumb: 'Customers & sales', icon: Star },
+  '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },

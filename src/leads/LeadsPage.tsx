@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
 import { Columns3, Download, List, Plus, RotateCcw, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -180,8 +180,10 @@ export function LeadsPage() {
       setNotice({ ok })
       setPicked(new Set())
       load()
+      return true
     } catch (e) {
       setNotice({ error: (e as Error).message })
+      return false
     }
   }
 
@@ -192,11 +194,18 @@ export function LeadsPage() {
   }
   async function doMove(ids: string[], stage: StageRow, note: string, lostReasonId: string | null) {
     const from = new Map((leads ?? []).map((l) => [l.id, l.stage_id]))
-    await run(async () => {
+    const ok = await run(async () => {
       await updateLeads(ids, { stage_id: stage.id, lost_reason_id: stage.kind === 'lost' ? lostReasonId : null })
       for (const id of ids)
         await logActivity(tenant.id, me, [id], { kind: 'stage', from_stage_id: from.get(id) ?? null, to_stage_id: stage.id, note: note.trim() || null })
     }, `${ids.length === 1 ? 'Lead' : `${ids.length} leads`} moved to ${stage.name}.`)
+    if (ok && stage.kind === 'won' && ids.length === 1) wonToSale(ids[0])
+  }
+
+  // a won lead goes straight to New sale, filled from the lead
+  const navigate = useNavigate()
+  function wonToSale(leadId: string) {
+    if (can('deals', 'add')) navigate(`/customers?sale_lead=${leadId}`)
   }
 
   function exportCsv() {
@@ -594,10 +603,11 @@ export function LeadsPage() {
           members={members}
           defaultFunnelId={funnel?.id ?? null}
           onClose={() => setDrawer(null)}
-          onSaved={(msg) => {
+          onSaved={(msg, wonLeadId) => {
             setDrawer(null)
             setNotice({ ok: msg })
             load()
+            if (wonLeadId) wonToSale(wonLeadId)
           }}
         />
       )}

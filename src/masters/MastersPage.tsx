@@ -1,0 +1,336 @@
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
+import { Package, Pencil, Plus, Receipt } from 'lucide-react'
+import { useAuth } from '@/auth/useAuth'
+import { useBusiness } from '@/business/useBusiness'
+import { Empty, PageHead } from '@/components/ui'
+import { money } from '@/leads/labels'
+import { cn } from '@/lib/cn'
+import { db } from '@/lib/supabase'
+import { useTenant } from '@/tenant/useTenant'
+import { listBillingCompanies, listProducts, validityText } from './api'
+import { BillingCompanyDrawer } from './BillingCompanyDrawer'
+import { ProductDrawer } from './ProductDrawer'
+import { SimpleList } from './SimpleList'
+import type { BillingCompanyRow, ProductRow, SimpleTable } from './types'
+
+type Tab = 'overview' | 'products' | 'billing' | SimpleTable
+
+const SIMPLE: Record<SimpleTable, { title: string; purpose: string }> = {
+  customer_stages: { title: 'Customer stages', purpose: 'The customer journey (tabs on Customers).' },
+  payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
+  lead_sources: { title: 'Lead sources', purpose: 'Where a lead came from.' },
+  lost_reasons: { title: 'Lost reasons', purpose: 'Why a lead was lost.' },
+  follow_up_outcomes: { title: 'Follow-up outcomes', purpose: 'The result of a call or follow-up.' },
+}
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'products', label: 'Products' },
+  { id: 'billing', label: 'Billing companies' },
+  { id: 'customer_stages', label: 'Customer stages' },
+  { id: 'payment_modes', label: 'Payment modes' },
+  { id: 'lead_sources', label: 'Lead sources' },
+  { id: 'lost_reasons', label: 'Lost reasons' },
+  { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
+]
+
+/** Masters: the editable lists every module picks from. */
+export function MastersPage() {
+  const { can } = useAuth()
+  const canEdit = can('masters', 'edit')
+  const [params, setParams] = useSearchParams()
+  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
+  const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
+  const go = (t: Tab) => {
+    setNotice({})
+    setParams(t === 'overview' ? {} : { tab: t })
+  }
+  const onNotice = useCallback((n: { ok?: string; error?: string }) => setNotice(n), [])
+
+  return (
+    <>
+      <PageHead title="Masters" subtitle="The lists the rest of the app picks from. Changes apply everywhere straight away." />
+      {notice.error && <div className="alert alert-error">{notice.error}</div>}
+      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+
+      <div className="panel">
+        <div className="panel-tabs">
+          <div className="tabs">
+            {TABS.map((t) => (
+              <button key={t.id} type="button" className={cn('tab', tab === t.id && 'is-active')} onClick={() => go(t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {tab === 'overview' && <Overview go={go} />}
+        {tab === 'products' && <ProductsTab canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'billing' && <BillingTab canEdit={canEdit} onNotice={onNotice} />}
+        {tab in SIMPLE && (
+          <SimpleList
+            key={tab}
+            table={tab as SimpleTable}
+            title={SIMPLE[tab as SimpleTable].title}
+            description={SIMPLE[tab as SimpleTable].purpose}
+            canEdit={canEdit}
+            onNotice={onNotice}
+          />
+        )}
+      </div>
+    </>
+  )
+}
+
+function Overview({ go }: { go: (t: Tab) => void }) {
+  const tenant = useTenant()
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    const tables = ['products', 'billing_companies', ...Object.keys(SIMPLE)]
+    void Promise.all(
+      tables.map((t) =>
+        db()
+          .from(t)
+          .select('id', { count: 'exact', head: true })
+          .eq('tenant_id', tenant.id)
+          .eq('is_active', true)
+          .then(({ count }) => [t, count ?? 0] as const),
+      ),
+    ).then((r) => setCounts(Object.fromEntries(r)))
+  }, [tenant.id])
+
+  const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
+    { tab: 'products', label: 'Products', table: 'products', purpose: 'What you sell: price, GST and validity, per business.' },
+    { tab: 'billing', label: 'Billing companies', table: 'billing_companies', purpose: 'Which legal company bills the sale.' },
+    ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t].title, table: t, purpose: SIMPLE[t].purpose })),
+  ]
+  return (
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Master list</th>
+            <th>Active entries</th>
+            <th>Used for</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.tab} className="is-clickable" onClick={() => go(r.tab)}>
+              <td>
+                <button type="button" className="link-btn">
+                  {r.label}
+                </button>
+              </td>
+              <td>{counts[r.table] ?? '…'}</td>
+              <td className="muted">{r.purpose}</td>
+            </tr>
+          ))}
+          <tr>
+            <td>
+              <Link to="/funnels" className="link-btn">
+                Funnels & stages
+              </Link>
+            </td>
+            <td className="muted">—</td>
+            <td className="muted">Lead stages are set per funnel on the Funnels page.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void }) {
+  const tenant = useTenant()
+  const { businesses } = useAuth()
+  const { selected } = useBusiness()
+  const [rows, setRows] = useState<ProductRow[] | null>(null)
+  const [drawer, setDrawer] = useState<{ product: ProductRow | null } | null>(null)
+  const [showOff, setShowOff] = useState(false)
+
+  const load = useCallback(() => {
+    listProducts(tenant.id)
+      .then(setRows)
+      .catch((e: Error) => onNotice({ error: e.message }))
+  }, [tenant.id, onNotice])
+  useEffect(load, [load])
+
+  const bizName = useMemo(() => new Map(businesses.map((b) => [b.id, b.name])), [businesses])
+  const visible = (rows ?? [])
+    .filter((p) => (selected ? p.business_id === selected.id : bizName.has(p.business_id)))
+    .filter((p) => showOff || p.is_active)
+
+  return (
+    <>
+      <div className="panel-bar">
+        <div>
+          <b>Products</b>
+          <div className="muted small">
+            {selected ? `Products of ${selected.name}.` : 'Products of every business.'} Pick the business in the top bar to narrow the list.
+          </div>
+        </div>
+        <div className="row">
+          <label className="check-inline">
+            <input type="checkbox" checked={showOff} onChange={(e) => setShowOff(e.target.checked)} /> Show inactive
+          </label>
+          {canEdit && (
+            <button type="button" className="btn btn-primary" onClick={() => setDrawer({ product: null })} disabled={!businesses.length}>
+              <Plus size={16} /> Add product
+            </button>
+          )}
+        </div>
+      </div>
+      {!rows ? (
+        <div className="empty">Loading…</div>
+      ) : visible.length === 0 ? (
+        <Empty icon={Package}>No products yet. Add what you sell so it can be picked on a new sale.</Empty>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Product</th>
+                {!selected && <th>Business</th>}
+                <th className="right">Price</th>
+                <th>GST</th>
+                <th className="right">With GST</th>
+                <th>Validity</th>
+                <th>Status</th>
+                {canEdit && <th />}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((p) => {
+                const total = Number(p.price) * (1 + (p.gst_applicable ? Number(p.gst_rate) : 0) / 100)
+                return (
+                  <tr key={p.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ product: p })}>
+                    <td className="muted">{p.sort_order}</td>
+                    <td>
+                      <b>{p.name}</b>
+                      <div className="muted small">{[p.category, p.code].filter(Boolean).join(' · ')}</div>
+                    </td>
+                    {!selected && <td>{bizName.get(p.business_id) ?? '—'}</td>}
+                    <td className="right nowrap">{money(p.price)}</td>
+                    <td>{p.gst_applicable ? `${Number(p.gst_rate)}%` : <span className="muted">No GST</span>}</td>
+                    <td className="right nowrap">{money(total)}</td>
+                    <td>{validityText(p)}</td>
+                    <td>
+                      <span className={cn('badge', p.is_active ? 'badge-success' : 'badge-muted')}>{p.is_active ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    {canEdit && (
+                      <td className="right">
+                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Edit ${p.name}`}>
+                          <Pencil size={15} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {drawer && (
+        <ProductDrawer
+          product={drawer.product}
+          businesses={businesses}
+          defaultBusinessId={selected?.id ?? null}
+          nextOrder={Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1}
+          onClose={() => setDrawer(null)}
+          onSaved={(msg) => {
+            setDrawer(null)
+            onNotice({ ok: msg })
+            load()
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+function BillingTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void }) {
+  const tenant = useTenant()
+  const [rows, setRows] = useState<BillingCompanyRow[] | null>(null)
+  const [drawer, setDrawer] = useState<{ company: BillingCompanyRow | null } | null>(null)
+
+  const load = useCallback(() => {
+    listBillingCompanies(tenant.id)
+      .then(setRows)
+      .catch((e: Error) => onNotice({ error: e.message }))
+  }, [tenant.id, onNotice])
+  useEffect(load, [load])
+
+  return (
+    <>
+      <div className="panel-bar">
+        <div>
+          <b>Billing companies</b>
+          <div className="muted small">Legal companies that bill your customers. Any business can bill through any of them.</div>
+        </div>
+        {canEdit && (
+          <button type="button" className="btn btn-primary" onClick={() => setDrawer({ company: null })}>
+            <Plus size={16} /> Add company
+          </button>
+        )}
+      </div>
+      {!rows ? (
+        <div className="empty">Loading…</div>
+      ) : rows.length === 0 ? (
+        <Empty icon={Receipt}>No billing companies yet. Add at least one to record sales.</Empty>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>GSTIN</th>
+                <th>State</th>
+                <th>Invoice prefix</th>
+                <th>Status</th>
+                {canEdit && <th />}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((c) => (
+                <tr key={c.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ company: c })}>
+                  <td>
+                    <b>{c.name}</b>
+                    {c.legal_name && <div className="muted small">{c.legal_name}</div>}
+                  </td>
+                  <td className="mono">{c.gst_number ?? <span className="muted">—</span>}</td>
+                  <td>{c.state ?? '—'}</td>
+                  <td>{c.invoice_prefix ?? '—'}</td>
+                  <td>
+                    <span className={cn('badge', c.is_active ? 'badge-success' : 'badge-muted')}>{c.is_active ? 'Active' : 'Inactive'}</span>
+                  </td>
+                  {canEdit && (
+                    <td className="right">
+                      <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Edit ${c.name}`}>
+                        <Pencil size={15} />
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {drawer && (
+        <BillingCompanyDrawer
+          company={drawer.company}
+          nextOrder={Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1}
+          onClose={() => setDrawer(null)}
+          onSaved={(msg) => {
+            setDrawer(null)
+            onNotice({ ok: msg })
+            load()
+          }}
+        />
+      )}
+    </>
+  )
+}

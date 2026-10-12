@@ -14,6 +14,8 @@ import { FunnelsPage } from '@/funnels/FunnelsPage'
 import { LeadsPage } from '@/leads/LeadsPage'
 import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
+import { CustomersPage } from '@/customers/CustomersPage'
+import { MastersPage } from '@/masters/MastersPage'
 
 export default function App() {
   return (
@@ -36,6 +38,7 @@ export default function App() {
                 />
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
+                <Route path="/customers" element={<CustomersPage />} />
                 <Route
                   path="/funnels"
                   element={
@@ -50,6 +53,14 @@ export default function App() {
                   element={
                     <RequirePermission module="team" orModule="access" orAction="edit">
                       <AccessControlPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/masters"
+                  element={
+                    <RequirePermission module="masters" action="edit">
+                      <MastersPage />
                     </RequirePermission>
                   }
                 />

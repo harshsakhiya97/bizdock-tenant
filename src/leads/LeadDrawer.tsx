@@ -31,7 +31,8 @@ export function LeadDrawer({
   members: MemberOption[]
   defaultFunnelId: string | null
   onClose: () => void
-  onSaved: (msg: string) => void
+  /** `wonLeadId`: the lead was just moved into (or added in) a Won stage */
+  onSaved: (msg: string, wonLeadId?: string) => void
 }) {
   const tenant = useTenant()
   const { can, membership } = useAuth()
@@ -120,7 +121,8 @@ export function LeadDrawer({
           })
         else if (lead) await clearLeadFollowUps(lead.id)
       }
-      onSaved(`${input.first_name.trim()} ${lead ? 'saved' : 'added'}.`)
+      const won = stage?.kind === 'won' && (!lead || stageChanged)
+      onSaved(`${input.first_name.trim()} ${lead ? 'saved' : 'added'}.`, won ? leadId : undefined)
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)
