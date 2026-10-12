@@ -88,8 +88,8 @@ export function TodayCard({
           </div>
           {row.check_out ? (
             <div className="row att-actions">
-              <button type="button" className="btn btn-dark" disabled title="You have checked out for today">
-                <LogOut size={15} /> Checked out · {clock(row.check_out)}
+              <button type="button" className="btn btn-dark" disabled={busy} onClick={() => setAskOut(true)}>
+                <LogOut size={15} /> Check out · {now}
               </button>
             </div>
           ) : (
@@ -119,10 +119,18 @@ export function TodayCard({
       <ConfirmModal
         open={askOut}
         icon={LogOut}
-        title="Check out for today?"
+        title={row?.check_out ? 'Check out again?' : 'Check out for today?'}
         message={
           <>
-            You've worked <b>{row ? hm(workedMinutes(row)) : '—'}</b> today{openBreak ? ` and your ${openBreak.kind} break will end` : ''}. You can't check in again today once you check out.
+            {row?.check_out ? (
+              <>
+                You checked out at <b>{clock(row.check_out)}</b>. Your check-out time will change to <b>{now}</b>.
+              </>
+            ) : (
+              <>
+                You've worked <b>{row ? hm(workedMinutes(row)) : '—'}</b> today{openBreak ? ` and your ${openBreak.kind} break will end` : ''}.
+              </>
+            )}
           </>
         }
         confirmLabel={`Check out · ${now}`}
