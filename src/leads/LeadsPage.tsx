@@ -280,9 +280,13 @@ export function LeadsPage() {
               <button
                 type="button"
                 className={cn(view === 'board' && 'is-active')}
-                onClick={() => setView('board')}
-                disabled={!funnel}
-                title={!funnel ? 'Pick a funnel to see its board' : undefined}
+                onClick={() => {
+                  // the board shows one funnel's stages: from "All funnels" it opens the first funnel
+                  if (!funnel && scopedFunnels[0]) pickFunnel(scopedFunnels[0].id)
+                  setView('board')
+                }}
+                disabled={!scopedFunnels.length}
+                title={!scopedFunnels.length ? 'No funnels yet' : undefined}
               >
                 <Columns3 size={14} /> Board
               </button>
