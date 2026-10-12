@@ -10,7 +10,7 @@ export async function listCustomers(tenantId: string): Promise<CustomerRow[]> {
 export async function listSales(tenantId: string): Promise<SaleRow[]> {
   const { data, error } = await db()
     .from('sales')
-    .select('*, sale_dues(id, kind, seq, due_on, amount, paid_amount, status)')
+    .select('*, sale_dues(id, kind, seq, due_on, amount, paid_amount, status, reminded_at)')
     .eq('tenant_id', tenantId)
     .order('sale_date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -22,7 +22,7 @@ export async function listPayments(saleIds: string[]): Promise<PaymentRow[]> {
   if (!saleIds.length) return []
   const { data, error } = await db()
     .from('payments')
-    .select('id, sale_id, amount, paid_on, payment_mode_id, reference, note, status, received_by')
+    .select('id, sale_id, amount, paid_on, payment_mode_id, reference, note, status, received_by, due_id, tds_amount, gateway_charge, verified')
     .in('sale_id', saleIds)
     .order('paid_on')
   if (error) throw error

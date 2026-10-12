@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, Database, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, type LucideIcon } from 'lucide-react'
+import { Building2, CalendarClock, Database, HandCoins, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -27,6 +27,10 @@ export const navSections: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
+    title: 'Finance',
+    items: [{ to: '/collections', label: 'Collections & EMI', icon: HandCoins, module: 'collections', area: 'sales' }],
+  },
+  {
     title: 'Admin',
     items: [
       { to: '/businesses', label: 'Businesses', icon: Building2, module: 'businesses' },
@@ -48,6 +52,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
   '/customers': { title: 'Customers', crumb: 'Customers & sales', icon: Star },
+  '/collections': { title: 'Collections & EMI', crumb: 'Dues & instalments', icon: HandCoins },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },

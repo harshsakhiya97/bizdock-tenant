@@ -24,6 +24,7 @@ export type DueRow = {
   amount: number
   paid_amount: number
   status: 'pending' | 'paid' | 'cancelled'
+  reminded_at: string | null
 }
 
 export type SaleRow = {
@@ -65,6 +66,10 @@ export type PaymentRow = {
   note: string | null
   status: 'received' | 'cancelled'
   received_by: string | null
+  due_id: string | null
+  tds_amount: number
+  gateway_charge: number
+  verified: boolean
 }
 
 /** What the New sale form sends to create_sale(). */

@@ -4,6 +4,7 @@ import { AlarmClock, CalendarCheck, CalendarX, Sparkles } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { Empty, PageHead, StatCard } from '@/components/ui'
 import { CompleteModal } from '@/followups/CompleteModal'
+import { DuesCard } from '@/collections/DuesCard'
 import { FollowUpTable } from '@/followups/FollowUpTable'
 import { dayBounds, modeOf } from '@/followups/labels'
 import { ScheduleModal } from '@/followups/ScheduleModal'
@@ -190,6 +191,8 @@ export function MyDayPage() {
               Open follow-ups →
             </Link>
           </div>
+
+          {can('collections', 'view') && <DuesCard mine={mine} me={me} />}
 
           <div className="card card-pad stack" style={{ gap: 12 }}>
             <b>Pipeline</b>

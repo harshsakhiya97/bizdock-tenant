@@ -16,6 +16,7 @@ import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
 import { CustomersPage } from '@/customers/CustomersPage'
 import { MastersPage } from '@/masters/MastersPage'
+import { CollectionsPage } from '@/collections/CollectionsPage'
 
 export default function App() {
   return (
@@ -39,6 +40,14 @@ export default function App() {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
+                <Route
+                  path="/collections"
+                  element={
+                    <RequirePermission module="collections">
+                      <CollectionsPage />
+                    </RequirePermission>
+                  }
+                />
                 <Route
                   path="/funnels"
                   element={

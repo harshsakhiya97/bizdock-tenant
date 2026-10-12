@@ -7,6 +7,7 @@ import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { fullName } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
+import { RecordPaymentModal } from '@/collections/RecordPaymentModal'
 import { AddCustomerDrawer } from './AddCustomerDrawer'
 import { CustomerDrawer } from './CustomerDrawer'
 import { emisLeft, fmtDay, nextDue, PLANS, planOf, remainingOf, rupees, todayIso, addMonthsIso } from './labels'
@@ -33,6 +34,7 @@ export function CustomersPage() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [sale, setSale] = useState<SalePrefill | null>(null)
   const [adding, setAdding] = useState(false)
+  const [collectSale, setCollectSale] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
   // /customers?sale_lead=<lead id>: a lead was just won → New sale filled from the lead
@@ -126,6 +128,7 @@ export function CustomersPage() {
           data={data}
           onClose={() => setOpenId(null)}
           onNewSale={() => setSale({ business_id: open.business_id, customer_id: open.id, customer_name: open.full_name })}
+          onCollect={setCollectSale}
           onSaved={saved}
         />
       )}
@@ -136,6 +139,17 @@ export function CustomersPage() {
           onClose={() => setSale(null)}
           onSaved={(msg) => {
             setSale(null)
+            saved(msg)
+          }}
+        />
+      )}
+      {collectSale && (
+        <RecordPaymentModal
+          data={data}
+          saleId={collectSale}
+          onClose={() => setCollectSale(null)}
+          onSaved={(msg) => {
+            setCollectSale(null)
             saved(msg)
           }}
         />

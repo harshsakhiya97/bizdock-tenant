@@ -18,12 +18,15 @@ export function CustomerDrawer({
   data,
   onClose,
   onNewSale,
+  onCollect,
   onSaved,
 }: {
   customer: CustomerRow
   data: SalesData
   onClose: () => void
   onNewSale: () => void
+  /** record a payment on one of their sales */
+  onCollect: (saleId: string) => void
   onSaved: (msg: string, close?: boolean) => void
 }) {
   const { can, businesses } = useAuth()
@@ -247,11 +250,18 @@ export function CustomerDrawer({
                           {s.valid_until ? ` · valid until ${fmtDay(s.valid_until)}` : p?.lifetime ? ' · lifetime' : ''}
                         </div>
                       </div>
-                      {can('deals', 'edit') && s.status === 'active' && (
-                        <Button variant="ghost" size="sm" onClick={() => setCancelling(s)}>
-                          <Ban size={14} /> Cancel sale
-                        </Button>
-                      )}
+                      <span className="row-actions">
+                        {can('payments', 'add') && s.status === 'active' && remainingOf(s) > 0 && (
+                          <Button size="sm" variant="outline" onClick={() => onCollect(s.id)}>
+                            Record payment
+                          </Button>
+                        )}
+                        {can('deals', 'edit') && s.status === 'active' && (
+                          <Button variant="ghost" size="sm" onClick={() => setCancelling(s)}>
+                            <Ban size={14} /> Cancel sale
+                          </Button>
+                        )}
+                      </span>
                     </div>
                     <div className="sale-figures">
                       <span>
@@ -297,7 +307,12 @@ export function CustomerDrawer({
                     {sp.length > 0 && (
                       <div className="muted small">
                         Payments:{' '}
-                        {sp.map((x) => `${rupees(x.amount, true)} on ${fmtDay(x.paid_on)}${data.modeName(x.payment_mode_id) ? ` (${data.modeName(x.payment_mode_id)})` : ''}${x.note ? ` · ${x.note}` : ''}`).join('; ')}
+                        {sp
+                          .map(
+                            (x) =>
+                              `${rupees(x.amount, true)} on ${fmtDay(x.paid_on)}${data.modeName(x.payment_mode_id) ? ` (${data.modeName(x.payment_mode_id)})` : ''}${Number(x.tds_amount) > 0 ? ` + TDS ${rupees(x.tds_amount, true)}` : ''}${x.note ? ` · ${x.note}` : ''}${x.verified ? '' : ' · awaiting verification'}`,
+                          )
+                          .join('; ')}
                       </div>
                     )}
                     {s.status === 'cancelled' && s.cancel_reason && <div className="muted small">Reason: {s.cancel_reason}</div>}
