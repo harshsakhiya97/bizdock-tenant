@@ -18,6 +18,7 @@ import { CustomersPage } from '@/customers/CustomersPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
+import { LedgerPage } from '@/collections/LedgerPage'
 
 export default function App() {
   return (
@@ -54,6 +55,14 @@ export default function App() {
                   element={
                     <RequirePermission module="payments">
                       <PaymentsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/ledger"
+                  element={
+                    <RequirePermission module="finance">
+                      <LedgerPage />
                     </RequirePermission>
                   }
                 />

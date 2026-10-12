@@ -52,6 +52,7 @@ export type SaleRow = {
   notes: string | null
   status: 'active' | 'cancelled'
   cancel_reason: string | null
+  cancelled_at: string | null
   created_at: string
   sale_dues: DueRow[]
 }

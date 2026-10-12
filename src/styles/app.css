@@ -346,3 +346,18 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .alert.row-between { display: flex; align-items: center; gap: 12px; }
 .split-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 @media (max-width: 900px) { .split-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ---------- Ledger ---------- */
+.ledger-table { min-width: 1000px; }
+.ledger-sum td { background: var(--surface-muted); }
+.table td.center { text-align: center; padding: 24px; }
+.print-only { display: none; }
+@media print {
+  .sidebar, .topbar, .tabbar, .no-print, .page-actions, .sidebar-overlay { display: none !important; }
+  .print-only { display: block; margin-bottom: 12px; font-size: 13px; }
+  .shell, .main, .page { display: block !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; height: auto !important; }
+  .table-wrap { overflow: visible !important; }
+  .ledger-table { min-width: 0; font-size: 11px; }
+  .panel, .stat { box-shadow: none !important; break-inside: avoid; }
+  .badge { border: 1px solid currentColor; }
+}
