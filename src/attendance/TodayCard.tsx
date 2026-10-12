@@ -86,7 +86,13 @@ export function TodayCard({
               </span>
             )}
           </div>
-          {!row.check_out && (
+          {row.check_out ? (
+            <div className="row att-actions">
+              <button type="button" className="btn btn-dark" disabled title="You have checked out for today">
+                <LogOut size={15} /> Checked out · {clock(row.check_out)}
+              </button>
+            </div>
+          ) : (
             <div className="row att-actions">
               {openBreak ? (
                 <button type="button" className="btn btn-outline" disabled={busy} onClick={() => run(() => breakAction(tenant.id, 'end'), 'Break ended.')}>
