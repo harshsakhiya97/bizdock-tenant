@@ -104,6 +104,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [membership],
   )
 
+  const scope = useCallback(
+    (area: string) => {
+      if (!membership) return 'none' as const
+      if (membership.is_support || membership.role.is_system || membership.role.level <= 1) return 'all' as const
+      const p = membership.permissions ?? membership.role.permissions
+      return (p?.scope?.[area] as 'all' | 'team' | 'own' | 'none' | undefined) ?? 'none'
+    },
+    [membership],
+  )
+
   const value = useMemo(
     () => ({
       session,
@@ -115,12 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessError,
       refreshProfile: () => loadUser(session),
       can,
+      scope,
       level: membership ? (membership.is_support ? 0 : membership.role.level) : Number.MAX_SAFE_INTEGER,
       signOut: async () => {
         await db().auth.signOut()
       },
     }),
-    [session, profile, membership, businesses, loading, accessError, loadUser, can],
+    [session, profile, membership, businesses, loading, accessError, loadUser, can, scope],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

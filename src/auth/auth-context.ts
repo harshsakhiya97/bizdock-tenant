@@ -38,6 +38,8 @@ export type AuthState = {
   refreshProfile: () => Promise<void>
   /** permission check for the current user in this tenant */
   can: (module: string, action: PermissionAction) => boolean
+  /** whose records this user sees in an area (leads, customers, ...): all / team / own / none */
+  scope: (area: string) => 'all' | 'team' | 'own' | 'none'
   /** this user's role level in the tenant (0 Tech Support, 1 Owner, ...). They manage levels above it. */
   level: number
   signOut: () => Promise<void>

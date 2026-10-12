@@ -11,6 +11,7 @@ import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
 import { FunnelsPage } from '@/funnels/FunnelsPage'
+import { LeadsPage } from '@/leads/LeadsPage'
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route path="/leads" element={<LeadsPage />} />
                 <Route
                   path="/funnels"
                   element={

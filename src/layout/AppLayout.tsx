@@ -26,7 +26,7 @@ function readCollapsed() {
 /** Theme-kit app shell: sidebar, top bar with crumbs, page area and the phone tab bar. */
 export function AppLayout() {
   const { pathname } = useLocation()
-  const { profile, user, can } = useAuth()
+  const { profile, user, can, scope } = useAuth()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -37,7 +37,9 @@ export function AppLayout() {
 
   const sections = navSections
     .map((s) => ({ ...s, items: s.items.filter(
-        (i) => !i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action)),
+        (i) =>
+          (i.area ? scope(i.area) !== 'none' : true) &&
+          (!i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action))),
       ) }))
     .filter((s) => s.items.length > 0)
   const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(

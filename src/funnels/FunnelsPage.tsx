@@ -5,6 +5,8 @@ import { useBusiness } from '@/business/useBusiness'
 import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { Link } from 'react-router'
+import { db } from '@/lib/supabase'
 import { archiveFunnel, listFunnels } from './api'
 import { FunnelDrawer } from './FunnelDrawer'
 import { FUNNEL_TYPES, typeLabel } from './templates'
@@ -28,10 +30,30 @@ export function FunnelsPage() {
   const [deleting, setDeleting] = useState<FunnelRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [busy, setBusy] = useState(false)
+  const [leadCount, setLeadCount] = useState<Map<string, { open: number; won: number }>>(new Map())
 
   const load = useCallback(() => {
     listFunnels(tenant.id)
-      .then(setFunnels)
+      .then((f) => {
+        setFunnels(f)
+        // leads this person can see, counted per funnel (in progress / won)
+        const kind = new Map(f.flatMap((x) => x.funnel_stages.map((st) => [st.id, st.kind] as const)))
+        void db()
+          .from('leads')
+          .select('funnel_id, stage_id')
+          .eq('tenant_id', tenant.id)
+          .eq('is_archived', false)
+          .then(({ data }) => {
+            const m = new Map<string, { open: number; won: number }>()
+            for (const l of data ?? []) {
+              const c = m.get(l.funnel_id) ?? { open: 0, won: 0 }
+              if (kind.get(l.stage_id) === 'open') c.open++
+              if (kind.get(l.stage_id) === 'won') c.won++
+              m.set(l.funnel_id, c)
+            }
+            setLeadCount(m)
+          })
+      })
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id])
   useEffect(load, [load])
@@ -140,16 +162,27 @@ export function FunnelsPage() {
                   </div>
                   <div className="pl-tiles">
                     <div className="pl-tile">
-                      <div className="pl-tile-label">Stages</div>
-                      <div className="pl-tile-value">{f.funnel_stages.length}</div>
+                      <div className="pl-tile-label">Open leads</div>
+                      <div className="pl-tile-value">{leadCount.get(f.id)?.open ?? 0}</div>
                     </div>
                     <div className="pl-tile">
-                      <div className="pl-tile-label">In progress</div>
-                      <div className="pl-tile-value">{open}</div>
+                      <div className="pl-tile-label">Won</div>
+                      <div className="pl-tile-value tone-success">{leadCount.get(f.id)?.won ?? 0}</div>
                     </div>
                   </div>
                   <div className="pl-auto">
-                    <span className="muted small">Leads appear here once the Leads module is built.</span>
+                    <Link to="/leads" className="link" onClick={() => {
+                        try {
+                          localStorage.setItem(`leads.funnel.${tenant.id}`, f.id)
+                        } catch {
+                          /* storage unavailable */
+                        }
+                      }}>
+                      Open leads →
+                    </Link>
+                    <span className="muted small">
+                      {f.funnel_stages.length} stages · {open} in progress
+                    </span>
                     <div className="row-actions">
                       {can('funnels', 'edit') && (
                         <button
