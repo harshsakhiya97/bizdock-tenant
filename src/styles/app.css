@@ -456,3 +456,8 @@ button.cal-day.is-today:hover { background: var(--brand); }
 .att-rules { grid-template-columns: 1fr 1fr; }
 .att-rules .field-label { font-size: 12px; }
 .myday-checkin { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+
+/* no sideways page movement: stops the trackpad rubber-band / swipe-back bounce and any stray horizontal overflow */
+html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
+.shell, .main, .page { overscroll-behavior-x: none; }
+.main { overflow-x: clip; }
