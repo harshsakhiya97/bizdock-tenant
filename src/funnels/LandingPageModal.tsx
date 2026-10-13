@@ -157,15 +157,6 @@ export function LandingPageModal({
           </Hint>
         </div>
 
-        <div>
-          <span className="field-label">Default UTMs</span>
-          <div className="form-grid form-grid-3">
-            <TextInput aria-label="utm_source" placeholder="utm_source, e.g. website" value={input.utm_source} onChange={set('utm_source')} />
-            <TextInput aria-label="utm_medium" placeholder="utm_medium, e.g. organic" value={input.utm_medium} onChange={set('utm_medium')} />
-            <TextInput aria-label="utm_campaign" placeholder="utm_campaign" value={input.utm_campaign} onChange={set('utm_campaign')} />
-          </div>
-          <Hint>Used when a visitor arrives without UTMs in the link (e.g. typed the address). Optional.</Hint>
-        </div>
       </div>
     </Modal>
   )

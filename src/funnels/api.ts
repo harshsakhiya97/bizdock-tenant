@@ -105,9 +105,10 @@ export async function saveLandingPage(tenantId: string, funnelId: string, existi
     name: input.name.trim(),
     url: clean(input.url),
     fields: input.fields.map((f) => ({ key: f.key, label: f.label.trim(), required: f.required })),
-    utm_source: clean(input.utm_source),
-    utm_medium: clean(input.utm_medium),
-    utm_campaign: clean(input.utm_campaign),
+    // no default UTMs: UTMs come only from the page's UTM links
+    utm_source: null,
+    utm_medium: null,
+    utm_campaign: null,
   }
   const { error } = existing
     ? await db().from('landing_pages').update(row).eq('id', existing.id)

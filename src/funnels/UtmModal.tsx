@@ -13,7 +13,7 @@ export function UtmModal({ page, onClose, onSaved }: { page: LandingPage; onClos
     label: '',
     utm_source: '',
     utm_medium: '',
-    utm_campaign: page.utm_campaign ?? '',
+    utm_campaign: '',
     utm_term: '',
     utm_content: '',
   })

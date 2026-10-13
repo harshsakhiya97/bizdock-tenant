@@ -150,31 +150,22 @@ export function LandingPagesTab({
                   </div>
                 </div>
 
-                <div className="lp-grid">
-                  <div className="lp-block">
-                    <span className="lp-label">Form fields</span>
-                    <div className="chip-row">
-                      {['name', 'email', 'phone'].map((k) => (
-                        <span key={k} className="field-chip">
-                          {k} <i>*</i>
-                        </span>
-                      ))}
-                      {p.fields.map((f) => (
-                        <span key={f.key} className="field-chip" title={f.label}>
-                          {f.key}
-                          {f.required && <i>*</i>}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="lp-block">
-                    <span className="lp-label">Default UTMs</span>
-                    <span className="small">
-                      {[p.utm_source, p.utm_medium, p.utm_campaign].filter(Boolean).join(' / ') || <span className="muted">None</span>}
-                    </span>
+                <div className="lp-block">
+                  <span className="lp-label">Form fields</span>
+                  <div className="chip-row">
+                    {['name', 'email', 'phone'].map((k) => (
+                      <span key={k} className="field-chip">
+                        {k} <i>*</i>
+                      </span>
+                    ))}
+                    {p.fields.map((f) => (
+                      <span key={f.key} className="field-chip" title={f.label}>
+                        {f.key}
+                        {f.required && <i>*</i>}
+                      </span>
+                    ))}
                   </div>
                 </div>
-
                 <div className="lp-block">
                   <div className="row-between">
                     <span className="lp-label">UTM links</span>
