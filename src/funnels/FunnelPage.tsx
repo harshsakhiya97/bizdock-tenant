@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, CalendarDays, Pencil, Tag, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -14,6 +14,10 @@ import { FunnelDrawer } from './FunnelDrawer'
 import { LandingPagesTab } from './LandingPagesTab'
 import { typeLabel } from './templates'
 import type { FunnelRow, LandingPage, SubmissionRow } from './types'
+import type { ChainContext } from './chain/types'
+
+// the canvas library is large: load it only when the Chain tab opens
+const ChainBuilder = lazy(() => import('./chain/ChainBuilder').then((m) => ({ default: m.ChainBuilder })))
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -63,6 +67,17 @@ export function FunnelPage() {
   const pageName = useMemo(() => new Map((pages ?? []).map((p) => [p.id, p.name])), [pages])
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
   const businessName = businesses.find((b) => b.id === funnel?.business_id)?.name ?? '—'
+
+  const chainCtx = useMemo<ChainContext>(
+    () => ({
+      pages: (pages ?? []).map((p) => ({ id: p.id, name: p.name })),
+      stages: (funnel?.funnel_stages ?? []).map((st) => ({ id: st.id, name: st.name })),
+      tags: [...new Set([...(funnel?.tags ?? []), ...(leads ?? []).flatMap((l) => l.tags)])].sort(),
+      event: event ? { title: event.title, date: event.event_date, time: event.start_time } : null,
+      fieldKeys: [...new Set((pages ?? []).flatMap((p) => p.fields.map((f) => f.key)))].filter((k) => k !== 'city'),
+    }),
+    [pages, funnel, leads, event],
+  )
 
   if (funnel === undefined) return <div className="empty">Loading funnel…</div>
   if (!funnel)
@@ -236,10 +251,9 @@ export function FunnelPage() {
           )}
 
           {tab === 'chain' && (
-            <Empty icon={Workflow}>
-              The communication chain builder comes next: drag WhatsApp, email and call steps, waits (e.g. 1 day after, 2 hours before the
-              webinar) and conditions, started when a lead submits a landing page form.
-            </Empty>
+            <Suspense fallback={<div className="empty">Loading the chain builder…</div>}>
+              <ChainBuilder funnelId={funnel.id} ctx={chainCtx} canEdit={can('funnels', 'edit')} />
+            </Suspense>
           )}
 
           {tab === 'leads' &&
