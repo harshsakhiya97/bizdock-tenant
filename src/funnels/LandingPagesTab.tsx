@@ -4,10 +4,13 @@ import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { archiveLandingPage, deleteUtmLink, matchesUtm, regenerateWebhookKey, setLandingPageActive, utmUrl, webhookUrl } from './api'
 import { LandingPageModal } from './LandingPageModal'
-import { htmlSnippet, jsSnippet } from './snippets'
+import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
 import type { LandingPage, SubmissionRow, UtmLink } from './types'
 import { UtmModal } from './UtmModal'
 import { useCopy } from './useCopy'
+
+const snippetFor = (p: LandingPage, kind: 'html' | 'js' | 'curl' | undefined) =>
+  kind === 'html' ? htmlSnippet(p) : kind === 'curl' ? curlSnippet(p) : jsSnippet(p)
 
 type Confirm =
   | { kind: 'regen'; page: LandingPage }
@@ -33,7 +36,7 @@ export function LandingPagesTab({
   const [editing, setEditing] = useState<{ page: LandingPage | null } | null>(null)
   const [utmFor, setUtmFor] = useState<LandingPage | null>(null)
   const [confirm, setConfirm] = useState<Confirm | null>(null)
-  const [snippet, setSnippet] = useState<Record<string, 'html' | 'js' | undefined>>({})
+  const [snippet, setSnippet] = useState<Record<string, 'html' | 'js' | 'curl' | undefined>>({})
   const [busy, setBusy] = useState(false)
   const { copied, copy } = useCopy()
 
@@ -243,6 +246,9 @@ export function LandingPagesTab({
                       <button type="button" className={cn(snippet[p.id] === 'js' && 'is-active')} onClick={() => setSnippet((s) => ({ ...s, [p.id]: s[p.id] === 'js' ? undefined : 'js' }))}>
                         JavaScript
                       </button>
+                      <button type="button" className={cn(snippet[p.id] === 'curl' && 'is-active')} onClick={() => setSnippet((s) => ({ ...s, [p.id]: s[p.id] === 'curl' ? undefined : 'curl' }))}>
+                        cURL
+                      </button>
                     </div>
                   </div>
                   {snippet[p.id] && (
@@ -250,11 +256,11 @@ export function LandingPagesTab({
                       <button
                         type="button"
                         className="btn btn-outline btn-sm snippet-copy"
-                        onClick={() => copy(`s-${p.id}`, snippet[p.id] === 'html' ? htmlSnippet(p) : jsSnippet(p))}
+                        onClick={() => copy(`s-${p.id}`, snippetFor(p, snippet[p.id]))}
                       >
                         {copied === `s-${p.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `s-${p.id}` ? 'Copied' : 'Copy'}
                       </button>
-                      <pre>{snippet[p.id] === 'html' ? htmlSnippet(p) : jsSnippet(p)}</pre>
+                      <pre>{snippetFor(p, snippet[p.id])}</pre>
                     </div>
                   )}
                 </div>

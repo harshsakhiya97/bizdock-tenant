@@ -45,3 +45,14 @@ ${extra ? `${extra}\n` : ''}    ...utm,
 // { ok: true, status: 'created' | 'updated', lead_id } or { ok: false, error }
 console.log(await res.json())`
 }
+
+/** A test call from a terminal (Mac / Linux; on Windows use Git Bash or WSL). */
+export function curlSnippet(p: LandingPage) {
+  const body: Record<string, string> = { name: 'Test Lead', email: 'test@example.com', phone: '9876543210' }
+  for (const f of p.fields) body[f.key] = f.key === 'city' ? 'Ahmedabad' : 'Test'
+  return `curl -X POST '${webhookUrl(p.webhook_key)}&utm_source=test' \\
+  -H 'Content-Type: application/json' \\
+  -d '${JSON.stringify(body)}'
+
+# reply: {"ok":true,"status":"created","lead_id":"…"}  (same phone again → "updated")`
+}
