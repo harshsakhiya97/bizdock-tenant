@@ -72,7 +72,7 @@ export function StepPanel({
                 </label>
               )
             })}
-            <Hint>Imported or hand-added leads don’t start the chain.</Hint>
+            <Hint>Imported or hand-added leads don’t start the automation.</Hint>
           </div>
         )}
 
@@ -271,7 +271,7 @@ function ConditionFields({
           <TextInput aria-label="Value" placeholder="e.g. facebook" value={String(d.value ?? '')} onChange={(e) => set('value', e.target.value)} disabled={disabled} />
         )}
       </div>
-      <Hint>Leads that match go down the Yes line, the rest down the No line. A line left empty ends the chain for them.</Hint>
+      <Hint>Leads that match go down the Yes line, the rest down the No line. A line left empty ends the automation for them.</Hint>
       {field === 'attendance' && <Hint>Attendance is filled in once webinar tracking is connected.</Hint>}
     </>
   )

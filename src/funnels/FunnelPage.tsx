@@ -16,13 +16,13 @@ import { typeLabel } from './templates'
 import type { FunnelRow, LandingPage, SubmissionRow } from './types'
 import type { ChainContext } from './chain/types'
 
-// the canvas library is large: load it only when the Chain tab opens
+// the canvas library is large: load it only when the Automation tab opens
 const ChainBuilder = lazy(() => import('./chain/ChainBuilder').then((m) => ({ default: m.ChainBuilder })))
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'pages', label: 'Landing pages' },
-  { key: 'chain', label: 'Chain' },
+  { key: 'automation', label: 'Automation' },
   { key: 'leads', label: 'Leads' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -30,7 +30,7 @@ type TabKey = (typeof TABS)[number]['key']
 const typeTone = { lead_gen: 'badge-info', webinar: 'badge-purple', vsl: 'badge-warning', custom: 'badge-muted' } as const
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
-/** One funnel: overview, landing pages (webhooks + UTM links), communication chain and its leads. */
+/** One funnel: overview, landing pages (webhooks + UTM links), automation and its leads. */
 export function FunnelPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
@@ -250,8 +250,8 @@ export function FunnelPage() {
             />
           )}
 
-          {tab === 'chain' && (
-            <Suspense fallback={<div className="empty">Loading the chain builder…</div>}>
+          {tab === 'automation' && (
+            <Suspense fallback={<div className="empty">Loading the automation builder…</div>}>
               <ChainBuilder funnelId={funnel.id} ctx={chainCtx} canEdit={can('funnels', 'edit')} />
             </Suspense>
           )}

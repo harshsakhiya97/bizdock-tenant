@@ -27,7 +27,7 @@ export async function saveChain(
   const row = {
     tenant_id: tenantId,
     funnel_id: funnelId,
-    name: chain.name.trim() || 'Communication chain',
+    name: chain.name.trim() || 'Automation',
     is_active: chain.is_active,
     nodes: slimNodes(chain.nodes),
     edges: slimEdges(chain.edges),

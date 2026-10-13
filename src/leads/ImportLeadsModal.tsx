@@ -363,7 +363,7 @@ export function ImportLeadsModal({
                 <div className="span-2">
                   <Hint>
                     {fromFunnel
-                      ? `They are tagged with the funnel${funnel?.tags.length ? ` (${funnel.tags.join(', ')})` : ''} and start in its first stage. Importing doesn’t start the communication chain.`
+                      ? `They are tagged with the funnel${funnel?.tags.length ? ` (${funnel.tags.join(', ')})` : ''} and start in its first stage. Importing doesn’t start the automation.`
                       : 'They start in the funnel’s first stage. The funnel’s tags are not added.'}
                   </Hint>
                 </div>

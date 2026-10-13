@@ -36,7 +36,7 @@ const newId = (kind: string) => `${kind}-${Date.now().toString(36)}-${++seq}`
 
 type Props = { funnelId: string; ctx: ChainContext; canEdit: boolean }
 
-/** Funnel → Chain: n8n-style canvas. Drag steps from the left, join them with lines, set each step on the right. */
+/** Funnel → Automation: n8n-style canvas. Drag steps from the left, join them with lines, set each step on the right. */
 export function ChainBuilder(props: Props) {
   return (
     <ReactFlowProvider>
@@ -52,7 +52,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
   const wrap = useRef<HTMLDivElement>(null)
   const [nodes, setNodes, onNodesChange] = useNodesState<StepNode>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<ChainEdge>([])
-  const [name, setName] = useState('Communication chain')
+  const [name, setName] = useState('Automation')
   const [active, setActive] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -66,7 +66,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
       .then((c) => {
         setNodes(c?.nodes?.length ? c.nodes : START_NODES)
         setEdges((c?.edges ?? []).map(withLook))
-        setName(c?.name ?? 'Communication chain')
+        setName(c?.name ?? 'Automation')
         setActive(c?.is_active ?? false)
         setSavedAt(c?.updated_at ?? null)
         setLoaded(true)
@@ -98,7 +98,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
     for (const n of nodes) {
       const p = problem(n.type as StepKind, n.data, ctx)
       if (p) out.set(n.id, p)
-      else if (!seen.has(n.id)) out.set(n.id, 'Not joined to the chain')
+      else if (!seen.has(n.id)) out.set(n.id, 'Not joined to the automation')
     }
     return out
   }, [nodes, edges, ctx])
@@ -158,7 +158,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
 
   async function save(nextActive = active) {
     if (nextActive && issues.size) {
-      setNotice({ error: 'Fix the steps marked with ! before turning the chain on.' })
+      setNotice({ error: 'Fix the steps marked with ! before turning the automation on.' })
       return
     }
     setBusy(true)
@@ -167,7 +167,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
       setActive(nextActive)
       setDirty(false)
       setSavedAt(new Date().toISOString())
-      setNotice({ ok: nextActive !== active ? (nextActive ? 'Chain turned on and saved.' : 'Chain turned off and saved.') : 'Chain saved.' })
+      setNotice({ ok: nextActive !== active ? (nextActive ? 'Automation turned on and saved.' : 'Automation turned off and saved.') : 'Automation saved.' })
     } catch (e) {
       setNotice({ error: (e as Error).message })
     } finally {
@@ -180,7 +180,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
       <div className="cb-bar">
         <input
           className="cb-name"
-          aria-label="Chain name"
+          aria-label="Automation name"
           value={name}
           disabled={!canEdit}
           onChange={(e) => {
@@ -197,7 +197,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         {canEdit && (
           <div className="row" style={{ marginLeft: 'auto' }}>
             <label className="check-inline" title={issues.size ? 'Fix the marked steps first' : undefined}>
-              <input type="checkbox" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} /> Chain on
+              <input type="checkbox" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} /> Automation on
             </label>
             <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={busy || !loaded || !dirty}>
               <Save size={15} /> {busy ? 'Saving…' : 'Save'}
@@ -206,7 +206,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         )}
       </div>
       <div className="alert alert-info small cb-note">
-        <Info size={15} /> WhatsApp, email and calls are connected later. Until then the chain is saved but no message is sent.
+        <Info size={15} /> WhatsApp, email and calls are connected later. Until then the automation is saved but no message is sent.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {notice.ok && !dirty && <div className="alert alert-info">{notice.ok}</div>}
