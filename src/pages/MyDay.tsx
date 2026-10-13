@@ -37,7 +37,7 @@ export function MyDayPage() {
   const today = fus.filter((f) => new Date(f.due_at) >= now && new Date(f.due_at) < end)
   const upcoming = fus.filter((f) => new Date(f.due_at) >= end && new Date(f.due_at) < week)
   const myLeads = data.leads.filter((l) => !mine || l.owner_id === me)
-  const openLeads = myLeads.filter((l) => data.stageById.get(l.stage_id)?.kind === 'open')
+  const openLeads = myLeads.filter((l) => data.stageById.get(l.stage_id ?? '')?.kind === 'open')
   const noFollowUp = openLeads.filter((l) => !l.next_follow_up_at)
   const stale = noFollowUp.filter((l) => Date.now() - new Date(l.updated_at).getTime() > 7 * 864e5)
   const newToday = myLeads.filter((l) => new Date(l.created_at) >= start)
@@ -137,7 +137,7 @@ export function MyDayPage() {
             ) : (
               <div className="link-rows" style={{ border: 0, borderRadius: 0 }}>
                 {noFollowUp.slice(0, 8).map((l) => {
-                  const s = data.stageById.get(l.stage_id)
+                  const s = data.stageById.get(l.stage_id ?? '')
                   return (
                     <div key={l.id}>
                       <div className="lr-main">

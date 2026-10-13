@@ -4,8 +4,9 @@ export type LeadRow = {
   id: string
   tenant_id: string
   business_id: string
-  funnel_id: string
-  stage_id: string
+  /** null = imported without a funnel (belongs to the business only) */
+  funnel_id: string | null
+  stage_id: string | null
   first_name: string
   last_name: string | null
   phone: string

@@ -38,10 +38,13 @@ export function LeadDrawer({
   const tenant = useTenant()
   const { can, membership } = useAuth()
   const me = membership?.id
-  const firstFunnel = funnels.find((f) => f.id === (lead?.funnel_id ?? defaultFunnelId)) ?? funnels[0]
+  // a lead imported without a funnel can stay without one, or be put into a funnel of its business
+  const noFunnelLead = !!lead && !lead.funnel_id
+  const funnelChoices = noFunnelLead ? funnels.filter((f) => f.business_id === lead!.business_id) : funnels
+  const firstFunnel = noFunnelLead ? undefined : (funnels.find((f) => f.id === (lead?.funnel_id ?? defaultFunnelId)) ?? funnels[0])
   const [input, setInput] = useState<LeadInput>(() => ({
-    funnel_id: lead?.funnel_id ?? firstFunnel?.id ?? '',
-    stage_id: lead?.stage_id ?? firstFunnel?.funnel_stages[0]?.id ?? '',
+    funnel_id: noFunnelLead ? '' : (lead?.funnel_id ?? firstFunnel?.id ?? ''),
+    stage_id: noFunnelLead ? '' : (lead?.stage_id ?? firstFunnel?.funnel_stages[0]?.id ?? ''),
     first_name: lead?.first_name ?? '',
     last_name: lead?.last_name ?? '',
     phone: lead?.phone ?? '',
@@ -70,7 +73,7 @@ export function LeadDrawer({
 
   const funnel = funnels.find((f) => f.id === input.funnel_id)
   const stage = funnel?.funnel_stages.find((s) => s.id === input.stage_id)
-  const stageChanged = !!lead && input.stage_id !== lead.stage_id
+  const stageChanged = !!lead && !!lead.stage_id && input.stage_id !== lead.stage_id
   const needsNote = stageChanged && !!stage && (stage.note_required || stage.kind === 'lost')
   const stageName = useMemo(() => {
     const m = new Map<string, string>()
@@ -91,7 +94,8 @@ export function LeadDrawer({
 
   async function submit(e: FormEvent) {
     e.preventDefault()
-    if (!funnel || !stage) return setError('Pick a funnel and stage.')
+    const keepNoFunnel = noFunnelLead && !input.funnel_id
+    if (!keepNoFunnel && (!funnel || !stage)) return setError('Pick a funnel and stage.')
     if (!input.first_name.trim()) return setError('First name is required.')
     if (!phoneOk(input.phone)) return setError('Enter a valid phone number (10 digits).')
     if (input.estimated_amount.trim() && Number.isNaN(Number(input.estimated_amount))) return setError('Estimated amount must be a number.')
@@ -100,15 +104,16 @@ export function LeadDrawer({
     setBusy(true)
     setError(null)
     try {
-      if (!lead || funnel.business_id !== lead.business_id || input.phone !== lead.phone) {
-        if (await phoneExists(funnel.business_id, input.phone, lead?.id)) {
+      const businessId = funnel?.business_id ?? lead!.business_id
+      if (!lead || businessId !== lead.business_id || input.phone !== lead.phone) {
+        if (await phoneExists(businessId, input.phone, lead?.id)) {
           setBusy(false)
           return setError('A lead with this phone number already exists in this business.')
         }
       }
       const leadId = lead
         ? (await updateLead(tenant.id, me, lead, input, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
-        : await createLead(tenant.id, funnel.business_id, me, input)
+        : await createLead(tenant.id, businessId, me, input)
       // the follow-up date lives in Follow-ups: a new date schedules one, clearing it cancels the pending one
       const before = toLocalInput(lead?.next_follow_up_at ?? null)
       if (canFollowUp && input.next_follow_up_at !== before) {
@@ -224,7 +229,7 @@ export function LeadDrawer({
         <FormSection title="Pipeline">
           <div className="form-grid form-grid-3">
             <div>
-              <Label htmlFor="l-funnel" required>
+              <Label htmlFor="l-funnel" required={!noFunnelLead}>
                 Funnel
               </Label>
               <Select
@@ -236,7 +241,8 @@ export function LeadDrawer({
                   setInput((d) => ({ ...d, funnel_id: e.target.value, stage_id: f?.funnel_stages[0]?.id ?? '' }))
                 }}
               >
-                {funnels.map((f) => (
+                {noFunnelLead && <option value="">— No funnel —</option>}
+                {funnelChoices.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
                   </option>
@@ -244,10 +250,11 @@ export function LeadDrawer({
               </Select>
             </div>
             <div>
-              <Label htmlFor="l-stage" required>
+              <Label htmlFor="l-stage" required={!!input.funnel_id}>
                 Stage
               </Label>
-              <Select id="l-stage" value={input.stage_id} onChange={set('stage_id')} disabled={!canEdit}>
+              <Select id="l-stage" value={input.stage_id} onChange={set('stage_id')} disabled={!canEdit || !input.funnel_id}>
+                {!input.funnel_id && <option value="">—</option>}
                 {(funnel?.funnel_stages ?? []).map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}

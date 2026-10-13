@@ -5,6 +5,7 @@ import { Hint, Label, Select } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { listLandingPages } from '@/funnels/api'
 import type { FunnelRow, LandingPage } from '@/funnels/types'
+import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { importLeads } from './api'
 
@@ -66,11 +67,13 @@ type Result = { created: number; updated: number; skipped: number; errors: { row
 export function ImportLeadsModal({
   funnels,
   defaultFunnelId,
+  defaultBusinessId,
   onClose,
   onDone,
 }: {
   funnels: FunnelRow[]
   defaultFunnelId: string | null
+  defaultBusinessId: string | null
   onClose: () => void
   onDone: (msg: string) => void
 }) {
@@ -80,7 +83,11 @@ export function ImportLeadsModal({
   const [body, setBody] = useState<string[][]>([])
   const [map, setMap] = useState<string[]>([])
   const [fromFunnel, setFromFunnel] = useState<boolean | null>(null)
+  const { businesses } = useAuth()
   const [funnelId, setFunnelId] = useState(defaultFunnelId ?? '')
+  // only when the list is not from a funnel: put them in a funnel anyway?
+  const [addToFunnel, setAddToFunnel] = useState<boolean | null>(null)
+  const [businessId, setBusinessId] = useState(defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''))
   const [pages, setPages] = useState<LandingPage[]>([])
   const [pageId, setPageId] = useState('')
   const [busy, setBusy] = useState(false)
@@ -128,14 +135,20 @@ export function ImportLeadsModal({
     if (!map.includes('phone')) return setError('Match one column to Phone.')
     if (!map.includes('name') && !map.includes('first_name')) return setError('Match a column to Full name or First name.')
     if (fromFunnel === null) return setError('Answer: are these leads from a funnel?')
-    if (!funnelId) return setError(fromFunnel ? 'Pick the funnel they came from.' : 'Pick the funnel to add them to.')
+    const useFunnel = fromFunnel || addToFunnel === true
+    if (!fromFunnel && addToFunnel === null) return setError('Answer: do you want to add them to a funnel?')
+    if (useFunnel && !funnelId) return setError(fromFunnel ? 'Pick the funnel they came from.' : 'Pick the funnel to add them to.')
+    if (!useFunnel && !businessId) return setError('Pick the business they belong to.')
+    const target = useFunnel
+      ? { businessId: funnels.find((f) => f.id === funnelId)!.business_id, funnelId }
+      : { businessId, funnelId: null }
     setBusy(true)
     setError(null)
     const total: Result = { created: 0, updated: 0, skipped: 0, errors: [] }
     try {
       for (let i = 0; i < records.length; i += 500) {
         setProgress(`Importing ${Math.min(i + 500, records.length)} of ${records.length}…`)
-        const r = await importLeads(funnelId, fromFunnel && pageId ? pageId : null, fromFunnel, records.slice(i, i + 500))
+        const r = await importLeads(target, fromFunnel && pageId ? pageId : null, fromFunnel, records.slice(i, i + 500))
         total.created += r.created
         total.updated += r.updated
         total.skipped += r.skipped
@@ -288,7 +301,7 @@ export function ImportLeadsModal({
                   </tbody>
                 </table>
               </div>
-              <Hint>Phone and a name are required. A phone already in the chosen funnel updates that lead instead of adding a new one.</Hint>
+              <Hint>Phone and a name are required. A phone that is already there (in the chosen funnel, or in the business when there is no funnel) updates that lead instead of adding a new one.</Hint>
             </div>
           )}
 
@@ -304,7 +317,22 @@ export function ImportLeadsModal({
                 No
               </button>
             </div>
-            {fromFunnel !== null && (
+            {fromFunnel === false && (
+              <>
+                <span className="field-label" style={{ margin: '4px 0 0' }}>
+                  Do you want to add them to a funnel?
+                </span>
+                <div className="seg seg-sm">
+                  <button type="button" className={cn(addToFunnel === true && 'is-active')} onClick={() => setAddToFunnel(true)}>
+                    Yes
+                  </button>
+                  <button type="button" className={cn(addToFunnel === false && 'is-active')} onClick={() => setAddToFunnel(false)}>
+                    No
+                  </button>
+                </div>
+              </>
+            )}
+            {(fromFunnel === true || (fromFunnel === false && addToFunnel === true)) && (
               <div className="form-grid">
                 <div>
                   <Label htmlFor="imp-funnel" required>
@@ -336,8 +364,28 @@ export function ImportLeadsModal({
                   <Hint>
                     {fromFunnel
                       ? `They are tagged with the funnel${funnel?.tags.length ? ` (${funnel.tags.join(', ')})` : ''} and start in its first stage. Importing doesn’t start the communication chain.`
-                      : 'Every lead sits in a funnel’s stages, so pick where they should be worked. The funnel’s tags are not added.'}
+                      : 'They start in the funnel’s first stage. The funnel’s tags are not added.'}
                   </Hint>
+                </div>
+              </div>
+            )}
+            {fromFunnel === false && addToFunnel === false && (
+              <div className="form-grid">
+                <div>
+                  <Label htmlFor="imp-business" required>
+                    Business
+                  </Label>
+                  <Select id="imp-business" value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
+                    <option value="">— select —</option>
+                    {businesses.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="span-2">
+                  <Hint>They are saved without a funnel (no stage). Find them under Leads → “No funnel” and move them into a funnel any time.</Hint>
                 </div>
               </div>
             )}

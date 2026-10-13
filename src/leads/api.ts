@@ -21,10 +21,16 @@ export async function listFunnelLeads(funnelId: string): Promise<LeadRow[]> {
   return (data ?? []) as LeadRow[]
 }
 
-/** CSV rows → leads in a funnel (same phone in the funnel = update). */
-export async function importLeads(funnelId: string, pageId: string | null, fromFunnel: boolean, rows: Record<string, string>[]) {
+/** CSV rows → leads in a funnel, or in a business without a funnel (same phone = update). */
+export async function importLeads(
+  target: { businessId: string; funnelId: string | null },
+  pageId: string | null,
+  fromFunnel: boolean,
+  rows: Record<string, string>[],
+) {
   const { data, error } = await db().rpc('import_leads', {
-    p_funnel: funnelId,
+    p_business: target.businessId,
+    p_funnel: target.funnelId,
     p_page: pageId,
     p_from_funnel: fromFunnel,
     p_rows: rows,
@@ -76,8 +82,8 @@ const clean = (v: string) => (v.trim() ? v.trim() : null)
 
 function toRow(input: LeadInput) {
   return {
-    funnel_id: input.funnel_id,
-    stage_id: input.stage_id,
+    funnel_id: input.funnel_id || null,
+    stage_id: input.funnel_id ? input.stage_id || null : null,
     first_name: input.first_name.trim(),
     last_name: clean(input.last_name),
     phone: input.phone.trim(),
@@ -121,7 +127,9 @@ export async function updateLead(
     .update({ ...row, lost_reason_id: row.stage_id !== lead.stage_id ? stageNote.lost_reason_id : lead.lost_reason_id })
     .eq('id', lead.id)
   if (error) throw error
-  if (row.stage_id !== lead.stage_id)
+  if (row.stage_id !== lead.stage_id && row.stage_id && !lead.stage_id)
+    await logActivity(tenantId, memberId, [lead.id], { kind: 'note', note: 'Added to a funnel', to_stage_id: row.stage_id })
+  else if (row.stage_id !== lead.stage_id)
     await logActivity(tenantId, memberId, [lead.id], {
       kind: 'stage',
       from_stage_id: lead.stage_id,

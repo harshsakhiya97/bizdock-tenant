@@ -91,7 +91,7 @@ export function FunnelPage() {
   }
 
   const fromPages = (leads ?? []).filter((l) => l.landing_page_id).length
-  const won = (leads ?? []).filter((l) => stageOf.get(l.stage_id)?.kind === 'won').length
+  const won = (leads ?? []).filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
   const daysTo = event ? Math.round((new Date(`${event.event_date}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null
 
   return (
@@ -263,7 +263,7 @@ export function FunnelPage() {
                   </thead>
                   <tbody>
                     {leads.map((l) => {
-                      const st = stageOf.get(l.stage_id)
+                      const st = stageOf.get(l.stage_id ?? '')
                       return (
                         <tr key={l.id} className="is-clickable" onClick={() => openLead(l.id)}>
                           <td className="strong">{fullName(l)}</td>

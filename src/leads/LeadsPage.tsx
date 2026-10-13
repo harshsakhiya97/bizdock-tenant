@@ -97,7 +97,8 @@ export function LeadsPage() {
     for (const f of funnels) for (const s of f.funnel_stages) m.set(s.id, s)
     return m
   }, [funnels])
-  const funnelName = (id: string) => funnels.find((f) => f.id === id)?.name ?? '—'
+  const funnelName = (id: string | null) => (id ? (funnels.find((f) => f.id === id)?.name ?? '—') : 'No funnel')
+  const noFunnel = funnelId === 'none'
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
 
@@ -106,7 +107,7 @@ export function LeadsPage() {
     write(FUNNEL_KEY(tenant.id), id)
     setStageTab('all')
     setPicked(new Set())
-    if (id === 'all') setView('list')
+    if (id === 'all' || id === 'none') setView('list')
   }
 
   // leads before the stage tab (for tab counts)
@@ -117,7 +118,16 @@ export function LeadsPage() {
     const scopedIds = new Set(scopedFunnels.map((f) => f.id))
     return (leads ?? [])
       .filter((l) => l.is_archived === filters.archived)
-      .filter((l) => (funnel ? l.funnel_id === funnel.id : scopedIds.has(l.funnel_id)))
+      // leads imported without a funnel: in "All funnels" (their business) and "No funnel"
+      .filter((l) =>
+        noFunnel
+          ? !l.funnel_id && (!selected || l.business_id === selected.id)
+          : funnel
+            ? l.funnel_id === funnel.id
+            : l.funnel_id
+              ? scopedIds.has(l.funnel_id)
+              : !selected || l.business_id === selected.id,
+      )
       .filter(
         (l) =>
           !q ||
@@ -145,9 +155,9 @@ export function LeadsPage() {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, scopedFunnels])
+  }, [leads, filters, funnel, scopedFunnels, noFunnel, selected])
 
-  const kindOf = (l: LeadRow) => stageById.get(l.stage_id)?.kind ?? 'open'
+  const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =
     stageTab === 'all'
       ? base
@@ -220,7 +230,7 @@ export function LeadsPage() {
         l.email ?? '',
         l.city ?? '',
         funnelName(l.funnel_id),
-        stageById.get(l.stage_id)?.name ?? '',
+        stageById.get(l.stage_id ?? '')?.name ?? '',
         tempOf(l.temperature)?.label ?? '',
         sourceName(l.source_id) ?? '',
         ownerName(l.owner_id) ?? '',
@@ -287,8 +297,9 @@ export function LeadsPage() {
       <div className="panel">
         <div className="panel-bar">
           <div className="row">
-            <select className="select-filled" value={funnel ? funnel.id : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
+            <select className="select-filled" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
               <option value="all">All funnels</option>
+              {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
               {scopedFunnels.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -565,7 +576,7 @@ export function LeadsPage() {
               </thead>
               <tbody>
                 {visible.map((l) => {
-                  const s = stageById.get(l.stage_id)
+                  const s = stageById.get(l.stage_id ?? '')
                   const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
@@ -581,10 +592,12 @@ export function LeadsPage() {
                         </div>
                       </td>
                       <td>
-                        {s && (
+                        {s ? (
                           <span className={cn('funnel-stage', s.kind !== 'open' && 'is-closed')} style={{ ['--c' as string]: s.color }}>
                             {s.name}
                           </span>
+                        ) : (
+                          <span className="badge badge-muted">No funnel</span>
                         )}
                       </td>
                       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
@@ -611,6 +624,7 @@ export function LeadsPage() {
         <ImportLeadsModal
           funnels={scopedFunnels}
           defaultFunnelId={funnel?.id ?? null}
+          defaultBusinessId={selected?.id ?? null}
           onClose={() => setImporting(false)}
           onDone={(msg) => {
             setImporting(false)
