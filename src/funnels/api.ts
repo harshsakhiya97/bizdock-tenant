@@ -67,7 +67,8 @@ export async function archiveFunnel(id: string) {
 // ---------- landing pages ----------
 const clean = (v: string | null | undefined) => (v && v.trim() ? v.trim() : null)
 
-export const WEBHOOK_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-webhook`
+/** on this app's own address; the host passes it on to the Supabase function (see vite.config.ts) */
+export const WEBHOOK_BASE = `${window.location.origin}/api/lead-webhook`
 export const webhookUrl = (key: string) => `${WEBHOOK_BASE}?key=${key}`
 
 /** the page link with the UTM values added, for ads and posts */
