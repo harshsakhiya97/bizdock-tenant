@@ -18,59 +18,14 @@ export type BusinessRow = {
   created_at: string
 }
 
-export type BranchRow = {
-  id: string
-  tenant_id: string
-  business_id: string
-  code: string
-  name: string
-  short_name: string
-  city: string | null
-  state: string | null
-  address: string | null
-  phone: string | null
-  email: string | null
-  manager_member_id: string | null
-  own_gst: boolean
-  legal_name: string | null
-  gst_number: string | null
-  is_active: boolean
-  archived_at: string | null
-  sort_order: number
-}
-
-/** Business list row: business + its branches (id + active flag, for counting) */
-export type BusinessListRow = BusinessRow & { branches: Pick<BranchRow, 'id' | 'is_active'>[] }
+/** Business list row */
+export type BusinessListRow = BusinessRow
 
 /** Editable business fields */
 export type BusinessInput = Pick<
   BusinessRow,
-  'name' | 'phone' | 'email' | 'address' | 'city' | 'state' | 'has_gst' | 'gst_number' | 'legal_name' | 'has_branches'
+  'name' | 'phone' | 'email' | 'address' | 'city' | 'state' | 'has_gst' | 'gst_number' | 'legal_name'
 >
-
-/** Branch as edited in the form. `id` is missing for branches not saved yet. */
-export type BranchDraft = {
-  key: string
-  id?: string
-  code: string
-  name: string
-  short_name: string
-  city: string
-  state: string
-  address: string
-  phone: string
-  email: string
-  manager_member_id: string | null
-  /** true = this branch has its own GST instead of the business GST */
-  own_gst: boolean
-  legal_name: string
-  gst_number: string
-}
-
-export type ManagerOption = { id: string; name: string }
-
-/** Branch code: 2–12 capital letters, numbers or dashes, e.g. MUM-01 */
-export const isValidBranchCode = (v: string) => /^[A-Z0-9-]{2,12}$/.test(v)
 
 export const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 /** Indian GSTIN: 15 characters, e.g. 24ABCDE1234F1Z5 */

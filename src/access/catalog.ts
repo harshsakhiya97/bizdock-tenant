@@ -83,7 +83,7 @@ export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
     rows: [
       { module: 'businesses', action: 'view', label: 'See businesses' },
       { module: 'businesses', action: 'add', label: 'Add businesses' },
-      { module: 'businesses', action: 'edit', label: 'Edit businesses & branches' },
+      { module: 'businesses', action: 'edit', label: 'Edit businesses' },
       { module: 'businesses', action: 'delete', label: 'Delete businesses' },
       { module: 'masters', action: 'edit', label: 'Masters', hint: 'Products, sources, statuses, billing companies' },
       { module: 'settings', action: 'edit', label: 'Settings & integrations' },

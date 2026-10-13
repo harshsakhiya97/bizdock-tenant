@@ -81,20 +81,6 @@ export function BusinessesPage() {
         ),
     },
     {
-      key: 'branches',
-      label: 'Branches',
-      render: (b) => {
-        const n = b.branches.filter((x) => x.is_active).length
-        return b.has_branches ? (
-          <span className="badge badge-brand">
-            {n} {n === 1 ? 'branch' : 'branches'}
-          </span>
-        ) : (
-          <span className="muted">Single location</span>
-        )
-      },
-    },
-    {
       key: 'contact',
       label: 'Contact',
       render: (b) => (
@@ -144,7 +130,7 @@ export function BusinessesPage() {
 
   return (
     <>
-      <PageHead title="Businesses" subtitle="Your businesses, their branches and details." />
+      <PageHead title="Businesses" subtitle="Your businesses and their details." />
 
       <div className="panel">
         <div className="panel-bar">
@@ -189,7 +175,7 @@ export function BusinessesPage() {
         icon={Trash2}
         danger
         title={`Delete ${archiving?.name ?? ''}?`}
-        message="It will be removed from the business switcher and lists. Its data, branches and history are kept, so it can be restored later if needed."
+        message="It will be removed from the business switcher and lists. Its data and history are kept, so it can be restored later if needed."
         confirmLabel={busy ? 'Deleting…' : 'Delete'}
         busy={busy}
         onCancel={() => setArchiving(null)}

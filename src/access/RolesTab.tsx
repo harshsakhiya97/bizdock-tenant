@@ -125,7 +125,7 @@ export function RolesTab({
       <div className="panel-filters" style={{ borderTop: '1px solid var(--line)', borderBottom: 0, alignItems: 'flex-end' }}>
         <div>
           <Label htmlFor="nr-name">New role</Label>
-          <TextInput id="nr-name" placeholder="e.g. Branch Manager" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <TextInput id="nr-name" placeholder="e.g. Team Lead" value={newName} onChange={(e) => setNewName(e.target.value)} />
         </div>
         <div style={{ minWidth: 200 }}>
           <Label htmlFor="nr-from">Start from</Label>

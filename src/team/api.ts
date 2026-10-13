@@ -47,7 +47,7 @@ export async function listMembers(tenantId: string): Promise<MemberRow[]> {
 export async function listBusinessOptions(tenantId: string): Promise<BusinessOption[]> {
   const { data, error } = await db()
     .from('businesses')
-    .select('id, name, has_branches, branches(id, name, code, is_active)')
+    .select('id, name')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
@@ -55,10 +55,6 @@ export async function listBusinessOptions(tenantId: string): Promise<BusinessOpt
   return (data ?? []).map((b) => ({
     id: b.id,
     name: b.name,
-    has_branches: b.has_branches,
-    branches: ((b.branches ?? []) as { id: string; name: string; code: string; is_active: boolean }[])
-      .filter((x) => x.is_active)
-      .map(({ id, name, code }) => ({ id, name, code })),
   }))
 }
 

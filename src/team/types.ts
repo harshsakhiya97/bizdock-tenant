@@ -33,8 +33,6 @@ export type MemberRow = {
 export type BusinessOption = {
   id: string
   name: string
-  has_branches: boolean
-  branches: { id: string; name: string; code: string }[]
 }
 
 export type MemberInput = {

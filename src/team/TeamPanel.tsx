@@ -92,11 +92,9 @@ export function TeamPanel() {
       <div className="stack" style={{ gap: 2 }}>
         {m.member_businesses.map((mb) => {
           const b = businessById.get(mb.business_id)
-          const br = b?.branches.find((x) => x.id === mb.branch_id)
           return (
             <span key={mb.business_id} className="nowrap">
               {b?.name ?? 'Archived business'}
-              {br && <span className="muted small"> · {br.code}</span>}
             </span>
           )
         })}

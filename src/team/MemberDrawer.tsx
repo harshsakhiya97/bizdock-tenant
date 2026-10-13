@@ -9,7 +9,7 @@ import type { BusinessOption, MemberInput, MemberRow, RoleRow } from './types'
 
 const emailOk = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
-/** Add or edit a team member: login details, role, reporting and which businesses / branch they work in. */
+/** Add or edit a team member: login details, role, reporting and which businesses they work in. */
 export function MemberDrawer({
   member,
   roles,
@@ -60,13 +60,6 @@ export function MemberDrawer({
         : d.businesses.filter((b) => b.business_id !== id),
     }))
   }
-  function setBranch(id: string, branchId: string) {
-    setInput((d) => ({
-      ...d,
-      businesses: d.businesses.map((b) => (b.business_id === id ? { ...b, branch_id: branchId || null } : b)),
-    }))
-  }
-
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!input.full_name.trim()) return setError('Name is required.')
@@ -74,10 +67,6 @@ export function MemberDrawer({
     if (!input.role_id) return setError('Pick a role.')
     if (!input.all_businesses) {
       if (!input.businesses.length) return setError('Pick at least one business, or tick All businesses.')
-      const missing = businesses.find(
-        (b) => b.has_branches && input.businesses.some((x) => x.business_id === b.id && !x.branch_id),
-      )
-      if (missing) return setError(`Pick a branch for ${missing.name}.`)
     }
     if (!member && !defaultPassword) return setError('Set the default password for new logins first (below the team list).')
 
@@ -209,7 +198,7 @@ export function MemberDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Businesses" description="Which businesses (and branch) this person works in.">
+        <FormSection title="Businesses" description="Which businesses this person works in.">
           <div className="check-box">
             <Checkbox
               id="m-all"
@@ -232,22 +221,6 @@ export function MemberDrawer({
                         <input type="checkbox" checked={!!p} onChange={(e) => toggleBusiness(b.id, e.target.checked)} />
                         <b>{b.name}</b>
                       </label>
-                      {p && b.has_branches && (
-                        <select
-                          className="input input-sm"
-                          style={{ width: 220 }}
-                          aria-label={`Branch in ${b.name}`}
-                          value={p.branch_id ?? ''}
-                          onChange={(e) => setBranch(b.id, e.target.value)}
-                        >
-                          <option value="">Select branch *</option>
-                          {b.branches.map((br) => (
-                            <option key={br.id} value={br.id}>
-                              {br.code} · {br.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
                     </div>
                   )
                 })}
