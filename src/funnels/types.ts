@@ -21,6 +21,10 @@ export type FunnelRow = {
   is_active: boolean
   sort_order: number
   created_at: string
+  /** added to every lead that comes in through this funnel */
+  tags: string[]
+  /** the calendar webinar / event this funnel leads to */
+  event_id: string | null
   funnel_stages: StageRow[]
 }
 
@@ -39,4 +43,65 @@ export type FunnelInput = {
   name: string
   type: FunnelType
   description: string
+  tags: string[]
+  event_id: string
+}
+
+/** an extra field a landing page form sends (name, email and phone are always required) */
+export type FormField = { key: string; label: string; required: boolean }
+
+export type UtmLink = {
+  id: string
+  landing_page_id: string
+  label: string
+  utm_source: string
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  created_at: string
+}
+
+export type LandingPage = {
+  id: string
+  tenant_id: string
+  funnel_id: string
+  name: string
+  url: string | null
+  webhook_key: string
+  fields: FormField[]
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  landing_page_utms: UtmLink[]
+}
+
+export type LandingPageInput = {
+  name: string
+  url: string
+  fields: FormField[]
+  utm_source: string
+  utm_medium: string
+  utm_campaign: string
+}
+
+export type UtmInput = { label: string; utm_source: string; utm_medium: string; utm_campaign: string; utm_term: string; utm_content: string }
+
+/** one form post / import row (for counts and the lead's log) */
+export type SubmissionRow = {
+  id: string
+  lead_id: string
+  landing_page_id: string | null
+  via: 'webhook' | 'import'
+  is_new: boolean
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  data: Record<string, string>
+  created_at: string
 }

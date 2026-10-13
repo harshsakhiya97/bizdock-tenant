@@ -30,7 +30,7 @@ export function AppLayout() {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const meta = pageMeta[pathname] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
+  const meta = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''

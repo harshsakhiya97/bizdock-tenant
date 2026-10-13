@@ -2,12 +2,35 @@ import { db } from '@/lib/supabase'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option, Temperature } from './types'
 
 const COLS =
-  'id, tenant_id, business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at'
+  'id, tenant_id, business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra'
 
 export async function listLeads(tenantId: string): Promise<LeadRow[]> {
   const { data, error } = await db().from('leads').select(COLS).eq('tenant_id', tenantId).order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as LeadRow[]
+}
+
+export async function listFunnelLeads(funnelId: string): Promise<LeadRow[]> {
+  const { data, error } = await db()
+    .from('leads')
+    .select(COLS)
+    .eq('funnel_id', funnelId)
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as LeadRow[]
+}
+
+/** CSV rows → leads in a funnel (same phone in the funnel = update). */
+export async function importLeads(funnelId: string, pageId: string | null, fromFunnel: boolean, rows: Record<string, string>[]) {
+  const { data, error } = await db().rpc('import_leads', {
+    p_funnel: funnelId,
+    p_page: pageId,
+    p_from_funnel: fromFunnel,
+    p_rows: rows,
+  })
+  if (error) throw new Error(error.message)
+  return data as { created: number; updated: number; skipped: number; errors: { row: number; error: string }[] }
 }
 
 export async function listSources(tenantId: string): Promise<Option[]> {

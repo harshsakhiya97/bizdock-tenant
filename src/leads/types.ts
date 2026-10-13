@@ -26,11 +26,19 @@ export type LeadRow = {
   stage_changed_at: string
   created_at: string
   updated_at: string
+  landing_page_id: string | null
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_term: string | null
+  utm_content: string | null
+  /** extra form fields (company, purpose…) */
+  extra: Record<string, string>
 }
 
 export type ActivityRow = {
   id: string
-  kind: 'created' | 'stage' | 'note' | 'assigned' | 'temperature' | 'follow_up' | 'archived' | 'restored'
+  kind: 'created' | 'stage' | 'note' | 'assigned' | 'temperature' | 'follow_up' | 'archived' | 'restored' | 'submission' | 'imported'
   from_stage_id: string | null
   to_stage_id: string | null
   note: string | null

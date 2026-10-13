@@ -5,7 +5,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { Link } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { db } from '@/lib/supabase'
 import { archiveFunnel, listFunnels } from './api'
 import { FunnelDrawer } from './FunnelDrawer'
@@ -30,6 +30,7 @@ export function FunnelsPage() {
   const [deleting, setDeleting] = useState<FunnelRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [busy, setBusy] = useState(false)
+  const navigate = useNavigate()
   const [leadCount, setLeadCount] = useState<Map<string, { open: number; won: number }>>(new Map())
 
   const load = useCallback(() => {
@@ -136,7 +137,18 @@ export function FunnelsPage() {
             {visible.map((f) => {
               const open = f.funnel_stages.filter((s) => s.kind === 'open').length
               return (
-                <article key={f.id} className="pl-card funnel-card" style={{ cursor: 'default' }}>
+                <article
+                  key={f.id}
+                  className="pl-card funnel-card"
+                  role="link"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    // buttons / links inside the card do their own thing
+                    if ((e.target as HTMLElement).closest('button, a')) return
+                    navigate(`/funnels/${f.id}`)
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && navigate(`/funnels/${f.id}`)}
+                >
                   <div className="pl-card-head">
                     <span className="thumb thumb-letter">
                       <Workflow size={17} />
@@ -171,14 +183,17 @@ export function FunnelsPage() {
                     </div>
                   </div>
                   <div className="pl-auto">
-                    <Link to="/leads" className="link" onClick={() => {
+                    <Link to={`/funnels/${f.id}`} className="link">
+                      Open funnel →
+                    </Link>
+                    <Link to="/leads" className="link muted" onClick={() => {
                         try {
                           localStorage.setItem(`leads.funnel.${tenant.id}`, f.id)
                         } catch {
                           /* storage unavailable */
                         }
                       }}>
-                      Open leads →
+                      Leads →
                     </Link>
                     <span className="muted small">
                       {f.funnel_stages.length} stages · {open} in progress

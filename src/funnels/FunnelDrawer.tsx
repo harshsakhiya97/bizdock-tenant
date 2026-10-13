@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
+import { TagInput } from '@/components/TagInput'
+import { listEvents, listEventTypes, type EventRow } from '@/calendar/api'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { saveFunnel } from './api'
@@ -30,7 +32,32 @@ export function FunnelDrawer({
     name: funnel?.name ?? '',
     type: funnel?.type ?? 'lead_gen',
     description: funnel?.description ?? '',
+    tags: funnel?.tags ?? [],
+    event_id: funnel?.event_id ?? '',
   }))
+  const [linked, setLinked] = useState(!!funnel?.event_id)
+  const [events, setEvents] = useState<EventRow[] | null>(null)
+  useEffect(() => {
+    Promise.all([listEvents(tenant.id), listEventTypes(tenant.id)])
+      .then(([ev, types]) => {
+        const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
+        setEvents(ev.filter((e) => ok.has(e.type_id)))
+      })
+      .catch(() => setEvents([]))
+  }, [tenant.id])
+  // upcoming webinars / events of this business (or for all businesses), plus the one already linked
+  const today = new Date().toISOString().slice(0, 10)
+  const eventOptions = useMemo(
+    () =>
+      (events ?? []).filter(
+        (e) =>
+          e.id === input.event_id ||
+          ((!e.business_id || e.business_id === input.business_id) && (e.end_date ?? e.event_date) >= today),
+      ),
+    [events, input.event_id, input.business_id, today],
+  )
+  const eventLabel = (e: EventRow) =>
+    `${e.title} · ${new Date(`${e.event_date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}${e.start_time ? `, ${e.start_time.slice(0, 5)}` : ''}`
   const [stages, setStages] = useState<StageDraft[]>(() =>
     funnel
       ? funnel.funnel_stages.map((s) => ({
@@ -87,10 +114,11 @@ export function FunnelDrawer({
     if (new Set(names).size !== names.length) return setError('Two stages have the same name.')
     if (!stages.some((s) => s.kind === 'open')) return setError('Add at least one in-progress stage.')
     if (!stages.some((s) => s.kind === 'won')) return setError('Add at least one Won stage.')
+    if (linked && !input.event_id) return setError('Pick the webinar or event, or answer No.')
     setBusy(true)
     setError(null)
     try {
-      await saveFunnel(tenant.id, funnel, input, stages)
+      await saveFunnel(tenant.id, funnel, { ...input, event_id: linked ? input.event_id : '' }, stages)
       onSaved(funnel ? `${input.name.trim()} saved.` : `${input.name.trim()} created.`)
     } catch (err) {
       setError((err as Error).message)
@@ -181,7 +209,43 @@ export function FunnelDrawer({
                 onChange={(e) => setInput((d) => ({ ...d, description: e.target.value }))}
               />
             </div>
+            <div className="span-2">
+              <Label htmlFor="f-tags">Tags</Label>
+              <TagInput id="f-tags" value={input.tags} onChange={(tags) => setInput((d) => ({ ...d, tags }))} placeholder="e.g. Diwali offer, FB ads — press Enter after each" />
+              <Hint>Added to every lead that comes in through this funnel (landing page forms and funnel imports).</Hint>
+            </div>
           </div>
+        </FormSection>
+
+        <FormSection title="Webinar / event" description="Is this funnel connected with a webinar or event from the Calendar?">
+          <div className="seg seg-sm" style={{ alignSelf: 'flex-start' }}>
+            <button type="button" className={cn(!linked && 'is-active')} onClick={() => setLinked(false)}>
+              No
+            </button>
+            <button type="button" className={cn(linked && 'is-active')} onClick={() => setLinked(true)}>
+              Yes
+            </button>
+          </div>
+          {linked && (
+            <div>
+              <Label htmlFor="f-event" required>
+                Webinar or event
+              </Label>
+              <Select id="f-event" value={input.event_id} onChange={(e) => setInput((d) => ({ ...d, event_id: e.target.value }))}>
+                <option value="">{events ? '— select —' : 'Loading…'}</option>
+                {eventOptions.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {eventLabel(e)}
+                  </option>
+                ))}
+              </Select>
+              <Hint>
+                {events && !eventOptions.length
+                  ? 'No upcoming webinar or event for this business. Add it in Calendar & Webinars first.'
+                  : 'Its date is used for messages sent before the webinar / event.'}
+              </Hint>
+            </div>
+          )}
         </FormSection>
 
         <FormSection

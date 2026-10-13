@@ -9,6 +9,7 @@ import { ago } from '@/team/time'
 import { clearLeadFollowUps, scheduleFollowUp } from '@/followups/api'
 import { createLead, listActivities, logActivity, phoneExists, updateLead } from './api'
 import { TEMPERATURES, toLocalInput } from './labels'
+import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
 
 const phoneOk = (v: string) => v.replace(/\D/g, '').length >= 10
@@ -139,7 +140,7 @@ export function LeadDrawer({
   function activityText(a: ActivityRow) {
     switch (a.kind) {
       case 'created':
-        return `Lead added${a.to_stage_id ? ` in ${stageName.get(a.to_stage_id) ?? 'a stage'}` : ''}`
+        return `Lead added${a.to_stage_id ? ` in ${stageName.get(a.to_stage_id) ?? 'a stage'}` : ''}${!a.member_id ? ' from a landing page' : ''}`
       case 'stage':
         return `Moved ${stageName.get(a.from_stage_id ?? '') ?? '—'} → ${stageName.get(a.to_stage_id ?? '') ?? '—'}`
       case 'assigned':
@@ -152,6 +153,10 @@ export function LeadDrawer({
         return 'Archived'
       case 'restored':
         return 'Restored'
+      case 'submission':
+        return 'Form submitted again'
+      case 'imported':
+        return 'Imported'
       default:
         return 'Note'
     }
@@ -332,6 +337,8 @@ export function LeadDrawer({
           {!lead && funnel && <Hint>The lead is added to {funnel.name}.</Hint>}
         </FormSection>
 
+        {lead && <LeadOrigin lead={lead} />}
+
         {lead && (
           <FormSection title="Activity">
             <div className="row" style={{ flexWrap: 'nowrap' }}>
@@ -353,7 +360,7 @@ export function LeadDrawer({
                       <b>{activityText(a)}</b>
                       {a.note && a.kind !== 'note' ? <p>{a.note}</p> : a.kind === 'note' ? <p>{a.note}</p> : null}
                       <small>
-                        {memberName(a.member_id)} · {ago(a.created_at)}
+                        {a.member_id ? memberName(a.member_id) : 'Webhook'} · {ago(a.created_at)}
                       </small>
                     </div>
                   </li>

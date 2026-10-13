@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
-import { Columns3, Download, List, Plus, RotateCcw, Users } from 'lucide-react'
+import { Columns3, Download, List, Plus, RotateCcw, Upload, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput } from '@/components/ui'
@@ -12,6 +12,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
 import { LeadBoard } from './LeadBoard'
 import { LeadDrawer } from './LeadDrawer'
+import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
@@ -72,6 +73,7 @@ export function LeadsPage() {
   useEffect(load, [load])
 
   // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
+  const [importing, setImporting] = useState(false)
   const [params, setParams] = useSearchParams()
   const openId = params.get('open')
   useEffect(() => {
@@ -252,6 +254,17 @@ export function LeadsPage() {
             {can('leads', 'export') && (
               <button type="button" className="btn btn-outline" onClick={exportCsv} disabled={!visible.length}>
                 <Download size={15} /> Export CSV
+              </button>
+            )}
+            {can('leads', 'add') && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setImporting(true)}
+                disabled={!scopedFunnels.length}
+                title={!scopedFunnels.length ? 'Add a funnel first' : undefined}
+              >
+                <Upload size={15} /> Import
               </button>
             )}
             {can('leads', 'add') && (
@@ -594,6 +607,18 @@ export function LeadsPage() {
         )}
       </div>
 
+      {importing && (
+        <ImportLeadsModal
+          funnels={scopedFunnels}
+          defaultFunnelId={funnel?.id ?? null}
+          onClose={() => setImporting(false)}
+          onDone={(msg) => {
+            setImporting(false)
+            setNotice({ ok: msg })
+            load()
+          }}
+        />
+      )}
       {drawer && (
         <LeadDrawer
           lead={drawer.lead}
