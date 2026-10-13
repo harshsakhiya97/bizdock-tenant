@@ -1,6 +1,7 @@
 import { db } from '@/lib/supabase'
 import { listEvents, listEventTypes } from '@/calendar/api'
 import { listFunnels } from '@/funnels/api'
+import { guessTarget } from '@/funnels/fieldMap'
 import type { FlowEdge, RefData, StepNode, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { TRIGGER_DEFAULTS } from './types'
 
@@ -86,7 +87,7 @@ export async function archiveWorkflow(id: string) {
 export async function loadRefData(tenantId: string): Promise<RefData> {
   const [funnels, pages, events, types] = await Promise.all([
     listFunnels(tenantId),
-    db().from('landing_pages').select('id, name, funnel_id, fields').eq('tenant_id', tenantId).is('archived_at', null),
+    db().from('landing_pages').select('id, name, funnel_id, field_map, sample').eq('tenant_id', tenantId).is('archived_at', null),
     listEvents(tenantId),
     listEventTypes(tenantId),
   ])
@@ -100,12 +101,12 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
       tags: f.tags,
       stages: f.funnel_stages.map((s) => ({ id: s.id, name: s.name })),
     })),
-    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; fields: { key: string }[] }[]).map((p) => ({
-      id: p.id,
-      name: p.name,
-      funnel_id: p.funnel_id,
-      fields: (p.fields ?? []).map((f) => f.key),
-    })),
+    // fields a lead from this page can carry: the standard optional ones + extra fields from the mapping
+    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string>; sample: Record<string, string> | null }[]).map((p) => {
+      const keys = [...new Set([...Object.keys(p.sample ?? {}), ...Object.keys(p.field_map ?? {})])]
+      const extras = keys.filter((k) => (p.field_map?.[k] ?? guessTarget(k)) === 'extra')
+      return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras] }
+    }),
     events: events
       .filter((e) => ok.has(e.type_id))
       .map((e) => ({ id: e.id, title: e.title, date: e.event_date, time: e.start_time, endTime: e.end_time })),

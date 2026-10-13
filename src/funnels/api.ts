@@ -105,11 +105,6 @@ export async function saveLandingPage(tenantId: string, funnelId: string, existi
   const row = {
     name: input.name.trim(),
     url: clean(input.url),
-    fields: input.fields.map((f) => ({ key: f.key, label: f.label.trim(), required: f.required })),
-    // no default UTMs: UTMs come only from the page's UTM links
-    utm_source: null,
-    utm_medium: null,
-    utm_campaign: null,
   }
   const { error } = existing
     ? await db().from('landing_pages').update(row).eq('id', existing.id)
@@ -119,6 +114,30 @@ export async function saveLandingPage(tenantId: string, funnelId: string, existi
 
 export async function setLandingPageActive(id: string, active: boolean) {
   const { error } = await db().from('landing_pages').update({ is_active: active }).eq('id', id)
+  if (error) throw error
+}
+
+export async function getLandingPage(id: string): Promise<LandingPage | null> {
+  const { data, error } = await db().from('landing_pages').select('*, landing_page_utms(*)').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data as LandingPage | null) ?? null
+}
+
+/** test mode: for the next 10 minutes the next form post is saved as a sample instead of a lead */
+export async function startWebhookTest(id: string) {
+  const until = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  const { error } = await db().from('landing_pages').update({ test_mode_until: until }).eq('id', id)
+  if (error) throw error
+  return until
+}
+
+export async function stopWebhookTest(id: string) {
+  const { error } = await db().from('landing_pages').update({ test_mode_until: null }).eq('id', id)
+  if (error) throw error
+}
+
+export async function saveFieldMap(id: string, map: Record<string, string>) {
+  const { error } = await db().from('landing_pages').update({ field_map: map }).eq('id', id)
   if (error) throw error
 }
 

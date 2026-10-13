@@ -3,6 +3,7 @@ import { Check, Code2, Copy, ExternalLink, Globe, Pencil, Plus, Power, RefreshCw
 import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { archiveLandingPage, deleteUtmLink, matchesUtm, regenerateWebhookKey, setLandingPageActive, utmUrl, webhookUrl } from './api'
+import { FieldMapping } from './FieldMapping'
 import { LandingPageModal } from './LandingPageModal'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
 import type { LandingPage, SubmissionRow, UtmLink } from './types'
@@ -73,8 +74,7 @@ export function LandingPagesTab({
     <>
       <div className="row-between" style={{ marginBottom: 14 }}>
         <p className="muted small" style={{ margin: 0 }}>
-          Each landing page gets its own webhook URL. Its form posts name, email, phone and its extra fields; the lead is added to the
-          funnel’s first stage with the funnel’s tags and the UTMs. The same phone again updates that lead.
+          Each landing page gets its own webhook URL. Send one test from the page to match its form fields to lead fields; after that every form post adds a lead to the funnel’s first stage with the funnel’s tags and the UTMs. The same phone again updates that lead.
         </p>
         {canEdit && (
           <button type="button" className="btn btn-primary" onClick={() => setEditing({ page: null })}>
@@ -153,22 +153,7 @@ export function LandingPagesTab({
                   </div>
                 </div>
 
-                <div className="lp-block">
-                  <span className="lp-label">Form fields</span>
-                  <div className="chip-row">
-                    {['name', 'email', 'phone'].map((k) => (
-                      <span key={k} className="field-chip">
-                        {k} <i>*</i>
-                      </span>
-                    ))}
-                    {p.fields.map((f) => (
-                      <span key={f.key} className="field-chip" title={f.label}>
-                        {f.key}
-                        {f.required && <i>*</i>}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                <FieldMapping key={`${p.id}-${p.sample_at ?? ''}`} page={p} canEdit={canEdit} onChanged={onChanged} onError={onError} />
                 <div className="lp-block">
                   <div className="row-between">
                     <span className="lp-label">UTM links</span>

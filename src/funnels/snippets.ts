@@ -3,9 +3,7 @@ import { webhookUrl } from './api'
 
 /** A plain HTML form for the landing page, with a small script that copies utm_* from the page URL. */
 export function htmlSnippet(p: LandingPage) {
-  const extra = p.fields
-    .map((f) => `  <input name="${f.key}" placeholder="${f.label}"${f.required ? ' required' : ''}>`)
-    .join('\n')
+  const extra = ['  <input name="company_name" placeholder="Company name">', '  <input name="purpose" placeholder="Purpose">', '  <textarea name="note" placeholder="Note"></textarea>'].join('\n')
   return `<form action="${webhookUrl(p.webhook_key)}" method="POST" id="lead-form">
   <input name="name" placeholder="Name" required>
   <input name="email" type="email" placeholder="Email" required>
@@ -28,7 +26,7 @@ ${extra ? `${extra}\n` : ''}  <!-- where to send the visitor after submitting (o
 
 /** The same as a JavaScript / JSON call (page builders, custom code, Zapier…). */
 export function jsSnippet(p: LandingPage) {
-  const extra = p.fields.map((f) => `    ${f.key}: '…',${f.required ? ' // required' : ''}`).join('\n')
+  const extra = "    company_name: '…', // optional fields: any names work, match them with “Test webhook”\n    purpose: '…',\n    note: '…',"
   return `const utm = Object.fromEntries(
   [...new URLSearchParams(location.search)].filter(([k]) => k.startsWith('utm_')),
 )
@@ -49,7 +47,7 @@ console.log(await res.json())`
 /** A test call from a terminal (Mac / Linux; on Windows use Git Bash or WSL). */
 export function curlSnippet(p: LandingPage) {
   const body: Record<string, string> = { name: 'Test Lead', email: 'test@example.com', phone: '9876543210' }
-  for (const f of p.fields) body[f.key] = f.key === 'city' ? 'Ahmedabad' : 'Test'
+  Object.assign(body, { company_name: 'Test Co', purpose: 'Testing', note: 'Sent from cURL' })
   return `curl -X POST '${webhookUrl(p.webhook_key)}&utm_source=test' \\
   -H 'Content-Type: application/json' \\
   -d '${JSON.stringify(body)}'

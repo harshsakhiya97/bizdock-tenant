@@ -577,3 +577,5 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .wf-kinds { display: flex; align-items: center; gap: 4px; }
 .switch { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .switch input { accent-color: var(--brand); width: 15px; height: 15px; cursor: pointer; }
+.fm-wait { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px dashed var(--brand); border-radius: var(--radius-sm, 8px); background: var(--brand-soft); color: var(--text); }
+.fm-wait > svg { color: var(--brand); flex-shrink: 0; margin-top: 2px; }

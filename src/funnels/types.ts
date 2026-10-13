@@ -69,7 +69,14 @@ export type LandingPage = {
   name: string
   url: string | null
   webhook_key: string
+  /** old fixed form fields (no longer used) */
   fields: FormField[]
+  /** incoming form field → lead field ("phone", "email", … "extra", "ignore") */
+  field_map: Record<string, string>
+  /** test mode: the next form post is saved as `sample` (no lead) until this time */
+  test_mode_until: string | null
+  sample: Record<string, string> | null
+  sample_at: string | null
   utm_source: string | null
   utm_medium: string | null
   utm_campaign: string | null
@@ -82,10 +89,6 @@ export type LandingPage = {
 export type LandingPageInput = {
   name: string
   url: string
-  fields: FormField[]
-  utm_source: string
-  utm_medium: string
-  utm_campaign: string
 }
 
 export type UtmInput = { label: string; utm_source: string; utm_medium: string; utm_campaign: string; utm_term: string; utm_content: string }
