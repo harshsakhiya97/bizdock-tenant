@@ -79,6 +79,15 @@ export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
     ],
   },
   {
+    title: 'Workflows',
+    rows: [
+      { module: 'workflows', action: 'view', label: 'See workflows' },
+      { module: 'workflows', action: 'add', label: 'Create workflows' },
+      { module: 'workflows', action: 'edit', label: 'Edit workflows', hint: 'Steps, trigger, turn on / off' },
+      { module: 'workflows', action: 'delete', label: 'Delete workflows' },
+    ],
+  },
+  {
     title: 'Admin',
     rows: [
       { module: 'businesses', action: 'view', label: 'See businesses' },

@@ -17,15 +17,14 @@ import '@xyflow/react/dist/style.css'
 import { AlertTriangle, Info, Save } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
-import { useTenant } from '@/tenant/useTenant'
-import { START_NODES, getChain, saveChain } from './api'
-import { ChainCtx, NODE_TYPES } from './StepBox'
+import { saveWorkflow } from './api'
+import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
-import { PALETTE, STEP_META, problem } from './steps'
-import { DEFAULTS, type ChainContext, type ChainEdge, type StepKind, type StepNode } from './types'
+import { PALETTE, STEP_META, flowContext, problem } from './steps'
+import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowRow } from './types'
 
 const EDGE_DEFAULTS = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 } } as const
-const withLook = (e: ChainEdge): ChainEdge => ({
+const withLook = (e: FlowEdge): FlowEdge => ({
   ...EDGE_DEFAULTS,
   ...e,
   className: e.sourceHandle === 'yes' ? 'is-yes' : e.sourceHandle === 'no' ? 'is-no' : undefined,
@@ -34,10 +33,10 @@ const withLook = (e: ChainEdge): ChainEdge => ({
 let seq = 0
 const newId = (kind: string) => `${kind}-${Date.now().toString(36)}-${++seq}`
 
-type Props = { funnelId: string; ctx: ChainContext; canEdit: boolean }
+type Props = { workflow: WorkflowRow; refData: RefData; canEdit: boolean; onSaved?: (w: { name: string; is_active: boolean }) => void }
 
-/** Funnel → Automation: n8n-style canvas. Drag steps from the left, join them with lines, set each step on the right. */
-export function ChainBuilder(props: Props) {
+/** Workflow builder: n8n-style canvas. Drag steps from the left, join them with lines, set each step on the right. */
+export function WorkflowBuilder(props: Props) {
   return (
     <ReactFlowProvider>
       <Builder {...props} />
@@ -45,14 +44,13 @@ export function ChainBuilder(props: Props) {
   )
 }
 
-function Builder({ funnelId, ctx, canEdit }: Props) {
-  const tenant = useTenant()
+function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   const { membership } = useAuth()
   const flow = useReactFlow()
   const wrap = useRef<HTMLDivElement>(null)
   const [nodes, setNodes, onNodesChange] = useNodesState<StepNode>([])
-  const [edges, setEdges, onEdgesChange] = useEdgesState<ChainEdge>([])
-  const [name, setName] = useState('Automation')
+  const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([])
+  const [name, setName] = useState(workflow.name)
   const [active, setActive] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -62,13 +60,14 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
-    getChain(funnelId)
-      .then((c) => {
-        setNodes(c?.nodes?.length ? c.nodes : START_NODES)
-        setEdges((c?.edges ?? []).map(withLook))
-        setName(c?.name ?? 'Automation')
-        setActive(c?.is_active ?? false)
-        setSavedAt(c?.updated_at ?? null)
+    {
+      const c = workflow
+      {
+        setNodes(c.nodes)
+        setEdges(c.edges.map(withLook))
+        setName(c.name)
+        setActive(c.is_active)
+        setSavedAt(c.updated_at)
         setLoaded(true)
         // fit everything, but never smaller than readable: then start from the top (the trigger)
         requestAnimationFrame(() => {
@@ -83,9 +82,12 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
             void flow.setCenter((minX + maxX) / 2, minY - 40 + wrap.current.clientHeight / 2 / z, { zoom: z })
           })
         })
-      })
-      .catch((e: Error) => setNotice({ error: e.message }))
-  }, [funnelId, setNodes, setEdges, flow])
+      }
+    }
+  }, [workflow, setNodes, setEdges, flow])
+
+  // funnel / event / stages this workflow is about (from its trigger)
+  const ctx = useMemo(() => flowContext(refData, nodes), [refData, nodes])
 
   // steps not reachable from the trigger, and steps with missing settings
   const issues = useMemo(() => {
@@ -98,7 +100,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
     for (const n of nodes) {
       const p = problem(n.type as StepKind, n.data, ctx)
       if (p) out.set(n.id, p)
-      else if (!seen.has(n.id)) out.set(n.id, 'Not joined to the automation')
+      else if (!seen.has(n.id)) out.set(n.id, 'Not joined to the workflow')
     }
     return out
   }, [nodes, edges, ctx])
@@ -108,13 +110,13 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
 
   const onConnect = useCallback(
     (c: Connection) => {
-      setEdges((eds) => addEdge(withLook({ ...c, id: newId('e') } as ChainEdge), eds))
+      setEdges((eds) => addEdge(withLook({ ...c, id: newId('e') } as FlowEdge), eds))
       touch()
     },
     [setEdges],
   )
   // one line out of each exit, no loops back into the trigger, no line to itself
-  const isValidConnection: IsValidConnection<ChainEdge> = useCallback(
+  const isValidConnection: IsValidConnection<FlowEdge> = useCallback(
     (c) =>
       c.source !== c.target &&
       c.target !== 'trigger' &&
@@ -127,9 +129,9 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
     // without a drop position: under the selected box (or the last one), joined to it
     const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
     const pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
-    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...DEFAULTS[kind] }, selected: true }])
+    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
     if (!position && anchor && anchor.type !== 'condition' && !edges.some((e) => e.source === anchor.id)) {
-      setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as ChainEdge)])
+      setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
     }
     setSelectedId(id)
     touch()
@@ -137,7 +139,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
 
   function onDrop(e: DragEvent) {
     e.preventDefault()
-    const kind = e.dataTransfer.getData('application/x-chain-step') as StepKind
+    const kind = e.dataTransfer.getData('application/x-workflow-step') as StepKind
     if (!kind || !canEdit) return
     const p = flow.screenToFlowPosition({ x: e.clientX, y: e.clientY })
     addStep(kind, { x: p.x - 130, y: p.y - 30 })
@@ -158,16 +160,17 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
 
   async function save(nextActive = active) {
     if (nextActive && issues.size) {
-      setNotice({ error: 'Fix the steps marked with ! before turning the automation on.' })
+      setNotice({ error: 'Fix the steps marked with ! before turning the workflow on.' })
       return
     }
     setBusy(true)
     try {
-      await saveChain(tenant.id, funnelId, membership?.id, { name, is_active: nextActive, nodes, edges })
+      await saveWorkflow(workflow.id, membership?.id, { name, is_active: nextActive, nodes, edges })
+      onSaved?.({ name, is_active: nextActive })
       setActive(nextActive)
       setDirty(false)
       setSavedAt(new Date().toISOString())
-      setNotice({ ok: nextActive !== active ? (nextActive ? 'Automation turned on and saved.' : 'Automation turned off and saved.') : 'Automation saved.' })
+      setNotice({ ok: nextActive !== active ? (nextActive ? 'Workflow turned on and saved.' : 'Workflow turned off and saved.') : 'Workflow saved.' })
     } catch (e) {
       setNotice({ error: (e as Error).message })
     } finally {
@@ -176,11 +179,11 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
   }
 
   return (
-    <ChainCtx.Provider value={ctx}>
+    <FlowCtx.Provider value={ctx}>
       <div className="cb-bar">
         <input
           className="cb-name"
-          aria-label="Automation name"
+          aria-label="Workflow name"
           value={name}
           disabled={!canEdit}
           onChange={(e) => {
@@ -197,7 +200,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         {canEdit && (
           <div className="row" style={{ marginLeft: 'auto' }}>
             <label className="check-inline" title={issues.size ? 'Fix the marked steps first' : undefined}>
-              <input type="checkbox" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} /> Automation on
+              <input type="checkbox" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} /> Workflow on
             </label>
             <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={busy || !loaded || !dirty}>
               <Save size={15} /> {busy ? 'Saving…' : 'Save'}
@@ -206,7 +209,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         )}
       </div>
       <div className="alert alert-info small cb-note">
-        <Info size={15} /> WhatsApp, email and calls are connected later. Until then the automation is saved but no message is sent.
+        <Info size={15} /> WhatsApp, email and calls are connected later. Until then the workflow is saved but no message is sent.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {notice.ok && !dirty && <div className="alert alert-info">{notice.ok}</div>}
@@ -225,7 +228,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
                   className="cb-tool"
                   draggable
                   onDragStart={(e) => {
-                    e.dataTransfer.setData('application/x-chain-step', k)
+                    e.dataTransfer.setData('application/x-workflow-step', k)
                     e.dataTransfer.effectAllowed = 'move'
                   }}
                   onClick={() => addStep(k)}
@@ -248,7 +251,7 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         )}
 
         <div className="cb-canvas" ref={wrap} onDragOver={(e) => (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))} onDrop={onDrop}>
-          <ReactFlow<StepNode, ChainEdge>
+          <ReactFlow<StepNode, FlowEdge>
             nodes={nodes}
             edges={edges}
             nodeTypes={NODE_TYPES}
@@ -298,6 +301,6 @@ function Builder({ funnelId, ctx, canEdit }: Props) {
         </div>
 
       </div>
-    </ChainCtx.Provider>
+    </FlowCtx.Provider>
   )
 }

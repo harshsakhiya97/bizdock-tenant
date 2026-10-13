@@ -2,14 +2,14 @@ import { createContext, memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { STEP_META, problem, summary } from './steps'
-import type { ChainContext, StepNode } from './types'
+import { STEP_META, problem, summary, triggerLabel } from './steps'
+import type { FlowContext, StepNode, TriggerData } from './types'
 
-export const ChainCtx = createContext<ChainContext>({ pages: [], stages: [], tags: [], event: null, fieldKeys: [] })
+export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [] })
 
 /** One box on the canvas: icon, name, one-line summary; condition boxes have a Yes and a No exit. */
 function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
-  const ctx = useContext(ChainCtx)
+  const ctx = useContext(FlowCtx)
   const meta = STEP_META[type]
   const Icon = meta.icon
   const issue = problem(type, data, ctx)
@@ -22,7 +22,7 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
         </span>
         <div className="cb-box-text">
           <span className="cb-kind">{type === 'trigger' ? 'Trigger' : meta.label}</span>
-          <b className="cb-title">{type === 'trigger' ? meta.label : summary(type, data, ctx)}</b>
+          <b className="cb-title">{type === 'trigger' ? triggerLabel((data as unknown as TriggerData).event) : summary(type, data, ctx)}</b>
         </div>
         {issue && (
           <span className="cb-issue" title={issue}>

@@ -12,6 +12,8 @@ import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
 import { FunnelsPage } from '@/funnels/FunnelsPage'
 import { FunnelPage } from '@/funnels/FunnelPage'
+import { WorkflowsPage } from '@/workflows/WorkflowsPage'
+import { WorkflowPage } from '@/workflows/WorkflowPage'
 import { LeadsPage } from '@/leads/LeadsPage'
 import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
@@ -84,6 +86,22 @@ export default function App() {
                   element={
                     <RequirePermission module="funnels">
                       <FunnelPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/workflows"
+                  element={
+                    <RequirePermission module="workflows">
+                      <WorkflowsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/workflows/:id"
+                  element={
+                    <RequirePermission module="workflows">
+                      <WorkflowPage />
                     </RequirePermission>
                   }
                 />
