@@ -376,19 +376,19 @@ export function BookingDrawer({
               </table>
             )}
             {(canEdit || can('payments', 'add')) && booking.status !== 'cancelled' && (
-              <div className="row bk-pay" style={{ flexWrap: 'wrap' }}>
-                <TextInput aria-label="Amount" type="number" min={0} placeholder="Amount" style={{ width: 120 }} value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
-                <select className="input" aria-label="Mode" style={{ width: 120 }} value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>
+              <div className="bk-pay">
+                <input className="input" aria-label="Amount" type="number" min={0} placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
+                <select className="input" aria-label="Mode" value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>
                   {refs.modes.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.name}
                     </option>
                   ))}
                 </select>
-                <input className="input" type="date" aria-label="Paid on" style={{ width: 150 }} value={pay.paid_on} onChange={(e) => setPay({ ...pay, paid_on: e.target.value })} />
-                <TextInput aria-label="Reference" placeholder="Ref / UTR" style={{ width: 120 }} value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} />
+                <input className="input" type="date" aria-label="Paid on" value={pay.paid_on} onChange={(e) => setPay({ ...pay, paid_on: e.target.value })} />
+                <input className="input" aria-label="Reference" placeholder="Ref / UTR" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} />
                 <Button variant="outline" onClick={addPayment} disabled={busy}>
-                  Add payment
+                  Add
                 </Button>
               </div>
             )}

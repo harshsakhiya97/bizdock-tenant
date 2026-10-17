@@ -628,3 +628,6 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
   .inv-actions { display: none; }
   .inv-page { border: 0; margin: 0; padding: 0; max-width: none; }
 }
+.bk-pay { display: grid; grid-template-columns: 100px 92px 142px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.bk-pay .input { min-width: 0; padding: 0 10px; }
+@media (max-width: 560px) { .bk-pay { grid-template-columns: 1fr 1fr; } }
