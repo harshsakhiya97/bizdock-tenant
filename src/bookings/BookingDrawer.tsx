@@ -11,7 +11,7 @@ import { fullName, money } from '@/leads/labels'
 import type { LeadRow } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { addBookingPayment, createBookingInvoice, deleteBookingPayment, saveBooking } from './api'
+import { addBookingPayment, createBookingInvoice, deleteBookingPayment, getBooking, saveBooking } from './api'
 import type { BookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingInput, type BookingRow, type BookingStatus } from './types'
 
@@ -23,7 +23,7 @@ const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : '')
  * an existing lead (search) or a new enquiry (name, phone, type), which is added as a lead.
  */
 export function BookingDrawer({
-  booking,
+  booking: initial,
   defaults,
   lead,
   leads,
@@ -45,6 +45,16 @@ export function BookingDrawer({
   const { can, membership, businesses } = useAuth()
   const { selected } = useBusiness()
   const me = membership?.id
+  // payments are added / removed in place; the page reloads when the drawer closes
+  const [booking, setBooking] = useState(initial)
+  const [paid, setPaid] = useState(false)
+  const close = () => (paid ? onSaved('Payments updated.') : onClose())
+  async function refresh() {
+    if (!booking) return
+    const b = await getBooking(booking.id)
+    if (b) setBooking(b)
+    setPaid(true)
+  }
   const canEdit = booking ? can('bookings', 'edit') : can('bookings', 'add')
   const fixed = !!lead || !!booking
   const [mode, setMode] = useState<'existing' | 'new'>(leads?.length ? 'existing' : 'new')
@@ -130,9 +140,12 @@ export function BookingDrawer({
     setBusy(true)
     try {
       await addBookingPayment(tenant.id, me, booking.id, pay)
-      onSaved('Payment added.')
+      await refresh()
+      setPay({ amount: '', mode: pay.mode, reference: '', paid_on: '' })
+      setError(null)
     } catch (e) {
       setError((e as Error).message)
+    } finally {
       setBusy(false)
     }
   }
@@ -152,13 +165,13 @@ export function BookingDrawer({
   return (
     <Drawer
       open
-      onClose={onClose}
+      onClose={close}
       width={600}
       title={booking ? `Booking · ${booking.client_name}` : 'New booking'}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
-            {canEdit ? 'Cancel' : 'Close'}
+          <Button variant="outline" onClick={close}>
+            {canEdit && !paid ? 'Cancel' : 'Close'}
           </Button>
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
@@ -380,7 +393,7 @@ export function BookingDrawer({
                               type="button"
                               className="btn btn-ghost btn-icon btn-sm"
                               aria-label="Remove payment"
-                              onClick={() => void deleteBookingPayment(p.id).then(() => onSaved('Payment removed.'), (e: Error) => setError(e.message))}
+                              onClick={() => void deleteBookingPayment(p.id).then(refresh, (e: Error) => setError(e.message))}
                             >
                               <Trash2 size={14} />
                             </button>
