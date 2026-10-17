@@ -1,6 +1,6 @@
-import { MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
+import { Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
 
-export type ProviderId = 'whatsapp' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw'
+export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw'
 export type ProviderField = {
   key: string
   label: string
@@ -31,6 +31,20 @@ export const PROVIDERS: Provider[] = [
     usedFor: 'Lead & client messages, booking confirmations, workflow steps',
     // set per WhatsApp provider below (the admin picks the provider)
     fields: [],
+  },
+  {
+    id: 'facebook_ads',
+    name: 'Facebook Ads account',
+    icon: Megaphone,
+    color: '#1877f2',
+    description: 'Your Meta (Facebook / Instagram) ad account, for ad spend, campaign results and lead forms.',
+    usedFor: 'Ad spend & cost per lead on funnels, Facebook lead forms into leads',
+    fields: [
+      { key: 'ad_account_id', label: 'Ad account ID', required: true, placeholder: 'act_1234567890', hint: 'Meta Business Suite → Settings → Ad accounts' },
+      { key: 'business_id', label: 'Business Manager ID', placeholder: '1234567890' },
+      { key: 'page_id', label: 'Facebook Page ID', placeholder: 'For lead forms', hint: 'The page your lead ads run from' },
+      { key: 'access_token', label: 'System user access token', secret: true, required: true, hint: 'Business Settings → System users → Generate token (ads_read, leads_retrieval)' },
+    ],
   },
   {
     id: 'callyzer',
