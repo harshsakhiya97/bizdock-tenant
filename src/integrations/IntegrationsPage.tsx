@@ -24,7 +24,7 @@ export function IntegrationsPage() {
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   // what BizDock (admin) allows this workspace: { whatsapp: { allowed, provider } }
-  const [allow, setAllow] = useState<{ whatsapp?: { allowed: boolean; provider: WhatsAppVendor | null } } | null>(null)
+  const [allow, setAllow] = useState<({ whatsapp?: { allowed: boolean; provider: WhatsAppVendor | null } } & Record<string, { allowed?: boolean } | undefined>) | null>(null)
   useEffect(() => {
     void db()
       .from('tenants')
@@ -37,7 +37,7 @@ export function IntegrationsPage() {
   /** WhatsApp: fields of the provider the admin picked */
   const effective = (p: Provider): Provider =>
     p.id === 'whatsapp' && waVendor ? { ...p, name: `WhatsApp · ${WHATSAPP_VENDORS[waVendor].label}`, fields: WHATSAPP_VENDORS[waVendor].fields } : p
-  const blocked = (p: Provider) => p.id === 'whatsapp' && !waVendor
+  const blocked = (p: Provider) => (p.id === 'whatsapp' ? !waVendor : !allow?.[p.id]?.allowed)
 
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
@@ -103,7 +103,7 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
-              {off && <div className="int-note">WhatsApp isn’t enabled for your workspace yet. Ask BizDock to turn it on.</div>}
+              {off && allow && <div className="int-note">{p.name} isn’t enabled for your workspace yet. Ask BizDock to turn it on.</div>}
               {stale && <div className="int-err"><CircleAlert size={14} /> Your WhatsApp provider is now {WHATSAPP_VENDORS[waVendor!].label}. Enter its keys again.</div>}
               {r?.status === 'error' && r.last_error && (
                 <div className="int-err">
