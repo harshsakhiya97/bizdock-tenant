@@ -11,7 +11,8 @@ import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, type IntegrationRow } from './api'
-import { mask, PROVIDERS, type Provider } from './providers'
+import { db } from '@/lib/supabase'
+import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -21,6 +22,21 @@ export function IntegrationsPage() {
   const [open, setOpen] = useState<Provider | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
+  // what BizDock (admin) allows this workspace: { whatsapp: { allowed, provider } }
+  const [allow, setAllow] = useState<{ whatsapp?: { allowed: boolean; provider: WhatsAppVendor | null } } | null>(null)
+  useEffect(() => {
+    void db()
+      .from('tenants')
+      .select('connections')
+      .eq('id', tenant.id)
+      .maybeSingle()
+      .then(({ data }) => setAllow((data?.connections as typeof allow) ?? {}))
+  }, [tenant.id])
+  const waVendor = allow?.whatsapp?.allowed ? (allow.whatsapp.provider ?? null) : null
+  /** WhatsApp: fields of the provider the admin picked */
+  const effective = (p: Provider): Provider =>
+    p.id === 'whatsapp' && waVendor ? { ...p, name: `WhatsApp · ${WHATSAPP_VENDORS[waVendor].label}`, fields: WHATSAPP_VENDORS[waVendor].fields } : p
+  const blocked = (p: Provider) => p.id === 'whatsapp' && !waVendor
 
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
@@ -55,7 +71,10 @@ export function IntegrationsPage() {
         {PROVIDERS.map((p) => {
           const r = byProvider.get(p.id)
           const Icon = p.icon
-          const state = !r ? 'off' : !r.is_enabled ? 'paused' : r.status
+          const off = blocked(p)
+          // the admin switched WhatsApp to another provider: the saved keys don't fit
+          const stale = p.id === 'whatsapp' && !!r && !!waVendor && r.config.vendor !== waVendor
+          const state = off ? 'blocked' : stale ? 'reconnect' : !r ? 'off' : !r.is_enabled ? 'paused' : r.status
           return (
             <section key={p.id} className="card int-card">
               <div className="int-top">
@@ -63,17 +82,17 @@ export function IntegrationsPage() {
                   <Icon size={20} />
                 </div>
                 <div className="int-title">
-                  <b>{p.name}</b>
+                  <b>{effective(p).name}</b>
                   <span
                     className={cn(
                       'badge',
-                      state === 'connected' ? 'badge-success' : state === 'error' ? 'badge-danger' : state === 'paused' ? 'badge-warning' : 'badge-muted',
+                      state === 'connected' ? 'badge-success' : state === 'error' || state === 'reconnect' ? 'badge-danger' : state === 'paused' ? 'badge-warning' : 'badge-muted',
                     )}
                   >
-                    {state === 'connected' ? 'Connected' : state === 'error' ? 'Error' : state === 'paused' ? 'Paused' : 'Not connected'}
+                    {{ connected: 'Connected', error: 'Error', reconnect: 'Reconnect needed', paused: 'Paused', off: 'Not connected', blocked: 'Not enabled', disconnected: 'Not connected' }[state]}
                   </span>
                 </div>
-                {r && (
+                {r && !off && !stale && (
                   <label className="switch" title={r.is_enabled ? 'Pause' : 'Turn on'}>
                     <input type="checkbox" checked={r.is_enabled} onChange={() => void toggle(r)} />
                   </label>
@@ -83,6 +102,8 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
+              {off && <div className="int-note">WhatsApp isn’t enabled for your workspace yet. Ask BizDock to turn it on.</div>}
+              {stale && <div className="int-err"><CircleAlert size={14} /> Your WhatsApp provider is now {WHATSAPP_VENDORS[waVendor!].label}. Enter its keys again.</div>}
               {r?.status === 'error' && r.last_error && (
                 <div className="int-err">
                   <CircleAlert size={14} /> {r.last_error}
@@ -90,7 +111,7 @@ export function IntegrationsPage() {
               )}
               <div className="int-foot">
                 <span className="muted small">
-                  {r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                  {off ? 'Turned on by BizDock' : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {r && (
@@ -98,13 +119,15 @@ export function IntegrationsPage() {
                       Disconnect
                     </button>
                   )}
-                  <button type="button" className={cn('btn btn-sm', r ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen(p)}>
-                    {r ? 'Settings' : (
+                  {!off && (
+                  <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen(effective(p))}>
+                    {r && !stale ? 'Settings' : (
                       <>
                         <PlugZap size={14} /> Connect
                       </>
                     )}
                   </button>
+                  )}
                 </div>
               </div>
             </section>
@@ -116,7 +139,9 @@ export function IntegrationsPage() {
       {open && (
         <ConnectDrawer
           provider={open}
-          existing={byProvider.get(open.id) ?? null}
+          existing={((r) => (r && open.id === 'whatsapp' && r.config.vendor !== waVendor ? null : r))(byProvider.get(open.id) ?? null)}
+          replaceId={byProvider.get(open.id)?.id ?? null}
+          vendor={open.id === 'whatsapp' ? waVendor : null}
           onClose={() => setOpen(null)}
           onSaved={(msg) => {
             setOpen(null)
@@ -153,11 +178,16 @@ export function IntegrationsPage() {
 function ConnectDrawer({
   provider,
   existing,
+  replaceId,
+  vendor,
   onClose,
   onSaved,
 }: {
   provider: Provider
   existing: IntegrationRow | null
+  /** a saved row whose keys no longer fit (WhatsApp provider changed): overwritten */
+  replaceId: string | null
+  vendor: WhatsAppVendor | null
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
@@ -172,7 +202,8 @@ function ConnectDrawer({
   const Icon = provider.icon
 
   async function save() {
-    const config: Record<string, string> = { ...(existing?.config ?? {}) }
+    const config: Record<string, string> = existing ? { ...existing.config } : {}
+    if (vendor) config.vendor = vendor
     for (const f of provider.fields) {
       const v = values[f.key]?.trim() ?? ''
       if (f.secret && !v && existing?.config[f.key]) continue
@@ -181,7 +212,7 @@ function ConnectDrawer({
     }
     setBusy(true)
     try {
-      await saveIntegration(tenant.id, membership?.id, existing, provider.id, config)
+      await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config)
       onSaved(existing ? `${provider.name} settings saved.` : `${provider.name} connected.`)
     } catch (e) {
       setError((e as Error).message)

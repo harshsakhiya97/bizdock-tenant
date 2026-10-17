@@ -29,12 +29,8 @@ export const PROVIDERS: Provider[] = [
     color: '#25d366',
     description: 'WhatsApp Business API for sending messages from leads, clients and workflows.',
     usedFor: 'Lead & client messages, booking confirmations, workflow steps',
-    fields: [
-      { key: 'vendor', label: 'Provider', required: true, options: ['Meta Cloud API', 'Interakt', 'WATI', 'AiSensy', 'Gupshup', 'Other'] },
-      { key: 'business_number', label: 'Business number', required: true, placeholder: '+91 98765 43210' },
-      { key: 'phone_number_id', label: 'Phone number ID / Channel ID', placeholder: 'From the provider dashboard' },
-      { key: 'access_token', label: 'Access token / API key', secret: true, required: true },
-    ],
+    // set per WhatsApp provider below (the admin picks the provider)
+    fields: [],
   },
   {
     id: 'callyzer',
@@ -91,3 +87,39 @@ export const PROVIDERS: Provider[] = [
 
 /** "••••••••3f9a" */
 export const mask = (v: string) => (v ? `${'•'.repeat(8)}${v.slice(-4)}` : '')
+
+/** WhatsApp providers the admin can allow; each needs its own keys */
+export type WhatsAppVendor = 'wati' | 'dovesoft' | 'aisensy' | 'meta'
+export const WHATSAPP_VENDORS: Record<WhatsAppVendor, { label: string; fields: ProviderField[] }> = {
+  wati: {
+    label: 'WATI',
+    fields: [
+      { key: 'api_endpoint', label: 'API endpoint', required: true, placeholder: 'https://live-mt-server.wati.io/123456', hint: 'WATI → API Docs → API Endpoint' },
+      { key: 'access_token', label: 'Access token', secret: true, required: true, hint: 'WATI → API Docs → Access Token (without “Bearer”)' },
+      { key: 'business_number', label: 'WhatsApp business number', required: true, placeholder: '+91 98765 43210' },
+    ],
+  },
+  dovesoft: {
+    label: 'Dovesoft',
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true },
+      { key: 'business_number', label: 'WhatsApp business number', required: true, placeholder: '+91 98765 43210' },
+    ],
+  },
+  aisensy: {
+    label: 'AiSensy',
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'AiSensy → Manage → API key' },
+      { key: 'business_number', label: 'WhatsApp business number', required: true, placeholder: '+91 98765 43210' },
+    ],
+  },
+  meta: {
+    label: 'Meta (Cloud API)',
+    fields: [
+      { key: 'phone_number_id', label: 'Phone number ID', required: true },
+      { key: 'waba_id', label: 'WhatsApp Business Account ID', required: true },
+      { key: 'access_token', label: 'Permanent access token', secret: true, required: true },
+      { key: 'business_number', label: 'WhatsApp business number', required: true, placeholder: '+91 98765 43210' },
+    ],
+  },
+}
