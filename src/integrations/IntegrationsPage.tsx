@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CheckCircle2, CircleAlert, PlugZap } from 'lucide-react'
+import { Link } from 'react-router'
+import { CheckCircle2, CircleAlert, MessageSquareText, PlugZap } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -114,6 +115,11 @@ export function IntegrationsPage() {
                   {off ? 'Turned on by BizDock' : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
+                  {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
+                    <Link to="/integrations/whatsapp/templates" className="btn btn-outline btn-sm">
+                      <MessageSquareText size={14} /> Templates
+                    </Link>
+                  )}
                   {r && (
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(r)}>
                       Disconnect

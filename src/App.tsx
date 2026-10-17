@@ -23,6 +23,8 @@ import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
 import { IntegrationsPage } from '@/integrations/IntegrationsPage'
+import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
+import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
@@ -125,6 +127,22 @@ export default function App() {
                   element={
                     <RequirePermission module="workflows">
                       <WorkflowPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/integrations/whatsapp/templates"
+                  element={
+                    <RequirePermission module="settings" action="edit">
+                      <WaTemplatesPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/integrations/whatsapp/templates/new"
+                  element={
+                    <RequirePermission module="settings" action="edit">
+                      <WaTemplateNewPage />
                     </RequirePermission>
                   }
                 />
