@@ -347,8 +347,24 @@ export function BookingDrawer({
 
         {booking && (
           <FormSection title="Payments" description={`Paid ${money(booking.paid_amount)} of ${money(booking.total_amount)} · balance ${money(Math.max(0, booking.total_amount - booking.paid_amount))}`}>
-            {booking.booking_payments.length > 0 && (
-              <table className="table table-compact">
+            {(booking.booking_payments.length > 0 || ((canEdit || can('payments', 'add')) && booking.status !== 'cancelled')) && (
+              <table className="table table-compact bk-pay-table">
+                <colgroup>
+                  <col style={{ width: 150 }} />
+                  <col style={{ width: 110 }} />
+                  <col />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 64 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Mode</th>
+                    <th>Reference</th>
+                    <th className="num">Amount</th>
+                    <th />
+                  </tr>
+                </thead>
                 <tbody>
                   {[...booking.booking_payments]
                     .sort((a, b) => a.paid_on.localeCompare(b.paid_on))
@@ -373,24 +389,36 @@ export function BookingDrawer({
                       </tr>
                     ))}
                 </tbody>
+                {(canEdit || can('payments', 'add')) && booking.status !== 'cancelled' && (
+                  <tfoot>
+                    <tr className="bk-pay-row">
+                      <td>
+                        <input className="input" type="date" aria-label="Paid on" value={pay.paid_on} onChange={(e) => setPay({ ...pay, paid_on: e.target.value })} />
+                      </td>
+                      <td>
+                        <select className="input" aria-label="Mode" value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>
+                          {refs.modes.map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <input className="input" aria-label="Reference" placeholder="Ref / UTR" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} />
+                      </td>
+                      <td>
+                        <input className="input num" aria-label="Amount" type="number" min={0} placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
+                      </td>
+                      <td className="num">
+                        <Button variant="outline" onClick={addPayment} disabled={busy}>
+                          Add
+                        </Button>
+                      </td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
-            )}
-            {(canEdit || can('payments', 'add')) && booking.status !== 'cancelled' && (
-              <div className="bk-pay">
-                <input className="input" aria-label="Amount" type="number" min={0} placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
-                <select className="input" aria-label="Mode" value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>
-                  {refs.modes.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-                <input className="input" type="date" aria-label="Paid on" value={pay.paid_on} onChange={(e) => setPay({ ...pay, paid_on: e.target.value })} />
-                <input className="input" aria-label="Reference" placeholder="Ref / UTR" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} />
-                <Button variant="outline" onClick={addPayment} disabled={busy}>
-                  Add
-                </Button>
-              </div>
             )}
           </FormSection>
         )}

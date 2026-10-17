@@ -628,6 +628,8 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
   .inv-actions { display: none; }
   .inv-page { border: 0; margin: 0; padding: 0; max-width: none; }
 }
-.bk-pay { display: grid; grid-template-columns: 100px 92px 142px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
-.bk-pay .input { min-width: 0; padding: 0 10px; }
-@media (max-width: 560px) { .bk-pay { grid-template-columns: 1fr 1fr; } }
+.bk-pay-table { table-layout: fixed; width: 100%; }
+.bk-pay-row td { padding-top: 8px; padding-bottom: 8px; padding-left: 4px; padding-right: 4px; border-bottom: 0; }
+.bk-pay-row .input { height: 36px; min-width: 0; padding: 0 8px; }
+.bk-pay-row .input.num { text-align: right; }
+.bk-pay-row .btn { padding: 0 10px; }
