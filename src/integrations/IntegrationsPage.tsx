@@ -38,6 +38,8 @@ export function IntegrationsPage() {
   const effective = (p: Provider): Provider =>
     p.id === 'whatsapp' && waVendor ? { ...p, name: `WhatsApp · ${WHATSAPP_VENDORS[waVendor].label}`, fields: WHATSAPP_VENDORS[waVendor].fields } : p
   const blocked = (p: Provider) => (p.id === 'whatsapp' ? !waVendor : !allow?.[p.id]?.allowed)
+  // only what BizDock has turned on for this workspace (plus anything still saved, so it can be disconnected)
+  const visible = allow ? PROVIDERS.filter((p) => !blocked(p) || (rows ?? []).some((r) => r.provider === p.id)) : []
 
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
@@ -63,13 +65,14 @@ export function IntegrationsPage() {
     <>
       <PageHead
         title="System Connections"
-        subtitle={`Connect the third-party services BizDock works with. ${rows ? `${connected} of ${PROVIDERS.length} connected.` : ''}`}
+        subtitle={`Connect the third-party services BizDock works with. ${rows && allow ? `${connected} of ${visible.length} connected.` : ''}`}
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
 
+      {allow && !visible.length && <div className="empty">No connections are turned on for your workspace yet. Ask BizDock to enable the ones you need.</div>}
       <div className="int-grid">
-        {PROVIDERS.map((p) => {
+        {visible.map((p) => {
           const r = byProvider.get(p.id)
           const Icon = p.icon
           const off = blocked(p)
@@ -103,7 +106,7 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
-              {off && allow && <div className="int-note">{p.name} isn’t enabled for your workspace yet. Ask BizDock to turn it on.</div>}
+              {off && allow && <div className="int-note">BizDock has turned {p.name} off for your workspace. Disconnect to remove the saved keys.</div>}
               {stale && <div className="int-err"><CircleAlert size={14} /> Your WhatsApp provider is now {WHATSAPP_VENDORS[waVendor!].label}. Enter its keys again.</div>}
               {r?.status === 'error' && r.last_error && (
                 <div className="int-err">
@@ -112,7 +115,7 @@ export function IntegrationsPage() {
               )}
               <div className="int-foot">
                 <span className="muted small">
-                  {off ? 'Turned on by BizDock' : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                  {off ? 'Turned off by BizDock' : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
