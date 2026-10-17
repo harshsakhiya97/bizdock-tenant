@@ -75,7 +75,7 @@ export function ClientPage() {
   if (!client)
     return (
       <Empty>
-        This client isn’t available. <Link to="/customers">Back to clients</Link>
+        This client isn’t available. <Link to="/sales">Back to sales</Link>
       </Empty>
     )
 

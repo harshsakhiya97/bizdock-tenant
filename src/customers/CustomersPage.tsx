@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { Download, IndianRupee, Plus, ReceiptText, ShoppingBag, UserPlus, Users, Wallet } from 'lucide-react'
+import { Download, IndianRupee, Plus, ReceiptText, ShoppingBag, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
@@ -8,11 +8,7 @@ import { fullName } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { RecordPaymentModal } from '@/collections/RecordPaymentModal'
-import { AddCustomerDrawer } from './AddCustomerDrawer'
-import { listBookings } from '@/bookings/api'
-import type { BookingRow } from '@/bookings/types'
-import { useTenant } from '@/tenant/useTenant'
-import { emisLeft, fmtDay, nextDue, PLANS, planOf, remainingOf, rupees, todayIso, addMonthsIso } from './labels'
+import { emisLeft, fmtDay, nextDue, PLANS, planOf, remainingOf, rupees, todayIso } from './labels'
 import { NewSaleDrawer, type SalePrefill } from './NewSaleDrawer'
 import type { CustomerRow, SaleRow } from './types'
 import { useSalesData, type SalesData } from './useSalesData'
@@ -26,22 +22,15 @@ function downloadCsv(name: string, rows: (string | number)[][]) {
   URL.revokeObjectURL(a.href)
 }
 
-/** Customers (journey tabs) and All sales (every product bought), with New sale / New customer. */
-export function CustomersPage() {
+/** Sales: every product sold, with dues and collections, and New sale. */
+export function SalesPage() {
   const data = useSalesData()
   const { can, scope } = useAuth()
   const { selected } = useBusiness()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'sales' && scope('sales') !== 'none' ? 'sales' : 'customers'
   const navigate = useNavigate()
-  const tenant = useTenant()
-  const [bookings, setBookings] = useState<BookingRow[]>([])
-  useEffect(() => {
-    listBookings(tenant.id).then(setBookings, () => setBookings([]))
-  }, [tenant.id])
   const openClient = (id: string) => navigate(`/customers/${id}`)
   const [sale, setSale] = useState<SalePrefill | null>(null)
-  const [adding, setAdding] = useState(false)
   const [collectSale, setCollectSale] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
@@ -86,15 +75,10 @@ export function CustomersPage() {
   return (
     <>
       <PageHead
-        title="Clients"
-        subtitle={selected ? `Clients of ${selected.name}: everyone who booked or bought.` : 'Everyone who booked at least once or bought from you.'}
+        title="Sales"
+        subtitle={selected ? `Everything sold in ${selected.name}, with what is still to be collected.` : 'Everything sold, with what is still to be collected.'}
         actions={
           <>
-            {can('customers', 'edit') && (
-              <button type="button" className="btn btn-outline" onClick={() => setAdding(true)}>
-                <UserPlus size={16} /> New client
-              </button>
-            )}
             {can('deals', 'add') && (
               <button type="button" className="btn btn-primary" onClick={() => setSale({ business_id: selected?.id })}>
                 <Plus size={16} /> New sale
@@ -106,18 +90,7 @@ export function CustomersPage() {
       {(notice.error || data.error) && <div className="alert alert-error">{notice.error ?? data.error}</div>}
       {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
 
-      {scope('sales') !== 'none' && (
-        <div className="seg">
-          <button type="button" className={cn(tab === 'customers' && 'is-active')} onClick={() => setParams({})}>
-            <Users size={15} /> Clients
-          </button>
-          <button type="button" className={cn(tab === 'sales' && 'is-active')} onClick={() => setParams({ tab: 'sales' })}>
-            <ReceiptText size={15} /> All sales
-          </button>
-        </div>
-      )}
-
-      {tab === 'customers' ? <CustomersTab data={data} bookings={bookings} onOpen={openClient} /> : <SalesTab data={data} onOpen={openClient} />}
+      {scope('sales') === 'none' ? <Empty icon={ReceiptText}>Your access doesn’t include sales.</Empty> : <SalesTab data={data} onOpen={openClient} />}
 
       {sale && (
         <NewSaleDrawer
@@ -141,239 +114,7 @@ export function CustomersPage() {
           }}
         />
       )}
-      {adding && (
-        <AddCustomerDrawer
-          data={data}
-          defaultBusinessId={selected?.id ?? null}
-          onClose={() => setAdding(false)}
-          onSaved={(msg) => {
-            setAdding(false)
-            saved(msg)
-          }}
-        />
-      )}
     </>
-  )
-}
-
-type CustFilters = { q: string; product: string; owner: string; emis: boolean; expiring: boolean; sort: string }
-const CUST_EMPTY: CustFilters = { q: '', product: '', owner: '', emis: false, expiring: false, sort: 'newest' }
-
-function CustomersTab({ data, bookings, onOpen }: { data: SalesData; bookings: BookingRow[]; onOpen: (id: string) => void }) {
-  const [stageTab, setStageTab] = useState('all')
-  const [f, setF] = useState<CustFilters>(CUST_EMPTY)
-  const setFilter = <K extends keyof CustFilters>(k: K, v: CustFilters[K]) => setF((d) => ({ ...d, [k]: v }))
-
-  const rows = useMemo(() => {
-    const today = todayIso()
-    const in30 = addMonthsIso(today, 1)
-    return (data.customers ?? []).map((c) => {
-      const sales = (data.salesByCustomer.get(c.id) ?? []).filter((s) => s.status === 'active')
-      const dues = sales.flatMap((s) => s.sale_dues.filter((d) => d.status === 'pending')).sort((a, b) => a.due_on.localeCompare(b.due_on))
-      const emis = sales.flatMap(emisLeft)
-      const bk = bookings.filter((b) => b.status !== 'cancelled' && (b.customer_id === c.id || (!!c.lead_id && b.lead_id === c.lead_id)))
-      const bkTotal = bk.reduce((a, b) => a + Number(b.total_amount), 0)
-      const bkPaid = bk.reduce((a, b) => a + Number(b.paid_amount), 0)
-      return {
-        c,
-        bookings: bk.length,
-        bkTotal,
-        bkBalance: Math.max(0, bkTotal - bkPaid),
-        lastBooking: bk.map((b) => b.booking_date).sort().pop() ?? null,
-        sales,
-        lifetime: sales.reduce((a, s) => a + Number(s.total_amount), 0),
-        remaining: sales.reduce((a, s) => a + remainingOf(s), 0),
-        emis,
-        next: dues[0] ?? null,
-        expiring: sales.some((s) => s.valid_until && s.valid_until >= today && s.valid_until <= in30),
-      }
-    })
-  }, [data.customers, data.salesByCustomer, bookings])
-
-  const base = rows
-    .filter((r) => (stageTab === 'deleted' ? r.c.is_archived : !r.c.is_archived))
-    .filter((r) => {
-      const q = f.q.trim().toLowerCase()
-      if (!q) return true
-      const digits = q.replace(/\D/g, '')
-      return (
-        r.c.full_name.toLowerCase().includes(q) ||
-        (r.c.email ?? '').toLowerCase().includes(q) ||
-        (r.c.city ?? '').toLowerCase().includes(q) ||
-        (!!digits && (r.c.phone ?? '').replace(/\D/g, '').includes(digits))
-      )
-    })
-    .filter((r) => !f.product || r.sales.some((s) => s.product_id === f.product))
-    .filter((r) => !f.owner || (f.owner === 'none' ? !r.c.owner_id : r.c.owner_id === f.owner))
-    .filter((r) => !f.emis || r.emis.length > 0)
-    .filter((r) => !f.expiring || r.expiring)
-  const visible = base
-    .filter((r) => stageTab === 'all' || stageTab === 'deleted' || r.c.stage_id === stageTab)
-    .sort((a, b) => {
-      if (f.sort === 'oldest') return a.c.created_at.localeCompare(b.c.created_at)
-      if (f.sort === 'value') return b.lifetime - a.lifetime
-      if (f.sort === 'remaining') return b.remaining - a.remaining
-      if (f.sort === 'name') return a.c.full_name.localeCompare(b.c.full_name)
-      return b.c.created_at.localeCompare(a.c.created_at)
-    })
-
-  const live = base.filter((r) => !r.c.is_archived)
-  const tabs = [
-    { id: 'all', label: 'All', count: stageTab === 'deleted' ? rows.filter((r) => !r.c.is_archived).length : live.length },
-    ...data.stages
-      .filter((s) => s.is_active)
-      .map((s) => ({ id: s.id, label: s.name, count: live.filter((r) => r.c.stage_id === s.id).length })),
-    { id: 'deleted', label: 'Deleted', count: rows.filter((r) => r.c.is_archived).length },
-  ]
-  const productsInScope = data.products.filter((p) => data.sales.some((s) => s.product_id === p.id))
-
-  return (
-    <div className="panel">
-      <div className="panel-tabs">
-        <div className="tabs">
-          {tabs.map((t) => (
-            <button key={t.id} type="button" className={cn('tab', stageTab === t.id && 'is-active')} onClick={() => setStageTab(t.id)}>
-              {t.label} <span className="muted small">{t.count}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="panel-filters">
-        <SearchInput placeholder="Name, phone, email or city" value={f.q} onChange={(v) => setFilter('q', v)} width={230} />
-        <select className="input input-sm filter-select" value={f.product} onChange={(e) => setFilter('product', e.target.value)} aria-label="Product">
-          <option value="">Product</option>
-          {productsInScope.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        <select className="input input-sm filter-select" value={f.owner} onChange={(e) => setFilter('owner', e.target.value)} aria-label="Owner">
-          <option value="">Owner</option>
-          <option value="none">Unassigned</option>
-          {data.members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name}
-            </option>
-          ))}
-        </select>
-        <select className="input input-sm filter-select" value={f.sort} onChange={(e) => setFilter('sort', e.target.value)} aria-label="Sort">
-          <option value="newest">Newest clients</option>
-          <option value="oldest">Oldest clients</option>
-          <option value="value">Highest lifetime value</option>
-          <option value="remaining">Most remaining</option>
-          <option value="name">Name A–Z</option>
-        </select>
-        <label className="check-inline">
-          <input type="checkbox" checked={f.emis} onChange={(e) => setFilter('emis', e.target.checked)} /> EMIs left
-        </label>
-        <label className="check-inline">
-          <input type="checkbox" checked={f.expiring} onChange={(e) => setFilter('expiring', e.target.checked)} /> Validity ends in 30 days
-        </label>
-        {JSON.stringify(f) !== JSON.stringify(CUST_EMPTY) && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setF(CUST_EMPTY)}>
-            Reset
-          </button>
-        )}
-      </div>
-
-      {!data.customers ? (
-        <div className="empty">Loading clients…</div>
-      ) : visible.length === 0 ? (
-        <Empty icon={Users}>{rows.length ? 'No clients match.' : 'No clients yet. A lead becomes a client with its first confirmed booking or sale.'}</Empty>
-      ) : (
-        <div className="table-wrap">
-          <table className="table cust-table">
-            <thead>
-              <tr>
-                <th>Client</th>
-                <th>Stage</th>
-                <th className="right">Bookings</th>
-                <th>Last booking</th>
-                <th>Products</th>
-                <th className="right">Lifetime value</th>
-                <th className="right">Remaining</th>
-                <th>EMIs left</th>
-                <th>Next due</th>
-                <th>Owner</th>
-                <th>Since</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((r) => {
-                const st = data.stageOf(r.c.stage_id)
-                return (
-                  <tr key={r.c.id} className="is-clickable" onClick={() => onOpen(r.c.id)}>
-                    <td>
-                      <b>{r.c.full_name}</b>
-                      <div className="muted small">{[r.c.phone, r.c.city].filter(Boolean).join(' · ') || '—'}</div>
-                    </td>
-                    <td>
-                      {st ? (
-                        <span className="stage-pill" style={{ ['--c' as string]: st.color }}>
-                          {st.name}
-                        </span>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="right nowrap">
-                      {r.bookings ? (
-                        <>
-                          {r.bookings} · {rupees(r.bkTotal)}
-                          {r.bkBalance > 0 && <div className="small text-danger">{rupees(r.bkBalance)} due</div>}
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="nowrap">{r.lastBooking ? fmtDay(r.lastBooking) : <span className="muted">—</span>}</td>
-                    <td>
-                      {r.sales.length === 0 ? (
-                        <span className="muted">—</span>
-                      ) : (
-                        r.sales.map((s) => (
-                          <div key={s.id} className="small">
-                            {data.productById.get(s.product_id)?.name ?? 'Product'}
-                            {s.valid_until && <span className="muted"> · till {fmtDay(s.valid_until)}</span>}
-                          </div>
-                        ))
-                      )}
-                    </td>
-                    <td className="right nowrap">{rupees(r.lifetime)}</td>
-                    <td className={cn('right nowrap', r.remaining > 0 && 'text-danger')}>{rupees(r.remaining)}</td>
-                    <td className="nowrap">
-                      {r.emis.length ? (
-                        <>
-                          {r.emis.length} left
-                          <div className="muted small">{rupees(r.emis.reduce((a, d) => a + Number(d.amount) - Number(d.paid_amount), 0))}</div>
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="nowrap">
-                      {r.next ? (
-                        <>
-                          <b>{rupees(Number(r.next.amount) - Number(r.next.paid_amount))}</b>
-                          <div className={cn('small', r.next.due_on < todayIso() ? 'text-danger' : 'muted')}>
-                            {r.next.kind === 'emi' ? `EMI ${r.next.seq}` : 'Balance'} · {fmtDay(r.next.due_on)}
-                          </div>
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                    <td className="nowrap">{data.memberName(r.c.owner_id) ?? <span className="muted">Unassigned</span>}</td>
-                    <td className="nowrap muted">{fmtDay(r.c.created_at)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
   )
 }
 

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { TenantProvider } from '@/tenant/TenantProvider'
 import { RequireAuth } from '@/auth/RequireAuth'
@@ -17,7 +17,7 @@ import { WorkflowPage } from '@/workflows/WorkflowPage'
 import { LeadsPage } from '@/leads/LeadsPage'
 import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
-import { CustomersPage } from '@/customers/CustomersPage'
+import { SalesPage } from '@/customers/CustomersPage'
 import { ClientPage } from '@/customers/ClientPage'
 import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
@@ -31,6 +31,13 @@ import { PaymentsPage } from '@/collections/PaymentsPage'
 import { LedgerPage } from '@/collections/LedgerPage'
 import { CalendarPage } from '@/calendar/CalendarPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
+
+/** old /customers links (?open=<client>, ?sale_lead=<lead>) */
+function ToSales() {
+  const { search } = useLocation()
+  const open = new URLSearchParams(search).get('open')
+  return <Navigate to={open ? `/customers/${open}` : `/sales${search}`} replace />
+}
 
 export default function App() {
   return (
@@ -62,7 +69,8 @@ export default function App() {
                 <Route path="/leads" element={<LeadsPage />} />
                 <Route path="/leads/:id" element={<LeadPage />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
-                <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/sales" element={<SalesPage />} />
+                <Route path="/customers" element={<ToSales />} />
                 <Route path="/customers/:id" element={<ClientPage />} />
                 <Route
                   path="/bookings"

@@ -213,7 +213,7 @@ export function LeadsPage() {
 
   // a won lead goes straight to New sale, filled from the lead
   function wonToSale(leadId: string) {
-    if (can('deals', 'add')) navigate(`/customers?sale_lead=${leadId}`)
+    if (can('deals', 'add')) navigate(`/sales?sale_lead=${leadId}`)
   }
 
   function exportCsv() {
