@@ -124,8 +124,12 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if ((t.event === 'before_event' || t.event === 'after_event') && !(Number(t.amount) >= 0)) return 'Set the time'
       return null
     }
-    case 'whatsapp':
-      return !String(d.message ?? '').trim() && !String(d.template ?? '').trim() ? 'Write the message or pick a template' : null
+    case 'whatsapp': {
+      if (!String(d.message ?? '').trim() && !String(d.template ?? '').trim()) return 'Write the message or pick a template'
+      const params = (d.params ?? {}) as Record<string, string>
+      if (d.template && Object.values(params).some((v) => !String(v ?? '').trim())) return 'Fill every template variable'
+      return null
+    }
     case 'email':
       return !String(d.subject ?? '').trim() || !String(d.body ?? '').trim() ? 'Add the subject and the message' : null
     case 'call':

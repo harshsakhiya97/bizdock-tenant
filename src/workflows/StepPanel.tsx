@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { WhatsAppFields } from './WhatsAppFields'
 import { ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, problem } from './steps'
 import { TRIGGER_DEFAULTS, VARIABLES, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit } from './types'
 
@@ -49,14 +50,13 @@ export function StepPanel({
         {kind === 'trigger' && <TriggerFields t={d as unknown as TriggerData} ctx={ctx} onChange={onChange} disabled={ro} />}
 
         {kind === 'whatsapp' && (
-          <>
-            <div>
-              <Label htmlFor="cb-wa-t">Template name</Label>
-              <TextInput id="cb-wa-t" placeholder="e.g. webinar_welcome (approved template)" value={String(d.template ?? '')} onChange={(e) => set('template', e.target.value)} disabled={ro} />
-              <Hint>Needed for messages outside the 24-hour window. Templates come from the WhatsApp provider once connected.</Hint>
-            </div>
-            <MessageField id="cb-wa-m" label="Message" value={String(d.message ?? '')} onChange={(v) => set('message', v)} disabled={ro} rows={6} />
-          </>
+          <WhatsAppFields
+            d={d}
+            set={set}
+            onChange={onChange}
+            disabled={ro}
+            messageField={<MessageField id="cb-wa-m" label="Message" value={String(d.message ?? '')} onChange={(v) => set('message', v)} disabled={ro} rows={6} hint="A free message only reaches leads who messaged you in the last 24 hours." />}
+          />
         )}
 
         {kind === 'email' && (

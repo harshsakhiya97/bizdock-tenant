@@ -692,3 +692,8 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .int-account + .int-account { border-top: 1px solid var(--line); }
 .int-account-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .int-account-main b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-params { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--surface-muted); }
+.cb-param { display: grid; grid-template-columns: minmax(0, 1fr) 118px; gap: 4px 6px; }
+.cb-param .wa-var { grid-column: 1 / -1; }
+.cb-param .input-sm { height: 40px; }
+.cb-param .wa-var { font-size: 12.5px; }
