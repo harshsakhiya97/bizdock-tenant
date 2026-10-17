@@ -292,15 +292,6 @@ export function LeadsPage() {
       <div className="panel">
         <div className="panel-bar">
           <div className="row">
-            <select className="select-filled" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
-              <option value="all">All funnels</option>
-              {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
-              {scopedFunnels.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
             <div className="seg seg-sm">
               <button type="button" className={cn(view === 'list' && 'is-active')} onClick={() => setView('list')}>
                 <List size={14} /> List
@@ -336,6 +327,15 @@ export function LeadsPage() {
 
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
+          <select className="input input-sm filter-select" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
+            <option value="all">All funnels</option>
+            {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
+            {scopedFunnels.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
           <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Temperature">
             <option value="">Temperature</option>
             {TEMPERATURES.map((t) => (
@@ -374,9 +374,6 @@ export function LeadsPage() {
             <option value="updated">Recently updated</option>
             <option value="name">Name</option>
           </select>
-          <label className="toggle" style={{ height: 34 }}>
-            <input type="checkbox" checked={filters.archived} onChange={(e) => setF('archived', e.target.checked)} /> Archived
-          </label>
           {JSON.stringify({ ...filters, sort: 'newest' }) !== JSON.stringify(EMPTY) && (
             <button type="button" className="clear-btn" onClick={() => setFilters(EMPTY)}>
               Reset
