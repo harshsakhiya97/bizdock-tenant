@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
-import { CalendarClock, Columns3, Download, List, Plus, RotateCcw, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { CalendarClock, Download, Plus, RotateCcw, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
@@ -10,7 +10,6 @@ import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
-import { LeadBoard } from './LeadBoard'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
@@ -50,7 +49,6 @@ export function LeadsPage() {
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [funnelId, setFunnelId] = useState<string>(() => read(FUNNEL_KEY(tenant.id)) ?? 'all')
-  const [view, setView] = useState<'list' | 'board'>('list')
   const [stageTab, setStageTab] = useState<string>('all')
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -103,7 +101,6 @@ export function LeadsPage() {
     write(FUNNEL_KEY(tenant.id), id)
     setStageTab('all')
     setPicked(new Set())
-    if (id === 'all' || id === 'none') setView('list')
   }
 
   // leads before the stage tab (for tab counts)
@@ -301,30 +298,6 @@ export function LeadsPage() {
       </div>
 
       <div className="panel">
-        <div className="panel-bar">
-          <div className="row">
-            <div className="seg seg-sm">
-              <button type="button" className={cn(view === 'list' && 'is-active')} onClick={() => setView('list')}>
-                <List size={14} /> List
-              </button>
-              <button
-                type="button"
-                className={cn(view === 'board' && 'is-active')}
-                onClick={() => {
-                  // the board shows one funnel's stages: from "All funnels" it opens the first funnel
-                  if (!funnel && scopedFunnels[0]) pickFunnel(scopedFunnels[0].id)
-                  setView('board')
-                }}
-                disabled={!scopedFunnels.length}
-                title={!scopedFunnels.length ? 'No funnels yet' : undefined}
-              >
-                <Columns3 size={14} /> Board
-              </button>
-            </div>
-          </div>
-        </div>
-
-
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
           <select className="input input-sm filter-select" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
@@ -381,7 +354,7 @@ export function LeadsPage() {
           )}
         </div>
 
-        {pickedIds.length > 0 && view === 'list' && (
+        {pickedIds.length > 0 && (
           <div className="bulk-bar">
             <b>{pickedIds.length} selected</b>
             {can('leads', 'assign') && (
@@ -530,15 +503,6 @@ export function LeadsPage() {
           <Empty icon={Users}>Your access doesn’t include leads.</Empty>
         ) : !scopedFunnels.length ? (
           <Empty icon={Users}>No funnels yet. Add a funnel first; leads sit in a funnel stage.</Empty>
-        ) : view === 'board' && funnel ? (
-          <LeadBoard
-            funnel={funnel}
-            leads={base}
-            members={members}
-            canMove={can('leads', 'edit')}
-            onOpen={(l) => navigate(`/leads/${l.id}`)}
-            onMove={(l, s) => requestMove([l.id], s)}
-          />
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{filters.archived ? 'No archived leads.' : 'No leads here yet.'}</Empty>
         ) : (
@@ -556,7 +520,6 @@ export function LeadsPage() {
                     />
                   </th>
                   <th>Lead</th>
-                  <th>Stage</th>
                   <th>Temp</th>
                   <th>Source</th>
                   {!funnel && <th>Funnel</th>}
@@ -568,7 +531,6 @@ export function LeadsPage() {
               </thead>
               <tbody>
                 {visible.map((l) => {
-                  const s = stageById.get(l.stage_id ?? '')
                   const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
@@ -582,15 +544,6 @@ export function LeadsPage() {
                           {l.phone}
                           {l.city ? ` · ${l.city}` : ''}
                         </div>
-                      </td>
-                      <td>
-                        {s ? (
-                          <span className={cn('funnel-stage', s.kind !== 'open' && 'is-closed')} style={{ ['--c' as string]: s.color }}>
-                            {s.name}
-                          </span>
-                        ) : (
-                          <span className="badge badge-muted">No funnel</span>
-                        )}
                       </td>
                       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
