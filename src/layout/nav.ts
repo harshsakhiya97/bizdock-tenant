@@ -1,4 +1,4 @@
-import { BookOpen, Building2, CalendarClock, CalendarDays, Clock3, Database, HandCoins, Wallet, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, type LucideIcon } from 'lucide-react'
+import { BookOpen, Building2, CalendarClock, CalendarDays, Clock3, Database, HandCoins, Wallet, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -55,6 +55,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
         module: 'team',
         or: { module: 'access', action: 'edit' },
       },
+      { to: '/integrations', label: 'System Connections', icon: Plug, module: 'settings', action: 'edit' },
     ],
   },
 ]
@@ -76,6 +77,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },
+  '/integrations': { title: 'System Connections', crumb: 'Third-party integrations', icon: Plug },
   '/access-control': { title: 'Access Control', crumb: 'Team & roles', icon: ShieldCheck },
   '/profile': { title: 'My Profile', crumb: 'Overview', icon: User },
   '/whats-new': { title: "What's New", crumb: 'Version history', icon: Sparkles },

@@ -22,6 +22,7 @@ import { ClientPage } from '@/customers/ClientPage'
 import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
+import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
@@ -124,6 +125,14 @@ export default function App() {
                   element={
                     <RequirePermission module="workflows">
                       <WorkflowPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/integrations"
+                  element={
+                    <RequirePermission module="settings" action="edit">
+                      <IntegrationsPage />
                     </RequirePermission>
                   }
                 />
