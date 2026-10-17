@@ -175,17 +175,6 @@ export function LeadsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, stageById])
-  const tabs: { id: string; label: string; count: number }[] = funnel
-    ? [
-        { id: 'all', label: 'All', count: base.length },
-        ...funnel.funnel_stages.map((s) => ({ id: s.id, label: s.name, count: base.filter((l) => l.stage_id === s.id).length })),
-      ]
-    : [
-        { id: 'all', label: 'All', count: base.length },
-        { id: 'open', label: 'In progress', count: base.filter((l) => kindOf(l) === 'open').length },
-        { id: 'won', label: 'Won', count: base.filter((l) => kindOf(l) === 'won').length },
-        { id: 'lost', label: 'Lost', count: base.filter((l) => kindOf(l) === 'lost').length },
-      ]
 
   const pickedIds = visible.filter((l) => picked.has(l.id)).map((l) => l.id)
   const allPicked = visible.length > 0 && pickedIds.length === visible.length
@@ -335,17 +324,6 @@ export function LeadsPage() {
           </div>
         </div>
 
-        {view === 'list' && (
-          <div className="panel-tabs">
-            <div className="tabs">
-              {tabs.map((t) => (
-                <button key={t.id} type="button" className={cn('tab', stageTab === t.id && 'is-active')} onClick={() => setStageTab(t.id)}>
-                  {t.label} <span className="muted small">{t.count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
