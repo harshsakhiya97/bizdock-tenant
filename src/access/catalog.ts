@@ -21,7 +21,7 @@ export const SCOPES: { value: Scope; label: string }[] = [
 /** Data visibility: whose records a person sees in each area. */
 export const SCOPE_AREAS: { key: string; label: string; hint: string }[] = [
   { key: 'leads', label: 'Leads', hint: 'Which leads they can see and work on' },
-  { key: 'customers', label: 'Customers', hint: 'Which customers they can see' },
+  { key: 'customers', label: 'Clients', hint: 'Which clients they can see' },
   { key: 'sales', label: 'Sales, payments & collections', hint: 'Sales, payments and dues they can see' },
   { key: 'dashboards', label: 'Dashboards', hint: 'Whose numbers their dashboards show' },
   { key: 'calendars', label: 'Staff calendars', hint: 'Whose week-offs, leaves and events they see' },
@@ -55,8 +55,16 @@ export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
     ],
   },
   {
-    title: 'Customers',
-    rows: [{ module: 'customers', action: 'edit', label: 'Edit customers', hint: 'Profile, journey status, products' }],
+    title: 'Bookings',
+    rows: [
+      { module: 'bookings', action: 'view', label: 'Booking calendar', hint: 'See bookings of the businesses they work in' },
+      { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, advance payments' },
+      { module: 'bookings', action: 'edit', label: 'Edit bookings & invoices', hint: 'Change, cancel, add payments, create invoices' },
+    ],
+  },
+  {
+    title: 'Clients',
+    rows: [{ module: 'customers', action: 'edit', label: 'Edit clients', hint: 'Profile, journey status, products' }],
   },
   {
     title: 'Work & team',

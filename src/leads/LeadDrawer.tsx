@@ -59,6 +59,9 @@ export function LeadDrawer({
     tags: (lead?.tags ?? []).join(', '),
     notes: lead?.notes ?? '',
     next_follow_up_at: toLocalInput(lead?.next_follow_up_at ?? null),
+    purpose: lead?.purpose ?? '',
+    required_on: lead?.required_on ?? '',
+    required_hours: lead?.required_hours != null ? String(lead.required_hours) : '',
   }))
   const [stageNote, setStageNote] = useState('')
   const [lostReason, setLostReason] = useState('')
@@ -222,6 +225,17 @@ export function LeadDrawer({
             <div>
               <Label htmlFor="l-city">Location / City</Label>
               <TextInput id="l-city" value={input.city} onChange={set('city')} disabled={!canEdit} />
+            </div>
+            <div>
+              <Label htmlFor="l-purpose">Purpose</Label>
+              <TextInput id="l-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={set('purpose')} disabled={!canEdit} />
+            </div>
+            <div>
+              <Label htmlFor="l-req">Required on</Label>
+              <div className="row" style={{ flexWrap: 'nowrap' }}>
+                <TextInput id="l-req" type="date" value={input.required_on} onChange={set('required_on')} disabled={!canEdit} />
+                <TextInput aria-label="Hours" type="number" min={0} step={0.5} placeholder="hrs" style={{ width: 80 }} value={input.required_hours} onChange={set('required_hours')} disabled={!canEdit} />
+              </div>
             </div>
           </div>
         </FormSection>

@@ -12,12 +12,13 @@ import { listBillingCompanies, listProducts, validityText } from './api'
 import { BillingCompanyDrawer } from './BillingCompanyDrawer'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
+import { TemplatesTab } from './TemplatesTab'
 import type { BillingCompanyRow, ProductRow, SimpleTable } from './types'
 
-type Tab = 'overview' | 'products' | 'billing' | SimpleTable
+type Tab = 'overview' | 'products' | 'billing' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Record<SimpleTable, { title: string; purpose: string }> = {
-  customer_stages: { title: 'Customer stages', purpose: 'The customer journey (tabs on Customers).' },
+  customer_stages: { title: 'Client stages', purpose: 'The client journey (tabs on Clients).' },
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
   lead_sources: { title: 'Lead sources', purpose: 'Where a lead came from.' },
   lost_reasons: { title: 'Lost reasons', purpose: 'Why a lead was lost.' },
@@ -30,11 +31,12 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'products', label: 'Products' },
   { id: 'billing', label: 'Billing companies' },
-  { id: 'customer_stages', label: 'Customer stages' },
+  { id: 'customer_stages', label: 'Client stages' },
   { id: 'payment_modes', label: 'Payment modes' },
   { id: 'lead_sources', label: 'Lead sources' },
   { id: 'lost_reasons', label: 'Lost reasons' },
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
+  { id: 'whatsapp', label: 'WhatsApp messages' },
   { id: 'event_types', label: 'Event types' },
   { id: 'webinar_types', label: 'Webinar types' },
 ]
@@ -71,6 +73,7 @@ export function MastersPage() {
         {tab === 'overview' && <Overview go={go} />}
         {tab === 'products' && <ProductsTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'billing' && <BillingTab canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
           <SimpleList
             key={tab}

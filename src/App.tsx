@@ -18,6 +18,10 @@ import { LeadsPage } from '@/leads/LeadsPage'
 import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
 import { CustomersPage } from '@/customers/CustomersPage'
+import { ClientPage } from '@/customers/ClientPage'
+import { LeadPage } from '@/leads/LeadPage'
+import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
+import { InvoicePage } from '@/bookings/InvoicePage'
 import { MastersPage } from '@/masters/MastersPage'
 import { CollectionsPage } from '@/collections/CollectionsPage'
 import { PaymentsPage } from '@/collections/PaymentsPage'
@@ -33,6 +37,14 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route element={<RequireAuth />}>
+              <Route
+                path="/bookings/:id/invoice"
+                element={
+                  <RequirePermission module="bookings">
+                    <InvoicePage />
+                  </RequirePermission>
+                }
+              />
               <Route element={<AppLayout />}>
                 <Route path="/my-day" element={<MyDayPage />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
@@ -45,8 +57,18 @@ export default function App() {
                   }
                 />
                 <Route path="/leads" element={<LeadsPage />} />
+                <Route path="/leads/:id" element={<LeadPage />} />
                 <Route path="/follow-ups" element={<FollowUpsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
+                <Route path="/customers/:id" element={<ClientPage />} />
+                <Route
+                  path="/bookings"
+                  element={
+                    <RequirePermission module="bookings">
+                      <BookingCalendarPage />
+                    </RequirePermission>
+                  }
+                />
                 <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/attendance" element={<AttendancePage />} />
                 <Route

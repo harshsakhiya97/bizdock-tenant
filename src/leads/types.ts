@@ -35,6 +35,10 @@ export type LeadRow = {
   utm_content: string | null
   /** extra form fields (company, purpose…) */
   extra: Record<string, string>
+  purpose: string | null
+  /** the date (and hours) the lead needs the service / slot */
+  required_on: string | null
+  required_hours: number | null
 }
 
 export type ActivityRow = {
@@ -67,4 +71,7 @@ export type LeadInput = {
   tags: string
   notes: string
   next_follow_up_at: string
+  purpose: string
+  required_on: string
+  required_hours: string
 }

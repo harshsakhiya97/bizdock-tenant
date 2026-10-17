@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { Download, IndianRupee, Plus, ReceiptText, ShoppingBag, UserPlus, Users, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -9,7 +9,9 @@ import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { RecordPaymentModal } from '@/collections/RecordPaymentModal'
 import { AddCustomerDrawer } from './AddCustomerDrawer'
-import { CustomerDrawer } from './CustomerDrawer'
+import { listBookings } from '@/bookings/api'
+import type { BookingRow } from '@/bookings/types'
+import { useTenant } from '@/tenant/useTenant'
 import { emisLeft, fmtDay, nextDue, PLANS, planOf, remainingOf, rupees, todayIso, addMonthsIso } from './labels'
 import { NewSaleDrawer, type SalePrefill } from './NewSaleDrawer'
 import type { CustomerRow, SaleRow } from './types'
@@ -31,7 +33,13 @@ export function CustomersPage() {
   const { selected } = useBusiness()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') === 'sales' && scope('sales') !== 'none' ? 'sales' : 'customers'
-  const [openId, setOpenId] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const tenant = useTenant()
+  const [bookings, setBookings] = useState<BookingRow[]>([])
+  useEffect(() => {
+    listBookings(tenant.id).then(setBookings, () => setBookings([]))
+  }, [tenant.id])
+  const openClient = (id: string) => navigate(`/customers/${id}`)
   const [sale, setSale] = useState<SalePrefill | null>(null)
   const [adding, setAdding] = useState(false)
   const [collectSale, setCollectSale] = useState<string | null>(null)
@@ -67,34 +75,24 @@ export function CustomersPage() {
   // /customers?open=<customer id>
   const openParam = params.get('open')
   useEffect(() => {
-    if (!openParam) return
-    setOpenId(openParam)
-    setParams(
-      (p) => {
-        p.delete('open')
-        return p
-      },
-      { replace: true },
-    )
-  }, [openParam, setParams])
+    if (openParam) navigate(`/customers/${openParam}`, { replace: true })
+  }, [openParam, navigate])
 
-  const open = data.allCustomers.find((c) => c.id === openId) ?? null
-  const saved = (msg: string, closeDrawer = false) => {
+  const saved = (msg: string) => {
     setNotice({ ok: msg })
-    if (closeDrawer) setOpenId(null)
     data.load()
   }
 
   return (
     <>
       <PageHead
-        title="Customers"
-        subtitle={selected ? `Customers of ${selected.name} and what they bought.` : 'Everyone who bought from you, and what they bought.'}
+        title="Clients"
+        subtitle={selected ? `Clients of ${selected.name}: everyone who booked or bought.` : 'Everyone who booked at least once or bought from you.'}
         actions={
           <>
             {can('customers', 'edit') && (
               <button type="button" className="btn btn-outline" onClick={() => setAdding(true)}>
-                <UserPlus size={16} /> New customer
+                <UserPlus size={16} /> New client
               </button>
             )}
             {can('deals', 'add') && (
@@ -111,7 +109,7 @@ export function CustomersPage() {
       {scope('sales') !== 'none' && (
         <div className="seg">
           <button type="button" className={cn(tab === 'customers' && 'is-active')} onClick={() => setParams({})}>
-            <Users size={15} /> Customers
+            <Users size={15} /> Clients
           </button>
           <button type="button" className={cn(tab === 'sales' && 'is-active')} onClick={() => setParams({ tab: 'sales' })}>
             <ReceiptText size={15} /> All sales
@@ -119,19 +117,8 @@ export function CustomersPage() {
         </div>
       )}
 
-      {tab === 'customers' ? <CustomersTab data={data} onOpen={setOpenId} /> : <SalesTab data={data} onOpen={setOpenId} />}
+      {tab === 'customers' ? <CustomersTab data={data} bookings={bookings} onOpen={openClient} /> : <SalesTab data={data} onOpen={openClient} />}
 
-      {open && !sale && (
-        <CustomerDrawer
-          key={open.id}
-          customer={open}
-          data={data}
-          onClose={() => setOpenId(null)}
-          onNewSale={() => setSale({ business_id: open.business_id, customer_id: open.id, customer_name: open.full_name })}
-          onCollect={setCollectSale}
-          onSaved={saved}
-        />
-      )}
       {sale && (
         <NewSaleDrawer
           data={data}
@@ -172,7 +159,7 @@ export function CustomersPage() {
 type CustFilters = { q: string; product: string; owner: string; emis: boolean; expiring: boolean; sort: string }
 const CUST_EMPTY: CustFilters = { q: '', product: '', owner: '', emis: false, expiring: false, sort: 'newest' }
 
-function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) => void }) {
+function CustomersTab({ data, bookings, onOpen }: { data: SalesData; bookings: BookingRow[]; onOpen: (id: string) => void }) {
   const [stageTab, setStageTab] = useState('all')
   const [f, setF] = useState<CustFilters>(CUST_EMPTY)
   const setFilter = <K extends keyof CustFilters>(k: K, v: CustFilters[K]) => setF((d) => ({ ...d, [k]: v }))
@@ -184,8 +171,15 @@ function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) 
       const sales = (data.salesByCustomer.get(c.id) ?? []).filter((s) => s.status === 'active')
       const dues = sales.flatMap((s) => s.sale_dues.filter((d) => d.status === 'pending')).sort((a, b) => a.due_on.localeCompare(b.due_on))
       const emis = sales.flatMap(emisLeft)
+      const bk = bookings.filter((b) => b.status !== 'cancelled' && (b.customer_id === c.id || (!!c.lead_id && b.lead_id === c.lead_id)))
+      const bkTotal = bk.reduce((a, b) => a + Number(b.total_amount), 0)
+      const bkPaid = bk.reduce((a, b) => a + Number(b.paid_amount), 0)
       return {
         c,
+        bookings: bk.length,
+        bkTotal,
+        bkBalance: Math.max(0, bkTotal - bkPaid),
+        lastBooking: bk.map((b) => b.booking_date).sort().pop() ?? null,
         sales,
         lifetime: sales.reduce((a, s) => a + Number(s.total_amount), 0),
         remaining: sales.reduce((a, s) => a + remainingOf(s), 0),
@@ -194,7 +188,7 @@ function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) 
         expiring: sales.some((s) => s.valid_until && s.valid_until >= today && s.valid_until <= in30),
       }
     })
-  }, [data.customers, data.salesByCustomer])
+  }, [data.customers, data.salesByCustomer, bookings])
 
   const base = rows
     .filter((r) => (stageTab === 'deleted' ? r.c.is_archived : !r.c.is_archived))
@@ -264,8 +258,8 @@ function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) 
           ))}
         </select>
         <select className="input input-sm filter-select" value={f.sort} onChange={(e) => setFilter('sort', e.target.value)} aria-label="Sort">
-          <option value="newest">Newest customers</option>
-          <option value="oldest">Oldest customers</option>
+          <option value="newest">Newest clients</option>
+          <option value="oldest">Oldest clients</option>
           <option value="value">Highest lifetime value</option>
           <option value="remaining">Most remaining</option>
           <option value="name">Name A–Z</option>
@@ -284,16 +278,18 @@ function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) 
       </div>
 
       {!data.customers ? (
-        <div className="empty">Loading customers…</div>
+        <div className="empty">Loading clients…</div>
       ) : visible.length === 0 ? (
-        <Empty icon={Users}>{rows.length ? 'No customers match.' : 'No customers yet. Record a New sale, or win a lead, and they appear here.'}</Empty>
+        <Empty icon={Users}>{rows.length ? 'No clients match.' : 'No clients yet. A lead becomes a client with its first confirmed booking or sale.'}</Empty>
       ) : (
         <div className="table-wrap">
           <table className="table cust-table">
             <thead>
               <tr>
-                <th>Customer</th>
+                <th>Client</th>
                 <th>Stage</th>
+                <th className="right">Bookings</th>
+                <th>Last booking</th>
                 <th>Products</th>
                 <th className="right">Lifetime value</th>
                 <th className="right">Remaining</th>
@@ -321,6 +317,17 @@ function CustomersTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) 
                         <span className="muted">—</span>
                       )}
                     </td>
+                    <td className="right nowrap">
+                      {r.bookings ? (
+                        <>
+                          {r.bookings} · {rupees(r.bkTotal)}
+                          {r.bkBalance > 0 && <div className="small text-danger">{rupees(r.bkBalance)} due</div>}
+                        </>
+                      ) : (
+                        <span className="muted">—</span>
+                      )}
+                    </td>
+                    <td className="nowrap">{r.lastBooking ? fmtDay(r.lastBooking) : <span className="muted">—</span>}</td>
                     <td>
                       {r.sales.length === 0 ? (
                         <span className="muted">—</span>

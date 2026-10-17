@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
 import { LeadBoard } from './LeadBoard'
-import { LeadDrawer } from './LeadDrawer'
+import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
@@ -54,7 +54,6 @@ export function LeadsPage() {
   const [stageTab, setStageTab] = useState<string>('all')
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [picked, setPicked] = useState<Set<string>>(new Set())
-  const [drawer, setDrawer] = useState<{ lead: LeadRow | null } | null>(null)
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
   const [bulk, setBulk] = useState({ owner: '', temp: '', followUp: '', stage: '', reason: '' })
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -74,17 +73,14 @@ export function LeadsPage() {
 
   // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
   const [importing, setImporting] = useState(false)
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const [adding, setAdding] = useState(false)
   const openId = params.get('open')
   useEffect(() => {
-    if (!openId || !leads) return
-    const l = leads.find((x) => x.id === openId)
-    if (l) setDrawer({ lead: l })
-    setParams((p) => {
-      p.delete('open')
-      return p
-    }, { replace: true })
-  }, [openId, leads, setParams])
+    if (!openId) return
+    navigate(`/leads/${openId}`, { replace: true })
+  }, [openId, navigate])
 
   // funnels of the business picked in the top bar (or all businesses)
   const scopedFunnels = useMemo(
@@ -215,7 +211,6 @@ export function LeadsPage() {
   }
 
   // a won lead goes straight to New sale, filled from the lead
-  const navigate = useNavigate()
   function wonToSale(leadId: string) {
     if (can('deals', 'add')) navigate(`/customers?sale_lead=${leadId}`)
   }
@@ -281,7 +276,7 @@ export function LeadsPage() {
               <button
                 type="button"
                 className="btn btn-primary"
-                onClick={() => setDrawer({ lead: null })}
+                onClick={() => setAdding(true)}
                 disabled={!scopedFunnels.length}
                 title={!scopedFunnels.length ? 'Add a funnel first' : undefined}
               >
@@ -544,7 +539,7 @@ export function LeadsPage() {
             leads={base}
             members={members}
             canMove={can('leads', 'edit')}
-            onOpen={(l) => setDrawer({ lead: l })}
+            onOpen={(l) => navigate(`/leads/${l.id}`)}
             onMove={(l, s) => requestMove([l.id], s)}
           />
         ) : visible.length === 0 ? (
@@ -580,7 +575,7 @@ export function LeadsPage() {
                   const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
-                    <tr key={l.id} className="is-clickable" onClick={() => setDrawer({ lead: l })}>
+                    <tr key={l.id} className="is-clickable" onClick={() => navigate(`/leads/${l.id}`)}>
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="am-check" aria-label={`Select ${fullName(l)}`} checked={picked.has(l.id)} onChange={() => toggle(l.id)} />
                       </td>
@@ -633,21 +628,13 @@ export function LeadsPage() {
           }}
         />
       )}
-      {drawer && (
-        <LeadDrawer
-          lead={drawer.lead}
+      {adding && (
+        <QuickAddLead
           funnels={scopedFunnels.length ? scopedFunnels : funnels}
-          sources={sources}
-          lostReasons={lostReasons}
-          members={members}
           defaultFunnelId={funnel?.id ?? null}
-          onClose={() => setDrawer(null)}
-          onSaved={(msg, wonLeadId) => {
-            setDrawer(null)
-            setNotice({ ok: msg })
-            load()
-            if (wonLeadId) wonToSale(wonLeadId)
-          }}
+          sources={sources}
+          onClose={() => setAdding(false)}
+          onAdded={(id) => navigate(`/leads/${id}`)}
         />
       )}
 

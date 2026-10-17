@@ -1,4 +1,4 @@
-import { BookOpen, Building2, CalendarClock, CalendarDays, Clock3, Database, HandCoins, Wallet, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, type LucideIcon } from 'lucide-react'
+import { BookOpen, Building2, CalendarClock, CalendarDays, Clock3, Database, HandCoins, Wallet, Star, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -22,7 +22,8 @@ export const navSections: { title: string; items: NavItem[] }[] = [
       { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid },
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
-      { to: '/customers', label: 'Customers', icon: Star, area: 'customers' },
+      { to: '/customers', label: 'Clients', icon: Star, area: 'customers' },
+      { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
     ],
@@ -63,7 +64,8 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/my-day': { title: 'My Day', crumb: 'Today', icon: Sun },
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
-  '/customers': { title: 'Customers', crumb: 'Customers & sales', icon: Star },
+  '/customers': { title: 'Clients', crumb: 'Clients, bookings & sales', icon: Star },
+  '/bookings': { title: 'Booking Calendar', crumb: 'Slots & bookings', icon: CalendarCheck },
   '/collections': { title: 'Collections & EMI', crumb: 'Dues & instalments', icon: HandCoins },
   '/payments': { title: 'Payments', crumb: 'Money received', icon: Wallet },
   '/ledger': { title: 'Ledger', crumb: 'Accounts & GST', icon: BookOpen },
