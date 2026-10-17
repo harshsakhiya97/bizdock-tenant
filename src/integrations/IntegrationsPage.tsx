@@ -20,7 +20,7 @@ export function IntegrationsPage() {
   const tenant = useTenant()
   const [rows, setRows] = useState<IntegrationRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
-  const [open, setOpen] = useState<Provider | null>(null)
+  const [open, setOpen] = useState<{ p: Provider; row: IntegrationRow | null } | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   // what BizDock (admin) allows this workspace: { whatsapp: { allowed, provider } }
@@ -50,7 +50,8 @@ export function IntegrationsPage() {
   }, [tenant.id])
 
   const byProvider = new Map((rows ?? []).map((r) => [r.provider, r]))
-  const connected = (rows ?? []).filter((r) => r.is_enabled && r.status === 'connected').length
+  const allOf = (id: string) => (rows ?? []).filter((r) => r.provider === id)
+  const connected = new Set((rows ?? []).filter((r) => r.is_enabled && r.status === 'connected').map((r) => r.provider)).size
 
   async function toggle(r: IntegrationRow) {
     try {
@@ -73,12 +74,27 @@ export function IntegrationsPage() {
       {allow && !visible.length && <div className="empty">No connections are turned on for your workspace yet. Ask BizDock to enable the ones you need.</div>}
       <div className="int-grid">
         {visible.map((p) => {
-          const r = byProvider.get(p.id)
+          const r = p.multiple ? undefined : byProvider.get(p.id)
+          const accounts = p.multiple ? allOf(p.id) : []
           const Icon = p.icon
           const off = blocked(p)
           // the admin switched WhatsApp to another provider: the saved keys don't fit
           const stale = p.id === 'whatsapp' && !!r && !!waVendor && r.config.vendor !== waVendor
-          const state = off ? 'blocked' : stale ? 'reconnect' : !r ? 'off' : !r.is_enabled ? 'paused' : r.status
+          const state = off
+            ? 'blocked'
+            : p.multiple
+              ? accounts.some((a) => a.is_enabled && a.status === 'connected')
+                ? 'connected'
+                : accounts.length
+                  ? 'paused'
+                  : 'off'
+              : stale
+                ? 'reconnect'
+                : !r
+                  ? 'off'
+                  : !r.is_enabled
+                    ? 'paused'
+                    : r.status
           return (
             <section key={p.id} className="card int-card">
               <div className="int-top">
@@ -93,6 +109,8 @@ export function IntegrationsPage() {
                       state === 'connected' ? 'badge-success' : state === 'error' || state === 'reconnect' ? 'badge-danger' : state === 'paused' ? 'badge-warning' : 'badge-muted',
                     )}
                   >
+                    {p.multiple && accounts.length ? `${accounts.length} account${accounts.length === 1 ? '' : 's'}` : ''}
+                    {p.multiple && accounts.length ? ' · ' : ''}
                     {{ connected: 'Connected', error: 'Error', reconnect: 'Reconnect needed', paused: 'Paused', off: 'Not connected', blocked: 'Not enabled', disconnected: 'Not connected' }[state]}
                   </span>
                 </div>
@@ -106,6 +124,32 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
+              {p.multiple && accounts.length > 0 && (
+                <div className="int-accounts">
+                  {accounts.map((a) => (
+                    <div key={a.id} className="int-account">
+                      <label className="switch" title={a.is_enabled ? 'Pause' : 'Turn on'}>
+                        <input type="checkbox" checked={a.is_enabled} disabled={off} onChange={() => void toggle(a)} />
+                      </label>
+                      <div className="int-account-main">
+                        <b>{a.label || a.config.ad_account_id}</b>
+                        <span className="muted small">
+                          {a.config.ad_account_id}
+                          {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
+                        </span>
+                      </div>
+                      {!off && (
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p, row: a })}>
+                          Settings
+                        </button>
+                      )}
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(a)}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
               {off && allow && <div className="int-note">BizDock has turned {p.name} off for your workspace. Disconnect to remove the saved keys.</div>}
               {stale && <div className="int-err"><CircleAlert size={14} /> Your WhatsApp provider is now {WHATSAPP_VENDORS[waVendor!].label}. Enter its keys again.</div>}
               {r?.status === 'error' && r.last_error && (
@@ -115,7 +159,7 @@ export function IntegrationsPage() {
               )}
               <div className="int-foot">
                 <span className="muted small">
-                  {off ? 'Turned off by BizDock' : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                  {off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? 'Add as many ad accounts as you run' : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
@@ -123,13 +167,18 @@ export function IntegrationsPage() {
                       <MessageSquareText size={14} /> Templates
                     </Link>
                   )}
+                  {p.multiple && !off && (
+                    <button type="button" className={cn('btn btn-sm', accounts.length ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p, row: null })}>
+                      <PlugZap size={14} /> {accounts.length ? 'Add account' : 'Connect'}
+                    </button>
+                  )}
                   {r && (
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(r)}>
                       Disconnect
                     </button>
                   )}
-                  {!off && (
-                  <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen(effective(p))}>
+                  {!off && !p.multiple && (
+                  <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
                         <PlugZap size={14} /> Connect
@@ -147,10 +196,10 @@ export function IntegrationsPage() {
 
       {open && (
         <ConnectDrawer
-          provider={open}
-          existing={((r) => (r && open.id === 'whatsapp' && r.config.vendor !== waVendor ? null : r))(byProvider.get(open.id) ?? null)}
-          replaceId={byProvider.get(open.id)?.id ?? null}
-          vendor={open.id === 'whatsapp' ? waVendor : null}
+          provider={open.p}
+          existing={open.row && open.p.id === 'whatsapp' && open.row.config.vendor !== waVendor ? null : open.row}
+          replaceId={open.p.multiple ? null : (open.row?.id ?? null)}
+          vendor={open.p.id === 'whatsapp' ? waVendor : null}
           onClose={() => setOpen(null)}
           onSaved={(msg) => {
             setOpen(null)
@@ -162,7 +211,7 @@ export function IntegrationsPage() {
       {removing && (
         <ConfirmModal
           open
-          title={`Disconnect ${PROVIDERS.find((p) => p.id === removing.provider)?.name}?`}
+          title={`${removing.label ? `Remove ${removing.label}` : `Disconnect ${PROVIDERS.find((p) => p.id === removing.provider)?.name}`}?`}
           message="The saved keys are removed. Anything using this connection stops until it is connected again."
           confirmLabel="Disconnect"
           danger
@@ -206,11 +255,13 @@ function ConnectDrawer({
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (f.options ? f.options[0] : ''))])),
   )
+  const [label, setLabel] = useState(existing?.label ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const Icon = provider.icon
 
   async function save() {
+    if (provider.multiple && !label.trim()) return setError('Give this account a name.')
     const config: Record<string, string> = existing ? { ...existing.config } : {}
     if (vendor) config.vendor = vendor
     for (const f of provider.fields) {
@@ -221,8 +272,8 @@ function ConnectDrawer({
     }
     setBusy(true)
     try {
-      await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config)
-      onSaved(existing ? `${provider.name} settings saved.` : `${provider.name} connected.`)
+      await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config, provider.multiple ? label.trim() : null)
+      onSaved(provider.multiple ? (existing ? `${label.trim()} saved.` : `${label.trim()} connected.`) : existing ? `${provider.name} settings saved.` : `${provider.name} connected.`)
     } catch (e) {
       setError((e as Error).message)
       setBusy(false)
@@ -234,7 +285,7 @@ function ConnectDrawer({
       open
       onClose={onClose}
       width={520}
-      title={existing ? `${provider.name} settings` : `Connect ${provider.name}`}
+      title={provider.multiple ? (existing ? `${existing.label ?? 'Account'} settings` : `Add ${provider.name}`) : existing ? `${provider.name} settings` : `Connect ${provider.name}`}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -259,6 +310,15 @@ function ConnectDrawer({
             <div className="muted small">{provider.description}</div>
           </div>
         </div>
+        {provider.multiple && (
+          <div>
+            <Label htmlFor="int-label" required>
+              Account name
+            </Label>
+            <TextInput id="int-label" placeholder="e.g. Studio ads, Webinar ads" value={label} onChange={(e) => setLabel(e.target.value)} />
+            <Hint>Your own name for this ad account, to tell several apart.</Hint>
+          </div>
+        )}
         {provider.fields.map((f) => (
           <div key={f.key}>
             <Label htmlFor={`int-${f.key}`} required={f.required && !(f.secret && existing?.config[f.key])}>

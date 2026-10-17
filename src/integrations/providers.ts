@@ -19,6 +19,8 @@ export type Provider = {
   description: string
   usedFor: string
   fields: ProviderField[]
+  /** several accounts can be connected (each with its own name) */
+  multiple?: boolean
 }
 
 export const PROVIDERS: Provider[] = [
@@ -39,6 +41,7 @@ export const PROVIDERS: Provider[] = [
     color: '#1877f2',
     description: 'Your Meta (Facebook / Instagram) ad account, for ad spend, campaign results and lead forms.',
     usedFor: 'Ad spend & cost per lead on funnels, Facebook lead forms into leads',
+    multiple: true,
     fields: [
       { key: 'ad_account_id', label: 'Ad account ID', required: true, placeholder: 'act_1234567890', hint: 'Meta Business Suite → Settings → Ad accounts' },
       { key: 'business_id', label: 'Business Manager ID', placeholder: '1234567890' },

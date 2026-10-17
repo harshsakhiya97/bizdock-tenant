@@ -687,3 +687,8 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .tpl-samples { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--surface-muted); border-radius: var(--radius); }
 .tpl-btn-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .tpl-btn-kind { font-size: 13px; font-weight: 600; }
+.int-accounts { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); }
+.int-account { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+.int-account + .int-account { border-top: 1px solid var(--line); }
+.int-account-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.int-account-main b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
