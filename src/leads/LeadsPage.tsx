@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
-import { Columns3, Download, List, Plus, RotateCcw, Upload, Users } from 'lucide-react'
+import { CalendarClock, Columns3, Download, List, Plus, RotateCcw, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
-import { Empty, PageHead, SearchInput } from '@/components/ui'
+import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
@@ -160,6 +160,21 @@ export function LeadsPage() {
       : funnel
         ? base.filter((l) => l.stage_id === stageTab)
         : base.filter((l) => kindOf(l) === stageTab)
+  const stats = useMemo(() => {
+    const now = new Date()
+    const weekAgo = new Date(now.getTime() - 7 * 864e5).toISOString()
+    const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const due = base.filter((l) => l.next_follow_up_at && new Date(l.next_follow_up_at) < endToday)
+    return {
+      total: base.length,
+      newWeek: base.filter((l) => l.created_at >= weekAgo).length,
+      due: due.length,
+      overdue: due.filter((l) => new Date(l.next_follow_up_at!) < now).length,
+      hot: base.filter((l) => l.temperature === 'hot').length,
+      won: base.filter((l) => kindOf(l) === 'won').length,
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [base, stageById])
   const tabs: { id: string; label: string; count: number }[] = funnel
     ? [
         { id: 'all', label: 'All', count: base.length },
@@ -288,6 +303,13 @@ export function LeadsPage() {
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+
+      <div className="stat-grid">
+        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={`${stats.hot} hot`} />
+        <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" />
+        <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} />
+        <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} />
+      </div>
 
       <div className="panel">
         <div className="panel-bar">
