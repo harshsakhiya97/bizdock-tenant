@@ -6,6 +6,8 @@ export type Unit = 'minutes' | 'hours' | 'days'
 export type TriggerEvent = 'form_submitted' | 'lead_added' | 'stage_changed' | 'tag_added' | 'before_event' | 'after_event'
 export type TriggerData = {
   event: TriggerEvent
+  /** optional box name shown on the canvas */
+  name?: string
   /** form_submitted / stage_changed (required), lead_added (optional = any funnel) */
   funnel_id?: string
   /** form_submitted: only these landing pages (empty = all) */

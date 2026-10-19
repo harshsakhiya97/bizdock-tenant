@@ -13,6 +13,8 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
   const meta = STEP_META[type]
   const Icon = meta.icon
   const issue = problem(type, data, ctx)
+  const name = typeof data.name === 'string' ? data.name.trim() : ''
+  const auto = type === 'trigger' ? triggerLabel((data as unknown as TriggerData).event) : summary(type, data, ctx)
   return (
     <div className={cn('cb-box', selected && 'is-selected', type === 'trigger' && 'is-trigger')} style={{ ['--c' as string]: meta.color }}>
       {type !== 'trigger' && <Handle type="target" position={Position.Top} className="cb-handle" />}
@@ -22,7 +24,7 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
         </span>
         <div className="cb-box-text">
           <span className="cb-kind">{type === 'trigger' ? 'Trigger' : meta.label}</span>
-          <b className="cb-title">{type === 'trigger' ? triggerLabel((data as unknown as TriggerData).event) : summary(type, data, ctx)}</b>
+          <b className="cb-title">{name || auto}</b>
         </div>
         {issue && (
           <span className="cb-issue" title={issue}>
@@ -30,7 +32,7 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
           </span>
         )}
       </div>
-      {type === 'trigger' && <div className="cb-sub">{summary(type, data, ctx)}</div>}
+      {type === 'trigger' ? <div className="cb-sub">{name ? `${auto} · ${summary(type, data, ctx)}` : summary(type, data, ctx)}</div> : name && <div className="cb-sub">{auto}</div>}
       {type === 'switch' ? (
         (() => {
           // one exit per path + "Otherwise", spread along the bottom

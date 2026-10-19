@@ -47,6 +47,12 @@ export function StepPanel({
       </div>
 
       <div className="cb-panel-body">
+        <div>
+          <Label htmlFor="cb-name">
+            Name <span className="muted small">(optional)</span>
+          </Label>
+          <TextInput id="cb-name" value={String(d.name ?? '')} onChange={(e) => set('name', e.target.value)} placeholder={kind === 'trigger' ? 'e.g. New webinar signup' : `e.g. ${meta.label} – welcome`} maxLength={60} disabled={ro} />
+        </div>
         {kind === 'trigger' && <TriggerFields t={d as unknown as TriggerData} ctx={ctx} onChange={onChange} disabled={ro} />}
 
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} />}
@@ -409,7 +415,7 @@ function TriggerFields({
           onChange={(e) => {
             const next = e.target.value as TriggerEvent
             // keep the funnel when switching between funnel triggers
-            onChange({ ...TRIGGER_DEFAULTS[next], ...(next !== 'before_event' && next !== 'after_event' && t.funnel_id ? { funnel_id: t.funnel_id } : {}) })
+            onChange({ ...TRIGGER_DEFAULTS[next], ...(t.name ? { name: t.name } : {}), ...(next !== 'before_event' && next !== 'after_event' && t.funnel_id ? { funnel_id: t.funnel_id } : {}) })
           }}
         >
           {TRIGGERS.map((x) => (
