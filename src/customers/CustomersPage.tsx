@@ -203,7 +203,7 @@ function SalesTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) => v
           c?.full_name ?? '',
           c?.phone ?? '',
           planOf(s.plan).short,
-          data.productById.get(s.product_id)?.name ?? '',
+          data.saleTitle(s),
           s.quantity,
           data.companyName(s.billing_company_id) ?? '',
           s.base_amount,
@@ -362,7 +362,7 @@ function SaleTr({ s, c, data, onOpen }: { s: SaleRow; c: CustomerRow | undefined
         {s.status === 'cancelled' && <span className="badge badge-danger">Cancelled</span>}
       </td>
       <td>
-        {data.productById.get(s.product_id)?.name ?? '—'}
+        {data.saleTitle(s)}
         {s.quantity > 1 && <span className="muted"> × {s.quantity}</span>}
       </td>
       <td className="nowrap">{data.companyName(s.billing_company_id) ?? '—'}</td>

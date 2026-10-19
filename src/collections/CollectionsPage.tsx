@@ -47,7 +47,7 @@ export function CollectionsPage() {
               s,
               name: custById.get(s.customer_id)?.full_name ?? 'Customer',
               phone: custById.get(s.customer_id)?.phone ?? null,
-              product: data.productById.get(s.product_id)?.name ?? 'Product',
+              product: data.saleTitle(s),
             })),
         )
         .sort((a, b) => a.d.due_on.localeCompare(b.d.due_on)),
@@ -314,7 +314,7 @@ export function CollectionsPage() {
                         <b>{c?.full_name ?? '—'}</b>
                         <div className="muted small">{c?.phone ?? ''}</div>
                       </td>
-                      <td>{data.productById.get(s.product_id)?.name}</td>
+                      <td>{data.saleTitle(s)}</td>
                       <td className="nowrap">
                         {left.length} of {s.sale_dues.filter((d) => d.kind === 'emi').length} left
                         <div className="muted small">{rupees(left.reduce((a, d) => a + dueLeft(d), 0))}</div>

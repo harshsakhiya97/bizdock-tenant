@@ -205,7 +205,7 @@ export function ClientPage() {
                 <span className="field-label">Products bought</span>
                 {sales.map((s) => (
                   <div key={s.id} className="small">
-                    {data.productById.get(s.product_id)?.name ?? 'Product'} · {money(s.total_amount)} · {fmtDay(s.sale_date)}
+                    {data.saleTitle(s)} · {money(s.total_amount)} · {fmtDay(s.sale_date)}
                   </div>
                 ))}
               </div>

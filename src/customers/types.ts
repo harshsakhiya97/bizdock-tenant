@@ -33,8 +33,8 @@ export type SaleRow = {
   business_id: string
   customer_id: string
   lead_id: string | null
-  product_id: string
-  billing_company_id: string
+  product_id: string | null
+  billing_company_id: string | null
   quantity: number
   plan: Plan
   base_amount: number

@@ -68,6 +68,8 @@ export function useSalesData() {
       modes,
       stages,
       members,
+      /** what a sale is called: its product, or what was written for it */
+      saleTitle: (s: Pick<SaleRow, 'product_id' | 'notes'>) => (s.product_id ? productById.get(s.product_id)?.name : null) ?? s.notes ?? 'Sale',
       memberName: (id: string | null) => members.find((m) => m.id === id)?.name,
       companyName: (id: string | null) => companies.find((c) => c.id === id)?.name,
       modeName: (id: string | null) => modes.find((m) => m.id === id)?.name,

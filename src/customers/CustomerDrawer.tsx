@@ -233,14 +233,14 @@ export function CustomerDrawer({
             <div className="stack">
               {sales.map((s) => {
                 const plan = planOf(s.plan)
-                const p = data.productById.get(s.product_id)
+                const p = s.product_id ? data.productById.get(s.product_id) : undefined
                 const sp = payments.filter((x) => x.sale_id === s.id && x.status === 'received')
                 return (
                   <article key={s.id} className={cn('sale-card', s.status === 'cancelled' && 'is-cancelled')}>
                     <div className="row-between">
                       <div>
                         <b>
-                          {p?.name ?? 'Product'}
+                          {data.saleTitle(s)}
                           {s.quantity > 1 ? ` × ${s.quantity}` : ''}
                         </b>{' '}
                         <span className={cn('badge', plan.tone)}>{plan.short}</span>

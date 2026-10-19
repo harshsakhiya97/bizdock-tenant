@@ -120,7 +120,7 @@ export function RecordPaymentModal({
                 placeholder="Search customer or product"
                 options={open.map((s) => ({
                   value: s.id,
-                  label: `${custById.get(s.customer_id)?.full_name ?? 'Customer'} · ${data.productById.get(s.product_id)?.name ?? 'Product'} · ${rupees(remainingOf(s))} due`,
+                  label: `${custById.get(s.customer_id)?.full_name ?? 'Customer'} · ${data.saleTitle(s)} · ${rupees(remainingOf(s))} due`,
                 }))}
                 emptyText="No sales with money still due"
               />
@@ -128,7 +128,7 @@ export function RecordPaymentModal({
           )}
           {sale && (
             <div className="span-2 pay-sale-box">
-              <b>{data.productById.get(sale.product_id)?.name}</b>
+              <b>{data.saleTitle(sale)}</b>
               <span className="muted small">
                 Total {rupees(sale.total_amount, true)} · paid {rupees(sale.paid_amount, true)} · <b className="text-danger">{rupees(left, true)} due</b>
               </span>

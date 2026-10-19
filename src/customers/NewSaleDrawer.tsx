@@ -1,14 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { GST_RATES } from '@/masters/types'
-import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { createSale, customerByPhone } from './api'
-import { PLANS, addMonthsIso, fmtDay, rupees, todayIso } from './labels'
+import { addMonthsIso, fmtDay, rupees, todayIso } from './labels'
 import type { SaleInput } from './types'
 import type { SalesData } from './useSalesData'
 
@@ -52,7 +50,7 @@ export function NewSaleDrawer({
     product_id: '',
     quantity: '1',
     plan: 'full',
-    billing_company_id: data.companies.filter((c) => c.is_active).length === 1 ? data.companies.find((c) => c.is_active)!.id : '',
+    billing_company_id: '',
     payment_mode_id: '',
     reference: '',
     payment_remark: '',
@@ -73,26 +71,7 @@ export function NewSaleDrawer({
   const set = <K extends keyof SaleInput>(k: K, v: SaleInput[K]) => setF((d) => ({ ...d, [k]: v }))
   const setCust = (k: keyof SaleInput['customer'], v: string) => setF((d) => ({ ...d, customer: { ...d.customer, [k]: v } }))
 
-  const products = data.products.filter((p) => p.is_active && p.business_id === f.business_id)
-  const product = data.productById.get(f.product_id)
-  const companies = data.companies.filter((c) => c.is_active)
   const modes = data.modes.filter((m) => m.is_active)
-
-  function pickProduct(id: string, qty = f.quantity) {
-    const p = data.productById.get(id)
-    setF((d) => ({
-      ...d,
-      product_id: id,
-      quantity: qty,
-      ...(p
-        ? {
-            base_amount: String(round2(Number(p.price) * (Number(qty) || 1))),
-            gst_applicable: p.gst_applicable,
-            gst_rate: String(Number(p.gst_rate)),
-          }
-        : {}),
-    }))
-  }
 
   const base = Number(f.base_amount) || 0
   const gst = f.gst_applicable ? round2((base * Number(f.gst_rate)) / 100) : 0
@@ -116,8 +95,6 @@ export function NewSaleDrawer({
       amount: i === n - 1 ? round2(rest - each * (n - 1)) : each,
     }))
   }, [f.plan, f.first_emi_on, n, rest])
-  const validUntil =
-    product && !product.lifetime && product.validity_months ? addMonthsIso(f.sale_date || today, product.validity_months) : null
 
   async function checkPhone() {
     if (f.customer_id || !f.business_id || !f.customer.phone.trim()) return setMatch(null)
@@ -128,8 +105,6 @@ export function NewSaleDrawer({
     e.preventDefault()
     if (!f.business_id) return setError('Pick the business.')
     if (!f.customer_id && !match && !f.customer.full_name.trim()) return setError('Enter the customer’s name.')
-    if (!f.product_id) return setError('Pick a product.')
-    if (!f.billing_company_id) return setError('Pick the billing company.')
     if (f.base_amount.trim() === '' || base < 0) return setError('Enter the amount before GST.')
     if (paidNow > total) return setError(`The amount received can’t be more than the total (${rupees(total, true)}).`)
     if (f.plan === 'full' && rest > 0 && !f.balance_due_on) return setError('Enter when the remaining amount will be paid.')
@@ -148,14 +123,14 @@ export function NewSaleDrawer({
     try {
       await createSale(tenant.id, { ...f, customer_id: f.customer_id || match?.id || '' })
       const who = prefill.customer_name ?? match?.full_name ?? f.customer.full_name.trim()
-      onSaved(`Sale saved: ${product?.name ?? 'product'} for ${who}.`)
+      onSaved(`Sale saved for ${who}.`)
     } catch (err) {
       setError((err as Error).message)
       setBusy(false)
     }
   }
 
-  const noMasters = !data.products.some((p) => p.is_active) || !companies.length
+  const noMasters = false
 
   return (
     <Drawer
@@ -178,11 +153,6 @@ export function NewSaleDrawer({
       }
     >
       <form id="sale-form" onSubmit={submit} className="stack">
-        {noMasters && (
-          <div className="alert alert-warning">
-            Add at least one product and one billing company in <Link to="/masters?tab=products">Masters</Link> first.
-          </div>
-        )}
         {prefill.lead_id && !prefill.customer_id && (
           <div className="alert alert-info">From the won lead. The new customer stays linked to the lead.</div>
         )}
@@ -235,52 +205,8 @@ export function NewSaleDrawer({
           </FormSection>
         )}
 
-        <FormSection title="Product & payment plan">
+        <FormSection title="Sale & payment">
           <div className="form-grid">
-            <div>
-              <Label htmlFor="s-product" required>
-                Product
-              </Label>
-              <Select id="s-product" value={f.product_id} disabled={!f.business_id} onChange={(e) => pickProduct(e.target.value)}>
-                <option value="">{f.business_id ? 'Select product' : 'Pick the business first'}</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {rupees(p.price)}
-                  </option>
-                ))}
-              </Select>
-              {product && <Hint>{validUntil ? `Valid until ${fmtDay(validUntil)}` : product.lifetime ? 'Lifetime access' : 'No validity period'}</Hint>}
-            </div>
-            <div>
-              <Label htmlFor="s-qty">Quantity</Label>
-              <TextInput id="s-qty" type="number" min={1} value={f.quantity} onChange={(e) => pickProduct(f.product_id, e.target.value)} />
-            </div>
-            <div className="span-2">
-              <span className="field-label">
-                Payment plan<span className="req">*</span>
-              </span>
-              <div className="choice-grid choice-grid-3">
-                {PLANS.map((p) => (
-                  <button key={p.value} type="button" className={cn('choice', f.plan === p.value && 'is-active')} onClick={() => set('plan', p.value)}>
-                    <b>{p.label}</b>
-                    <small>{p.hint}</small>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="s-bc" required>
-                Billing company
-              </Label>
-              <Select id="s-bc" value={f.billing_company_id} onChange={(e) => set('billing_company_id', e.target.value)}>
-                <option value="">— select —</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
             <div>
               <Label htmlFor="s-person">Sales person</Label>
               <Select id="s-person" value={f.sales_person_id} disabled={ownOnly} onChange={(e) => set('sales_person_id', e.target.value)}>
@@ -318,7 +244,7 @@ export function NewSaleDrawer({
           </div>
         </FormSection>
 
-        <FormSection title={PLANS.find((p) => p.value === f.plan)!.label}>
+        <FormSection title="Amount">
           <div className="form-grid">
             <div>
               <Label htmlFor="s-base" required>
@@ -447,8 +373,8 @@ export function NewSaleDrawer({
           )}
         </FormSection>
 
-        <FormSection title="Notes">
-          <TextInput placeholder="Anything about this sale" value={f.notes} onChange={(e) => set('notes', e.target.value)} aria-label="Notes" />
+        <FormSection title="What was sold">
+          <TextInput placeholder="e.g. Podcast shoot – 3 hours, edited episode" value={f.notes} onChange={(e) => set('notes', e.target.value)} aria-label="Notes" />
         </FormSection>
       </form>
     </Drawer>

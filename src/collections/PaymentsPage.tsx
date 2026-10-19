@@ -140,7 +140,7 @@ export function PaymentsPage() {
         return [
           p.paid_on,
           custById.get(p.customer_id)?.full_name ?? '',
-          s ? (data.productById.get(s.product_id)?.name ?? '') : '',
+          s ? (data.saleTitle(s)) : '',
           p.amount,
           round2(Number(p.amount) - gstOf(p)),
           gstOf(p),
@@ -281,7 +281,7 @@ export function PaymentsPage() {
                           </button>
                           <div className="muted small">{p.kind === 'initial' ? 'At sale' : (p.note ?? 'Collection')}</div>
                         </td>
-                        <td>{s ? data.productById.get(s.product_id)?.name : '—'}</td>
+                        <td>{s ? data.saleTitle(s) : '—'}</td>
                         <td className="right nowrap">
                           <b>{rupees(p.amount, true)}</b>
                           {Number(p.tds_amount) > 0 && <div className="muted small">+ TDS {rupees(p.tds_amount)}</div>}

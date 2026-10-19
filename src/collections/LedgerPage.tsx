@@ -64,7 +64,7 @@ export function LedgerPage() {
   const all: Entry[] = useMemo(() => {
     const out: Entry[] = []
     for (const s of data.sales) {
-      const product = data.productById.get(s.product_id)?.name ?? 'Product'
+      const product = data.saleTitle(s)
       out.push({
         key: `i-${s.id}`,
         date: s.sale_date,
