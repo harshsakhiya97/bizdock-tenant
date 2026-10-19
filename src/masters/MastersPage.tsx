@@ -8,7 +8,7 @@ import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { listBillingCompanies, listProducts, validityText } from './api'
+import { listBillingCompanies, listProducts } from './api'
 import { BillingCompanyDrawer } from './BillingCompanyDrawer'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
@@ -107,7 +107,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   }, [tenant.id])
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
-    { tab: 'products', label: 'Products', table: 'products', purpose: 'What you sell: price, GST and validity, per business.' },
+    { tab: 'products', label: 'Products', table: 'products', purpose: 'What you sell: price and GST, per business.' },
     { tab: 'billing', label: 'Billing companies', table: 'billing_companies', purpose: 'Which legal company bills the sale.' },
     ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t].title, table: t, purpose: SIMPLE[t].purpose })),
   ]
@@ -197,13 +197,11 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
           <table className="table">
             <thead>
               <tr>
-                <th>#</th>
                 <th>Product</th>
                 {!selected && <th>Business</th>}
                 <th className="right">Price</th>
                 <th>GST</th>
                 <th className="right">With GST</th>
-                <th>Validity</th>
                 <th>Status</th>
                 {canEdit && <th />}
               </tr>
@@ -213,16 +211,13 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
                 const total = Number(p.price) * (1 + (p.gst_applicable ? Number(p.gst_rate) : 0) / 100)
                 return (
                   <tr key={p.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ product: p })}>
-                    <td className="muted">{p.sort_order}</td>
                     <td>
                       <b>{p.name}</b>
-                      <div className="muted small">{[p.category, p.code].filter(Boolean).join(' · ')}</div>
                     </td>
                     {!selected && <td>{bizName.get(p.business_id) ?? '—'}</td>}
                     <td className="right nowrap">{money(p.price)}</td>
                     <td>{p.gst_applicable ? `${Number(p.gst_rate)}%` : <span className="muted">No GST</span>}</td>
                     <td className="right nowrap">{money(total)}</td>
-                    <td>{validityText(p)}</td>
                     <td>
                       <span className={cn('badge', p.is_active ? 'badge-success' : 'badge-muted')}>{p.is_active ? 'Active' : 'Inactive'}</span>
                     </td>

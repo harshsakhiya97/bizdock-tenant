@@ -5,7 +5,7 @@ import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from 
 import { money } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
 import { saveProduct, type ProductInput } from './api'
-import { GST_RATES, type ProductRow } from './types'
+import type { ProductRow } from './types'
 
 const slug = (s: string) =>
   s
@@ -55,18 +55,20 @@ export function ProductDrawer({
     if (!f.business_id) return setError('Pick a business.')
     if (!f.name.trim()) return setError('Enter the product name.')
     if (f.price.trim() === '' || Number.isNaN(Number(f.price)) || Number(f.price) < 0) return setError('Enter a valid price.')
-    if (!f.lifetime && f.validity_months && Number(f.validity_months) < 1) return setError('Validity must be at least 1 month.')
+    const rate = Number(f.gst_rate)
+    if (f.gst_applicable && (f.gst_rate.trim() === '' || Number.isNaN(rate) || rate < 0 || rate > 100)) return setError('Enter a GST rate between 0 and 100.')
     setBusy(true)
     setError(null)
     const input: ProductInput = {
       business_id: f.business_id,
       name: f.name.trim(),
+      // code and category are no longer asked; an existing product keeps its own
       code: f.code.trim() || slug(f.name),
       category: f.category.trim() || null,
       description: f.description.trim() || null,
       price: Number(f.price),
       gst_applicable: f.gst_applicable,
-      gst_rate: Number(f.gst_rate),
+      gst_rate: f.gst_applicable ? rate : Number(product?.gst_rate ?? 18),
       lifetime: f.lifetime,
       validity_months: f.lifetime || !f.validity_months ? null : Number(f.validity_months),
       is_active: f.is_active,
@@ -123,14 +125,6 @@ export function ProductDrawer({
               </Label>
               <TextInput id="p-name" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!product} />
             </div>
-            <div>
-              <Label htmlFor="p-code">Code</Label>
-              <TextInput id="p-code" placeholder={slug(f.name) || 'auto from the name'} value={f.code} onChange={(e) => set('code', e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="p-cat">Category</Label>
-              <TextInput id="p-cat" placeholder="e.g. Course, Package, Service" value={f.category} onChange={(e) => set('category', e.target.value)} />
-            </div>
             <div className="span-2">
               <Label htmlFor="p-desc">Description</Label>
               <TextArea id="p-desc" rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
@@ -147,14 +141,8 @@ export function ProductDrawer({
               <TextInput id="p-price" type="number" min={0} step="0.01" value={f.price} onChange={(e) => set('price', e.target.value)} />
             </div>
             <div>
-              <Label htmlFor="p-rate">GST rate</Label>
-              <Select id="p-rate" value={f.gst_rate} disabled={!f.gst_applicable} onChange={(e) => set('gst_rate', e.target.value)}>
-                {GST_RATES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}%
-                  </option>
-                ))}
-              </Select>
+              <Label htmlFor="p-rate">GST rate (%)</Label>
+              <TextInput id="p-rate" type="number" min={0} max={100} step="0.01" value={f.gst_rate} disabled={!f.gst_applicable} onChange={(e) => set('gst_rate', e.target.value)} />
             </div>
             <div className="span-2">
               <Checkbox id="p-gst" checked={f.gst_applicable} onChange={(v) => set('gst_applicable', v)} label="GST applicable" />
@@ -165,43 +153,9 @@ export function ProductDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Validity" description="How long a customer keeps access after buying.">
-          <div className="form-grid">
-            <div>
-              <Label htmlFor="p-months">Valid for (months)</Label>
-              <TextInput
-                id="p-months"
-                type="number"
-                min={1}
-                placeholder="Leave empty if it doesn’t expire"
-                value={f.lifetime ? '' : f.validity_months}
-                disabled={f.lifetime}
-                onChange={(e) => set('validity_months', e.target.value)}
-              />
-            </div>
-            <div className="field-center">
-              <Checkbox id="p-life" checked={f.lifetime} onChange={(v) => set('lifetime', v)} label="Lifetime access" />
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection title="Listing">
-          <div className="form-grid">
-            <div>
-              <Label htmlFor="p-order">Order</Label>
-              <TextInput id="p-order" type="number" value={f.sort_order} onChange={(e) => set('sort_order', e.target.value)} />
-            </div>
-            <div className="field-center">
-              <Checkbox
-                id="p-active"
-                checked={f.is_active}
-                onChange={(v) => set('is_active', v)}
-                label="Active"
-                description="Inactive products can’t be picked on a new sale."
-              />
-            </div>
-          </div>
-        </FormSection>
+        <div className="check-box">
+          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description="Inactive products can’t be picked on a new sale." />
+        </div>
       </form>
     </Drawer>
   )
