@@ -22,7 +22,7 @@ const typeTone: Record<FunnelType, string> = {
 export function FunnelsPage() {
   const tenant = useTenant()
   const { can, businesses } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const [funnels, setFunnels] = useState<FunnelRow[] | null>(null)
   const [type, setType] = useState<FunnelType | 'all'>('all')
   const [query, setQuery] = useState('')
@@ -63,7 +63,7 @@ export function FunnelsPage() {
   const subName = (f: FunnelRow) => businesses.find((b) => b.id === f.business_id)?.subs.find((x) => x.id === f.sub_business_id)?.name
   // follows the business picked in the top bar; otherwise every business this person works in
   const inScope = (funnels ?? []).filter((f) =>
-    selected ? f.business_id === selected.id : businessName.has(f.business_id),
+    selected ? f.business_id === selected.id && (!sub || f.sub_business_id === sub.id) : businessName.has(f.business_id),
   )
   const visible = inScope
     .filter((f) => type === 'all' || f.type === type)
@@ -91,7 +91,7 @@ export function FunnelsPage() {
         title="Funnels"
         subtitle={
           selected
-            ? `Funnels of ${selected.name} and the stages their leads move through.`
+            ? `Funnels of ${selected.name}${sub ? ` · ${sub.name}` : ''} and the stages their leads move through.`
             : 'Each business’s funnels and the stages their leads move through.'
         }
       />
@@ -237,6 +237,7 @@ export function FunnelsPage() {
           funnel={drawer.funnel}
           businesses={businesses}
           defaultBusinessId={selected?.id ?? null}
+          defaultSubId={sub?.id ?? null}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {
             setDrawer(null)

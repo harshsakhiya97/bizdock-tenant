@@ -82,8 +82,8 @@ export function LeadsPage() {
 
   // funnels of the business picked in the top bar (or all businesses)
   const scopedFunnels = useMemo(
-    () => funnels.filter((f) => !selected || f.business_id === selected.id),
-    [funnels, selected],
+    () => funnels.filter((f) => !selected || (f.business_id === selected.id && (!sub || f.sub_business_id === sub.id))),
+    [funnels, selected, sub],
   )
   const funnel = scopedFunnels.find((f) => f.id === funnelId) ?? null
   const stageById = useMemo(() => {
@@ -108,7 +108,8 @@ export function LeadsPage() {
     const q = filters.q.trim().toLowerCase()
     const now = new Date()
     const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-    const scopedIds = new Set(scopedFunnels.map((f) => f.id))
+    // a sub-business narrows by the lead's own sub-business (below), so every funnel of the business counts here
+    const scopedIds = new Set(funnels.filter((f) => !selected || f.business_id === selected.id).map((f) => f.id))
     return (leads ?? [])
       .filter((l) => l.is_archived === filters.archived)
       // leads imported without a funnel: in "All funnels" (their business) and "No funnel"
@@ -150,7 +151,7 @@ export function LeadsPage() {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, scopedFunnels, noFunnel, selected, sub, inScope])
+  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope])
 
   const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =

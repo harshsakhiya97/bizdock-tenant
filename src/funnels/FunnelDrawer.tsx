@@ -16,6 +16,7 @@ export function FunnelDrawer({
   funnel,
   businesses,
   defaultBusinessId,
+  defaultSubId = null,
   onClose,
   onSaved,
 }: {
@@ -23,13 +24,14 @@ export function FunnelDrawer({
   funnel: FunnelRow | null
   businesses: { id: string; name: string }[]
   defaultBusinessId: string | null
+  defaultSubId?: string | null
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
   const tenant = useTenant()
   const [input, setInput] = useState<FunnelInput>(() => ({
     business_id: funnel?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
-    sub_business_id: funnel?.sub_business_id ?? '',
+    sub_business_id: funnel ? (funnel.sub_business_id ?? '') : (defaultSubId ?? ''),
     name: funnel?.name ?? '',
     type: funnel?.type ?? 'webinar',
     description: funnel?.description ?? '',
