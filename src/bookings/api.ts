@@ -67,6 +67,7 @@ export async function saveBooking(
   const row = {
     business_id: input.business_id,
     sub_business_id: input.sub_business_id || null,
+    product_id: input.product_id || null,
     lead_id: leadId,
     ...(input.customer_id ? { customer_id: input.customer_id } : {}),
     client_name: input.client_name.trim(),

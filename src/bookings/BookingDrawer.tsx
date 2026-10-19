@@ -64,6 +64,7 @@ export function BookingDrawer({
   const [input, setInput] = useState<BookingInput>(() => ({
     business_id: booking?.business_id ?? lead?.business_id ?? selected?.id ?? businesses[0]?.id ?? '',
     sub_business_id: booking ? (booking.sub_business_id ?? '') : (lead ? (lead.sub_business_id ?? '') : (sub?.id ?? '')),
+    product_id: booking?.product_id ?? '',
     lead_id: booking?.lead_id ?? lead?.id ?? null,
     customer_id: booking ? undefined : (lead?.customer_id ?? null),
     new_lead: null,
@@ -103,6 +104,17 @@ export function BookingDrawer({
   })()
 
   const subs = useSubBusinesses(input.business_id)
+  // products of the booking's business (plus the booking's own, even if it was turned off since)
+  const products = refs.products.filter((p) => p.business_id === input.business_id && (p.is_active || p.id === input.product_id))
+  /** picking a product fills the amount and GST from it; the amount can still be changed */
+  function pickProduct(id: string) {
+    const p = refs.products.find((x) => x.id === id)
+    setInput((d) => ({
+      ...d,
+      product_id: id,
+      ...(p ? { amount: String(p.price), gst_applicable: p.gst_applicable, gst_rate: String(Number(p.gst_rate)) } : {}),
+    }))
+  }
 
   function pickLead(id: string | null) {
     setPickedLead(id)
@@ -130,7 +142,7 @@ export function BookingDrawer({
     setError(null)
     try {
       const f = refs.funnels.find((x) => x.business_id === data.business_id)
-      data = { ...data, sub_business_id: subOf(subs, data.sub_business_id) }
+      data = { ...data, sub_business_id: subOf(subs, data.sub_business_id), product_id: refs.products.some((p) => p.id === data.product_id && p.business_id === data.business_id) ? data.product_id : '' }
       await saveBooking(tenant.id, me, booking, data, f ? { id: f.id, stage_id: f.funnel_stages[0]?.id ?? '' } : null)
       onSaved(booking ? 'Booking updated.' : `Booked ${data.client_name.trim()} on ${new Date(`${data.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}.`)
     } catch (e) {
@@ -316,19 +328,19 @@ export function BookingDrawer({
         <FormSection title="Amount">
           <div className="form-grid">
             <div>
-              <Label htmlFor="bk-amt">Amount (before GST)</Label>
-              <TextInput id="bk-amt" type="number" min={0} value={input.amount} onChange={(e) => set('amount', e.target.value)} disabled={!canEdit} />
-            </div>
-            <div>
-              <Label htmlFor="bk-co">Billing company</Label>
-              <Select id="bk-co" value={input.billing_company_id} onChange={(e) => set('billing_company_id', e.target.value)} disabled={!canEdit || !!booking?.invoice_no}>
-                <option value="">— select —</option>
-                {refs.companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
+              <Label htmlFor="bk-prod">Product</Label>
+              <Select id="bk-prod" value={input.product_id} onChange={(e) => pickProduct(e.target.value)} disabled={!canEdit}>
+                <option value="">— none —</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {money(p.price)}
                   </option>
                 ))}
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="bk-amt">Amount (before GST)</Label>
+              <TextInput id="bk-amt" type="number" min={0} value={input.amount} onChange={(e) => set('amount', e.target.value)} disabled={!canEdit} />
             </div>
             <div className="span-2 row" style={{ alignItems: 'center' }}>
               <Checkbox id="bk-gst" checked={input.gst_applicable} onChange={(v) => set('gst_applicable', v)} label="Add GST" />
