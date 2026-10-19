@@ -25,7 +25,14 @@ export type TriggerData = {
 export type ConditionField = 'stage' | 'tag' | 'landing_page' | 'utm_source' | 'field_filled' | 'attendance'
 export type ConditionData = { field: ConditionField; op: 'is' | 'is_not'; value: string }
 
-export type StepKind = 'trigger' | 'whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition'
+/** one path of a Switch box: leads matching it go down its line (checked top to bottom, else "Otherwise") */
+export type SwitchCase = ConditionData & { id: string; label: string }
+
+/** who a WhatsApp / email step goes to */
+export type Recipient = 'lead' | 'team'
+
+/** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
+export type StepKind = 'trigger' | 'whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -50,6 +57,12 @@ export type RefData = {
   funnels: { id: string; name: string; business_id: string; event_id: string | null; tags: string[]; stages: { id: string; name: string }[] }[]
   pages: { id: string; name: string; funnel_id: string; fields: string[] }[]
   events: { id: string; title: string; date: string; time: string | null; endTime: string | null }[]
+  /** team members (WhatsApp / email to the team) */
+  members: { id: string; name: string }[]
+  /** other workflows (Go to workflow) */
+  workflows: { id: string; name: string; is_active: boolean }[]
+  /** the workflow being edited */
+  selfId?: string
 }
 
 /** what the workflow is about, worked out from its trigger */
@@ -64,12 +77,14 @@ export type FlowContext = RefData & {
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
-  whatsapp: { template: '', message: 'Hi {{first_name}}, thanks for registering!' },
-  email: { subject: '', body: '' },
+  whatsapp: { to: 'lead', member_id: '', template: '', message: 'Hi {{first_name}}, thanks for registering!' },
+  email: { to: 'lead', member_id: '', subject: '', body: '' },
   call: { script: '' },
   wait: { amount: 1, unit: 'days' },
   wait_event: { amount: 2, unit: 'hours', when: 'before' },
   condition: { field: 'stage', op: 'is', value: '' },
+  switch: { cases: [{ id: 'c1', label: '', field: 'stage', op: 'is', value: '' }] },
+  goto: { workflow_id: '' },
 }
 
 export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {

@@ -20,7 +20,7 @@ import { cn } from '@/lib/cn'
 import { saveWorkflow } from './api'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
-import { PALETTE, STEP_META, flowContext, problem } from './steps'
+import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowRow } from './types'
 
 const EDGE_DEFAULTS = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 } } as const
@@ -87,7 +87,18 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   }, [workflow, setNodes, setEdges, flow])
 
   // funnel / event / stages this workflow is about (from its trigger)
-  const ctx = useMemo(() => flowContext(refData, nodes), [refData, nodes])
+  const ctx = useMemo(() => flowContext({ ...refData, selfId: workflow.id }, nodes), [refData, nodes, workflow.id])
+  // lines out of a Switch show their path's name
+  const shownEdges = useMemo(() => {
+    const sw = new Map(nodes.filter((n) => n.type === 'switch').map((n) => [n.id, n]))
+    return edges.map((e) => {
+      const n = sw.get(e.source)
+      if (!n || !e.sourceHandle) return e
+      if (e.sourceHandle === 'else') return { ...e, label: 'Otherwise', className: 'is-no' }
+      const i = casesOf(n.data).findIndex((c) => c.id === e.sourceHandle)
+      return i < 0 ? e : { ...e, label: caseLabel(casesOf(n.data)[i], i, ctx) }
+    })
+  }, [edges, nodes, ctx])
 
   // steps not reachable from the trigger, and steps with missing settings
   const issues = useMemo(() => {
@@ -130,7 +141,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
     const pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
     setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
-    if (!position && anchor && anchor.type !== 'condition' && !edges.some((e) => e.source === anchor.id)) {
+    if (!position && anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto' && !edges.some((e) => e.source === anchor.id)) {
       setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
     }
     setSelectedId(id)
@@ -148,6 +159,11 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   const selected = nodes.find((n) => n.id === selectedId) ?? null
   function updateData(data: Record<string, unknown>) {
     setNodes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, data } : n)))
+    // a removed Switch path takes its line with it
+    if (selected?.type === 'switch') {
+      const keep = new Set([...casesOf(data).map((c) => c.id), 'else'])
+      setEdges((es) => es.filter((e) => e.source !== selectedId || !e.sourceHandle || keep.has(e.sourceHandle)))
+    }
     touch()
   }
   function deleteSelected() {
@@ -253,7 +269,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         <div className="cb-canvas" ref={wrap} onDragOver={(e) => (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))} onDrop={onDrop}>
           <ReactFlow<StepNode, FlowEdge>
             nodes={nodes}
-            edges={edges}
+            edges={shownEdges}
             nodeTypes={NODE_TYPES}
             onNodesChange={(c) => {
               // the trigger stays

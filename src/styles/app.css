@@ -700,3 +700,7 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .lp-hook { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
 .lp-hook.is-off { opacity: .7; }
 .lp-hook .lp-block { padding: 0; border: 0; }
+.cb-paths { display: flex; gap: 4px; padding: 8px 0 0; }
+.cb-paths span { flex: 1; min-width: 0; text-align: center; font-size: 10.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+.cb-paths span.is-else { color: var(--text-muted); }
+.cb-case { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }

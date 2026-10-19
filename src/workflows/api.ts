@@ -2,6 +2,7 @@ import { db } from '@/lib/supabase'
 import { listEvents, listEventTypes } from '@/calendar/api'
 import { listFunnels } from '@/funnels/api'
 import { guessTarget } from '@/funnels/fieldMap'
+import { listMemberOptions } from '@/leads/api'
 import type { FlowEdge, RefData, StepNode, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { TRIGGER_DEFAULTS } from './types'
 
@@ -85,11 +86,13 @@ export async function archiveWorkflow(id: string) {
 
 /** funnels, landing pages and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
-  const [funnels, pages, events, types] = await Promise.all([
+  const [funnels, pages, events, types, members, workflows] = await Promise.all([
     listFunnels(tenantId),
-    db().from('landing_pages').select('id, name, funnel_id, field_map, sample').eq('tenant_id', tenantId).is('archived_at', null),
+    db().from('landing_pages').select('id, name, funnel_id, landing_page_webhooks(field_map, sample)').eq('tenant_id', tenantId).is('archived_at', null),
     listEvents(tenantId),
     listEventTypes(tenantId),
+    listMemberOptions(tenantId),
+    db().from('workflows').select('id, name, is_active').eq('tenant_id', tenantId).is('archived_at', null).order('name'),
   ])
   const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
   return {
@@ -102,13 +105,16 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
       stages: f.funnel_stages.map((s) => ({ id: s.id, name: s.name })),
     })),
     // fields a lead from this page can carry: the standard optional ones + extra fields from the mapping
-    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string>; sample: Record<string, string> | null }[]).map((p) => {
-      const keys = [...new Set([...Object.keys(p.sample ?? {}), ...Object.keys(p.field_map ?? {})])]
-      const extras = keys.filter((k) => (p.field_map?.[k] ?? guessTarget(k)) === 'extra')
+    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; landing_page_webhooks: { field_map: Record<string, string>; sample: Record<string, string> | null }[] }[]).map((p) => {
+      const map: Record<string, string> = Object.assign({}, ...(p.landing_page_webhooks ?? []).map((h) => h.field_map ?? {}))
+      const keys = [...new Set([...(p.landing_page_webhooks ?? []).flatMap((h) => Object.keys(h.sample ?? {})), ...Object.keys(map)])]
+      const extras = keys.filter((k) => (map[k] ?? guessTarget(k)) === 'extra')
       return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras] }
     }),
     events: events
       .filter((e) => ok.has(e.type_id))
       .map((e) => ({ id: e.id, title: e.title, date: e.event_date, time: e.start_time, endTime: e.end_time })),
+    members: members.map((m) => ({ id: m.id, name: m.name })),
+    workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
   }
 }

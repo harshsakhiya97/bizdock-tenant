@@ -1,5 +1,5 @@
-import { Clock, Hourglass, Mail, MessageCircle, PhoneCall, Split, Zap, type LucideIcon } from 'lucide-react'
-import type { ConditionData, FlowContext, RefData, StepKind, StepNode, TriggerData, TriggerEvent, Unit } from './types'
+import { Clock, GitFork, Hourglass, Mail, MessageCircle, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import type { ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
   trigger: { label: 'Trigger', hint: 'What starts this workflow', icon: Zap, color: '#16a34a' },
@@ -9,6 +9,8 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
   wait_event: { label: 'Wait for event', hint: 'Wait until before / after the webinar or event', icon: Clock, color: '#ea580c' },
   condition: { label: 'Condition', hint: 'Go Yes or No depending on the lead', icon: Split, color: '#475569' },
+  switch: { label: 'Switch', hint: 'Different paths for different leads (several conditions)', icon: GitFork, color: '#475569' },
+  goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
 }
 
 export const TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [
@@ -22,7 +24,7 @@ export const TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = 
 export const triggerLabel = (e: TriggerEvent | undefined) => TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'email', 'call', 'wait', 'wait_event', 'condition']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -80,15 +82,33 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
   }
 }
 
+/** "Stage is Hot", "email is filled" … */
+export function conditionText(c: ConditionData, ctx: FlowContext): string {
+  const field = CONDITION_FIELDS.find((f) => f.value === c.field)?.label ?? 'Field'
+  const value =
+    c.field === 'stage'
+      ? ctx.funnels.flatMap((f) => f.stages).find((s) => s.id === c.value)?.name
+      : c.field === 'landing_page'
+        ? ctx.pages.find((p) => p.id === c.value)?.name
+        : c.value
+  if (c.field === 'field_filled') return value ? `${value} ${c.op === 'is' ? 'is filled' : 'is empty'}` : 'Pick a field'
+  if (c.field === 'tag') return value ? `${c.op === 'is' ? 'Has' : 'Doesn’t have'} tag ${value}` : 'Pick a tag'
+  return value ? `${field} ${c.op === 'is' ? 'is' : 'is not'} ${value}` : `Pick a ${field.toLowerCase()}`
+}
+export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
+export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (c.value ? conditionText(c, ctx) : `Path ${i + 1}`)
+const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
+  d.to === 'team' ? `To ${ctx.members.find((m) => m.id === d.member_id)?.name ?? 'team'} · ` : ''
+
 /** one-line summary shown inside a box */
 export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowContext): string {
   switch (kind) {
     case 'trigger':
       return triggerSummary(d as unknown as TriggerData, ctx)
     case 'whatsapp':
-      return (d.template as string) || (d.message as string) || 'No message yet'
+      return toWho(d, ctx) + ((d.template as string) || (d.message as string) || 'No message yet')
     case 'email':
-      return (d.subject as string) || 'No subject yet'
+      return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
     case 'call':
       return (d.script as string) || 'No script yet'
     case 'wait':
@@ -96,18 +116,14 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'wait_event':
       if (!ctx.event) return 'No webinar / event for this workflow'
       return `${unitText(Number(d.amount) || 0, d.unit as Unit)} ${d.when} ${ctx.event.title}`
-    case 'condition': {
-      const c = d as unknown as ConditionData
-      const field = CONDITION_FIELDS.find((f) => f.value === c.field)?.label ?? 'Field'
-      const value =
-        c.field === 'stage'
-          ? ctx.funnels.flatMap((f) => f.stages).find((s) => s.id === c.value)?.name
-          : c.field === 'landing_page'
-            ? ctx.pages.find((p) => p.id === c.value)?.name
-            : c.value
-      if (c.field === 'field_filled') return value ? `${value} ${c.op === 'is' ? 'is filled' : 'is empty'}` : 'Pick a field'
-      return value ? `${field} ${c.op === 'is' ? 'is' : 'is not'} ${value}` : `Pick a ${field.toLowerCase()}`
+    case 'condition':
+      return conditionText(d as unknown as ConditionData, ctx)
+    case 'switch': {
+      const n = casesOf(d).length
+      return `${n} path${n === 1 ? '' : 's'} + otherwise`
     }
+    case 'goto':
+      return ctx.workflows.find((w) => w.id === d.workflow_id)?.name ?? 'Pick the workflow'
   }
 }
 
@@ -125,12 +141,14 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return null
     }
     case 'whatsapp': {
+      if (d.to === 'team' && !d.member_id) return 'Pick the team member'
       if (!String(d.message ?? '').trim() && !String(d.template ?? '').trim()) return 'Write the message or pick a template'
       const params = (d.params ?? {}) as Record<string, string>
       if (d.template && Object.values(params).some((v) => !String(v ?? '').trim())) return 'Fill every template variable'
       return null
     }
     case 'email':
+      if (d.to === 'team' && !d.member_id) return 'Pick the team member'
       return !String(d.subject ?? '').trim() || !String(d.body ?? '').trim() ? 'Add the subject and the message' : null
     case 'call':
       return !String(d.script ?? '').trim() ? 'Write what the call says' : null
@@ -140,5 +158,11 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return !(Number(d.amount) > 0) ? 'Set how long to wait' : null
     case 'condition':
       return !String(d.value ?? '').trim() ? 'Finish the condition' : null
+    case 'switch':
+      if (!casesOf(d).length) return 'Add at least one path'
+      return casesOf(d).some((c) => !String(c.value ?? '').trim()) ? 'Finish every path’s condition' : null
+    case 'goto':
+      if (!d.workflow_id) return 'Pick the workflow'
+      return d.workflow_id === ctx.selfId ? 'Pick another workflow' : null
   }
 }

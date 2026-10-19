@@ -2,10 +2,10 @@ import { createContext, memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { STEP_META, problem, summary, triggerLabel } from './steps'
+import { STEP_META, caseLabel, casesOf, problem, summary, triggerLabel } from './steps'
 import type { FlowContext, StepNode, TriggerData } from './types'
 
-export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [] })
+export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [] })
 
 /** One box on the canvas: icon, name, one-line summary; condition boxes have a Yes and a No exit. */
 function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
@@ -31,7 +31,26 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
         )}
       </div>
       {type === 'trigger' && <div className="cb-sub">{summary(type, data, ctx)}</div>}
-      {type === 'condition' ? (
+      {type === 'switch' ? (
+        (() => {
+          // one exit per path + "Otherwise", spread along the bottom
+          const exits = [...casesOf(data).map((c, i) => ({ id: c.id, label: caseLabel(c, i, ctx) })), { id: 'else', label: 'Otherwise' }]
+          return (
+            <>
+              <div className="cb-paths">
+                {exits.map((x) => (
+                  <span key={x.id} className={cn(x.id === 'else' && 'is-else')} title={x.label}>
+                    {x.label}
+                  </span>
+                ))}
+              </div>
+              {exits.map((x, i) => (
+                <Handle key={x.id} id={x.id} type="source" position={Position.Bottom} className={cn('cb-handle', x.id === 'else' && 'is-no')} style={{ left: `${((i + 0.5) / exits.length) * 100}%` }} />
+              ))}
+            </>
+          )
+        })()
+      ) : type === 'goto' ? null : type === 'condition' ? (
         <>
           <Handle id="yes" type="source" position={Position.Bottom} className="cb-handle is-yes" style={{ left: '28%' }} />
           <Handle id="no" type="source" position={Position.Bottom} className="cb-handle is-no" style={{ left: '72%' }} />
@@ -56,4 +75,6 @@ export const NODE_TYPES = {
   wait: StepBox,
   wait_event: StepBox,
   condition: StepBox,
+  switch: StepBox,
+  goto: StepBox,
 }

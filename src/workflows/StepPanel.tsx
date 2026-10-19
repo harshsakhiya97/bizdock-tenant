@@ -1,9 +1,9 @@
 import { useRef, type ReactNode } from 'react'
-import { Trash2, X } from 'lucide-react'
+import { ArrowUp, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { WhatsAppFields } from './WhatsAppFields'
-import { ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, problem } from './steps'
-import { TRIGGER_DEFAULTS, VARIABLES, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit } from './types'
+import { ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem } from './steps'
+import { TRIGGER_DEFAULTS, VARIABLES, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
 
@@ -49,6 +49,7 @@ export function StepPanel({
       <div className="cb-panel-body">
         {kind === 'trigger' && <TriggerFields t={d as unknown as TriggerData} ctx={ctx} onChange={onChange} disabled={ro} />}
 
+        {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
@@ -106,6 +107,26 @@ export function StepPanel({
         )}
 
         {kind === 'condition' && <ConditionFields d={d} ctx={ctx} set={set} disabled={ro} />}
+        {kind === 'switch' && <SwitchFields d={d} ctx={ctx} set={set} disabled={ro} />}
+        {kind === 'goto' && (
+          <div>
+            <Label htmlFor="cb-goto" required>
+              Workflow
+            </Label>
+            <Select id="cb-goto" value={String(d.workflow_id ?? '')} onChange={(e) => set('workflow_id', e.target.value)} disabled={ro}>
+              <option value="">— select —</option>
+              {ctx.workflows
+                .filter((w) => w.id !== ctx.selfId)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                    {w.is_active ? '' : ' (off)'}
+                  </option>
+                ))}
+            </Select>
+            <Hint>The lead leaves this workflow here and starts the chosen one from its first step (its trigger is skipped).</Hint>
+          </div>
+        )}
 
         {issue && <div className="alert alert-warning small">{issue}</div>}
       </div>
@@ -118,6 +139,36 @@ export function StepPanel({
         </div>
       )}
     </aside>
+  )
+}
+
+function RecipientField({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const to = (d.to as string) || 'lead'
+  return (
+    <div className="form-grid" style={{ gridTemplateColumns: to === 'team' ? '110px 1fr' : '1fr' }}>
+      <div>
+        <Label htmlFor="cb-to">Send to</Label>
+        <Select id="cb-to" value={to} onChange={(e) => set('to', e.target.value)} disabled={disabled}>
+          <option value="lead">Lead</option>
+          <option value="team">Team</option>
+        </Select>
+      </div>
+      {to === 'team' && (
+        <div>
+          <Label htmlFor="cb-member" required>
+            Team member
+          </Label>
+          <Select id="cb-member" value={String(d.member_id ?? '')} onChange={(e) => set('member_id', e.target.value)} disabled={disabled}>
+            <option value="">— select —</option>
+            {ctx.members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -182,7 +233,17 @@ function ConditionFields({
   set: (k: string, v: unknown) => void
   disabled: boolean
 }) {
-  const field = d.field as string
+  return (
+    <>
+      <CondEditor id="cb-c" c={d as unknown as ConditionData} ctx={ctx} disabled={disabled} onChange={(c) => (set('field', c.field), set('op', c.op), set('value', c.value))} />
+      <Hint>Leads that match go down the Yes line, the rest down the No line. A line left empty ends the workflow for them.</Hint>
+    </>
+  )
+}
+
+/** "If the lead's [field] [is / is not] [value]" */
+function CondEditor({ id, c, ctx, disabled, onChange }: { id: string; c: ConditionData; ctx: FlowContext; disabled: boolean; onChange: (c: ConditionData) => void }) {
+  const field = c.field
   const options: { value: string; label: string }[] | null =
     field === 'stage'
       ? ctx.stages.map((s) => ({ value: s.id, label: s.name }))
@@ -198,16 +259,8 @@ function ConditionFields({
   return (
     <>
       <div>
-        <Label htmlFor="cb-c-f">If the lead’s</Label>
-        <Select
-          id="cb-c-f"
-          value={field}
-          disabled={disabled}
-          onChange={(e) => {
-            set('field', e.target.value)
-            set('value', '')
-          }}
-        >
+        <Label htmlFor={`${id}-f`}>If the lead’s</Label>
+        <Select id={`${id}-f`} value={field} disabled={disabled} onChange={(e) => onChange({ ...c, field: e.target.value as ConditionData['field'], value: '' })}>
           {CONDITION_FIELDS.map((f) => (
             <option key={f.value} value={f.value}>
               {f.label}
@@ -216,12 +269,12 @@ function ConditionFields({
         </Select>
       </div>
       <div className="form-grid" style={{ gridTemplateColumns: '120px 1fr' }}>
-        <Select aria-label="is / is not" value={String(d.op)} onChange={(e) => set('op', e.target.value)} disabled={disabled}>
+        <Select aria-label="is / is not" value={String(c.op)} onChange={(e) => onChange({ ...c, op: e.target.value as ConditionData['op'] })} disabled={disabled}>
           <option value="is">{field === 'field_filled' ? 'is filled' : field === 'tag' ? 'has' : 'is'}</option>
           <option value="is_not">{field === 'field_filled' ? 'is empty' : field === 'tag' ? 'doesn’t have' : 'is not'}</option>
         </Select>
         {options ? (
-          <Select aria-label="Value" value={String(d.value ?? '')} onChange={(e) => set('value', e.target.value)} disabled={disabled}>
+          <Select aria-label="Value" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled}>
             <option value="">— select —</option>
             {options.map((o) => (
               <option key={o.value} value={o.value}>
@@ -230,11 +283,43 @@ function ConditionFields({
             ))}
           </Select>
         ) : (
-          <TextInput aria-label="Value" placeholder="e.g. facebook" value={String(d.value ?? '')} onChange={(e) => set('value', e.target.value)} disabled={disabled} />
+          <TextInput aria-label="Value" placeholder="e.g. facebook" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled} />
         )}
       </div>
-      <Hint>Leads that match go down the Yes line, the rest down the No line. A line left empty ends the workflow for them.</Hint>
       {field === 'attendance' && <Hint>Attendance is filled in once webinar tracking is connected.</Hint>}
+    </>
+  )
+}
+
+/** Switch: several paths, each with its own condition, checked top to bottom; the rest go "Otherwise". */
+function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const cases = casesOf(d)
+  const put = (next: SwitchCase[]) => set('cases', next)
+  return (
+    <>
+      {cases.map((c, i) => (
+        <div key={c.id} className="cb-case">
+          <div className="row-between">
+            <b className="small">Path {i + 1}</b>
+            <div className="row" style={{ gap: 2 }}>
+              <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Move up" disabled={disabled || i === 0} onClick={() => put(cases.map((x, j) => (j === i - 1 ? cases[i] : j === i ? cases[i - 1] : x)))}>
+                <ArrowUp size={13} />
+              </button>
+              <button type="button" className="btn btn-ghost btn-icon btn-sm danger-text" aria-label="Remove path" disabled={disabled || cases.length <= 1} onClick={() => put(cases.filter((x) => x.id !== c.id))}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          </div>
+          <TextInput aria-label="Path name" placeholder={`Name (optional), e.g. ${i === 0 ? 'Hot leads' : 'From Facebook'}`} value={c.label} onChange={(e) => put(cases.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} disabled={disabled} />
+          <CondEditor id={`cb-${c.id}`} c={c} ctx={ctx} disabled={disabled} onChange={(n) => put(cases.map((x) => (x.id === c.id ? { ...x, ...n } : x)))} />
+        </div>
+      ))}
+      {!disabled && (
+        <button type="button" className="add-chip" style={{ alignSelf: 'flex-start' }} onClick={() => put([...cases, { id: `c${Date.now().toString(36)}`, label: '', field: 'stage', op: 'is', value: '' }])}>
+          <Plus size={14} /> Add path
+        </button>
+      )}
+      <Hint>Each lead goes down the first path it matches; leads matching none go down “Otherwise”. A path with no line ends the workflow for those leads.</Hint>
     </>
   )
 }

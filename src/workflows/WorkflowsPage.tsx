@@ -30,7 +30,7 @@ export function WorkflowsPage() {
     listWorkflows(tenant.id)
       .then(setRows)
       .catch((e: Error) => setNotice({ error: e.message }))
-    loadRefData(tenant.id).then(setRefData).catch(() => setRefData({ funnels: [], pages: [], events: [] }))
+    loadRefData(tenant.id).then(setRefData).catch(() => setRefData({ funnels: [], pages: [], events: [], members: [], workflows: [] }))
   }, [tenant.id])
   useEffect(load, [load])
 
