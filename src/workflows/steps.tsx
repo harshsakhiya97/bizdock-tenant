@@ -13,7 +13,8 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
 }
 
-export const TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [
+/** every trigger, including ones no longer offered (older workflows still use them) */
+export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [
   { value: 'form_submitted', label: 'Funnel form submitted', hint: 'A lead submits a landing page form of a funnel' },
   { value: 'lead_added', label: 'Lead added', hint: 'A lead is added by hand, by import or by a form' },
   { value: 'stage_changed', label: 'Lead moved to a stage', hint: 'A lead enters a stage of a funnel' },
@@ -21,7 +22,9 @@ export const TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = 
   { value: 'before_event', label: 'Before a webinar / event starts', hint: 'Some time before it starts, for its funnel’s leads' },
   { value: 'after_event', label: 'After a webinar / event ends', hint: 'Some time after it ends, for its funnel’s leads' },
 ]
-export const triggerLabel = (e: TriggerEvent | undefined) => TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
+/** triggers offered for new workflows */
+export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' && t.value !== 'tag_added')
+export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
 export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']

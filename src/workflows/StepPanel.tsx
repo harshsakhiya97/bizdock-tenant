@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import { ArrowUp, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { WhatsAppFields } from './WhatsAppFields'
-import { ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem } from './steps'
+import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem } from './steps'
 import { TRIGGER_DEFAULTS, VARIABLES, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
@@ -418,13 +418,13 @@ function TriggerFields({
             onChange({ ...TRIGGER_DEFAULTS[next], ...(t.name ? { name: t.name } : {}), ...(next !== 'before_event' && next !== 'after_event' && t.funnel_id ? { funnel_id: t.funnel_id } : {}) })
           }}
         >
-          {TRIGGERS.map((x) => (
+          {ALL_TRIGGERS.filter((x) => TRIGGERS.includes(x) || x.value === t.event).map((x) => (
             <option key={x.value} value={x.value}>
               {x.label}
             </option>
           ))}
         </Select>
-        <Hint>{TRIGGERS.find((x) => x.value === t.event)?.hint}</Hint>
+        <Hint>{ALL_TRIGGERS.find((x) => x.value === t.event)?.hint}</Hint>
       </div>
 
       {t.event === 'form_submitted' && (
