@@ -43,7 +43,7 @@ export function LoginPage() {
       if (error) setError(error.message)
     } else {
       const { error } = await db().auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/profile?tab=password`,
+        redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}profile?tab=password`,
       })
       if (error) setError(error.message)
       else setNotice('If this email has an account, a reset link is on its way. Open it to set a new password.')

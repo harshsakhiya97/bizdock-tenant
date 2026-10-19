@@ -1,0 +1,49 @@
+# Live site for the studio-rental client: https://pride.viralsakhiya.com/pride/
+#
+# Push (or merge main) into the branch `deploy/pride` → build → upload to the shared hosting by FTP.
+#
+# GitHub → Settings → Environments → "pride":
+#   secrets:   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+#   variables: VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, FTP_DIR (e.g. /public_html/pride/)
+name: Deploy · pride
+
+on:
+  push:
+    branches: [deploy/pride]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-pride
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: pride
+    env:
+      VITE_BASE_PATH: /pride/
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # the webhook pass-through needs the Supabase address
+      - run: sed -i "s#__SUPABASE_URL__#${VITE_SUPABASE_URL}#" dist/api/lead-webhook.php
+
+      - name: Upload by FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: ./dist/
+          server-dir: ${{ vars.FTP_DIR }}

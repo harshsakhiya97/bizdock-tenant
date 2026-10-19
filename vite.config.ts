@@ -16,6 +16,8 @@ export default defineConfig(({ mode }) => {
     },
   }
   return {
+    // the app can live in a sub-folder, e.g. https://pride.viralsakhiya.com/pride/ (VITE_BASE_PATH=/pride/)
+    base: env.VITE_BASE_PATH || '/',
     plugins: [react(), tailwindcss()],
     server: { port: 5174, proxy: api }, // owner app uses 5173
     preview: { proxy: api },
