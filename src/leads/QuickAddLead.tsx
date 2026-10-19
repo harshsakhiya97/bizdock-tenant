@@ -3,6 +3,7 @@ import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { useAuth } from '@/auth/useAuth'
+import { useBusiness } from '@/business/useBusiness'
 import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { createLead, phoneExists } from './api'
@@ -23,9 +24,12 @@ export function QuickAddLead({
   onAdded: (leadId: string, name: string) => void
 }) {
   const tenant = useTenant()
-  const { membership } = useAuth()
+  const { membership, businesses } = useAuth()
+  const { selected } = useBusiness()
   const me = membership?.id
+  // '' = no funnel: the lead belongs to a business only
   const [funnelId, setFunnelId] = useState(defaultFunnelId ?? funnels[0]?.id ?? '')
+  const [businessId, setBusinessId] = useState(selected?.id ?? businesses[0]?.id ?? '')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [source, setSource] = useState('')
@@ -35,22 +39,23 @@ export function QuickAddLead({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const funnel = funnels.find((f) => f.id === funnelId)
+  const bizId = funnel?.business_id ?? businessId
 
   async function save() {
-    if (!funnel) return setError('Add a funnel first.')
+    if (!bizId) return setError('Pick the business.')
     if (!name.trim()) return setError('Name is required.')
     if (phone.replace(/\D/g, '').length < 10) return setError('Enter a valid phone number (10 digits).')
     setBusy(true)
     setError(null)
     try {
-      if (await phoneExists(funnel.business_id, phone)) {
+      if (await phoneExists(bizId, phone)) {
         setBusy(false)
         return setError('A lead with this phone number already exists in this business.')
       }
       const first = name.trim().split(/\s+/)[0]
       const input: LeadInput = {
-        funnel_id: funnel.id,
-        stage_id: funnel.funnel_stages[0]?.id ?? '',
+        funnel_id: funnel?.id ?? '',
+        stage_id: funnel?.funnel_stages[0]?.id ?? '',
         first_name: first,
         last_name: name.trim().slice(first.length).trim(),
         phone,
@@ -69,7 +74,7 @@ export function QuickAddLead({
         required_on: reqOn,
         required_hours: hours,
       }
-      const id = await createLead(tenant.id, funnel.business_id, me, input)
+      const id = await createLead(tenant.id, bizId, me, input)
       onAdded(id, name.trim())
     } catch (e) {
       setError((e as Error).message)
@@ -133,20 +138,38 @@ export function QuickAddLead({
               <TextInput aria-label="Hours" type="number" min={0} step={0.5} placeholder="Hours" style={{ width: 110 }} value={hours} onChange={(e) => setHours(e.target.value)} />
             </div>
           </div>
-          {funnels.length > 1 && (
-            <div className="span-2">
-              <Label htmlFor="q-funnel">Funnel</Label>
-              <Select id="q-funnel" value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
-                {funnels.map((f) => (
+          <div className={funnel || businesses.length < 2 ? 'span-2' : undefined}>
+            <Label htmlFor="q-funnel">Funnel</Label>
+            <Select id="q-funnel" value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
+              <option value="">No funnel</option>
+              {funnels.map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
+                  </option>
+              ))}
+            </Select>
+          </div>
+          {!funnel && businesses.length > 1 && (
+            <div>
+              <Label htmlFor="q-biz" required>
+                Business
+              </Label>
+              <Select id="q-biz" value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
+                {businesses.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
                   </option>
                 ))}
               </Select>
             </div>
           )}
         </div>
-        <Hint>The lead starts in {funnel ? `${funnel.name} → ${funnel.funnel_stages[0]?.name ?? 'first stage'}` : 'the first stage'}, owned by you. Add the rest on its page.</Hint>
+        <Hint>
+          {funnel
+            ? `The lead starts in ${funnel.name} → ${funnel.funnel_stages[0]?.name ?? 'first stage'}, owned by you.`
+            : 'The lead is saved without a funnel, owned by you; you can put it in a funnel later.'}{' '}
+          Add the rest on its page.
+        </Hint>
       </div>
     </Modal>
   )

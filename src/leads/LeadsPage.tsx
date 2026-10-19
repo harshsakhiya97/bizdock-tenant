@@ -267,8 +267,6 @@ export function LeadsPage() {
                 type="button"
                 className="btn btn-outline"
                 onClick={() => setImporting(true)}
-                disabled={!scopedFunnels.length}
-                title={!scopedFunnels.length ? 'Add a funnel first' : undefined}
               >
                 <Upload size={15} /> Import
               </button>
@@ -278,8 +276,6 @@ export function LeadsPage() {
                 type="button"
                 className="btn btn-primary"
                 onClick={() => setAdding(true)}
-                disabled={!scopedFunnels.length}
-                title={!scopedFunnels.length ? 'Add a funnel first' : undefined}
               >
                 <Plus size={16} /> Add lead
               </button>
@@ -501,8 +497,6 @@ export function LeadsPage() {
           <div className="empty">Loading leads…</div>
         ) : scope('leads') === 'none' ? (
           <Empty icon={Users}>Your access doesn’t include leads.</Empty>
-        ) : !scopedFunnels.length ? (
-          <Empty icon={Users}>No funnels yet. Add a funnel first; leads sit in a funnel stage.</Empty>
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{filters.archived ? 'No archived leads.' : 'No leads here yet.'}</Empty>
         ) : (
