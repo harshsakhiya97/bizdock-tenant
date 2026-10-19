@@ -61,7 +61,9 @@ export function FunnelPage() {
 
   const pageName = useMemo(() => new Map((pages ?? []).map((p) => [p.id, p.name])), [pages])
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
-  const businessName = businesses.find((b) => b.id === funnel?.business_id)?.name ?? '—'
+  const biz = businesses.find((b) => b.id === funnel?.business_id)
+  const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
+  const businessName = biz ? (subName ? `${biz.name} · ${subName}` : biz.name) : '—'
 
   if (funnel === undefined) return <div className="empty">Loading funnel…</div>
   if (!funnel)

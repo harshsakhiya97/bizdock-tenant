@@ -60,6 +60,7 @@ export function FunnelsPage() {
   useEffect(load, [load])
 
   const businessName = useMemo(() => new Map(businesses.map((b) => [b.id, b.name])), [businesses])
+  const subName = (f: FunnelRow) => businesses.find((b) => b.id === f.business_id)?.subs.find((x) => x.id === f.sub_business_id)?.name
   // follows the business picked in the top bar; otherwise every business this person works in
   const inScope = (funnels ?? []).filter((f) =>
     selected ? f.business_id === selected.id : businessName.has(f.business_id),
@@ -155,7 +156,8 @@ export function FunnelsPage() {
                     </span>
                     <div className="pl-card-title">
                       <div className="pl-name">{f.name}</div>
-                      <div className="pl-sub muted small">{businessName.get(f.business_id) ?? '—'}</div>
+                      <div className="pl-sub muted small">{businessName.get(f.business_id) ?? '—'}
+                        {subName(f) ? ` · ${subName(f)}` : ''}</div>
                     </div>
                     <span className={cn('badge', typeTone[f.type])}>{typeLabel(f.type)}</span>
                   </div>

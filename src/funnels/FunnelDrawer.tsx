@@ -6,6 +6,7 @@ import { TagInput } from '@/components/TagInput'
 import { listEvents, listEventTypes, type EventRow } from '@/calendar/api'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { SubBusinessSelect, useSubBusinesses } from '@/business/SubBusinessSelect'
 import { saveFunnel } from './api'
 import { FUNNEL_TYPES, templateStages } from './templates'
 import type { FunnelInput, FunnelRow, FunnelType, StageDraft } from './types'
@@ -28,6 +29,7 @@ export function FunnelDrawer({
   const tenant = useTenant()
   const [input, setInput] = useState<FunnelInput>(() => ({
     business_id: funnel?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
+    sub_business_id: funnel?.sub_business_id ?? '',
     name: funnel?.name ?? '',
     type: funnel?.type ?? 'webinar',
     description: funnel?.description ?? '',
@@ -35,6 +37,9 @@ export function FunnelDrawer({
     event_id: funnel?.event_id ?? '',
   }))
   const [events, setEvents] = useState<EventRow[] | null>(null)
+  const subs = useSubBusinesses(input.business_id)
+  const hasSubs = subs.length > 0
+  const subOk = subs.some((x) => x.id === input.sub_business_id)
   useEffect(() => {
     Promise.all([listEvents(tenant.id), listEventTypes(tenant.id)])
       .then(([ev, types]) => {
@@ -89,7 +94,7 @@ export function FunnelDrawer({
     setBusy(true)
     setError(null)
     try {
-      await saveFunnel(tenant.id, funnel, { ...input, event_id: linked ? input.event_id : '' }, stages)
+      await saveFunnel(tenant.id, funnel, { ...input, sub_business_id: subOk ? input.sub_business_id : '', event_id: linked ? input.event_id : '' }, stages)
       onSaved(funnel ? `${input.name.trim()} saved.` : `${input.name.trim()} created.`)
     } catch (err) {
       setError((err as Error).message)
@@ -127,7 +132,7 @@ export function FunnelDrawer({
               <Select
                 id="f-business"
                 value={input.business_id}
-                onChange={(e) => setInput((d) => ({ ...d, business_id: e.target.value }))}
+                onChange={(e) => setInput((d) => ({ ...d, business_id: e.target.value, sub_business_id: '' }))}
               >
                 <option value="">— select —</option>
                 {businesses.map((b) => (
@@ -137,7 +142,8 @@ export function FunnelDrawer({
                 ))}
               </Select>
             </div>
-            <div>
+            <SubBusinessSelect id="f-sub" businessId={input.business_id} value={input.sub_business_id} onChange={(v) => setInput((d) => ({ ...d, sub_business_id: v }))} />
+            <div className={cn(hasSubs && 'span-2')}>
               <Label htmlFor="f-name" required>
                 Funnel name
               </Label>

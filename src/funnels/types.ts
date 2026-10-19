@@ -15,6 +15,8 @@ export type FunnelRow = {
   id: string
   tenant_id: string
   business_id: string
+  /** leads added through the funnel get this sub-business */
+  sub_business_id: string | null
   name: string
   type: FunnelType
   description: string | null
@@ -40,6 +42,7 @@ export type StageDraft = {
 
 export type FunnelInput = {
   business_id: string
+  sub_business_id: string
   name: string
   type: FunnelType
   description: string

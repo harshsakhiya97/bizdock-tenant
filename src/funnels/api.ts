@@ -4,7 +4,7 @@ import type { FunnelInput, FunnelRow, LandingPage, LandingPageInput, StageDraft,
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
     .from('funnels')
-    .select('id, tenant_id, business_id, name, type, description, is_active, sort_order, created_at, tags, event_id, funnel_stages(id, funnel_id, name, color, kind, note_required, sort_order)')
+    .select('id, tenant_id, business_id, sub_business_id, name, type, description, is_active, sort_order, created_at, tags, event_id, funnel_stages(id, funnel_id, name, color, kind, note_required, sort_order)')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
@@ -20,6 +20,7 @@ export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
 export async function saveFunnel(tenantId: string, existing: FunnelRow | null, input: FunnelInput, stages: StageDraft[]) {
   const row = {
     business_id: input.business_id,
+    sub_business_id: input.sub_business_id || null,
     name: input.name.trim(),
     type: input.type,
     description: input.description.trim() || null,
