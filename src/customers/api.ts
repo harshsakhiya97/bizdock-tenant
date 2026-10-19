@@ -36,6 +36,7 @@ export async function createSale(tenantId: string, input: SaleInput) {
     p: {
       tenant_id: tenantId,
       business_id: input.business_id,
+      sub_business_id: input.sub_business_id || null,
       customer_id: input.customer_id || null,
       lead_id: input.lead_id || null,
       customer: input.customer,

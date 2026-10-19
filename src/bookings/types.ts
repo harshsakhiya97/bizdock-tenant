@@ -16,6 +16,7 @@ export type BookingRow = {
   id: string
   tenant_id: string
   business_id: string
+  sub_business_id: string | null
   lead_id: string | null
   customer_id: string | null
   client_name: string
@@ -43,6 +44,7 @@ export type BookingRow = {
 
 export type BookingInput = {
   business_id: string
+  sub_business_id: string
   lead_id: string | null
   /** a client added without a lead */
   customer_id?: string | null

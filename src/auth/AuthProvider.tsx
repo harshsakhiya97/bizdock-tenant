@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { Session } from '@supabase/supabase-js'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { AuthContext, type Business, type Membership, type PermissionAction, type Profile } from './auth-context'
+import { AuthContext, type Business, type Membership, type PermissionAction, type Profile, type SubBusiness } from './auth-context'
 
 type MemberRow = {
   id: string
@@ -48,16 +48,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return clear()
       }
 
-      const [{ data: prof }, { data: bizRows }, { data: allowed }] = await Promise.all([
+      const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: subRows }] = await Promise.all([
         db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
         db().from('businesses').select('id, name').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
           : db().from('member_businesses').select('business_id').eq('member_id', member.id),
+        db().from('sub_businesses').select('id, business_id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
       ])
 
       const allowedIds = allowed ? new Set(allowed.map((r: { business_id: string }) => r.business_id)) : null
-      const list = ((bizRows ?? []) as Business[]).filter((b) => !allowedIds || allowedIds.has(b.id))
+      const subs = (subRows ?? []) as SubBusiness[]
+      const list: Business[] = ((bizRows ?? []) as { id: string; name: string }[])
+        .filter((b) => !allowedIds || allowedIds.has(b.id))
+        .map((b) => ({ ...b, subs: subs.filter((s) => s.business_id === b.id) }))
 
       setAccessError(null)
       setProfile(prof ?? null)

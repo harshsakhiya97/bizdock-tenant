@@ -26,7 +26,7 @@ function downloadCsv(name: string, rows: (string | number)[][]) {
 export function SalesPage() {
   const data = useSalesData()
   const { can, scope } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
   const openClient = (id: string) => navigate(`/customers/${id}`)
@@ -40,13 +40,14 @@ export function SalesPage() {
     if (!saleLead) return
     void db()
       .from('leads')
-      .select('id, business_id, first_name, last_name, phone, email, city, owner_id, estimated_amount')
+      .select('id, business_id, sub_business_id, first_name, last_name, phone, email, city, owner_id, estimated_amount')
       .eq('id', saleLead)
       .maybeSingle()
       .then(({ data: l }) => {
         if (l)
           setSale({
             business_id: l.business_id,
+            sub_business_id: l.sub_business_id ?? undefined,
             lead_id: l.id,
             customer: { full_name: fullName(l), phone: l.phone ?? '', email: l.email ?? '', city: l.city ?? '' },
             sales_person_id: l.owner_id ?? undefined,
@@ -80,7 +81,7 @@ export function SalesPage() {
         actions={
           <>
             {can('deals', 'add') && (
-              <button type="button" className="btn btn-primary" onClick={() => setSale({ business_id: selected?.id })}>
+              <button type="button" className="btn btn-primary" onClick={() => setSale({ business_id: selected?.id, sub_business_id: sub?.id })}>
                 <Plus size={16} /> New sale
               </button>
             )}

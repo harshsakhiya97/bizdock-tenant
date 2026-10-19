@@ -8,6 +8,7 @@ import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { createLead, phoneExists } from './api'
 import type { LeadInput, Option } from './types'
+import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
 /** Add lead: just name, phone, source, purpose and required on. Everything else is on the lead's page. */
 export function QuickAddLead({
@@ -25,7 +26,7 @@ export function QuickAddLead({
 }) {
   const tenant = useTenant()
   const { membership, businesses } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const me = membership?.id
   // '' = no funnel: the lead belongs to a business only
   const [funnelId, setFunnelId] = useState(defaultFunnelId ?? funnels[0]?.id ?? '')
@@ -36,10 +37,12 @@ export function QuickAddLead({
   const [purpose, setPurpose] = useState('')
   const [reqOn, setReqOn] = useState('')
   const [hours, setHours] = useState('')
+  const [subId, setSubId] = useState(sub?.id ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const funnel = funnels.find((f) => f.id === funnelId)
   const bizId = funnel?.business_id ?? businessId
+  const subs = useSubBusinesses(bizId)
 
   async function save() {
     if (!bizId) return setError('Pick the business.')
@@ -73,6 +76,7 @@ export function QuickAddLead({
         purpose,
         required_on: reqOn,
         required_hours: hours,
+        sub_business_id: subOf(subs, subId),
       }
       const id = await createLead(tenant.id, bizId, me, input)
       onAdded(id, name.trim())
@@ -127,6 +131,7 @@ export function QuickAddLead({
               ))}
             </Select>
           </div>
+          <SubBusinessSelect id="q-sub" businessId={bizId} value={subId} onChange={setSubId} />
           <div>
             <Label htmlFor="q-purpose">Purpose</Label>
             <TextInput id="q-purpose" placeholder="e.g. Podcast, Product shoot" value={purpose} onChange={(e) => setPurpose(e.target.value)} />

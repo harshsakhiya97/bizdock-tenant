@@ -13,7 +13,7 @@ import type { CustomerRow, SaleRow } from './types'
 export function useSalesData() {
   const tenant = useTenant()
   const { businesses } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const [customers, setCustomers] = useState<CustomerRow[] | null>(null)
   const [sales, setSales] = useState<SaleRow[]>([])
   const [products, setProducts] = useState<ProductRow[]>([])
@@ -60,7 +60,7 @@ export function useSalesData() {
       error,
       customers: customers ? customers.filter((c) => inBiz(c.business_id)) : null,
       allCustomers: customers ?? [],
-      sales: sales.filter((s) => inBiz(s.business_id)),
+      sales: sales.filter((s) => inBiz(s.business_id) && (!sub || s.sub_business_id === sub.id)),
       salesByCustomer,
       products,
       productById,
@@ -75,7 +75,7 @@ export function useSalesData() {
       modeName: (id: string | null) => modes.find((m) => m.id === id)?.name,
       stageOf: (id: string | null) => stages.find((s) => s.id === id),
     }
-  }, [load, error, customers, sales, products, companies, modes, stages, members, inBiz])
+  }, [load, error, customers, sales, products, companies, modes, stages, members, inBiz, sub])
 }
 
 export type SalesData = ReturnType<typeof useSalesData>

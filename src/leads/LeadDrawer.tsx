@@ -11,6 +11,7 @@ import { createLead, listActivities, logActivity, phoneExists, updateLead } from
 import { TEMPERATURES, toLocalInput } from './labels'
 import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
+import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
 const phoneOk = (v: string) => v.replace(/\D/g, '').length >= 10
 
@@ -62,6 +63,7 @@ export function LeadDrawer({
     purpose: lead?.purpose ?? '',
     required_on: lead?.required_on ?? '',
     required_hours: lead?.required_hours != null ? String(lead.required_hours) : '',
+    sub_business_id: lead?.sub_business_id ?? '',
   }))
   const [stageNote, setStageNote] = useState('')
   const [lostReason, setLostReason] = useState('')
@@ -76,6 +78,8 @@ export function LeadDrawer({
 
   const funnel = funnels.find((f) => f.id === input.funnel_id)
   const stage = funnel?.funnel_stages.find((s) => s.id === input.stage_id)
+  const bizId = funnel?.business_id ?? lead?.business_id
+  const subs = useSubBusinesses(bizId)
   const stageChanged = !!lead && !!lead.stage_id && input.stage_id !== lead.stage_id
   const needsNote = stageChanged && !!stage && (stage.note_required || stage.kind === 'lost')
   const stageName = useMemo(() => {
@@ -108,6 +112,8 @@ export function LeadDrawer({
     setError(null)
     try {
       const businessId = funnel?.business_id ?? lead!.business_id
+      // a sub-business only stays when it belongs to the lead's business
+      const clean = { ...input, sub_business_id: subOf(subs, input.sub_business_id) }
       if (!lead || businessId !== lead.business_id || input.phone !== lead.phone) {
         if (await phoneExists(businessId, input.phone, lead?.id)) {
           setBusy(false)
@@ -115,8 +121,8 @@ export function LeadDrawer({
         }
       }
       const leadId = lead
-        ? (await updateLead(tenant.id, me, lead, input, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
-        : await createLead(tenant.id, businessId, me, input)
+        ? (await updateLead(tenant.id, me, lead, clean, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
+        : await createLead(tenant.id, businessId, me, clean)
       // the follow-up date lives in Follow-ups: a new date schedules one, clearing it cancels the pending one
       const before = toLocalInput(lead?.next_follow_up_at ?? null)
       if (canFollowUp && input.next_follow_up_at !== before) {
@@ -226,6 +232,7 @@ export function LeadDrawer({
               <Label htmlFor="l-city">Location / City</Label>
               <TextInput id="l-city" value={input.city} onChange={set('city')} disabled={!canEdit} />
             </div>
+            <SubBusinessSelect id="l-sub" businessId={bizId} value={input.sub_business_id} onChange={(v) => setInput((d) => ({ ...d, sub_business_id: v }))} disabled={!canEdit} />
             <div>
               <Label htmlFor="l-purpose">Purpose</Label>
               <TextInput id="l-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={set('purpose')} disabled={!canEdit} />

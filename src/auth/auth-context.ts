@@ -20,7 +20,15 @@ export type Membership = {
   role: { name: string; permissions: Permissions; is_system: boolean; level: number }
 }
 
-export type Business = { id: string; name: string }
+export type SubBusinessType = 'editing' | 'podcast' | 'studio_rental'
+export type SubBusiness = { id: string; business_id: string; name: string; type: SubBusinessType }
+export const SUB_BUSINESS_TYPES: { id: SubBusinessType; label: string }[] = [
+  { id: 'editing', label: 'Editing service' },
+  { id: 'podcast', label: 'Podcast' },
+  { id: 'studio_rental', label: 'Podcast studio rental' },
+]
+/** a business and its active sub-businesses */
+export type Business = { id: string; name: string; subs: SubBusiness[] }
 
 export type PermissionAction = string
 

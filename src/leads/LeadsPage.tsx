@@ -40,7 +40,7 @@ type PendingMove = { ids: string[]; stage: StageRow }
 export function LeadsPage() {
   const tenant = useTenant()
   const { can, scope, membership } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub, inScope } = useBusiness()
   const me = membership?.id
 
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
@@ -121,6 +121,8 @@ export function LeadsPage() {
               ? scopedIds.has(l.funnel_id)
               : !selected || l.business_id === selected.id,
       )
+      // a sub-business picked in the top bar narrows to its leads
+      .filter((l) => !sub || inScope(l.business_id, l.sub_business_id))
       .filter(
         (l) =>
           !q ||
@@ -148,7 +150,7 @@ export function LeadsPage() {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, scopedFunnels, noFunnel, selected])
+  }, [leads, filters, funnel, scopedFunnels, noFunnel, selected, sub, inScope])
 
   const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =
@@ -254,7 +256,7 @@ export function LeadsPage() {
     <>
       <PageHead
         title="Leads"
-        subtitle={`Showing ${scopeText}${selected ? ` in ${selected.name}` : ''}.`}
+        subtitle={`Showing ${scopeText}${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}.`}
         actions={
           <>
             {can('leads', 'export') && (

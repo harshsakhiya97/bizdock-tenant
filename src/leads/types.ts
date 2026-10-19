@@ -4,6 +4,7 @@ export type LeadRow = {
   id: string
   tenant_id: string
   business_id: string
+  sub_business_id: string | null
   /** null = imported without a funnel (belongs to the business only) */
   funnel_id: string | null
   stage_id: string | null
@@ -74,4 +75,5 @@ export type LeadInput = {
   purpose: string
   required_on: string
   required_hours: string
+  sub_business_id: string
 }

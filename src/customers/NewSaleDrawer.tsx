@@ -9,9 +9,11 @@ import { createSale, customerByPhone } from './api'
 import { addMonthsIso, fmtDay, rupees, todayIso } from './labels'
 import type { SaleInput } from './types'
 import type { SalesData } from './useSalesData'
+import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
 export type SalePrefill = {
   business_id?: string
+  sub_business_id?: string
   customer_id?: string
   customer_name?: string
   lead_id?: string
@@ -42,6 +44,7 @@ export function NewSaleDrawer({
   const today = todayIso()
   const [f, setF] = useState<SaleInput>(() => ({
     business_id: prefill.business_id ?? (businesses.length === 1 ? businesses[0].id : ''),
+    sub_business_id: prefill.sub_business_id ?? '',
     customer_id: prefill.customer_id ?? '',
     lead_id: prefill.lead_id ?? '',
     customer: { full_name: '', phone: '', email: '', city: '', ...prefill.customer },
@@ -72,6 +75,7 @@ export function NewSaleDrawer({
   const setCust = (k: keyof SaleInput['customer'], v: string) => setF((d) => ({ ...d, customer: { ...d.customer, [k]: v } }))
 
   const modes = data.modes.filter((m) => m.is_active)
+  const subs = useSubBusinesses(f.business_id)
 
   const base = Number(f.base_amount) || 0
   const gst = f.gst_applicable ? round2((base * Number(f.gst_rate)) / 100) : 0
@@ -121,7 +125,7 @@ export function NewSaleDrawer({
     setBusy(true)
     setError(null)
     try {
-      await createSale(tenant.id, { ...f, customer_id: f.customer_id || match?.id || '' })
+      await createSale(tenant.id, { ...f, sub_business_id: subOf(subs, f.sub_business_id), customer_id: f.customer_id || match?.id || '' })
       const who = prefill.customer_name ?? match?.full_name ?? f.customer.full_name.trim()
       onSaved(`Sale saved for ${who}.`)
     } catch (err) {
@@ -168,7 +172,7 @@ export function NewSaleDrawer({
                   <Select
                     id="s-biz"
                     value={f.business_id}
-                    onChange={(e) => setF((d) => ({ ...d, business_id: e.target.value, product_id: '' }))}
+                    onChange={(e) => setF((d) => ({ ...d, business_id: e.target.value, sub_business_id: '', product_id: '' }))}
                   >
                     <option value="">— select —</option>
                     {businesses.map((b) => (
@@ -207,6 +211,7 @@ export function NewSaleDrawer({
 
         <FormSection title="Sale & payment">
           <div className="form-grid">
+            <SubBusinessSelect id="s-sub" className="span-2" businessId={f.business_id} value={f.sub_business_id} onChange={(v) => set('sub_business_id', v)} />
             <div>
               <Label htmlFor="s-person">Sales person</Label>
               <Select id="s-person" value={f.sales_person_id} disabled={ownOnly} onChange={(e) => set('sales_person_id', e.target.value)}>

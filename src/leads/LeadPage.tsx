@@ -98,7 +98,9 @@ export function LeadPage() {
   const canEdit = can('leads', 'edit')
   const canFollow = canEdit || can('follow_ups', 'add')
   const canBook = can('bookings', 'add')
-  const biz = businesses.find((b) => b.id === lead.business_id)?.name
+  const bizRow = businesses.find((b) => b.id === lead.business_id)
+  const biz = bizRow?.name
+  const subName = bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.name
   const nextBooking = (bookings ?? [])
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
@@ -134,7 +136,7 @@ export function LeadPage() {
     ['Next follow-up', <span className={cn(fu.state === 'overdue' && 'text-danger')}>{fu.text}</span>],
     ['Tags', lead.tags.length ? lead.tags.join(', ') : '—'],
     ['Received', `${new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${ago(lead.created_at)}`],
-    ['Business', biz ?? '—'],
+    ['Business', biz ? (subName ? `${biz} · ${subName}` : biz) : '—'],
   ]
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
@@ -285,7 +287,7 @@ export function LeadPage() {
             start: '10:00',
             end: lead.required_hours ? `${String(Math.min(23, 10 + Math.ceil(lead.required_hours))).padStart(2, '0')}:00` : undefined,
           }}
-          lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id }}
+          lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id, sub_business_id: lead.sub_business_id }}
           refs={refs}
           onClose={() => setBk(null)}
           onSaved={(msg) => {

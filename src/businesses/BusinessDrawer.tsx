@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { ImageUp, Trash2 } from 'lucide-react'
+import { ImageUp, Plus, Trash2, X } from 'lucide-react'
+import { SUB_BUSINESS_TYPES } from '@/auth/auth-context'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { AddressFields } from '@/components/AddressFields'
-import { Checkbox, FormSection, Hint, Label, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
-import { saveBusiness } from './api'
+import { listSubBusinesses, saveBusiness, saveSubBusinesses, type SubBusinessDraft } from './api'
 import { isValidEmail, isValidGst, type BusinessInput, type BusinessRow } from './types'
 
 const MAX_LOGO = 2 * 1024 * 1024
@@ -51,6 +52,12 @@ export function BusinessDrawer({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  const [subs, setSubs] = useState<SubBusinessDraft[]>([])
+  const [removedSubs, setRemovedSubs] = useState<string[]>([])
+  useEffect(() => {
+    if (business) void listSubBusinesses(business.id).then(setSubs, () => setSubs([]))
+  }, [business])
+  const setSub = (i: number, patch: Partial<SubBusinessDraft>) => setSubs((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s)))
 
   const logoPreview = useMemo(() => {
     if (logo) return URL.createObjectURL(logo)
@@ -70,10 +77,12 @@ export function BusinessDrawer({
     if (email && !isValidEmail(email)) return setError('Enter a valid business email.')
     if (input.has_gst && !gst) return setError('Enter the GST number, or untick "Registered for GST?".')
     if (input.has_gst && !isValidGst(gst)) return setError('GST number should be 15 characters, like 24ABCDE1234F1Z5.')
+    if (subs.some((s) => !s.name.trim())) return setError('Give every sub-business a name, or remove it.')
     setBusy(true)
     setError(null)
     try {
-      await saveBusiness({ tenantId: tenant.id, existing: business, input, logo })
+      const saved = await saveBusiness({ tenantId: tenant.id, existing: business, input, logo })
+      await saveSubBusinesses(tenant.id, saved.id, subs, removedSubs)
       onSaved()
     } catch (err) {
       setError((err as Error).message)
@@ -139,6 +148,42 @@ export function BusinessDrawer({
             <TextInput id="bz-name" placeholder="e.g. Studio Rental" value={input.name} onChange={set('name')} />
             <Hint>Shown in the business switcher and on every record of this business.</Hint>
           </div>
+        </FormSection>
+
+        <FormSection title="Sub-businesses" description="Optional. Split this business into sub-businesses; leads, sales and bookings can then be tagged with one.">
+          {subs.length > 0 && (
+            <div className="stack" style={{ gap: 8 }}>
+              {subs.map((s, i) => (
+                <div key={s.id ?? `new-${i}`} className="sub-biz-row">
+                  <TextInput aria-label="Sub-business name" placeholder="e.g. Podcast Studio Rental" value={s.name} onChange={(e) => setSub(i, { name: e.target.value })} />
+                  <Select aria-label="Type" value={s.type} onChange={(e) => setSub(i, { type: e.target.value as SubBusinessDraft['type'] })}>
+                    {SUB_BUSINESS_TYPES.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </Select>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon"
+                    aria-label="Remove"
+                    onClick={() => {
+                      if (s.id) setRemovedSubs((r) => [...r, s.id!])
+                      setSubs((l) => l.filter((_, j) => j !== i))
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div>
+            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: 'editing' }])}>
+              <Plus /> Add sub-business
+            </Button>
+          </div>
+          {removedSubs.length > 0 && <Hint>Leads, sales and bookings of a removed sub-business stay in this business.</Hint>}
         </FormSection>
 
         <FormSection title="Contact" description="How customers and your team reach this business.">

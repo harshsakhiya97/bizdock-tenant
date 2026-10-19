@@ -1,4 +1,5 @@
 import { db } from '@/lib/supabase'
+import type { SubBusiness, SubBusinessType } from '@/auth/auth-context'
 import type { BusinessInput, BusinessListRow, BusinessRow } from './types'
 
 const BUCKET = 'business-logos'
@@ -97,4 +98,33 @@ export async function setBusinessArchived(id: string, archived: boolean) {
 function pathInBucket(url: string | null) {
   const marker = `/storage/v1/object/public/${BUCKET}/`
   return url && url.includes(marker) ? url.split(marker)[1] : null
+}
+
+export type SubBusinessDraft = { id?: string; name: string; type: SubBusinessType }
+
+export async function listSubBusinesses(businessId: string) {
+  const { data, error } = await db()
+    .from('sub_businesses')
+    .select('id, business_id, name, type')
+    .eq('business_id', businessId)
+    .eq('is_active', true)
+    .order('sort_order')
+    .order('created_at')
+  fail(error)
+  return (data ?? []) as SubBusiness[]
+}
+
+/** Saves the sub-business list of a business: updates, adds and removes (records keep their business). */
+export async function saveSubBusinesses(tenantId: string, businessId: string, rows: SubBusinessDraft[], removed: string[]) {
+  if (removed.length) {
+    const { error } = await db().from('sub_businesses').delete().in('id', removed)
+    fail(error)
+  }
+  for (const [i, r] of rows.entries()) {
+    const fields = { name: r.name.trim(), type: r.type, sort_order: i + 1 }
+    const { error } = r.id
+      ? await db().from('sub_businesses').update(fields).eq('id', r.id)
+      : await db().from('sub_businesses').insert({ ...fields, tenant_id: tenantId, business_id: businessId })
+    fail(error)
+  }
 }

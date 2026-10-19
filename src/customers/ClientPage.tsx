@@ -296,7 +296,7 @@ export function ClientPage() {
         <BookingDrawer
           key={bk.booking?.id ?? 'new'}
           booking={bk.booking}
-          lead={{ id: leadId, customer_id: client.id, name: client.full_name, phone: client.phone ?? '', purpose: lead?.purpose ?? null, business_id: client.business_id }}
+          lead={{ id: leadId, customer_id: client.id, name: client.full_name, phone: client.phone ?? '', purpose: lead?.purpose ?? null, business_id: client.business_id, sub_business_id: lead?.sub_business_id }}
           refs={refs}
           onClose={() => setBk(null)}
           onSaved={(msg) => {

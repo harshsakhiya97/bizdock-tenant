@@ -31,6 +31,7 @@ export type SaleRow = {
   id: string
   tenant_id: string
   business_id: string
+  sub_business_id: string | null
   customer_id: string
   lead_id: string | null
   product_id: string | null
@@ -88,6 +89,7 @@ export type PaymentFull = PaymentRow & {
 /** What the New sale form sends to create_sale(). */
 export type SaleInput = {
   business_id: string
+  sub_business_id: string
   customer_id: string
   lead_id: string
   customer: { full_name: string; phone: string; email: string; city: string }

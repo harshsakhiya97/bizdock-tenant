@@ -44,7 +44,7 @@ const clock = (t: string) => new Date(2000, 0, 1, ...(t.split(':').map(Number) a
 export function BookingCalendarPage() {
   const tenant = useTenant()
   const { can } = useAuth()
-  const { selected } = useBusiness()
+  const { inScope } = useBusiness()
   const refs = useBookingRefs()
   const canAdd = can('bookings', 'add')
   const today = iso(new Date())
@@ -116,27 +116,27 @@ export function BookingCalendarPage() {
   const visible = useMemo(
     () =>
       (bookings ?? [])
-        .filter((b) => !selected || b.business_id === selected.id)
+        .filter((b) => inScope(b.business_id, b.sub_business_id))
         .filter((b) => (status ? b.status === status : b.status !== 'cancelled')),
-    [bookings, selected, status],
+    [bookings, inScope, status],
   )
   const byDay = useMemo(() => {
     const m = new Map<string, BookingRow[]>()
     for (const b of [...visible].sort((x, y) => x.start_time.localeCompare(y.start_time))) m.set(b.booking_date, [...(m.get(b.booking_date) ?? []), b])
     return m
   }, [visible])
-  const scopedLeads = useMemo(() => leads.filter((l) => !selected || l.business_id === selected.id), [leads, selected])
+  const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
   // ---- stats for the month on screen ----
   const month = anchor.slice(0, 7)
   const stats = useMemo(() => {
-    const inMonth = (bookings ?? []).filter((b) => (!selected || b.business_id === selected.id) && b.status !== 'cancelled' && b.booking_date.slice(0, 7) === month)
+    const inMonth = (bookings ?? []).filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled' && b.booking_date.slice(0, 7) === month)
     const hours = inMonth.reduce((a, b) => a + (minutes(b.end_time) - minutes(b.start_time)) / 60, 0)
     const value = inMonth.reduce((a, b) => a + Number(b.total_amount), 0)
     const paid = inMonth.reduce((a, b) => a + Number(b.paid_amount), 0)
-    const todays = (bookings ?? []).filter((b) => (!selected || b.business_id === selected.id) && b.status !== 'cancelled' && b.booking_date === today)
+    const todays = (bookings ?? []).filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled' && b.booking_date === today)
     return { count: inMonth.length, tentative: inMonth.filter((b) => b.status === 'tentative').length, hours, value, due: Math.max(0, value - paid), todays: todays.length }
-  }, [bookings, selected, month, today])
+  }, [bookings, inScope, month, today])
 
   const weekStart = mondayOf(anchor)
   function shift(dir: -1 | 1) {

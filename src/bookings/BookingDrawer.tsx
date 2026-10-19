@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { FileText, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
+import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
@@ -34,7 +35,7 @@ export function BookingDrawer({
   booking: BookingRow | null
   defaults?: { date?: string; start?: string; end?: string }
   /** fixed enquiry (lead / client page) */
-  lead?: { id: string | null; customer_id?: string | null; name: string; phone: string; purpose: string | null; business_id: string } | null
+  lead?: { id: string | null; customer_id?: string | null; name: string; phone: string; purpose: string | null; business_id: string; sub_business_id?: string | null } | null
   /** leads to pick from (calendar) */
   leads?: LeadRow[]
   refs: BookingRefs
@@ -43,7 +44,7 @@ export function BookingDrawer({
 }) {
   const tenant = useTenant()
   const { can, membership, businesses } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const me = membership?.id
   // payments are added / removed in place; the page reloads when the drawer closes
   const [booking, setBooking] = useState(initial)
@@ -62,6 +63,7 @@ export function BookingDrawer({
   const [nl, setNl] = useState({ name: '', phone: '', purpose: '', source_id: '' })
   const [input, setInput] = useState<BookingInput>(() => ({
     business_id: booking?.business_id ?? lead?.business_id ?? selected?.id ?? businesses[0]?.id ?? '',
+    sub_business_id: booking ? (booking.sub_business_id ?? '') : (lead ? (lead.sub_business_id ?? '') : (sub?.id ?? '')),
     lead_id: booking?.lead_id ?? lead?.id ?? null,
     customer_id: booking ? undefined : (lead?.customer_id ?? null),
     new_lead: null,
@@ -100,11 +102,13 @@ export function BookingDrawer({
     return b > a ? (b - a) / 60 : 0
   })()
 
+  const subs = useSubBusinesses(input.business_id)
+
   function pickLead(id: string | null) {
     setPickedLead(id)
     const l = leads?.find((x) => x.id === id)
     if (l)
-      setInput((p) => ({ ...p, lead_id: l.id, business_id: l.business_id, client_name: fullName(l), phone: l.phone, purpose: l.purpose ?? p.purpose }))
+      setInput((p) => ({ ...p, lead_id: l.id, business_id: l.business_id, sub_business_id: l.sub_business_id ?? '', client_name: fullName(l), phone: l.phone, purpose: l.purpose ?? p.purpose }))
   }
 
   async function save() {
@@ -126,6 +130,7 @@ export function BookingDrawer({
     setError(null)
     try {
       const f = refs.funnels.find((x) => x.business_id === data.business_id)
+      data = { ...data, sub_business_id: subOf(subs, data.sub_business_id) }
       await saveBooking(tenant.id, me, booking, data, f ? { id: f.id, stage_id: f.funnel_stages[0]?.id ?? '' } : null)
       onSaved(booking ? 'Booking updated.' : `Booked ${data.client_name.trim()} on ${new Date(`${data.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}.`)
     } catch (e) {
@@ -265,6 +270,7 @@ export function BookingDrawer({
 
         <FormSection title="Slot">
           <div className="form-grid">
+            <SubBusinessSelect id="bk-sub" className="span-2" businessId={input.business_id} value={input.sub_business_id} onChange={(v) => set('sub_business_id', v)} disabled={!canEdit} />
             <div className="span-2">
               <Label htmlFor="bk-date" required>
                 Date
