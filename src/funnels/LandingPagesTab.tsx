@@ -1,20 +1,25 @@
-import { useMemo, useState } from 'react'
-import { Check, Code2, Copy, ExternalLink, Globe, Pencil, Plus, Power, RefreshCw, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Check, Code2, Copy, ExternalLink, Globe, Pencil, Plus, Power, RefreshCw, Trash2, Webhook } from 'lucide-react'
+import { Button } from '@/components/Button'
+import { Label, TextInput } from '@/components/Field'
+import { Modal } from '@/components/Modal'
+import { useTenant } from '@/tenant/useTenant'
 import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { archiveLandingPage, deleteUtmLink, matchesUtm, regenerateWebhookKey, setLandingPageActive, utmUrl, webhookUrl } from './api'
+import { addWebhook, archiveLandingPage, deleteUtmLink, deleteWebhook, matchesUtm, regenerateWebhookKey, renameWebhook, setLandingPageActive, setWebhookActive, utmUrl, webhookUrl } from './api'
 import { FieldMapping } from './FieldMapping'
 import { LandingPageModal } from './LandingPageModal'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
-import type { LandingPage, SubmissionRow, UtmLink } from './types'
+import type { LandingPage, LandingPageWebhook, SubmissionRow, UtmLink } from './types'
 import { UtmModal } from './UtmModal'
 import { useCopy } from './useCopy'
 
-const snippetFor = (p: LandingPage, kind: 'html' | 'js' | 'curl' | undefined) =>
+const snippetFor = (p: LandingPageWebhook, kind: 'html' | 'js' | 'curl' | undefined) =>
   kind === 'html' ? htmlSnippet(p) : kind === 'curl' ? curlSnippet(p) : jsSnippet(p)
 
 type Confirm =
-  | { kind: 'regen'; page: LandingPage }
+  | { kind: 'regen'; hook: LandingPageWebhook }
+  | { kind: 'hook'; hook: LandingPageWebhook }
   | { kind: 'delete'; page: LandingPage }
   | { kind: 'utm'; utm: UtmLink }
 
@@ -39,6 +44,10 @@ export function LandingPagesTab({
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [snippet, setSnippet] = useState<Record<string, 'html' | 'js' | 'curl' | undefined>>({})
   const [busy, setBusy] = useState(false)
+  const [naming, setNaming] = useState<{ page: LandingPage; hook: LandingPageWebhook | null } | null>(null)
+  const [hookName, setHookName] = useState('')
+  const tenant = useTenant()
+  useEffect(() => setHookName(naming?.hook?.name ?? ''), [naming])
   const { copied, copy } = useCopy()
 
   // leads created / form posts per page (webhook only)
@@ -74,7 +83,7 @@ export function LandingPagesTab({
     <>
       <div className="row-between" style={{ marginBottom: 14 }}>
         <p className="muted small" style={{ margin: 0 }}>
-          Each landing page gets its own webhook URL. Send one test from the page to match its form fields to lead fields; after that every form post adds a lead to the funnel’s first stage with the funnel’s tags and the UTMs. The same phone again updates that lead.
+          Each landing page can have several webhook URLs, one per form. Send one test from a form to match its form fields to lead fields; after that every form post adds a lead to the funnel’s first stage with the funnel’s tags and the UTMs. The same phone again updates that lead.
         </p>
         {canEdit && (
           <button type="button" className="btn btn-primary" onClick={() => setEditing({ page: null })}>
@@ -89,7 +98,6 @@ export function LandingPagesTab({
         <div className="stack">
           {pages.map((p) => {
             const st = stats.get(p.id) ?? { leads: 0, posts: 0, subs: [] }
-            const url = webhookUrl(p.webhook_key)
             return (
               <section key={p.id} className={cn('card lp-card', !p.is_active && 'is-off')}>
                 <div className="lp-head">
@@ -139,21 +147,84 @@ export function LandingPagesTab({
                 </div>
 
                 <div className="lp-block">
-                  <span className="lp-label">Webhook URL</span>
-                  <div className="code-line with-actions">
-                    <span className="cell-clip">{url}</span>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => copy(`wh-${p.id}`, url)}>
-                      {copied === `wh-${p.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `wh-${p.id}` ? 'Copied' : 'Copy'}
-                    </button>
+                  <div className="row-between">
+                    <span className="lp-label">Webhooks</span>
                     {canEdit && (
-                      <button type="button" className="btn btn-ghost btn-sm" title="New secret key; the old URL stops working" onClick={() => setConfirm({ kind: 'regen', page: p })}>
-                        <RefreshCw size={14} /> Regenerate
+                      <button type="button" className="add-chip" onClick={() => setNaming({ page: p, hook: null })}>
+                        <Plus size={14} /> Webhook
                       </button>
                     )}
                   </div>
+                  <div className="muted small">One URL per form on this page (e.g. hero form, popup, footer form). Each has its own field mapping.</div>
+                  {p.landing_page_webhooks.map((h) => {
+                    const url = webhookUrl(h.webhook_key)
+                    return (
+                      <div key={h.id} className={cn('lp-hook', !h.is_active && 'is-off')}>
+                        <div className="row-between">
+                          <div className="row" style={{ gap: 8 }}>
+                            <Webhook size={14} />
+                            <b>{h.name}</b>
+                            {!h.is_active && <span className="badge badge-muted">Off</span>}
+                          </div>
+                          {canEdit && (
+                            <div className="row-actions">
+                              <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Rename" aria-label={`Rename ${h.name}`} onClick={() => setNaming({ page: p, hook: h })}>
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-icon btn-sm"
+                                title={h.is_active ? 'Turn off (this URL stops accepting leads)' : 'Turn on'}
+                                aria-label={h.is_active ? `Turn off ${h.name}` : `Turn on ${h.name}`}
+                                disabled={busy}
+                                onClick={() => run(() => setWebhookActive(h.id, !h.is_active), h.is_active ? `${h.name} turned off.` : `${h.name} turned on.`)}
+                              >
+                                <Power size={14} />
+                              </button>
+                              {p.landing_page_webhooks.length > 1 && (
+                                <button type="button" className="btn btn-ghost btn-icon btn-sm danger-text" title="Delete" aria-label={`Delete ${h.name}`} onClick={() => setConfirm({ kind: 'hook', hook: h })}>
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="code-line with-actions">
+                          <span className="cell-clip">{url}</span>
+                          <button type="button" className="btn btn-outline btn-sm" onClick={() => copy(`wh-${h.id}`, url)}>
+                            {copied === `wh-${h.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `wh-${h.id}` ? 'Copied' : 'Copy'}
+                          </button>
+                          {canEdit && (
+                            <button type="button" className="btn btn-ghost btn-sm" title="New secret key; the old URL stops working" onClick={() => setConfirm({ kind: 'regen', hook: h })}>
+                              <RefreshCw size={14} /> Regenerate
+                            </button>
+                          )}
+                        </div>
+                        <FieldMapping key={`${h.id}-${h.sample_at ?? ''}`} hook={h} canEdit={canEdit} onChanged={onChanged} onError={onError} />
+                        <div className="row">
+                          <span className="lp-label" style={{ marginRight: 4 }}>
+                            <Code2 size={13} /> How to connect
+                          </span>
+                          <div className="seg seg-sm">
+                            {(['html', 'js', 'curl'] as const).map((k) => (
+                              <button key={k} type="button" className={cn(snippet[h.id] === k && 'is-active')} onClick={() => setSnippet((x) => ({ ...x, [h.id]: x[h.id] === k ? undefined : k }))}>
+                                {k === 'html' ? 'HTML form' : k === 'js' ? 'JavaScript' : 'cURL'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        {snippet[h.id] && (
+                          <div className="snippet">
+                            <button type="button" className="btn btn-outline btn-sm snippet-copy" onClick={() => copy(`s-${h.id}`, snippetFor(h, snippet[h.id]))}>
+                              {copied === `s-${h.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `s-${h.id}` ? 'Copied' : 'Copy'}
+                            </button>
+                            <pre>{snippetFor(h, snippet[h.id])}</pre>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-
-                <FieldMapping key={`${p.id}-${p.sample_at ?? ''}`} page={p} canEdit={canEdit} onChanged={onChanged} onError={onError} />
                 <div className="lp-block">
                   <div className="row-between">
                     <span className="lp-label">UTM links</span>
@@ -219,36 +290,6 @@ export function LandingPagesTab({
                   )}
                 </div>
 
-                <div className="lp-block">
-                  <div className="row">
-                    <span className="lp-label" style={{ marginRight: 4 }}>
-                      <Code2 size={13} /> How to connect
-                    </span>
-                    <div className="seg seg-sm">
-                      <button type="button" className={cn(snippet[p.id] === 'html' && 'is-active')} onClick={() => setSnippet((s) => ({ ...s, [p.id]: s[p.id] === 'html' ? undefined : 'html' }))}>
-                        HTML form
-                      </button>
-                      <button type="button" className={cn(snippet[p.id] === 'js' && 'is-active')} onClick={() => setSnippet((s) => ({ ...s, [p.id]: s[p.id] === 'js' ? undefined : 'js' }))}>
-                        JavaScript
-                      </button>
-                      <button type="button" className={cn(snippet[p.id] === 'curl' && 'is-active')} onClick={() => setSnippet((s) => ({ ...s, [p.id]: s[p.id] === 'curl' ? undefined : 'curl' }))}>
-                        cURL
-                      </button>
-                    </div>
-                  </div>
-                  {snippet[p.id] && (
-                    <div className="snippet">
-                      <button
-                        type="button"
-                        className="btn btn-outline btn-sm snippet-copy"
-                        onClick={() => copy(`s-${p.id}`, snippetFor(p, snippet[p.id]))}
-                      >
-                        {copied === `s-${p.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `s-${p.id}` ? 'Copied' : 'Copy'}
-                      </button>
-                      <pre>{snippetFor(p, snippet[p.id])}</pre>
-                    </div>
-                  )}
-                </div>
               </section>
             )
           })}
@@ -277,6 +318,42 @@ export function LandingPagesTab({
         />
       )}
 
+      {naming && (
+        <Modal
+          open
+          onClose={() => setNaming(null)}
+          width={460}
+          title={naming.hook ? 'Rename webhook' : `New webhook · ${naming.page.name}`}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setNaming(null)}>
+                Cancel
+              </Button>
+              <div className="foot-end">
+                <Button
+                  disabled={busy || !hookName.trim()}
+                  onClick={() => {
+                    const n = naming
+                    setNaming(null)
+                    void run(
+                      () => (n.hook ? renameWebhook(n.hook.id, hookName) : addWebhook(tenant.id, n.page.id, hookName)),
+                      n.hook ? 'Webhook renamed.' : `Webhook ${hookName.trim()} added. Copy its URL into that form.`,
+                    )
+                  }}
+                >
+                  {naming.hook ? 'Save' : 'Add webhook'}
+                </Button>
+              </div>
+            </>
+          }
+        >
+          <Label htmlFor="hook-name" required>
+            Name
+          </Label>
+          <TextInput id="hook-name" autoFocus placeholder="e.g. Hero form, Popup form" value={hookName} onChange={(e) => setHookName(e.target.value)} />
+        </Modal>
+      )}
+
       <ConfirmModal
         open={!!confirm}
         icon={confirm?.kind === 'regen' ? RefreshCw : Trash2}
@@ -286,13 +363,17 @@ export function LandingPagesTab({
             ? 'Regenerate the webhook URL?'
             : confirm?.kind === 'delete'
               ? `Delete ${confirm.page.name}?`
-              : `Delete ${confirm?.kind === 'utm' ? confirm.utm.label : ''}?`
+              : confirm?.kind === 'hook'
+                ? `Delete the webhook ${confirm.hook.name}?`
+                : `Delete ${confirm?.kind === 'utm' ? confirm.utm.label : ''}?`
         }
         message={
           confirm?.kind === 'regen'
             ? 'The current URL stops working straight away. Put the new URL in the landing page form after this.'
             : confirm?.kind === 'delete'
-              ? 'Its webhook stops accepting leads. Leads that already came from it are kept.'
+              ? 'Its webhooks stop accepting leads. Leads that already came from it are kept.'
+              : confirm?.kind === 'hook'
+                ? 'This URL stops accepting leads. Leads that already came through it are kept.'
               : 'The link is removed from this list. Leads that came through it keep their UTMs.'
         }
         confirmLabel={busy ? 'Working…' : confirm?.kind === 'regen' ? 'Regenerate' : 'Delete'}
@@ -300,7 +381,8 @@ export function LandingPagesTab({
         onCancel={() => setConfirm(null)}
         onConfirm={() => {
           if (!confirm) return
-          if (confirm.kind === 'regen') void run(() => regenerateWebhookKey(confirm.page.id), 'New webhook URL created. Update the landing page form.')
+          if (confirm.kind === 'regen') void run(() => regenerateWebhookKey(confirm.hook.id), 'New webhook URL created. Update the landing page form.')
+          else if (confirm.kind === 'hook') void run(() => deleteWebhook(confirm.hook.id), `${confirm.hook.name} deleted.`)
           else if (confirm.kind === 'delete') void run(() => archiveLandingPage(confirm.page.id), `${confirm.page.name} deleted.`)
           else void run(() => deleteUtmLink(confirm.utm.id), `${confirm.utm.label} deleted.`)
         }}

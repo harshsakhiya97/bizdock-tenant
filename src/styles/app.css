@@ -697,3 +697,6 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cb-param .wa-var { grid-column: 1 / -1; }
 .cb-param .input-sm { height: 40px; }
 .cb-param .wa-var { font-size: 12.5px; }
+.lp-hook { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
+.lp-hook.is-off { opacity: .7; }
+.lp-hook .lp-block { padding: 0; border: 0; }

@@ -84,6 +84,24 @@ export type LandingPage = {
   sort_order: number
   created_at: string
   landing_page_utms: UtmLink[]
+  landing_page_webhooks: LandingPageWebhook[]
+}
+
+/** One webhook URL of a landing page (a page can have several forms, each with its own URL and field mapping). */
+export type LandingPageWebhook = {
+  id: string
+  tenant_id: string
+  landing_page_id: string
+  name: string
+  webhook_key: string
+  /** incoming form field → lead field ("phone", "email", … "extra", "ignore") */
+  field_map: Record<string, string>
+  /** test mode: the next form post is saved as `sample` (no lead) until this time */
+  test_mode_until: string | null
+  sample: Record<string, string> | null
+  sample_at: string | null
+  is_active: boolean
+  created_at: string
 }
 
 export type LandingPageInput = {

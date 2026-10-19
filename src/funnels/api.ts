@@ -1,5 +1,5 @@
 import { db } from '@/lib/supabase'
-import type { FunnelInput, FunnelRow, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink } from './types'
+import type { FunnelInput, FunnelRow, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, LandingPageWebhook } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
@@ -92,7 +92,7 @@ export function utmUrl(pageUrl: string | null, u: Partial<Record<'utm_source' | 
 export async function listLandingPages(funnelId: string): Promise<LandingPage[]> {
   const { data, error } = await db()
     .from('landing_pages')
-    .select('*, landing_page_utms(*)')
+    .select('*, landing_page_utms(*), landing_page_webhooks(*)')
     .eq('funnel_id', funnelId)
     .is('archived_at', null)
     .order('sort_order')
@@ -101,6 +101,7 @@ export async function listLandingPages(funnelId: string): Promise<LandingPage[]>
   return ((data ?? []) as LandingPage[]).map((p) => ({
     ...p,
     landing_page_utms: [...(p.landing_page_utms ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)),
+    landing_page_webhooks: [...(p.landing_page_webhooks ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at)),
   }))
 }
 
@@ -120,34 +121,55 @@ export async function setLandingPageActive(id: string, active: boolean) {
   if (error) throw error
 }
 
-export async function getLandingPage(id: string): Promise<LandingPage | null> {
-  const { data, error } = await db().from('landing_pages').select('*, landing_page_utms(*)').eq('id', id).maybeSingle()
+export async function getWebhook(id: string): Promise<LandingPageWebhook | null> {
+  const { data, error } = await db().from('landing_page_webhooks').select('*').eq('id', id).maybeSingle()
   if (error) throw error
-  return (data as LandingPage | null) ?? null
+  return (data as LandingPageWebhook | null) ?? null
+}
+
+/** another webhook URL on a landing page (e.g. a second form or a popup) */
+export async function addWebhook(tenantId: string, pageId: string, name: string) {
+  const { error } = await db().from('landing_page_webhooks').insert({ tenant_id: tenantId, landing_page_id: pageId, name: name.trim() || 'Form' })
+  if (error) throw error
+}
+
+export async function renameWebhook(id: string, name: string) {
+  const { error } = await db().from('landing_page_webhooks').update({ name: name.trim() }).eq('id', id)
+  if (error) throw error
+}
+
+export async function setWebhookActive(id: string, active: boolean) {
+  const { error } = await db().from('landing_page_webhooks').update({ is_active: active }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteWebhook(id: string) {
+  const { error } = await db().from('landing_page_webhooks').delete().eq('id', id)
+  if (error) throw error
 }
 
 /** test mode: for the next 10 minutes the next form post is saved as a sample instead of a lead */
 export async function startWebhookTest(id: string) {
   const until = new Date(Date.now() + 10 * 60 * 1000).toISOString()
-  const { error } = await db().from('landing_pages').update({ test_mode_until: until }).eq('id', id)
+  const { error } = await db().from('landing_page_webhooks').update({ test_mode_until: until }).eq('id', id)
   if (error) throw error
   return until
 }
 
 export async function stopWebhookTest(id: string) {
-  const { error } = await db().from('landing_pages').update({ test_mode_until: null }).eq('id', id)
+  const { error } = await db().from('landing_page_webhooks').update({ test_mode_until: null }).eq('id', id)
   if (error) throw error
 }
 
 export async function saveFieldMap(id: string, map: Record<string, string>) {
-  const { error } = await db().from('landing_pages').update({ field_map: map }).eq('id', id)
+  const { error } = await db().from('landing_page_webhooks').update({ field_map: map }).eq('id', id)
   if (error) throw error
 }
 
 /** a new secret key: the old webhook URL stops working */
 export async function regenerateWebhookKey(id: string) {
   const key = crypto.randomUUID().replace(/-/g, '')
-  const { error } = await db().from('landing_pages').update({ webhook_key: key }).eq('id', id)
+  const { error } = await db().from('landing_page_webhooks').update({ webhook_key: key }).eq('id', id)
   if (error) throw error
 }
 

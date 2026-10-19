@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, FlaskConical, Loader2, Save, X } from 'lucide-react'
-import { getLandingPage, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
+import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
 import { KNOWN_NAMES, LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
-import type { LandingPage } from './types'
+import type { LandingPageWebhook } from './types'
 
 /**
  * Test mode + field mapping for one landing page:
  * "Test webhook" → the next form post is saved as a sample (no lead) → its fields are matched to lead fields.
  */
 export function FieldMapping({
-  page,
+  hook: page,
   canEdit,
   onChanged,
   onError,
 }: {
-  page: LandingPage
+  hook: LandingPageWebhook
   canEdit: boolean
   onChanged: (msg: string) => void
   onError: (msg: string) => void
@@ -40,7 +40,7 @@ export function FieldMapping({
         return
       }
       try {
-        const p = await getLandingPage(page.id)
+        const p = await getWebhook(page.id)
         if (p?.sample_at && p.sample_at !== startedAt.current) {
           setSample(p.sample)
           setSampleAt(p.sample_at)
