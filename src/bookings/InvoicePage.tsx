@@ -4,11 +4,29 @@ import { Printer } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import type { BillingCompanyRow } from '@/masters/types'
 import { createBookingInvoice, getBooking } from './api'
-import { slotText } from './BookingsTab'
 import type { BookingRow } from './types'
 
-const inr = (n: number) => `₹${Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+const inr = (n: number) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
+
+const ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety']
+const two = (n: number) => (n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]}${n % 10 ? ` ${ONES[n % 10]}` : ''}`)
+const three = (n: number) => [n >= 100 ? `${ONES[Math.floor(n / 100)]} Hundred` : '', two(n % 100)].filter(Boolean).join(' ')
+/** Indian numbering: 12500 → "Twelve Thousand Five Hundred Rupees Only" */
+function inWords(amount: number) {
+  let n = Math.floor(amount)
+  const paise = Math.round((amount - n) * 100)
+  if (!n && !paise) return 'Zero Rupees Only'
+  const parts: string[] = []
+  for (const [size, name] of [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']] as const) {
+    if (n >= size) {
+      parts.push(`${three(Math.floor(n / size))} ${name}`)
+      n %= size
+    }
+  }
+  if (n) parts.push(three(n))
+  return `${parts.join(' ')} Rupees${paise ? ` and ${two(paise)} Paise` : ''} Only`
+}
 
 /** Printable invoice for one booking (Print → Save as PDF). */
 export function InvoicePage() {
@@ -66,122 +84,136 @@ export function InvoicePage() {
   const half = Math.round((b.gst_amount / 2) * 100) / 100
   const balance = Math.max(0, b.total_amount - b.paid_amount)
 
+  const seller = co ? co.legal_name || co.name : biz?.legal_name || biz?.name || 'Invoice'
+  const sellerSub = co ? null : biz?.sub
+  const sellerLines = co
+    ? [co.address, co.state, co.gst_number ? `GSTIN: ${co.gst_number}` : null]
+    : [biz?.address, [biz?.city, biz?.state].filter(Boolean).join(', ') || null, biz?.gst_number ? `GSTIN: ${biz.gst_number}` : null]
+  const stamp = balance <= 0 ? 'PAID' : b.paid_amount > 0 ? 'PART PAID' : 'DUE'
+  const status = b.status.charAt(0).toUpperCase() + b.status.slice(1)
+  const longDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
+  const shortDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  const clock = (t: string) => {
+    const [h, m] = t.slice(0, 5).split(':').map(Number)
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`
+  }
+
   return (
-    <>
+    <div className="inv2-wrap">
       <div className="inv-actions">
-        <button type="button" className="btn btn-primary" onClick={() => window.print()}>
+        <button type="button" className="btn btn-outline" onClick={() => (window.history.length > 1 ? window.history.back() : window.close())}>
+          ← Back to Bookings
+        </button>
+        <button type="button" className="btn btn-primary inv2-print" onClick={() => window.print()}>
           <Printer size={15} /> Print / Save PDF
         </button>
       </div>
-      <article className="inv-page">
-        <div className="inv-top">
+      <article className="inv2">
+        <header className="inv2-head">
           <div>
-            <h1>{co ? co.legal_name || co.name : biz?.legal_name || biz?.name || 'Invoice'}</h1>
-            <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-              {co ? (
-                <>
-                  {co.address}
-                  {co.state ? `\n${co.state}` : ''}
-                  {co.gst_number ? `\nGSTIN: ${co.gst_number}` : ''}
-                </>
-              ) : (
-                <>
-                  {biz?.sub ?? ''}
-                  {biz?.address ? `${biz.sub ? '\n' : ''}${biz.address}` : ''}
-                  {biz?.city || biz?.state ? `\n${[biz.city, biz.state].filter(Boolean).join(', ')}` : ''}
-                  {biz?.gst_number ? `\nGSTIN: ${biz.gst_number}` : ''}
-                </>
-              )}
-            </div>
+            <h1>{seller}</h1>
+            {sellerSub && <div className="inv2-sub">{sellerSub}</div>}
+            {sellerLines.filter(Boolean).map((l, i) => (
+              <div key={i} className="inv2-sub">
+                {l}
+              </div>
+            ))}
           </div>
-          <div className="inv-meta">
-            <b style={{ fontSize: 16 }}>{b.gst_applicable ? 'TAX INVOICE' : 'INVOICE'}</b>
-            <div>
-              No. <b>{b.invoice_no}</b>
-            </div>
-            <div>Date {b.invoice_date ? day(b.invoice_date) : '—'}</div>
+          <div className="inv2-title">
+            {sellerSub && <div className="inv2-kicker">{sellerSub}</div>}
+            <div className="inv2-big">{b.gst_applicable ? 'TAX INVOICE' : 'INVOICE'}</div>
+            <span className={`inv2-stamp ${stamp === 'PAID' ? 'is-paid' : 'is-due'}`}>{stamp}</span>
           </div>
-        </div>
+        </header>
 
-        <div className="inv-parties">
+        <section className="inv2-info">
           <div>
-            <h4>Bill to</h4>
-            <b>{b.client_name}</b>
-            <div>{b.phone}</div>
+            <div className="inv2-label">Billed to</div>
+            <div className="inv2-client">{b.client_name}</div>
+            {b.phone && <div>{b.phone}</div>}
             {client?.email && <div>{client.email}</div>}
             {client?.city && <div>{client.city}</div>}
           </div>
-          <div>
-            <h4>Booking</h4>
-            <div>{slotText(b)}</div>
-            <div>
-              {hours} hour{hours === 1 ? '' : 's'}
-              {b.purpose ? ` · ${b.purpose}` : ''}
-            </div>
-          </div>
-        </div>
+          <dl className="inv2-meta">
+            <dt>Invoice No.</dt>
+            <dd>
+              <b>{b.invoice_no}</b>
+            </dd>
+            <dt>Invoice Date</dt>
+            <dd>{b.invoice_date ? shortDay(b.invoice_date) : '—'}</dd>
+            <dt>Shoot Date</dt>
+            <dd>{longDay(b.booking_date)}</dd>
+            <dt>Status</dt>
+            <dd>{status}</dd>
+          </dl>
+        </section>
 
-        <table className="inv-table">
+        <table className="inv2-table">
           <thead>
             <tr>
               <th>Description</th>
-              <th className="r">Hours</th>
               <th className="r">Amount</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>
-                {b.purpose ? `${b.purpose} — studio booking` : 'Studio booking'}
-                <div style={{ fontSize: 12, color: '#6b7280' }}>{slotText(b)}</div>
+                <b>{sellerSub ? `${sellerSub}${b.purpose ? ` - ${b.purpose}` : ''}` : b.purpose || 'Studio booking'}</b>
+                <div className="inv2-muted">
+                  {shortDay(b.booking_date)} · {clock(b.start_time)} - {clock(b.end_time)} · {hours} hr{hours === 1 ? '' : 's'}
+                </div>
               </td>
-              <td className="r">{hours}</td>
               <td className="r">{inr(b.amount)}</td>
             </tr>
             {b.gst_applicable && (
               <>
-                <tr>
-                  <td colSpan={2} className="r">
-                    CGST {b.gst_rate / 2}%
-                  </td>
+                <tr className="inv2-tax">
+                  <td>CGST {b.gst_rate / 2}%</td>
                   <td className="r">{inr(half)}</td>
                 </tr>
-                <tr>
-                  <td colSpan={2} className="r">
-                    SGST {b.gst_rate / 2}%
-                  </td>
+                <tr className="inv2-tax">
+                  <td>SGST {b.gst_rate / 2}%</td>
                   <td className="r">{inr(b.gst_amount - half)}</td>
                 </tr>
               </>
             )}
-            <tr className="inv-total">
-              <td colSpan={2} className="r">
-                Total
-              </td>
-              <td className="r">{inr(b.total_amount)}</td>
-            </tr>
-            {b.booking_payments.map((p) => (
-              <tr key={p.id}>
-                <td colSpan={2} className="r" style={{ color: '#6b7280' }}>
-                  Received {day(p.paid_on)}
-                  {p.payment_mode_id ? ` · ${modes.get(p.payment_mode_id) ?? ''}` : ''}
-                  {p.reference ? ` · ${p.reference}` : ''}
-                </td>
-                <td className="r">− {inr(p.amount)}</td>
-              </tr>
-            ))}
-            <tr className="inv-total">
-              <td colSpan={2} className="r">
-                Balance due
-              </td>
-              <td className="r">{inr(balance)}</td>
-            </tr>
           </tbody>
         </table>
 
-        {b.notes && <p style={{ fontSize: 13, marginTop: 20 }}>{b.notes}</p>}
-        <div className="inv-foot">This is a computer-generated invoice.</div>
+        <div className="inv2-totals">
+          <div className="inv2-total">
+            <span>Total</span>
+            <span>{inr(b.total_amount)}</span>
+          </div>
+          {b.booking_payments.map((p) => (
+            <div key={p.id} className="inv2-row">
+              <span>
+                Received {shortDay(p.paid_on)}
+                {p.payment_mode_id ? ` · ${modes.get(p.payment_mode_id) ?? ''}` : ''}
+                {p.reference ? ` · ${p.reference}` : ''}
+              </span>
+              <span>- {inr(p.amount)}</span>
+            </div>
+          ))}
+          <div className="inv2-row">
+            <span>Balance Due</span>
+            <span>{inr(balance)}</span>
+          </div>
+        </div>
+        <p className="inv2-words">Amount in words: {inWords(b.total_amount)}</p>
+        {b.notes && <p className="inv2-words">{b.notes}</p>}
+
+        <footer className="inv2-foot">
+          <div>
+            <div>Advance is non-refundable. Balance is payable on or before the shoot date.</div>
+            <div>This is a computer-generated invoice.</div>
+          </div>
+          <div className="inv2-sign">
+            <div>Authorised Signatory</div>
+            <div>{seller}</div>
+          </div>
+        </footer>
       </article>
-    </>
+    </div>
   )
 }

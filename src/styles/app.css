@@ -714,3 +714,41 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .bk-total b { font-size: 18px; color: var(--brand); }
 .bk-extra { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr auto; gap: 8px; align-items: end; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
 .cal-item-acts { display: flex; gap: 6px; margin-left: 10px; }
+/* invoice (print layout) */
+.inv2-wrap { background: #eef0f4; min-height: 100vh; padding: 20px 16px 40px; font-family: 'Outfit', 'Inter', system-ui, sans-serif; }
+.inv2-wrap .inv-actions { max-width: 1110px; }
+.inv2-print { background: #2a4d82; border-color: #2a4d82; }
+.inv2 { max-width: 1110px; margin: 14px auto 0; background: #fff; color: #1f2937; border: 1px solid #e3e6ec; border-radius: 12px; padding: 44px 64px 40px; }
+.inv2-head { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 3px solid #2a4d82; }
+.inv2-head h1 { margin: 0 0 6px; color: #2a4d82; font-size: 30px; font-weight: 700; letter-spacing: -.01em; }
+.inv2-sub { color: #4b5563; font-size: 14px; line-height: 1.5; }
+.inv2-title { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.inv2-kicker { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: #6b7280; }
+.inv2-big { font-size: 38px; font-weight: 800; letter-spacing: .1em; color: #2a4d82; line-height: 1.05; }
+.inv2-stamp { margin-top: 10px; padding: 4px 14px; border: 2px solid; border-radius: 6px; font-weight: 700; letter-spacing: .1em; font-size: 14px; transform: rotate(-3deg); }
+.inv2-stamp.is-paid { color: #2e7d32; border-color: #2e7d32; }
+.inv2-stamp.is-due { color: #c62828; border-color: #c62828; }
+.inv2-info { display: flex; justify-content: space-between; gap: 24px; margin: 28px 0 26px; font-size: 14px; line-height: 1.6; }
+.inv2-label { font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; }
+.inv2-client { font-size: 18px; font-weight: 700; color: #111827; }
+.inv2-meta { display: grid; grid-template-columns: auto auto; column-gap: 24px; row-gap: 6px; margin: 0; }
+.inv2-meta dt { color: #6b7280; }
+.inv2-meta dd { margin: 0; color: #111827; }
+.inv2-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.inv2-table th { background: #2a4d82; color: #fff; text-align: left; padding: 10px 16px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.inv2-table td { padding: 14px 16px 12px; vertical-align: top; }
+.inv2-table .r { text-align: right; }
+.inv2-table tbody tr:last-child td { border-bottom: 2px solid #1f2937; }
+.inv2-tax td { padding-top: 4px; padding-bottom: 4px; color: #4b5563; }
+.inv2-muted { color: #4b5563; margin-top: 6px; }
+.inv2-totals { padding: 14px 16px 0; }
+.inv2-total { display: flex; justify-content: space-between; font-size: 19px; font-weight: 700; color: #111827; margin-bottom: 14px; }
+.inv2-row { display: flex; justify-content: space-between; color: #4b5563; font-size: 14px; margin-bottom: 10px; }
+.inv2-words { color: #4b5563; font-size: 14px; margin: 14px 0 0; }
+.inv2-foot { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: 90px; font-size: 13px; color: #4b5563; line-height: 1.8; }
+.inv2-sign { min-width: 240px; border-top: 1.5px solid #374151; padding-top: 8px; text-align: center; line-height: 1.4; }
+@media print {
+  .inv2-wrap { background: #fff; padding: 0; min-height: 0; }
+  .inv2 { border: 0; border-radius: 0; padding: 0; max-width: none; margin: 0; }
+  .inv2-table th, .inv2-stamp { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
