@@ -60,7 +60,7 @@ export function BookingDrawer({
   // calendar: a lead to link, or '' for a direct booking (no enquiry)
   const [pickedLead, setPickedLead] = useState<string>('')
   // multi-day: more dates for the same client (saved as separate bookings)
-  const [extra, setExtra] = useState<{ date: string; start: string; end: string }[]>([])
+  const [extra, setExtra] = useState<{ date: string; start: string; end: string; amount: string }[]>([])
   const [input, setInput] = useState<BookingInput>(() => ({
     business_id: booking?.business_id ?? lead?.business_id ?? selected?.id ?? businesses[0]?.id ?? '',
     sub_business_id: booking ? (booking.sub_business_id ?? '') : (lead ? (lead.sub_business_id ?? '') : (sub?.id ?? '')),
@@ -135,7 +135,7 @@ export function BookingDrawer({
       const clean = { ...data, sub_business_id: subOf(subs, data.sub_business_id) }
       await saveBooking(tenant.id, me, booking, clean, null)
       // extra dates: same client, GST, status and note; the advance stays on the first date
-      for (const x of extra) await saveBooking(tenant.id, me, null, { ...clean, booking_date: x.date, start_time: x.start, end_time: x.end, advance: '' }, null)
+      for (const x of extra) await saveBooking(tenant.id, me, null, { ...clean, booking_date: x.date, start_time: x.start, end_time: x.end, amount: x.amount, advance: '' }, null)
       const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
       onSaved(
         booking
@@ -191,7 +191,7 @@ export function BookingDrawer({
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
               <Button onClick={save} disabled={busy}>
-                {busy ? 'Saving…' : booking ? 'Save booking' : 'Book slot'}
+                {busy ? 'Saving…' : booking ? 'Save booking' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
               </Button>
             )}
           </div>
@@ -296,16 +296,38 @@ export function BookingDrawer({
 
           {!booking && (
             <div className="stack" style={{ gap: 8 }}>
-              {extra.map((x, i) => (
-                <div key={i} className="bk-extra">
-                  <TextInput aria-label="Date" type="date" value={x.date} onChange={(e) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, date: e.target.value } : y)))} />
-                  <TextInput aria-label="Start" type="time" step={900} value={x.start} onChange={(e) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, start: e.target.value } : y)))} />
-                  <TextInput aria-label="End" type="time" step={900} value={x.end} onChange={(e) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, end: e.target.value } : y)))} />
-                  <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove this date" onClick={() => setExtra((l) => l.filter((_, j) => j !== i))}>
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              ))}
+              {extra.map((x, i) => {
+                const upd = (k: 'date' | 'start' | 'end' | 'amount', v: string) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, [k]: v } : y)))
+                return (
+                  <div key={i} className="bk-extra">
+                    <div>
+                      <Label htmlFor={`bx-d-${i}`} required>
+                        Date
+                      </Label>
+                      <TextInput id={`bx-d-${i}`} type="date" value={x.date} onChange={(e) => upd('date', e.target.value)} />
+                    </div>
+                    <div>
+                      <Label htmlFor={`bx-s-${i}`} required>
+                        Start time
+                      </Label>
+                      <TextInput id={`bx-s-${i}`} type="time" step={900} value={x.start} onChange={(e) => upd('start', e.target.value)} />
+                    </div>
+                    <div>
+                      <Label htmlFor={`bx-e-${i}`} required>
+                        End time
+                      </Label>
+                      <TextInput id={`bx-e-${i}`} type="time" step={900} value={x.end} onChange={(e) => upd('end', e.target.value)} />
+                    </div>
+                    <div>
+                      <Label htmlFor={`bx-a-${i}`}>Amount (₹)</Label>
+                      <TextInput id={`bx-a-${i}`} type="number" min={0} placeholder="Charge before GST" value={x.amount} onChange={(e) => upd('amount', e.target.value)} />
+                    </div>
+                    <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove this date" onClick={() => setExtra((l) => l.filter((_, j) => j !== i))}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                )
+              })}
               <div className="row" style={{ gap: 10 }}>
                 <Button
                   variant="outline"
@@ -316,7 +338,7 @@ export function BookingDrawer({
                     const [y, m, d] = last.split('-').map(Number)
                     const next = new Date(y, m - 1, d + 1)
                     const iso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
-                    setExtra((l) => [...l, { date: iso, start: input.start_time, end: input.end_time }])
+                    setExtra((l) => [...l, { date: iso, start: input.start_time, end: input.end_time, amount: input.amount }])
                   }}
                 >
                   <Plus /> Add another date
