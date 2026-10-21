@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { cancelPayment, listAllPayments, verifyPayment } from './paymentsApi'
 import { RecordPaymentModal } from './RecordPaymentModal'
+import { Flash } from '@/components/Flash'
 
 const monthStart = () => `${todayIso().slice(0, 8)}01`
 const round2 = (n: number) => Math.round(n * 100) / 100
@@ -181,7 +182,7 @@ export function PaymentsPage() {
         }
       />
       {(notice.error || data.error) && <div className="alert alert-error">{notice.error ?? data.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
       {pendingCount > 0 && status !== 'pending' && (
         <div className="alert alert-warning row-between">
           <span>

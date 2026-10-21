@@ -13,6 +13,7 @@ import type { FollowUpRow } from '@/followups/types'
 import { useFollowUpData } from '@/followups/useFollowUpData'
 import { fullName } from '@/leads/labels'
 import { cn } from '@/lib/cn'
+import { Flash } from '@/components/Flash'
 
 function greeting() {
   const h = new Date().getHours()
@@ -82,7 +83,7 @@ export function MyDayPage() {
           </div>
         }
       />
-      {notice && <div className="alert alert-info">{notice}</div>}
+      <Flash msg={notice} />
       <MyDayCheckIn onNotice={setNotice} />
       {data.error && <div className="alert alert-error">{data.error}</div>}
 

@@ -10,6 +10,7 @@ import { telHref, waHref } from '@/followups/labels'
 import { cn } from '@/lib/cn'
 import { dueLabel, dueLeft, markReminded } from './api'
 import { RecordPaymentModal } from './RecordPaymentModal'
+import { Flash } from '@/components/Flash'
 
 type Window = 'overdue' | '7' | '30' | '90' | 'all'
 const addDays = (iso: string, n: number) => {
@@ -123,7 +124,7 @@ export function CollectionsPage() {
         }
       />
       {(notice.error || data.error) && <div className="alert alert-error">{notice.error ?? data.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
         <StatCard icon={AlarmClock} tone="danger" value={rupees(sum(emiOverdue))} label="EMI overdue" hint={`${emiOverdue.length} instalment${emiOverdue.length === 1 ? '' : 's'}`} />

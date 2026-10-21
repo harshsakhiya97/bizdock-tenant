@@ -19,6 +19,7 @@ import {
 import { MemberDrawer } from './MemberDrawer'
 import { ago, fmtDate } from './time'
 import type { BusinessOption, MemberRow, RoleRow } from './types'
+import { Flash } from '@/components/Flash'
 
 const TABS = ['Active', 'Inactive', 'All'] as const
 type Tab = (typeof TABS)[number]
@@ -255,7 +256,7 @@ export function TeamPanel() {
   return (
     <>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-bar">

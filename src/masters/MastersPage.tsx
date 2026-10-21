@@ -14,6 +14,7 @@ import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
 import { TemplatesTab } from './TemplatesTab'
 import type { BillingCompanyRow, ProductRow, SimpleTable } from './types'
+import { Flash } from '@/components/Flash'
 
 type Tab = 'overview' | 'products' | 'billing' | 'whatsapp' | SimpleTable
 
@@ -58,7 +59,7 @@ export function MastersPage() {
     <>
       <PageHead title="Masters" subtitle="The lists the rest of the app picks from. Changes apply everywhere straight away." />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-tabs">

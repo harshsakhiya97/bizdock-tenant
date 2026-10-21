@@ -15,6 +15,7 @@ import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
+import { Flash } from '@/components/Flash'
 
 const FUNNEL_KEY = (t: string) => `leads.funnel.${t}`
 const read = (k: string) => {
@@ -287,7 +288,7 @@ export function LeadsPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
         <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={`${stats.hot} hot`} />

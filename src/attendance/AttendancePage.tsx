@@ -30,6 +30,7 @@ import {
   type Person,
 } from './api'
 import { TodayCard } from './TodayCard'
+import { Flash } from '@/components/Flash'
 
 const monthDays = (ym: string) => {
   const [y, m] = ym.split('-').map(Number)
@@ -132,7 +133,7 @@ export function AttendancePage() {
     <>
       <PageHead title="Attendance" subtitle="Check in and out, breaks, late marks and the monthly discipline report." />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="att-grid">
         <div className="stack">

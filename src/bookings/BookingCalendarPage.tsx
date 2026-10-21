@@ -13,6 +13,7 @@ import { BookingDrawer } from './BookingDrawer'
 import { slotText } from './BookingsTab'
 import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
+import { Flash } from '@/components/Flash'
 
 type View = 'list' | 'day' | 'week' | 'month'
 const VIEWS: { id: View; label: string }[] = [
@@ -375,7 +376,7 @@ export function BookingCalendarPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
         <StatCard icon={CalendarCheck} tone="brand" value={stats.count} label={`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`} hint={stats.tentative ? `${stats.tentative} tentative` : undefined} />

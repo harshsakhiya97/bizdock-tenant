@@ -11,6 +11,7 @@ import { archiveFunnel, listFunnels } from './api'
 import { FunnelDrawer } from './FunnelDrawer'
 import { FUNNEL_TYPES, typeLabel } from './templates'
 import type { FunnelRow, FunnelType } from './types'
+import { Flash } from '@/components/Flash'
 
 const typeTone: Record<FunnelType, string> = {
   lead_gen: 'badge-info',
@@ -96,7 +97,7 @@ export function FunnelsPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-bar">

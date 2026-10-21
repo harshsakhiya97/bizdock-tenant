@@ -7,6 +7,7 @@ import { Label, PasswordInput, TextInput } from '@/components/Field'
 import { LogoutDialog } from '@/components/LogoutDialog'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
+import { Flash } from '@/components/Flash'
 
 type Tab = 'profile' | 'password'
 type Msg = { error?: string; ok?: string }
@@ -134,7 +135,7 @@ function ProfileView() {
         </>
       )}
       {msg.error && <div className="alert alert-error">{msg.error}</div>}
-      {msg.ok && <div className="alert alert-info">{msg.ok}</div>}
+      <Flash msg={msg.ok} dep={msg} />
       <LogoutDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} />
     </>
   )
@@ -186,7 +187,7 @@ function ResetPasswordView() {
           />
         </div>
         {msg.error && <div className="alert alert-error">{msg.error}</div>}
-        {msg.ok && <div className="alert alert-info">{msg.ok}</div>}
+        <Flash msg={msg.ok} dep={msg} />
         <div>
           <button type="submit" className="btn btn-dark" disabled={busy}>
             {busy ? 'Updating…' : 'Update Password'}

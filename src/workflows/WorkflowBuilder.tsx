@@ -22,6 +22,7 @@ import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowRow } from './types'
+import { Flash } from '@/components/Flash'
 
 const EDGE_DEFAULTS = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 } } as const
 const withLook = (e: FlowEdge): FlowEdge => ({
@@ -228,7 +229,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         <Info size={15} /> WhatsApp, email and calls are connected later. Until then the workflow is saved but no message is sent.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && !dirty && <div className="alert alert-info">{notice.ok}</div>}
+      {!dirty && <Flash msg={notice.ok} dep={notice} />}
 
       <div className="cb-layout">
         {canEdit && (

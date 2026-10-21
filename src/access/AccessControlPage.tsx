@@ -9,6 +9,7 @@ import { listMembers, listRoles } from '@/team/api'
 import { TeamPanel } from '@/team/TeamPanel'
 import type { MemberRow, RoleRow } from '@/team/types'
 import { RolesTab } from './RolesTab'
+import { Flash } from '@/components/Flash'
 
 /** Access Control: the Team (people, logins, per-person access) and Roles (what each role sees and does). */
 export function AccessControlPage() {
@@ -63,7 +64,7 @@ function RolesPanel() {
   return (
     <>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
       <div className="panel">
         <div className="panel-bar">
           <b>Roles</b>

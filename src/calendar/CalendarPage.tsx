@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { isoDate, listEvents, listEventTypes, listWebinarTypes, timeText, type EventRow, type EventType, type Option } from './api'
 import { EventDrawer } from './EventDrawer'
+import { Flash } from '@/components/Flash'
 
 type View = 'list' | 'day' | 'week' | 'month'
 const VIEWS: { id: View; label: string }[] = [
@@ -464,7 +465,7 @@ export function CalendarPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-bar">

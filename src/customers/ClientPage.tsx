@@ -22,6 +22,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { CustomerDrawer } from './CustomerDrawer'
 import { NewSaleDrawer, type SalePrefill } from './NewSaleDrawer'
 import { useSalesData } from './useSalesData'
+import { Flash } from '@/components/Flash'
 
 type Tab = 'details' | 'followups' | 'bookings' | 'invoices'
 
@@ -133,7 +134,7 @@ export function ClientPage() {
         </button>
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <section className="card card-pad rec-head">
         <div className="rec-avatar is-client">{client.full_name.slice(0, 1).toUpperCase()}</div>

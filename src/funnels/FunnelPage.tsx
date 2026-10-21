@@ -16,6 +16,7 @@ import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
+import { Flash } from '@/components/Flash'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -133,7 +134,7 @@ export function FunnelPage() {
       </div>
 
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-bar">

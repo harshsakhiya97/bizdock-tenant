@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
 import { deleteWatiTemplate, listWatiTemplates, type WatiTemplate } from './watiApi'
+import { Flash } from '@/components/Flash'
 
 const STATUS: Record<string, { label: string; tone: string }> = {
   APPROVED: { label: 'Approved', tone: 'badge-success' },
@@ -86,7 +87,7 @@ export function WaTemplatesPage() {
         }
       />
       {error && <div className="alert alert-error">{error}</div>}
-      {notice && <div className="alert alert-info">{notice}</div>}
+      <Flash msg={notice} />
 
       <div className="panel">
         <div className="panel-tabs">

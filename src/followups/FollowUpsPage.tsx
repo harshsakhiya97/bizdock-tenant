@@ -10,6 +10,7 @@ import { MODES, dayBounds, modeOf } from './labels'
 import { ScheduleModal } from './ScheduleModal'
 import type { FollowUpRow } from './types'
 import { useFollowUpData } from './useFollowUpData'
+import { Flash } from '@/components/Flash'
 
 const TABS = [
   { id: 'pending', label: 'Pending' },
@@ -127,7 +128,7 @@ export function FollowUpsPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
       {data.error && <div className="alert alert-error">{data.error}</div>}
 
       <div className="stat-grid">

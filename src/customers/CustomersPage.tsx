@@ -12,6 +12,7 @@ import { emisLeft, fmtDay, nextDue, PLANS, planOf, remainingOf, rupees, todayIso
 import { NewSaleDrawer, type SalePrefill } from './NewSaleDrawer'
 import type { CustomerRow, SaleRow } from './types'
 import { useSalesData, type SalesData } from './useSalesData'
+import { Flash } from '@/components/Flash'
 
 function downloadCsv(name: string, rows: (string | number)[][]) {
   const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -89,7 +90,7 @@ export function SalesPage() {
         }
       />
       {(notice.error || data.error) && <div className="alert alert-error">{notice.error ?? data.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       {scope('sales') === 'none' ? <Empty icon={ReceiptText}>Your access doesn’t include sales.</Empty> : <SalesTab data={data} onOpen={openClient} />}
 

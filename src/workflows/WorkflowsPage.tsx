@@ -11,6 +11,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { archiveWorkflow, createWorkflow, listWorkflows, loadRefData, setWorkflowActive } from './api'
 import { STEP_META, TRIGGERS, flowContext, triggerLabel, triggerSummary } from './steps'
 import type { RefData, TriggerData, TriggerEvent, WorkflowRow } from './types'
+import { Flash } from '@/components/Flash'
 
 /** Sidebar → Workflows: every workflow with its trigger, steps and on / off. */
 export function WorkflowsPage() {
@@ -82,7 +83,7 @@ export function WorkflowsPage() {
         }
       />
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <div className="panel">
         <div className="panel-bar">

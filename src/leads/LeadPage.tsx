@@ -20,6 +20,7 @@ import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
 import { followUp, fullName, money, tempOf } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
+import { Flash } from '@/components/Flash'
 
 type Tab = 'details' | 'followups' | 'bookings' | 'invoices'
 
@@ -154,7 +155,7 @@ export function LeadPage() {
         </button>
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
-      {notice.ok && <div className="alert alert-info">{notice.ok}</div>}
+      <Flash msg={notice.ok} dep={notice} />
 
       <section className="card card-pad rec-head">
         <div className="rec-avatar">{lead.first_name.slice(0, 1).toUpperCase()}</div>
