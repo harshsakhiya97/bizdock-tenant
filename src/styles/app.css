@@ -716,9 +716,9 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cal-item-acts { display: flex; gap: 6px; margin-left: 10px; }
 /* invoice (print layout) */
 .inv2-wrap { background: #eef0f4; min-height: 100vh; padding: 20px 16px 40px; font-family: 'Outfit', 'Inter', system-ui, sans-serif; }
-.inv2-wrap .inv-actions { max-width: 1110px; }
+.inv2-wrap .inv-actions { max-width: 820px; }
 .inv2-print { background: #2a4d82; border-color: #2a4d82; }
-.inv2 { max-width: 1110px; margin: 14px auto 0; background: #fff; color: #1f2937; border: 1px solid #e3e6ec; border-radius: 12px; padding: 44px 64px 40px; }
+.inv2 { max-width: 820px; margin: 14px auto 0; background: #fff; color: #1f2937; border: 1px solid #e3e6ec; border-radius: 12px; padding: 40px 52px 36px; }
 .inv2-head { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 3px solid #2a4d82; }
 .inv2-head h1 { margin: 0 0 6px; color: #2a4d82; font-size: 30px; font-weight: 700; letter-spacing: -.01em; }
 .inv2-sub { color: #4b5563; font-size: 14px; line-height: 1.5; }
