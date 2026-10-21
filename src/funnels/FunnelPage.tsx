@@ -173,7 +173,7 @@ export function FunnelPage() {
                 </div>
               </div>
 
-              <div className="fp-grid">
+              <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>
                   <b>Details</b>
                   {funnel.description && <p className="muted small" style={{ margin: 0 }}>{funnel.description}</p>}
@@ -213,24 +213,6 @@ export function FunnelPage() {
                   </div>
                 </section>
 
-                <section className="card card-pad stack" style={{ gap: 10 }}>
-                  <b>Leads by stage</b>
-                  {funnel.funnel_stages.map((s) => {
-                    const n = (leads ?? []).filter((l) => l.stage_id === s.id).length
-                    const max = Math.max(1, ...funnel.funnel_stages.map((x) => (leads ?? []).filter((l) => l.stage_id === x.id).length))
-                    return (
-                      <div key={s.id} className="fp-stage">
-                        <span className="funnel-stage" style={{ ['--c' as string]: s.color }}>
-                          {s.name}
-                        </span>
-                        <div className="fp-bar">
-                          <span style={{ width: `${(n / max) * 100}%`, background: s.color }} />
-                        </div>
-                        <b className="small">{n}</b>
-                      </div>
-                    )
-                  })}
-                </section>
               </div>
             </div>
           )}
