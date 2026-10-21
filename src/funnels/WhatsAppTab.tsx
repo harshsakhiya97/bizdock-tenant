@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { deleteSheet, parseSheetUrl, savePerisclaw, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
-import { SHEET_COLUMNS, guessColumn, parseExample, perisclawMessage } from './perisclaw'
+import { SHEET_COLUMNS, SHEET_FIELD_MAP, guessColumn, parseExample, perisclawMessage } from './perisclaw'
 import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelSheet, SheetInput } from './types'
 import { useCopy } from './useCopy'
@@ -209,7 +209,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
   const cols = useMemo(() => sheet.headers ?? [], [sheet.headers])
   // "Full Name" / "WhatsApp Number" are guessed like full_name / whatsapp_number (same as the sync)
   const norm = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-  const target = (k: string) => map[k] ?? guessTarget(norm(k))
+  const target = (k: string) => map[k] ?? SHEET_FIELD_MAP[k] ?? guessTarget(norm(k))
   const chosen = new Set(cols.map(target))
   const missing = [!chosen.has('name') && !chosen.has('first_name') ? 'Name' : null, !chosen.has('phone') ? 'Phone' : null, !chosen.has('email') ? 'Email' : null].filter(Boolean)
 
