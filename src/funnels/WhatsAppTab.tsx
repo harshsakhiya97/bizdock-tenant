@@ -157,7 +157,11 @@ export function WhatsAppTab({
               )}
 
               <PerisclawSetupBlock key={`p-${s.id}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
-              <SheetColumns key={`${s.id}-${(s.headers ?? []).join('|')}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
+              {s.perisclaw ? (
+                <RowOneCheck sheet={s} />
+              ) : (
+                <SheetColumns key={`${s.id}-${(s.headers ?? []).join('|')}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
+              )}
             </section>
           ))}
         </div>
@@ -525,6 +529,28 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** with a Perisclaw setup the columns come from the setup: warn when row 1 of the sheet doesn't match it */
+function RowOneCheck({ sheet }: { sheet: FunnelSheet }) {
+  const map = Object.fromEntries(Object.entries(sheet.perisclaw?.map ?? {}).map(([k, v]) => [k, fromSaved(v)]))
+  const expected = sheetColumns(map).map((c) => c.name)
+  const actual = (sheet.headers ?? []).filter((h) => !/^Column \d+$/.test(h))
+  if (!sheet.headers) return null
+  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+  if (expected.length === actual.length && expected.every((e, i) => same(e, actual[i]))) return null
+  return (
+    <div className="alert alert-warning small">
+      <span className="row" style={{ gap: 6, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+        <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+        <span>
+          Row 1 of the sheet doesn’t match the Perisclaw setup. It should be: <b>{expected.join(' | ')}</b>
+          <br />
+          The sheet has: <b>{actual.length ? actual.join(' | ') : 'nothing'}</b>
+        </span>
+      </span>
     </div>
   )
 }
