@@ -13,19 +13,22 @@ import { CATEGORY_LABEL, type MessageTemplate, type TemplateCategory } from './t
 export function WhatsAppModal({
   lead,
   vars,
+  defaultCategory = 'all',
   onClose,
   onSent,
 }: {
   lead: { id: string; name: string; phone: string; whatsapp?: string | null; subtitle?: string }
   /** values for {{first_name}}, {{purpose}}, {{required_on}}, {{business}}, {{booking_date}}… */
   vars: Record<string, string | null | undefined>
+  /** tab opened first (e.g. Follow-up from the follow-ups list) */
+  defaultCategory?: TemplateCategory | 'all'
   onClose: () => void
   onSent: (msg: string) => void
 }) {
   const tenant = useTenant()
   const { membership } = useAuth()
   const [templates, setTemplates] = useState<MessageTemplate[] | null>(null)
-  const [cat, setCat] = useState<TemplateCategory | 'all'>('all')
+  const [cat, setCat] = useState<TemplateCategory | 'all'>(defaultCategory)
   const [picked, setPicked] = useState<MessageTemplate | null>(null)
   const [text, setText] = useState('')
   const [error, setError] = useState<string | null>(null)

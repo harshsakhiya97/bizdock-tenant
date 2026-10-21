@@ -168,6 +168,7 @@ export function FollowUpTable({
           required_on: wl.required_on ? fmtDay(wl.required_on) : null,
           business: businesses.find((b) => b.id === wl.business_id)?.name,
         }}
+        defaultCategory="follow_up"
         onClose={() => setWa(null)}
         onSent={(msg) => {
           setWa(null)
