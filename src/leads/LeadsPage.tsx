@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
-import { CalendarClock, Download, Plus, RotateCcw, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { CalendarClock, Download, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
-import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
+import { ConfirmModal, Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
+import { deleteLeads, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
@@ -74,6 +74,7 @@ export function LeadsPage() {
   const [importing, setImporting] = useState(false)
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const [deleting, setDeleting] = useState(false)
   const [adding, setAdding] = useState(false)
   const openId = params.get('open')
   useEffect(() => {
@@ -466,27 +467,9 @@ export function LeadsPage() {
                   <RotateCcw size={14} /> Restore
                 </button>
               ) : (
-                <span className="bulk-group">
-                  <input
-                    className="input input-sm"
-                    placeholder="Archive reason"
-                    value={bulk.reason}
-                    onChange={(e) => setBulk((b) => ({ ...b, reason: e.target.value }))}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm danger-text"
-                    disabled={!bulk.reason.trim()}
-                    onClick={() =>
-                      run(async () => {
-                        await updateLeads(pickedIds, { is_archived: true, archive_reason: bulk.reason.trim(), archived_at: new Date().toISOString() })
-                        await logActivity(tenant.id, me, pickedIds, { kind: 'archived', note: bulk.reason.trim() })
-                      }, 'Leads archived.')
-                    }
-                  >
-                    Archive
-                  </button>
-                </span>
+                <button type="button" className="btn btn-outline btn-sm danger-text" onClick={() => setDeleting(true)}>
+                  <Trash2 size={14} /> Delete
+                </button>
               ))}
           </div>
         )}
@@ -593,6 +576,20 @@ export function LeadsPage() {
           }}
         />
       )}
+      <ConfirmModal
+        open={deleting}
+        danger
+        icon={Trash2}
+        title={`Delete ${pickedIds.length} lead${pickedIds.length === 1 ? '' : 's'}?`}
+        message="They are removed for good, with their follow-ups, activity and form submissions. Bookings stay, without the link to the lead."
+        confirmLabel="Delete"
+        onCancel={() => setDeleting(false)}
+        onConfirm={() => {
+          setDeleting(false)
+          const n = pickedIds.length
+          void run(() => deleteLeads(pickedIds), `${n} lead${n === 1 ? '' : 's'} deleted.`)
+        }}
+      />
     </>
   )
 }

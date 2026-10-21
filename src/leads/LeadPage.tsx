@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, MessageCircle, Pencil, PhoneCall, Star } from 'lucide-react'
+import { ArrowLeft, MessageCircle, Pencil, PhoneCall, Star, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
@@ -9,13 +9,13 @@ import { FollowUpsTab } from '@/bookings/FollowUpsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
 import type { BookingRow } from '@/bookings/types'
-import { Empty } from '@/components/ui'
+import { ConfirmModal, Empty } from '@/components/ui'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { ActivityLog } from './ActivityLog'
-import { getLead, listLostReasons, listMemberOptions } from './api'
+import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
 import { followUp, fullName, money, tempOf } from './labels'
@@ -46,6 +46,7 @@ export function LeadPage() {
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
+  const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -190,6 +191,11 @@ export function LeadPage() {
               <PhoneCall size={15} /> Log call
             </button>
           )}
+          {can('leads', 'delete') && (
+            <button type="button" className="btn btn-outline danger-text" onClick={() => setRemoving(true)}>
+              <Trash2 size={15} /> Delete
+            </button>
+          )}
           {canEdit && (
             <button type="button" className="btn btn-primary" onClick={() => setEditing(true)}>
               <Pencil size={15} /> Edit
@@ -276,6 +282,24 @@ export function LeadPage() {
           }}
         />
       )}
+      <ConfirmModal
+        open={removing}
+        danger
+        icon={Trash2}
+        title={`Delete ${name}?`}
+        message="The lead is removed for good, with its follow-ups, activity and form submissions. Its bookings stay, without the link to the lead."
+        confirmLabel="Delete"
+        onCancel={() => setRemoving(false)}
+        onConfirm={async () => {
+          setRemoving(false)
+          try {
+            await deleteLeads([lead.id])
+            navigate('/leads', { replace: true })
+          } catch (e) {
+            setNotice({ error: (e as Error).message })
+          }
+        }}
+      />
     </>
   )
 }

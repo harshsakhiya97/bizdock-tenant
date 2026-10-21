@@ -155,3 +155,10 @@ export async function updateLeads(ids: string[], patch: Record<string, unknown>)
   const { error } = await db().from('leads').update(patch).in('id', ids)
   if (error) throw error
 }
+
+/** deletes leads for good (their follow-ups, activity and form posts go too; bookings keep their details) */
+export async function deleteLeads(ids: string[]) {
+  const { data, error } = await db().from('leads').delete().in('id', ids).select('id')
+  if (error) throw error
+  if ((data ?? []).length < ids.length) throw new Error('Some leads couldn’t be deleted (no permission).')
+}

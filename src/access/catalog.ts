@@ -48,7 +48,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         actions: [
           { module: 'leads', action: 'add', label: 'Add leads' },
           { module: 'leads', action: 'edit', label: 'Edit leads' },
-          { module: 'leads', action: 'delete', label: 'Delete leads' },
+          { module: 'leads', action: 'delete', label: 'Delete leads', hint: 'Removes them for good, with their follow-ups and activity' },
           { module: 'leads', action: 'assign', label: 'Assign / transfer leads', hint: 'Change the owner (within the leads they can see)' },
           { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads' },
         ],
