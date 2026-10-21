@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { deleteSheet, parseSheetUrl, savePerisclaw, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
-import { SHEET_COLUMNS, SHEET_FIELD_MAP, guessColumn, parseExample, perisclawMessage } from './perisclaw'
+import { LEAD_FIELDS, SHEET_FIELD_MAP, extraName, fieldMapFor, fromSaved, guessField, isExtra, parseExample, perisclawMessage, sheetColumns } from './perisclaw'
 import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelSheet, SheetInput } from './types'
 import { useCopy } from './useCopy'
@@ -380,25 +380,29 @@ function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onC
 function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: FunnelSheet; canEdit: boolean; onChanged: (m: string) => void; onError: (m: string) => void }) {
   const [open, setOpen] = useState(!sheet.perisclaw)
   const [example, setExample] = useState(sheet.perisclaw?.example ?? '')
-  const [map, setMap] = useState<Record<string, string>>(sheet.perisclaw?.map ?? {})
+  const savedMap = useMemo(() => Object.fromEntries(Object.entries(sheet.perisclaw?.map ?? {}).map(([k, v]) => [k, fromSaved(v)])), [sheet.perisclaw])
+  const [map, setMap] = useState<Record<string, string>>(savedMap)
   const [busy, setBusy] = useState(false)
   const { copied, copy } = useCopy()
   const parts = useMemo(() => parseExample(example), [example])
-  const col = (label: string) => (label in map ? map[label] : guessColumn(label))
+  const col = (label: string) => (label in map ? map[label] : guessField(label))
   const fullMap = Object.fromEntries(parts.map((p) => [p.label, col(p.label)]))
   const message = parts.length ? perisclawMessage(sheet.sheet_url, parts, fullMap, example) : ''
+  const columns = sheetColumns(fullMap)
   // compare key by key (the saved map comes back with its keys in another order)
-  const savedMap = sheet.perisclaw?.map ?? {}
   const dirty =
     example.trim() !== (sheet.perisclaw?.example ?? '').trim() ||
     Object.keys(fullMap).length !== Object.keys(savedMap).length ||
     Object.entries(fullMap).some(([k, v]) => savedMap[k] !== v)
-  const missing = ['Name', 'Email', 'Contact No'].filter((c) => !Object.values(fullMap).includes(c))
+  const used = new Set(Object.values(fullMap))
+  const missing = [['name', 'Full name'], ['email', 'Email'], ['phone', 'Phone']].filter(([v]) => !used.has(v)).map(([, l]) => l)
+  const badExtra = Object.values(fullMap).some((v) => isExtra(v) && !extraName(v))
 
   async function save() {
     setBusy(true)
     try {
-      await savePerisclaw(sheet.id, { example: example.trim(), map: fullMap })
+      if (badExtra) throw new Error('Give every extra field a column name.')
+      await savePerisclaw(sheet.id, { example: example.trim(), map: fullMap }, fieldMapFor(fullMap))
       onChanged(`Perisclaw setup for ${sheet.name} saved.`)
     } catch (e) {
       onError((e as Error).message)
@@ -433,14 +437,14 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
 
           {parts.length > 0 && (
             <>
-              <span className="field-label">2. Match each part to our sheet column</span>
+              <span className="field-label">2. Match each part to a lead field</span>
               <div className="table-wrap">
                 <table className="table table-compact">
                   <thead>
                     <tr>
                       <th>In the message</th>
                       <th>Example</th>
-                      <th>Sheet column</th>
+                      <th>Saved on the lead as</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -455,14 +459,33 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
                           </span>
                         </td>
                         <td>
-                          <select className="input input-sm" aria-label={`${p.label} goes to`} disabled={!canEdit} value={col(p.label)} onChange={(e) => setMap((m) => ({ ...m, [p.label]: e.target.value }))}>
-                            <option value="">— leave out —</option>
-                            {SHEET_COLUMNS.filter((c) => c.name !== 'Sr No').map((c) => (
-                              <option key={c.name} value={c.name}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                            <select
+                              className="input input-sm"
+                              aria-label={`${p.label} goes to`}
+                              disabled={!canEdit}
+                              value={isExtra(col(p.label)) ? 'extra' : col(p.label)}
+                              onChange={(e) => setMap((m) => ({ ...m, [p.label]: e.target.value === 'extra' ? `extra:${p.label}` : e.target.value }))}
+                            >
+                              <option value="">— leave out —</option>
+                              {LEAD_FIELDS.map((f) => (
+                                <option key={f.value} value={f.value}>
+                                  {f.label}
+                                </option>
+                              ))}
+                              <option value="extra">Other / extra field…</option>
+                            </select>
+                            {isExtra(col(p.label)) && (
+                              <input
+                                className="input input-sm"
+                                aria-label={`Column name for ${p.label}`}
+                                placeholder="Column name"
+                                disabled={!canEdit}
+                                value={extraName(col(p.label))}
+                                onChange={(e) => setMap((m) => ({ ...m, [p.label]: `extra:${e.target.value}` }))}
+                              />
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -487,7 +510,8 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
                 <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
               </div>
               <Hint>
-                Put these column names in row 1 of the sheet first: <b>{SHEET_COLUMNS.map((c) => c.name).join(' | ')}</b>
+                Put these column names in row 1 of the sheet first: <b>{columns.map((c) => c.name).join(' | ')}</b>. Extra fields show on the lead page under “Source & form
+                submissions”.
               </Hint>
               {canEdit && (
                 <div className="row" style={{ justifyContent: 'flex-end' }}>

@@ -289,9 +289,9 @@ export async function deleteSheet(id: string) {
   if (error) throw error
 }
 
-/** saves the Perisclaw setup; the sheet then uses our fixed columns */
-export async function savePerisclaw(id: string, setup: PerisclawSetup) {
-  const { error } = await db().from('funnel_sheets').update({ perisclaw: setup, field_map: SHEET_FIELD_MAP }).eq('id', id)
+/** saves the Perisclaw setup and the sheet columns it asks for (column → lead field) */
+export async function savePerisclaw(id: string, setup: PerisclawSetup, fieldMap: Record<string, string>) {
+  const { error } = await db().from('funnel_sheets').update({ perisclaw: setup, field_map: fieldMap }).eq('id', id)
   if (error) throw error
 }
 
