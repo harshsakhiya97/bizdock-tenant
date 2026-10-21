@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -11,7 +10,8 @@ import { SearchSelect } from '@/components/SearchSelect'
 import { fullName, money } from '@/leads/labels'
 import type { LeadRow } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { addBookingPayment, createBookingInvoice, deleteBookingPayment, getBooking, saveBooking } from './api'
+import { addBookingPayment, deleteBookingPayment, getBooking, saveBooking } from './api'
+import { invoiceHref } from './BookingsTab'
 import type { BookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingInput, type BookingRow, type BookingStatus } from './types'
 
@@ -160,18 +160,6 @@ export function BookingDrawer({
     } catch (e) {
       setError((e as Error).message)
     } finally {
-      setBusy(false)
-    }
-  }
-
-  async function invoice() {
-    if (!booking) return
-    setBusy(true)
-    try {
-      const no = await createBookingInvoice(booking.id, input.billing_company_id || null)
-      onSaved(`Invoice ${no} created.`)
-    } catch (e) {
-      setError((e as Error).message)
       setBusy(false)
     }
   }
@@ -429,25 +417,12 @@ export function BookingDrawer({
 
         {booking && booking.status !== 'cancelled' && (
           <FormSection title="Invoice">
-            {booking.invoice_no ? (
-              <div className="row-between">
-                <span>
-                  <b>{booking.invoice_no}</b> <span className="muted small">· {refs.companyName(booking.billing_company_id)}</span>
-                </span>
-                <Link className="btn btn-outline btn-sm" to={`/bookings/${booking.id}/invoice`} target="_blank">
-                  <FileText size={14} /> View / print
-                </Link>
-              </div>
-            ) : can('bookings', 'edit') ? (
-              <div className="row-between">
-                <span className="muted small">Numbered per billing company, e.g. {(refs.companies.find((c) => c.id === input.billing_company_id)?.invoice_prefix || 'INV')}/26-27/0001.</span>
-                <Button variant="outline" onClick={invoice} disabled={busy || !input.billing_company_id}>
-                  <FileText size={14} /> Create invoice
-                </Button>
-              </div>
-            ) : (
-              <span className="muted small">No invoice yet.</span>
-            )}
+            <div className="row-between">
+              <span className="muted small">{booking.invoice_no ? <b>{booking.invoice_no}</b> : 'The invoice number is given when it is first opened.'}</span>
+              <a className="btn btn-outline btn-sm" href={invoiceHref(booking.id)} target="_blank" rel="noreferrer">
+                <FileText size={14} /> Invoice
+              </a>
+            </div>
           </FormSection>
         )}
       </div>

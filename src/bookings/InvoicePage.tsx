@@ -3,7 +3,7 @@ import { useParams } from 'react-router'
 import { Printer } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import type { BillingCompanyRow } from '@/masters/types'
-import { getBooking } from './api'
+import { createBookingInvoice, getBooking } from './api'
 import { slotText } from './BookingsTab'
 import type { BookingRow } from './types'
 
@@ -17,9 +17,22 @@ export function InvoicePage() {
   const [co, setCo] = useState<BillingCompanyRow | null>(null)
   const [client, setClient] = useState<{ email: string | null; city: string | null } | null>(null)
   const [modes, setModes] = useState<Map<string, string>>(new Map())
+  const [err, setErr] = useState<string | null>(null)
+  // without a billing company the invoice shows the business (and sub-business)
+  const [biz, setBiz] = useState<{ name: string; legal_name: string | null; address: string | null; city: string | null; state: string | null; gst_number: string | null; sub: string | null } | null>(null)
 
   useEffect(() => {
-    getBooking(id).then(async (bk) => {
+    getBooking(id).then(async (first) => {
+      let bk = first
+      // the invoice number is given the first time the invoice is opened
+      if (bk && !bk.invoice_no && bk.status !== 'cancelled') {
+        try {
+          await createBookingInvoice(bk.id, null)
+          bk = await getBooking(id)
+        } catch (e) {
+          setErr((e as Error).message)
+        }
+      }
       setB(bk)
       if (!bk) return
       const [c, m, l] = await Promise.all([
@@ -30,6 +43,11 @@ export function InvoicePage() {
       setCo(c.data as BillingCompanyRow | null)
       setModes(new Map(((m.data ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name])))
       setClient(l.data as { email: string | null; city: string | null } | null)
+      const [{ data: bz }, { data: sb }] = await Promise.all([
+        db().from('businesses').select('name, legal_name, address, city, state, gst_number').eq('id', bk.business_id).maybeSingle(),
+        bk.sub_business_id ? db().from('sub_businesses').select('name').eq('id', bk.sub_business_id).maybeSingle() : Promise.resolve({ data: null }),
+      ])
+      if (bz) setBiz({ ...(bz as Omit<NonNullable<typeof biz>, 'sub'>), sub: (sb as { name: string } | null)?.name ?? null })
     }, () => setB(null))
   }, [id])
 
@@ -39,7 +57,7 @@ export function InvoicePage() {
 
   if (b === undefined) return <div className="empty">Loading…</div>
   if (!b) return <div className="empty">This booking isn’t available.</div>
-  if (!b.invoice_no) return <div className="empty">This booking has no invoice yet.</div>
+  if (!b.invoice_no) return <div className="empty">{b.status === 'cancelled' ? 'A cancelled booking has no invoice.' : `The invoice couldn’t be created${err ? `: ${err}` : '.'}`}</div>
 
   const hours = (() => {
     const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
@@ -58,11 +76,22 @@ export function InvoicePage() {
       <article className="inv-page">
         <div className="inv-top">
           <div>
-            <h1>{co?.legal_name || co?.name || 'Invoice'}</h1>
+            <h1>{co ? co.legal_name || co.name : biz?.legal_name || biz?.name || 'Invoice'}</h1>
             <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-              {co?.address}
-              {co?.state ? `\n${co.state}` : ''}
-              {co?.gst_number ? `\nGSTIN: ${co.gst_number}` : ''}
+              {co ? (
+                <>
+                  {co.address}
+                  {co.state ? `\n${co.state}` : ''}
+                  {co.gst_number ? `\nGSTIN: ${co.gst_number}` : ''}
+                </>
+              ) : (
+                <>
+                  {biz?.sub ?? ''}
+                  {biz?.address ? `${biz.sub ? '\n' : ''}${biz.address}` : ''}
+                  {biz?.city || biz?.state ? `\n${[biz.city, biz.state].filter(Boolean).join(', ')}` : ''}
+                  {biz?.gst_number ? `\nGSTIN: ${biz.gst_number}` : ''}
+                </>
+              )}
             </div>
           </div>
           <div className="inv-meta">

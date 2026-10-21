@@ -13,6 +13,9 @@ export const slotText = (b: Pick<BookingRow, 'booking_date' | 'start_time' | 'en
 }
 
 /** Bookings of one lead / client. */
+/** the booking's invoice page, opened in a new tab */
+export const invoiceHref = (id: string) => `${import.meta.env.BASE_URL}bookings/${id}/invoice`
+
 export function BookingsTab({
   bookings,
   canAdd,
@@ -54,6 +57,7 @@ export function BookingsTab({
                 <th className="num">Total</th>
                 <th className="num">Paid</th>
                 <th className="num">Balance</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -67,6 +71,16 @@ export function BookingsTab({
                   <td className="num">{money(b.total_amount)}</td>
                   <td className="num">{money(b.paid_amount)}</td>
                   <td className="num">{b.status === 'cancelled' ? '—' : money(Math.max(0, b.total_amount - b.paid_amount))}</td>
+                  <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpen(b)}>
+                      Edit
+                    </button>{' '}
+                    {b.status !== 'cancelled' && (
+                      <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
+                        Invoice
+                      </a>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

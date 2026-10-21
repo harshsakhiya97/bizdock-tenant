@@ -10,7 +10,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from './api'
 import { BookingDrawer } from './BookingDrawer'
-import { slotText } from './BookingsTab'
+import { invoiceHref, slotText } from './BookingsTab'
 import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
@@ -341,7 +341,7 @@ export function BookingCalendarPage() {
               {day === today ? ' · Today' : ''}
             </div>
             {(byDay.get(day) ?? []).map((b) => (
-              <button key={b.id} type="button" className="cal-item" style={{ ['--c' as string]: color(b) }} onClick={() => open(b)}>
+              <div key={b.id} role="button" tabIndex={0} className="cal-item" style={{ ['--c' as string]: color(b) }} onClick={() => open(b)} onKeyDown={(e) => e.key === 'Enter' && open(b)}>
                 <span className="cal-bar" />
                 <span className="cal-item-main">
                   <b>{b.client_name}</b>
@@ -354,7 +354,17 @@ export function BookingCalendarPage() {
                   {money(b.total_amount)}
                   {b.total_amount - b.paid_amount > 0 && <span className="text-danger"> · {money(b.total_amount - b.paid_amount)} due</span>}
                 </span>
-              </button>
+                <span className="cal-item-acts" onClick={(e) => e.stopPropagation()}>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => open(b)}>
+                    Edit
+                  </button>
+                  {b.status !== 'cancelled' && (
+                    <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
+                      Invoice
+                    </a>
+                  )}
+                </span>
+              </div>
             ))}
           </section>
         ))}
