@@ -20,6 +20,8 @@ const typeTone: Record<FunnelType, string> = {
   custom: 'badge-muted',
 }
 
+type Counts = { total: number; unassigned: number; pipeline: number; closed: number }
+
 export function FunnelsPage() {
   const tenant = useTenant()
   const { can, businesses } = useAuth()
@@ -32,25 +34,29 @@ export function FunnelsPage() {
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
-  const [leadCount, setLeadCount] = useState<Map<string, { open: number; won: number }>>(new Map())
+  const [leadCount, setLeadCount] = useState<Map<string, Counts>>(new Map())
 
   const load = useCallback(() => {
     listFunnels(tenant.id)
       .then((f) => {
         setFunnels(f)
-        // leads this person can see, counted per funnel (in progress / won)
+        // leads this person can see, counted per funnel: total / unassigned / in pipeline / closed (won or lost)
         const kind = new Map(f.flatMap((x) => x.funnel_stages.map((st) => [st.id, st.kind] as const)))
         void db()
           .from('leads')
-          .select('funnel_id, stage_id')
+          .select('funnel_id, stage_id, owner_id')
           .eq('tenant_id', tenant.id)
           .eq('is_archived', false)
           .then(({ data }) => {
-            const m = new Map<string, { open: number; won: number }>()
+            const m = new Map<string, Counts>()
             for (const l of data ?? []) {
-              const c = m.get(l.funnel_id) ?? { open: 0, won: 0 }
-              if (kind.get(l.stage_id) === 'open') c.open++
-              if (kind.get(l.stage_id) === 'won') c.won++
+              if (!l.funnel_id) continue
+              const c = m.get(l.funnel_id) ?? { total: 0, unassigned: 0, pipeline: 0, closed: 0 }
+              c.total++
+              if (!l.owner_id) c.unassigned++
+              const k = kind.get(l.stage_id)
+              if (k === 'won' || k === 'lost') c.closed++
+              else c.pipeline++
               m.set(l.funnel_id, c)
             }
             setLeadCount(m)
@@ -137,7 +143,7 @@ export function FunnelsPage() {
         ) : (
           <div className="pl-grid">
             {visible.map((f) => {
-              const open = f.funnel_stages.filter((s) => s.kind === 'open').length
+              const c = leadCount.get(f.id) ?? { total: 0, unassigned: 0, pipeline: 0, closed: 0 }
               return (
                 <article
                   key={f.id}
@@ -163,26 +169,22 @@ export function FunnelsPage() {
                     <span className={cn('badge', typeTone[f.type])}>{typeLabel(f.type)}</span>
                   </div>
                   {f.description && <p className="muted small funnel-desc">{f.description}</p>}
-                  <div className="funnel-flow" aria-label="Stages">
-                    {f.funnel_stages.map((s) => (
-                      <span
-                        key={s.id}
-                        className={cn('funnel-stage', s.kind !== 'open' && 'is-closed')}
-                        style={{ ['--c' as string]: s.color }}
-                        title={s.note_required ? `${s.name} · note required` : s.name}
-                      >
-                        {s.name}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="pl-tiles">
+                  <div className="pl-tiles funnel-tiles">
                     <div className="pl-tile">
-                      <div className="pl-tile-label">Open leads</div>
-                      <div className="pl-tile-value">{leadCount.get(f.id)?.open ?? 0}</div>
+                      <div className="pl-tile-label">Total leads</div>
+                      <div className="pl-tile-value">{c.total}</div>
                     </div>
                     <div className="pl-tile">
-                      <div className="pl-tile-label">Won</div>
-                      <div className="pl-tile-value tone-success">{leadCount.get(f.id)?.won ?? 0}</div>
+                      <div className="pl-tile-label">Unassigned</div>
+                      <div className={cn('pl-tile-value', c.unassigned > 0 && 'tone-warning')}>{c.unassigned}</div>
+                    </div>
+                    <div className="pl-tile">
+                      <div className="pl-tile-label">In pipeline</div>
+                      <div className="pl-tile-value">{c.pipeline}</div>
+                    </div>
+                    <div className="pl-tile">
+                      <div className="pl-tile-label">Closed</div>
+                      <div className="pl-tile-value tone-success">{c.closed}</div>
                     </div>
                   </div>
                   <div className="pl-auto">
@@ -198,9 +200,6 @@ export function FunnelsPage() {
                       }}>
                       Leads →
                     </Link>
-                    <span className="muted small">
-                      {f.funnel_stages.length} stages · {open} in progress
-                    </span>
                     <div className="row-actions">
                       {can('funnels', 'edit') && (
                         <button
