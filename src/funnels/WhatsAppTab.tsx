@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Bot, Check, ChevronDown, ChevronRight, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { AlertTriangle, Bot, Check, ChevronDown, ChevronRight, Columns3, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
@@ -206,6 +206,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
   const [map, setMap] = useState<Record<string, string>>(sheet.field_map ?? {})
   const [dirty, setDirty] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [open, setOpen] = useState<boolean | null>(null)
   const cols = useMemo(() => sheet.headers ?? [], [sheet.headers])
   // "Full Name" / "WhatsApp Number" are guessed like full_name / whatsapp_number (same as the sync)
   const norm = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
@@ -213,7 +214,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
   const chosen = new Set(cols.map(target))
   const missing = [!chosen.has('name') && !chosen.has('first_name') ? 'Name' : null, !chosen.has('phone') ? 'Phone' : null, !chosen.has('email') ? 'Email' : null].filter(Boolean)
 
-  if (!cols.length) return <div className="muted small">Columns show here after the first sync (Sync now, or within a minute once the sheet is shared).</div>
+  if (!cols.length) return <div className="muted small">The column mapping shows here after the first sync (Sync now, or within a minute once the sheet is shared).</div>
 
   async function save() {
     setBusy(true)
@@ -223,7 +224,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
       await saveSheetMap(sheet.id, out)
       setMap(out)
       setDirty(false)
-      onChanged(`Columns of ${sheet.name} saved.`)
+      onChanged(`Column mapping of ${sheet.name} saved.`)
     } catch (e) {
       onError((e as Error).message)
     } finally {
@@ -231,9 +232,16 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
     }
   }
 
+  // closed once every needed field is matched; open when something is missing
+  const isOpen = open ?? missing.length > 0
   return (
     <div className="lp-block">
-      <span className="lp-label">Columns</span>
+      <button type="button" className="link-btn lp-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setOpen(!isOpen)}>
+        {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />} <Columns3 size={14} /> Column mapping
+        {missing.length ? <span className="badge badge-warning">{missing.join(', ')} missing</span> : <span className="badge badge-success">Done</span>}
+      </button>
+      {isOpen && (
+        <>
       <div className="table-wrap">
         <table className="table table-compact">
           <thead>
@@ -287,11 +295,13 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
       )}
       {canEdit && (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
-          {dirty && <span className="muted small">Unsaved columns</span>}
+          {dirty && <span className="muted small">Unsaved mapping</span>}
           <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={busy || !dirty}>
-            <Save size={14} /> Save columns
+            <Save size={14} /> Save mapping
           </button>
         </div>
+      )}
+        </>
       )}
     </div>
   )
