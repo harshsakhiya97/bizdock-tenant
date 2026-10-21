@@ -432,9 +432,9 @@ function TriggerFields({
           {funnelSelect(false)}
           {funnel && (
             <div className="stack" style={{ gap: 8 }}>
-              <span className="field-label">Landing pages</span>
+              <span className="field-label">Forms (webhooks)</span>
               <label className="check-inline">
-                <input type="checkbox" disabled={disabled} checked={!(t.pages ?? []).length} onChange={() => set({ pages: [] })} /> Any landing page
+                <input type="checkbox" disabled={disabled} checked={!(t.pages ?? []).length} onChange={() => set({ pages: [] })} /> Any form
               </label>
               {pages.map((p) => {
                 const on = (t.pages ?? []).includes(p.id)
@@ -450,7 +450,7 @@ function TriggerFields({
                   </label>
                 )
               })}
-              {!pages.length && <Hint>This funnel has no landing pages yet.</Hint>}
+              {!pages.length && <Hint>This funnel has no webhooks yet.</Hint>}
             </div>
           )}
         </>
@@ -465,7 +465,7 @@ function TriggerFields({
               <option value="any">Any way</option>
               <option value="manual">By hand (Add lead)</option>
               <option value="import">By import</option>
-              <option value="form">By a landing page form</option>
+              <option value="form">By a webhook form</option>
             </Select>
           </div>
         </>

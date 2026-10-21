@@ -10,7 +10,7 @@ export type TriggerData = {
   name?: string
   /** form_submitted / stage_changed (required), lead_added (optional = any funnel) */
   funnel_id?: string
-  /** form_submitted: only these landing pages (empty = all) */
+  /** form_submitted: only these webhook forms (empty = all) */
   pages?: string[]
   /** stage_changed */
   stage_id?: string
@@ -71,7 +71,7 @@ export type RefData = {
 export type FlowContext = RefData & {
   funnel: RefData['funnels'][number] | null
   event: RefData['events'][number] | null
-  /** the funnel's landing pages / stages (or all, when the trigger has no funnel) */
+  /** the funnel's webhook forms / stages (or all, when the trigger has no funnel) */
   pages: RefData['pages']
   stages: { id: string; name: string }[]
   tags: string[]

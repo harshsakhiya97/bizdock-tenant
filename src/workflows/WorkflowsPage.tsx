@@ -272,7 +272,7 @@ function NewWorkflowModal({
             </Select>
           </div>
         )}
-        <Hint>The rest (landing pages, stage, webinar, timing) is set on the trigger box in the builder.</Hint>
+        <Hint>The rest (forms, webinar, timing) is set on the trigger box in the builder.</Hint>
       </div>
     </Modal>
   )

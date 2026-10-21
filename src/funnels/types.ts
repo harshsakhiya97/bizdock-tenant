@@ -87,14 +87,13 @@ export type LandingPage = {
   sort_order: number
   created_at: string
   landing_page_utms: UtmLink[]
-  landing_page_webhooks: LandingPageWebhook[]
 }
 
-/** One webhook URL of a landing page (a page can have several forms, each with its own URL and field mapping). */
-export type LandingPageWebhook = {
+/** One webhook URL of a funnel (a funnel can have several, each with its own URL and field mapping; not tied to a landing page). */
+export type FunnelWebhook = {
   id: string
   tenant_id: string
-  landing_page_id: string
+  funnel_id: string
   name: string
   webhook_key: string
   /** incoming form field → lead field ("phone", "email", … "extra", "ignore") */
@@ -119,7 +118,8 @@ export type SubmissionRow = {
   id: string
   lead_id: string
   landing_page_id: string | null
-  via: 'webhook' | 'import'
+  webhook_id: string | null
+  via: 'webhook' | 'import' | 'sheet'
   is_new: boolean
   utm_source: string | null
   utm_medium: string | null

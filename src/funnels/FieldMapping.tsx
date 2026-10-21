@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, CheckCircle2, FlaskConical, Loader2, Save, X } from 'lucide-react'
 import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
 import { KNOWN_NAMES, LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
-import type { LandingPageWebhook } from './types'
+import type { FunnelWebhook } from './types'
 
 /**
  * Test mode + field mapping for one landing page:
@@ -14,7 +14,7 @@ export function FieldMapping({
   onChanged,
   onError,
 }: {
-  hook: LandingPageWebhook
+  hook: FunnelWebhook
   canEdit: boolean
   onChanged: (msg: string) => void
   onError: (msg: string) => void

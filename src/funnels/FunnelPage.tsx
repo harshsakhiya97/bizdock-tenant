@@ -9,15 +9,17 @@ import { fullName } from '@/leads/labels'
 import type { LeadRow, Option } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { listFunnelSubmissions, listFunnels, listLandingPages } from './api'
+import { listFunnelSubmissions, listFunnels, listLandingPages, listWebhooks } from './api'
 import { FunnelDrawer } from './FunnelDrawer'
 import { LandingPagesTab } from './LandingPagesTab'
+import { WebhooksTab } from './WebhooksTab'
 import { typeLabel } from './templates'
-import type { FunnelRow, LandingPage, SubmissionRow } from './types'
+import type { FunnelRow, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'pages', label: 'Landing pages' },
+  { key: 'webhooks', label: 'Webhooks' },
   { key: 'leads', label: 'Leads' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
@@ -25,7 +27,7 @@ type TabKey = (typeof TABS)[number]['key']
 const typeTone = { lead_gen: 'badge-info', webinar: 'badge-purple', vsl: 'badge-warning', custom: 'badge-muted' } as const
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 
-/** One funnel: overview, landing pages (webhooks + UTM links) and its leads. */
+/** One funnel: overview, landing pages (+ UTM links), webhooks and its leads. */
 export function FunnelPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
@@ -36,6 +38,7 @@ export function FunnelPage() {
 
   const [funnel, setFunnel] = useState<FunnelRow | null | undefined>(undefined)
   const [pages, setPages] = useState<LandingPage[] | null>(null)
+  const [hooks, setHooks] = useState<FunnelWebhook[] | null>(null)
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [sources, setSources] = useState<Option[]>([])
@@ -53,6 +56,7 @@ export function FunnelPage() {
       })
       .catch((e: Error) => setNotice({ error: e.message }))
     listLandingPages(id).then(setPages).catch((e: Error) => setNotice({ error: e.message }))
+    listWebhooks(id).then(setHooks).catch((e: Error) => setNotice({ error: e.message }))
     listFunnelSubmissions(id).then(setSubs).catch(() => setSubs([]))
     listFunnelLeads(id).then(setLeads).catch(() => setLeads([]))
     void listSources(tenant.id).then(setSources)
@@ -60,6 +64,7 @@ export function FunnelPage() {
   useEffect(load, [load])
 
   const pageName = useMemo(() => new Map((pages ?? []).map((p) => [p.id, p.name])), [pages])
+  const hookName = useMemo(() => new Map((hooks ?? []).map((h) => [h.id, h.name])), [hooks])
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
   const biz = businesses.find((b) => b.id === funnel?.business_id)
   const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
@@ -91,7 +96,7 @@ export function FunnelPage() {
     navigate(`/leads?open=${leadId}`)
   }
 
-  const fromPages = (leads ?? []).filter((l) => l.landing_page_id).length
+  const fromForms = (leads ?? []).filter((l) => l.webhook_id || l.landing_page_id).length
   const won = (leads ?? []).filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
   const daysTo = event ? Math.round((new Date(`${event.event_date}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null
 
@@ -132,6 +137,7 @@ export function FunnelPage() {
               <button key={t.key} type="button" className={cn('tab', tab === t.key && 'is-active')} onClick={() => setTab(t.key)}>
                 {t.label}
                 {t.key === 'pages' && pages && <span className="muted small"> {pages.length}</span>}
+                {t.key === 'webhooks' && hooks && <span className="muted small"> {hooks.length}</span>}
                 {t.key === 'leads' && leads && <span className="muted small"> {leads.length}</span>}
               </button>
             ))}
@@ -147,8 +153,8 @@ export function FunnelPage() {
                   <div className="pl-tile-value">{leads?.length ?? '—'}</div>
                 </div>
                 <div className="pl-tile">
-                  <div className="pl-tile-label">From landing pages</div>
-                  <div className="pl-tile-value">{fromPages}</div>
+                  <div className="pl-tile-label">From forms</div>
+                  <div className="pl-tile-value">{fromForms}</div>
                 </div>
                 <div className="pl-tile">
                   <div className="pl-tile-label">Form posts</div>
@@ -236,6 +242,19 @@ export function FunnelPage() {
             />
           )}
 
+          {tab === 'webhooks' && (
+            <WebhooksTab
+              funnelId={funnel.id}
+              hooks={hooks}
+              submissions={subs}
+              canEdit={can('funnels', 'edit')}
+              onChanged={(msg) => {
+                setNotice({ ok: msg })
+                load()
+              }}
+              onError={(msg) => setNotice({ error: msg })}
+            />
+          )}
 
           {tab === 'leads' &&
             (!leads ? (
@@ -250,7 +269,7 @@ export function FunnelPage() {
                       <th>Name</th>
                       <th>Phone</th>
                       <th>Stage</th>
-                      <th>Landing page</th>
+                      <th>Form</th>
                       <th>UTM source / campaign</th>
                       <th>Source</th>
                       <th>Added</th>
@@ -270,7 +289,7 @@ export function FunnelPage() {
                               </span>
                             )}
                           </td>
-                          <td className="muted">{l.landing_page_id ? pageName.get(l.landing_page_id) ?? 'Deleted page' : '—'}</td>
+                          <td className="muted">{l.webhook_id ? (hookName.get(l.webhook_id) ?? 'Deleted webhook') : l.landing_page_id ? (pageName.get(l.landing_page_id) ?? 'Deleted page') : '—'}</td>
                           <td className="muted small">{[l.utm_source, l.utm_campaign].filter(Boolean).join(' / ') || '—'}</td>
                           <td className="muted">{sources.find((s) => s.id === l.source_id)?.name ?? '—'}</td>
                           <td className="muted nowrap">{new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>

@@ -84,11 +84,11 @@ export async function archiveWorkflow(id: string) {
   if (error) throw error
 }
 
-/** funnels, landing pages and webinars / events to pick from */
+/** funnels, webhook forms and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
   const [funnels, pages, events, types, members, workflows] = await Promise.all([
     listFunnels(tenantId),
-    db().from('landing_pages').select('id, name, funnel_id, landing_page_webhooks(field_map, sample)').eq('tenant_id', tenantId).is('archived_at', null),
+    db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
     listEventTypes(tenantId),
     listMemberOptions(tenantId),
@@ -104,10 +104,11 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
       tags: f.tags,
       stages: f.funnel_stages.map((s) => ({ id: s.id, name: s.name })),
     })),
-    // fields a lead from this page can carry: the standard optional ones + extra fields from the mapping
-    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; landing_page_webhooks: { field_map: Record<string, string>; sample: Record<string, string> | null }[] }[]).map((p) => {
-      const map: Record<string, string> = Object.assign({}, ...(p.landing_page_webhooks ?? []).map((h) => h.field_map ?? {}))
-      const keys = [...new Set([...(p.landing_page_webhooks ?? []).flatMap((h) => Object.keys(h.sample ?? {})), ...Object.keys(map)])]
+    // the funnel's webhook forms (kept as `pages` in workflows); fields a lead from it can carry:
+    // the standard optional ones + extra fields from its mapping
+    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string> | null; sample: Record<string, string> | null }[]).map((p) => {
+      const map: Record<string, string> = p.field_map ?? {}
+      const keys = [...new Set([...Object.keys(p.sample ?? {}), ...Object.keys(map)])]
       const extras = keys.filter((k) => (map[k] ?? guessTarget(k)) === 'extra')
       return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras] }
     }),

@@ -14,27 +14,42 @@ const label = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUppe
 export function LeadOrigin({ lead }: { lead: LeadRow }) {
   const [subs, setSubs] = useState<SubmissionRow[] | null>(null)
   const [pages, setPages] = useState<Map<string, string>>(new Map())
+  const [hooks, setHooks] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
     listLeadSubmissions(lead.id)
       .then(async (rows) => {
         setSubs(rows)
         const ids = [...new Set([lead.landing_page_id, ...rows.map((r) => r.landing_page_id)].filter(Boolean))] as string[]
-        if (!ids.length) return
-        const { data } = await db().from('landing_pages').select('id, name').in('id', ids)
-        setPages(new Map((data ?? []).map((p) => [p.id as string, p.name as string])))
+        const hookIds = [...new Set([lead.webhook_id, ...rows.map((r) => r.webhook_id)].filter(Boolean))] as string[]
+        if (ids.length) {
+          const { data } = await db().from('landing_pages').select('id, name').in('id', ids)
+          setPages(new Map((data ?? []).map((p) => [p.id as string, p.name as string])))
+        }
+        if (hookIds.length) {
+          const { data } = await db().from('funnel_webhooks').select('id, name').in('id', hookIds)
+          setHooks(new Map((data ?? []).map((p) => [p.id as string, p.name as string])))
+        }
       })
       .catch(() => setSubs([]))
-  }, [lead.id, lead.landing_page_id])
+  }, [lead.id, lead.landing_page_id, lead.webhook_id])
 
   const utms = UTM_KEYS.filter((k) => lead[k])
   const extra = Object.entries(lead.extra ?? {}).filter(([, v]) => String(v ?? '').trim())
-  if (!lead.landing_page_id && !utms.length && !extra.length && !subs?.length) return null
+  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !extra.length && !subs?.length) return null
   const pageName = (id: string | null) => (id ? pages.get(id) ?? 'Landing page' : null)
+  const hookName = (id: string | null) => (id ? hooks.get(id) ?? 'Webhook' : null)
+  const formOf = (s: Pick<SubmissionRow, 'webhook_id' | 'landing_page_id'>) => hookName(s.webhook_id) ?? pageName(s.landing_page_id)
 
   return (
-    <FormSection title="Source & form submissions" description="Filled in by the landing page webhook or an import.">
+    <FormSection title="Source & form submissions" description="Filled in by a webhook form or an import.">
       <dl className="origin-grid">
+        {lead.webhook_id && (
+          <>
+            <dt>Form</dt>
+            <dd>{hookName(lead.webhook_id)}</dd>
+          </>
+        )}
         {lead.landing_page_id && (
           <>
             <dt>Landing page</dt>
@@ -59,7 +74,7 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
                 <div>
                   <b>
                     {s.via === 'import' ? (s.is_new ? 'Imported' : 'Updated by an import') : s.is_new ? 'Submitted the form' : 'Submitted the form again'}
-                    {pageName(s.landing_page_id) ? ` · ${pageName(s.landing_page_id)}` : ''}
+                    {formOf(s) ? ` · ${formOf(s)}` : ''}
                   </b>
                   {(s.utm_source || s.utm_campaign) && (
                     <p className="small">

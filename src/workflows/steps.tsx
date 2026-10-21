@@ -15,7 +15,7 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
 
 /** every trigger, including ones no longer offered (older workflows still use them) */
 export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [
-  { value: 'form_submitted', label: 'Funnel form submitted', hint: 'A lead submits a landing page form of a funnel' },
+  { value: 'form_submitted', label: 'Funnel form submitted', hint: 'A lead submits a webhook form of a funnel' },
   { value: 'lead_added', label: 'Lead added', hint: 'A lead is added by hand, by import or by a form' },
   { value: 'stage_changed', label: 'Lead moved to a stage', hint: 'A lead enters a stage of a funnel' },
   { value: 'tag_added', label: 'Tag added', hint: 'A tag is added to a lead' },
@@ -35,7 +35,7 @@ const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN',
 export const CONDITION_FIELDS: { value: ConditionData['field']; label: string }[] = [
   { value: 'stage', label: 'Stage' },
   { value: 'tag', label: 'Tag' },
-  { value: 'landing_page', label: 'Landing page' },
+  { value: 'landing_page', label: 'Form (webhook)' },
   { value: 'utm_source', label: 'UTM source' },
   { value: 'field_filled', label: 'Form field is filled' },
   { value: 'attendance', label: 'Webinar / event attendance' },
@@ -64,8 +64,8 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
   switch (t.event) {
     case 'form_submitted': {
       if (!funnel) return 'Pick the funnel'
-      const pages = (t.pages ?? []).map((id) => ctx.pages.find((p) => p.id === id)?.name ?? 'Deleted page')
-      return `${funnel} · ${pages.length ? pages.join(', ') : 'any landing page'}`
+      const pages = (t.pages ?? []).map((id) => ctx.pages.find((p) => p.id === id)?.name ?? 'Deleted webhook')
+      return `${funnel} · ${pages.length ? pages.join(', ') : 'any form'}`
     }
     case 'lead_added':
       return `${funnel ?? 'Any funnel'} · ${{ any: 'any way', manual: 'added by hand', import: 'imported', form: 'from a form' }[t.source ?? 'any']}`
