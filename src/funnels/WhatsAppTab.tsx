@@ -376,7 +376,12 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
   const col = (label: string) => (label in map ? map[label] : guessColumn(label))
   const fullMap = Object.fromEntries(parts.map((p) => [p.label, col(p.label)]))
   const message = parts.length ? perisclawMessage(sheet.sheet_url, parts, fullMap, example) : ''
-  const dirty = example.trim() !== (sheet.perisclaw?.example ?? '').trim() || JSON.stringify(fullMap) !== JSON.stringify(sheet.perisclaw?.map ?? {})
+  // compare key by key (the saved map comes back with its keys in another order)
+  const savedMap = sheet.perisclaw?.map ?? {}
+  const dirty =
+    example.trim() !== (sheet.perisclaw?.example ?? '').trim() ||
+    Object.keys(fullMap).length !== Object.keys(savedMap).length ||
+    Object.entries(fullMap).some(([k, v]) => savedMap[k] !== v)
   const missing = ['Name', 'Email', 'Contact No'].filter((c) => !Object.values(fullMap).includes(c))
 
   async function save() {
