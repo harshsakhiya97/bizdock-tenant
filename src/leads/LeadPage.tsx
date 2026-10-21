@@ -18,7 +18,7 @@ import { ActivityLog } from './ActivityLog'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
-import { followUp, fullName, money, tempOf } from './labels'
+import { fullName } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -110,10 +110,7 @@ export function LeadPage() {
   const nextBooking = (bookings ?? [])
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
-  const fu = followUp(lead.next_follow_up_at)
-  const temp = tempOf(lead.temperature)
   const sourceName = refs.sources.find((s) => s.id === lead.source_id)?.name
-  const owner = members.find((m) => m.id === lead.owner_id)?.name
 
   const vars = {
     first_name: lead.first_name,
@@ -125,22 +122,12 @@ export function LeadPage() {
     booking_time: nextBooking ? slotText(nextBooking).split(' · ')[1] : null,
   }
 
+  // same fields as Add / Edit lead
   const info: [string, React.ReactNode][] = [
     ['Phone', lead.phone],
-    ['WhatsApp', lead.whatsapp || '—'],
-    ['Email', lead.email || '—'],
     ['City', lead.city || '—'],
-    ['Purpose', lead.purpose || '—'],
-    ['Required on', lead.required_on ? `${fmtDay(lead.required_on)}${lead.required_hours ? ` · ${lead.required_hours} h` : ''}` : '—'],
     ['Source', sourceName ?? '—'],
-    ['Referred by', lead.referred_by || '—'],
-    ['Funnel', funnel ? `${funnel.name} → ${stage?.name ?? '—'}` : 'No funnel'],
-    ['Owner', owner ?? 'Unassigned'],
-    ['Temperature', temp ? <span className={`badge ${temp.tone}`}>{temp.label}</span> : '—'],
-    ['Estimated amount', money(lead.estimated_amount)],
-    ['Next follow-up', <span className={cn(fu.state === 'overdue' && 'text-danger')}>{fu.text}</span>],
-    ['Tags', lead.tags.length ? lead.tags.join(', ') : '—'],
-    ['Received', `${new Date(lead.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${ago(lead.created_at)}`],
+    ['Purpose', lead.purpose || '—'],
     ['Business', biz ? (subName ? `${biz} · ${subName}` : biz) : '—'],
   ]
 
