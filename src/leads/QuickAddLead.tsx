@@ -10,7 +10,7 @@ import { createLead, phoneExists } from './api'
 import type { LeadInput, Option } from './types'
 import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
-/** Add lead: just name, phone, source, purpose and required on. Everything else is on the lead's page. */
+/** Add lead: name, phone, city, source, purpose and sub-business. */
 export function QuickAddLead({
   funnels,
   defaultFunnelId,
@@ -28,15 +28,14 @@ export function QuickAddLead({
   const { membership, businesses } = useAuth()
   const { selected, sub } = useBusiness()
   const me = membership?.id
-  // '' = no funnel: the lead belongs to a business only
-  const [funnelId, setFunnelId] = useState(defaultFunnelId ?? funnels[0]?.id ?? '')
+  // the funnel picked on the Leads page (if any); otherwise the lead belongs to a business only
+  const funnelId = defaultFunnelId ?? ''
   const [businessId, setBusinessId] = useState(selected?.id ?? businesses[0]?.id ?? '')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [source, setSource] = useState('')
   const [purpose, setPurpose] = useState('')
-  const [reqOn, setReqOn] = useState('')
-  const [hours, setHours] = useState('')
+  const [city, setCity] = useState('')
   const [subId, setSubId] = useState(sub?.id ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -64,7 +63,7 @@ export function QuickAddLead({
         phone,
         whatsapp: '',
         email: '',
-        city: '',
+        city: city.trim(),
         source_id: source,
         referred_by: '',
         temperature: '',
@@ -74,8 +73,8 @@ export function QuickAddLead({
         notes: '',
         next_follow_up_at: '',
         purpose,
-        required_on: reqOn,
-        required_hours: hours,
+        required_on: '',
+        required_hours: '',
         sub_business_id: subOf(subs, subId),
       }
       const id = await createLead(tenant.id, bizId, me, input)
@@ -121,6 +120,10 @@ export function QuickAddLead({
             <TextInput id="q-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
           <div>
+            <Label htmlFor="q-city">City</Label>
+            <TextInput id="q-city" value={city} onChange={(e) => setCity(e.target.value)} />
+          </div>
+          <div>
             <Label htmlFor="q-source">Source</Label>
             <Select id="q-source" value={source} onChange={(e) => setSource(e.target.value)}>
               <option value="">— select —</option>
@@ -131,29 +134,11 @@ export function QuickAddLead({
               ))}
             </Select>
           </div>
-          <SubBusinessSelect id="q-sub" businessId={bizId} value={subId} onChange={setSubId} />
           <div>
             <Label htmlFor="q-purpose">Purpose</Label>
             <TextInput id="q-purpose" placeholder="e.g. Podcast, Product shoot" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
           </div>
-          <div className="span-2">
-            <Label htmlFor="q-req">Required on</Label>
-            <div className="row" style={{ flexWrap: 'nowrap' }}>
-              <TextInput id="q-req" type="date" value={reqOn} onChange={(e) => setReqOn(e.target.value)} />
-              <TextInput aria-label="Hours" type="number" min={0} step={0.5} placeholder="Hours" style={{ width: 110 }} value={hours} onChange={(e) => setHours(e.target.value)} />
-            </div>
-          </div>
-          <div className={funnel || businesses.length < 2 ? 'span-2' : undefined}>
-            <Label htmlFor="q-funnel">Funnel</Label>
-            <Select id="q-funnel" value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
-              <option value="">No funnel</option>
-              {funnels.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-              ))}
-            </Select>
-          </div>
+          <SubBusinessSelect id="q-sub" businessId={bizId} value={subId} onChange={setSubId} />
           {!funnel && businesses.length > 1 && (
             <div>
               <Label htmlFor="q-biz" required>
@@ -169,12 +154,7 @@ export function QuickAddLead({
             </div>
           )}
         </div>
-        <Hint>
-          {funnel
-            ? `The lead starts in ${funnel.name} → ${funnel.funnel_stages[0]?.name ?? 'first stage'}, owned by you.`
-            : 'The lead is saved without a funnel, owned by you; you can put it in a funnel later.'}{' '}
-          Add the rest on its page.
-        </Hint>
+        {funnel && <Hint>The lead is added to {funnel.name}.</Hint>}
       </div>
     </Modal>
   )
