@@ -124,7 +124,6 @@ type SaleFilters = {
   q: string
   plan: string
   product: string
-  company: string
   mode: string
   person: string
   from: string
@@ -138,7 +137,6 @@ const SALE_EMPTY: SaleFilters = {
   q: '',
   plan: '',
   product: '',
-  company: '',
   mode: '',
   person: '',
   from: '',
@@ -169,7 +167,6 @@ function SalesTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) => v
     })
     .filter((s) => !f.plan || s.plan === f.plan)
     .filter((s) => !f.product || s.product_id === f.product)
-    .filter((s) => !f.company || s.billing_company_id === f.company)
     .filter((s) => !f.mode || s.payment_mode_id === f.mode)
     .filter((s) => !f.person || s.sales_person_id === f.person)
     .filter((s) => !f.from || s.sale_date >= f.from)
@@ -255,14 +252,6 @@ function SalesTab({ data, onOpen }: { data: SalesData; onOpen: (id: string) => v
             {data.products.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
-              </option>
-            ))}
-          </select>
-          <select className="input input-sm filter-select" value={f.company} onChange={(e) => setFilter('company', e.target.value)} aria-label="Billing company">
-            <option value="">Billing company</option>
-            {data.companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
               </option>
             ))}
           </select>
