@@ -11,18 +11,15 @@ import {
   correct,
   dayStatus,
   getSettings,
-  hm,
   isoDay,
   listAttendance,
   listDaysOff,
   listPeople,
   longBreaks,
-  mins,
   saveSettings,
   setWeeklyOff,
   STATUS_LABEL,
   WEEKDAY_SHORT,
-  workedMinutes,
   type AttRow,
   type AttSettings,
   type DayOff,
@@ -39,7 +36,9 @@ const monthDays = (ym: string) => {
 /** Attendance: my day (check in / breaks / out), my log, monthly discipline, team today, corrections and rules. */
 export function AttendancePage() {
   const tenant = useTenant()
-  const { can, membership } = useAuth()
+  const { can, membership, level } = useAuth()
+  // the Owner and Tech Support can open any staff member's calendar
+  const canAll = level <= 1
   const me = membership?.id ?? ''
   const canEdit = can('attendance', 'edit')
   const today = isoDay(new Date())
@@ -71,8 +70,10 @@ export function AttendancePage() {
   // hidden support logins don't keep attendance: show the first team member's log instead
   const isSupport = !!membership?.is_support
   useEffect(() => {
-    if (people.length && !people.some((p) => p.id === logPerson)) setLogPerson(people[0].id)
-  }, [people, logPerson])
+    if (!people.length) return
+    if (!canAll && people.some((p) => p.id === me)) setLogPerson(me)
+    else if (!people.some((p) => p.id === logPerson)) setLogPerson(people[0].id)
+  }, [people, logPerson, canAll, me])
 
   const done = (msg: string) => {
     setNotice({ ok: msg })
@@ -124,7 +125,15 @@ export function AttendancePage() {
 
   const logOf = people.find((p) => p.id === logPerson) ?? meAsPerson
   const myStats = stats.find((x) => x.p.id === logOf.id)
-  const logDays = days.filter((d) => d <= today).reverse()
+  // calendar grid: blanks before the 1st, then every day of the month
+  const lead = new Date(`${days[0]}T00:00:00`).getDay()
+  const cells: (string | null)[] = [...Array(lead).fill(null), ...days]
+  while (cells.length % 7) cells.push(null)
+  const shiftMonth = (n: number) => {
+    const [y, m] = month.split('-').map(Number)
+    const d = new Date(y, m - 1 + n, 1)
+    setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
   const monthLabel = new Date(`${month}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
   const upcomingHolidays = offs.filter((o) => o.kind === 'holiday' && o.to >= today).slice(0, 6)
 
@@ -134,79 +143,94 @@ export function AttendancePage() {
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       <Flash msg={notice.ok} dep={notice} />
 
+      {!isSupport && <TodayCard row={myRow} settings={settings} dayNote={dayNote} onChanged={done} onError={(m) => setNotice({ error: m })} />}
+
+      <div className="panel att-cal-panel">
+        <div className="panel-bar">
+          <b>
+            {logOf.id === me ? 'My attendance' : `${logOf.name}’s attendance`} · {monthLabel}
+          </b>
+          <div className="row">
+            {canAll && people.length > 1 && (
+              <select className="input input-sm filter-select" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+              ‹
+            </button>
+            <input type="month" className="input input-sm" value={month} max={today.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => shiftMonth(1)} disabled={month >= today.slice(0, 7)} aria-label="Next month">
+              ›
+            </button>
+          </div>
+        </div>
+        {myStats && (
+          <div className="att-summary muted small">
+            {myStats.working} working days · {myStats.present} present · {myStats.late} late · {myStats.half} half day · {myStats.leave} leave · {myStats.absent} absent · weekly off{' '}
+            {logOf.weekly_off.map((d) => WEEKDAY_SHORT[d]).join(', ') || 'none'}
+          </div>
+        )}
+        <div className="att-cal">
+          {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((w) => (
+            <div key={w} className="att-cal-head">
+              <span className="wide">{w}</span>
+              <span className="narrow">{w.slice(0, 3)}</span>
+            </div>
+          ))}
+          {cells.map((d, i) => {
+            if (!d) return <div key={`b${i}`} className="att-cell is-blank" />
+            const r = rowOf(logOf.id, d)
+            const st = dayStatus(d, today, logOf, r, offs, settings)
+            const dow = new Date(`${d}T00:00:00`).getDay()
+            const breaks = r?.attendance_breaks ?? []
+            return (
+              <div
+                key={d}
+                className={cn('att-cell', `st-${st}`, d === today && 'is-today', (st === 'off' || st === 'holiday') && 'is-off')}
+                title={r?.correction_reason ? `Corrected: ${r.correction_reason}` : STATUS_LABEL[st].label}
+              >
+                <div className="att-cell-top">
+                  {st !== 'future' && <span className={cn('att-dot', `dot-${st}`)} />}
+                  <span className={cn('att-day', dow === 0 && 'is-sun')}>{Number(d.slice(8))}</span>
+                </div>
+                <div className="att-cell-body">
+                  {r?.check_in ? (
+                    <>
+                      <div>
+                        Check In: {clock(r.check_in)}
+                        {r.is_late ? <span className="text-danger"> +{r.late_minutes}m</span> : null}
+                      </div>
+                      {breaks.map((b) => (
+                        <div key={b.id}>
+                          {b.kind === 'lunch' ? 'Lunch' : b.kind === 'tea' ? 'Tea' : 'Break'}: {clock(b.started_at)} - {b.ended_at ? clock(b.ended_at) : 'now'}
+                        </div>
+                      ))}
+                      {r.check_out && <div>Check Out: {clock(r.check_out)}</div>}
+                    </>
+                  ) : st === 'future' ? null : (
+                    <div className="att-cell-label">{STATUS_LABEL[st].label}</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className="att-legend small muted">
+          {(['present', 'late', 'half', 'in', 'leave', 'absent', 'holiday', 'off'] as const).map((k) => (
+            <span key={k}>
+              <span className={cn('att-dot', `dot-${k}`)} /> {STATUS_LABEL[k].label}
+            </span>
+          ))}
+        </div>
+      </div>
+
       <div className="att-grid">
         <div className="stack">
-          {!isSupport && <TodayCard row={myRow} settings={settings} dayNote={dayNote} onChanged={done} onError={(m) => setNotice({ error: m })} />}
-
-          <div className="panel">
-            <div className="panel-bar">
-              <b>
-                {logOf.id === me ? 'My log' : `${logOf.name}’s log`} · {monthLabel}
-              </b>
-              <div className="row">
-                {people.length > 1 && (
-                  <select className="input input-sm filter-select" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Person">
-                    {people.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <input type="month" className="input input-sm" value={month} max={today.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
-              </div>
-            </div>
-            {myStats && (
-              <div className="att-summary muted small">
-                {myStats.working} working days · {myStats.present} present · {myStats.late} late · {myStats.half} half day · {myStats.leave} leave · {myStats.absent} absent · weekly off{' '}
-                {logOf.weekly_off.map((d) => WEEKDAY_SHORT[d]).join(', ') || 'none'}
-              </div>
-            )}
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>In</th>
-                    <th>Out</th>
-                    <th>Breaks</th>
-                    <th>Work</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logDays.map((d) => {
-                    const r = rowOf(logOf.id, d)
-                    const st = dayStatus(d, today, logOf, r, offs, settings)
-                    const s = STATUS_LABEL[st]
-                    return (
-                      <tr key={d} className={st === 'off' || st === 'holiday' ? 'is-off' : undefined}>
-                        <td className="nowrap">{new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</td>
-                        <td className={cn('nowrap', r?.is_late && 'text-danger')}>
-                          {clock(r?.check_in ?? null)}
-                          {r?.is_late ? <span className="muted small"> +{r.late_minutes}m</span> : null}
-                        </td>
-                        <td className="nowrap">{clock(r?.check_out ?? null)}</td>
-                        <td className="small">
-                          {r?.attendance_breaks.length
-                            ? r.attendance_breaks
-                                .map((b) => `${b.kind === 'lunch' ? 'Lunch' : b.kind === 'tea' ? 'Tea' : 'Break'} ${mins(b.started_at, b.ended_at)}m`)
-                                .join(' · ')
-                            : '—'}
-                        </td>
-                        <td className="nowrap">{r ? hm(workedMinutes(r)) : '—'}</td>
-                        <td>
-                          <span className={cn('badge', s.tone)}>{s.label}</span>
-                          {r?.correction_reason && <span className="muted small" title={r.correction_reason}> · corrected</span>}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
           {people.length > 1 && (
             <div className="panel">
               <div className="panel-bar">

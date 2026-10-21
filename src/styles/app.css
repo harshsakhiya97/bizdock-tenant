@@ -796,3 +796,37 @@ a.db-card:hover { border-color: var(--brand); }
 .inv2-st { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; }
 .inv2-st.is-paid { background: #dcfce7; color: #166534; }
 .inv2-st.is-overdue { background: #fee2e2; color: #991b1b; }
+
+/* attendance calendar */
+.att-cal-panel { margin-bottom: 18px; }
+.att-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); }
+.att-cal-head { padding: 10px 8px; text-align: center; font-weight: 600; font-size: 13px; color: var(--text-muted); background: var(--surface-muted, #f8fafc); border-bottom: 1px solid var(--line); }
+.att-cal-head .narrow { display: none; }
+.att-cell { min-height: 112px; padding: 8px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-width: 0; }
+.att-cell:nth-child(7n) { border-right: 0; }
+.att-cell.is-blank { background: var(--surface-muted, #f8fafc); }
+.att-cell.is-off { background: #f3f4f6; }
+.att-cell.is-today { background: #ecfdf3; }
+.att-cell-top { display: flex; align-items: center; justify-content: space-between; }
+.att-day { margin-left: auto; font-size: 18px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.att-day.is-sun { color: #c2410c; }
+.att-cell.is-today .att-day { font-weight: 700; color: var(--text); }
+.att-cell-body { font-size: 12px; line-height: 1.5; color: var(--text); }
+.att-cell-label { color: var(--text-muted); font-weight: 500; }
+.att-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #cbd5e1; vertical-align: -1px; }
+.dot-present { background: #3b5bdb; }
+.dot-late { background: #eab308; }
+.dot-half { background: #8b5cf6; }
+.dot-in { background: #22c55e; }
+.dot-leave { background: #0ea5e9; }
+.dot-absent { background: #ef4444; }
+.dot-holiday { background: #f97316; }
+.dot-off { background: #d1d5db; }
+.att-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 10px 16px; }
+@media (max-width: 760px) {
+  .att-cal-head .wide { display: none; }
+  .att-cal-head .narrow { display: inline; }
+  .att-cell { min-height: 64px; padding: 6px; }
+  .att-cell-body { display: none; }
+  .att-day { font-size: 14px; }
+}
