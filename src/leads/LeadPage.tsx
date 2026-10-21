@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, MessageCircle, Pencil, PhoneCall, Star } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
-import { slotText } from '@/bookings/BookingsTab'
+import { BookingDrawer } from '@/bookings/BookingDrawer'
+import { BookingsTab, slotText } from '@/bookings/BookingsTab'
 import { FollowUpsTab } from '@/bookings/FollowUpsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
@@ -21,12 +22,12 @@ import { followUp, fullName, money, tempOf } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'details' | 'followups'
+type Tab = 'details' | 'followups' | 'bookings'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
-/** One lead: details and follow-ups (calls / WhatsApp). */
+/** One lead: details, follow-ups (calls / WhatsApp) and bookings. */
 export function LeadPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
@@ -40,6 +41,7 @@ export function LeadPage() {
   const [client, setClient] = useState<{ id: string } | null>(null)
   const [tab, setTab] = useState<Tab>('details')
   const [editing, setEditing] = useState(false)
+  const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -96,6 +98,7 @@ export function LeadPage() {
   const name = fullName(lead)
   const canEdit = can('leads', 'edit')
   const canFollow = canEdit || can('follow_ups', 'add')
+  const canBook = can('bookings', 'add')
   const bizRow = businesses.find((b) => b.id === lead.business_id)
   const biz = bizRow?.name
   const subName = bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.name
@@ -139,6 +142,7 @@ export function LeadPage() {
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
+    ...(can('bookings', 'view') ? [{ id: 'bookings' as Tab, label: 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }] : []),
   ]
 
   return (
@@ -226,6 +230,7 @@ export function LeadPage() {
         {tab === 'followups' && (
           <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
         )}
+        {tab === 'bookings' && <BookingsTab bookings={bookings} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
       </section>
 
       {editing && (
@@ -250,6 +255,19 @@ export function LeadPage() {
           onClose={() => setWa(false)}
           onSent={(msg) => {
             setWa(false)
+            done(msg)
+          }}
+        />
+      )}
+      {bk && (
+        <BookingDrawer
+          key={bk.booking?.id ?? 'new'}
+          booking={bk.booking}
+          lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id, sub_business_id: lead.sub_business_id }}
+          refs={refs}
+          onClose={() => setBk(null)}
+          onSaved={(msg) => {
+            setBk(null)
             done(msg)
           }}
         />

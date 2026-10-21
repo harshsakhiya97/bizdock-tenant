@@ -709,3 +709,7 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .access-matrix .am-module td:first-child b { font-size: 14px; }
 .access-matrix .am-sub td:first-child { padding-left: 32px; }
 .access-matrix .am-sub td:first-child b { font-weight: 500; }
+.bk-gst { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface-muted); }
+.bk-total { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.3; }
+.bk-total b { font-size: 18px; color: var(--brand); }
+.bk-extra { display: grid; grid-template-columns: 1fr 130px 130px auto; gap: 8px; align-items: center; }
