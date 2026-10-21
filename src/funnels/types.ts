@@ -153,6 +153,8 @@ export type FunnelSheet = {
   leads_added: number
   leads_updated: number
   rows_skipped: number
+  /** Perisclaw setup: example lead message + which part goes to which sheet column */
+  perisclaw: { example: string; map: Record<string, string> } | null
   is_active: boolean
   created_at: string
 }

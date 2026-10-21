@@ -1,4 +1,5 @@
 import { db } from '@/lib/supabase'
+import { SHEET_FIELD_MAP, type PerisclawSetup } from './perisclaw'
 import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
@@ -273,7 +274,7 @@ export async function saveSheet(tenantId: string, funnelId: string, existing: Fu
   }
   const { data, error } = existing
     ? await db().from('funnel_sheets').update(row).eq('id', existing.id).select('id').single()
-    : await db().from('funnel_sheets').insert({ ...row, tenant_id: tenantId, funnel_id: funnelId }).select('id').single()
+    : await db().from('funnel_sheets').insert({ ...row, field_map: SHEET_FIELD_MAP, tenant_id: tenantId, funnel_id: funnelId }).select('id').single()
   if (error) throw error
   return data.id as string
 }
@@ -285,6 +286,12 @@ export async function setSheetActive(id: string, active: boolean) {
 
 export async function deleteSheet(id: string) {
   const { error } = await db().from('funnel_sheets').delete().eq('id', id)
+  if (error) throw error
+}
+
+/** saves the Perisclaw setup; the sheet then uses our fixed columns */
+export async function savePerisclaw(id: string, setup: PerisclawSetup) {
+  const { error } = await db().from('funnel_sheets').update({ perisclaw: setup, field_map: SHEET_FIELD_MAP }).eq('id', id)
   if (error) throw error
 }
 

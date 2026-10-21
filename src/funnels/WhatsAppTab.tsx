@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Check, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { AlertTriangle, Bot, Check, ChevronDown, ChevronRight, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
@@ -7,7 +7,8 @@ import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteSheet, parseSheetUrl, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
+import { deleteSheet, parseSheetUrl, savePerisclaw, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
+import { SHEET_COLUMNS, guessColumn, parseExample, perisclawMessage } from './perisclaw'
 import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelSheet, SheetInput } from './types'
 import { useCopy } from './useCopy'
@@ -154,6 +155,7 @@ export function WhatsAppTab({
                 </div>
               )}
 
+              <PerisclawSetupBlock key={`p-${s.id}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
               <SheetColumns key={`${s.id}-${(s.headers ?? []).join('|')}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
             </section>
           ))}
@@ -360,5 +362,129 @@ function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onC
         )}
       </div>
     </Modal>
+  )
+}
+
+/** Perisclaw setup: paste one example lead message, match its parts to our columns, copy the message for Perisclaw. */
+function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: FunnelSheet; canEdit: boolean; onChanged: (m: string) => void; onError: (m: string) => void }) {
+  const [open, setOpen] = useState(!sheet.perisclaw)
+  const [example, setExample] = useState(sheet.perisclaw?.example ?? '')
+  const [map, setMap] = useState<Record<string, string>>(sheet.perisclaw?.map ?? {})
+  const [busy, setBusy] = useState(false)
+  const { copied, copy } = useCopy()
+  const parts = useMemo(() => parseExample(example), [example])
+  const col = (label: string) => (label in map ? map[label] : guessColumn(label))
+  const fullMap = Object.fromEntries(parts.map((p) => [p.label, col(p.label)]))
+  const message = parts.length ? perisclawMessage(sheet.sheet_url, parts, fullMap, example) : ''
+  const dirty = example.trim() !== (sheet.perisclaw?.example ?? '').trim() || JSON.stringify(fullMap) !== JSON.stringify(sheet.perisclaw?.map ?? {})
+  const missing = ['Name', 'Email', 'Contact No'].filter((c) => !Object.values(fullMap).includes(c))
+
+  async function save() {
+    setBusy(true)
+    try {
+      await savePerisclaw(sheet.id, { example: example.trim(), map: fullMap })
+      onChanged(`Perisclaw setup for ${sheet.name} saved.`)
+    } catch (e) {
+      onError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="lp-block">
+      <button type="button" className="link-btn lp-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setOpen((o) => !o)}>
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />} <Bot size={14} /> Perisclaw setup
+        {sheet.perisclaw && <span className="badge badge-success">Done</span>}
+      </button>
+      {open && (
+        <div className="stack" style={{ gap: 10 }}>
+          <div>
+            <Label htmlFor={`pc-ex-${sheet.id}`}>1. Paste one lead message exactly as you get it on WhatsApp</Label>
+            <textarea
+              id={`pc-ex-${sheet.id}`}
+              className="input"
+              rows={6}
+              disabled={!canEdit}
+              placeholder={'e.g.\nName: Rahul Mehta\nMobile: 98250 41002\nEmail: rahul@example.com\nCity: Surat\nRequirement: Podcast shoot'}
+              value={example}
+              onChange={(e) => setExample(e.target.value)}
+            />
+            <Hint>Each detail on its own line as “Label: value”.</Hint>
+          </div>
+
+          {example.trim() && !parts.length && <div className="alert alert-warning small">No “Label: value” lines found in this message.</div>}
+
+          {parts.length > 0 && (
+            <>
+              <span className="field-label">2. Match each part to our sheet column</span>
+              <div className="table-wrap">
+                <table className="table table-compact">
+                  <thead>
+                    <tr>
+                      <th>In the message</th>
+                      <th>Example</th>
+                      <th>Sheet column</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parts.map((p) => (
+                      <tr key={p.label}>
+                        <td>
+                          <code className="code-chip">{p.label}</code>
+                        </td>
+                        <td className="muted small">
+                          <span className="cell-clip" style={{ maxWidth: 240 }}>
+                            {p.value}
+                          </span>
+                        </td>
+                        <td>
+                          <select className="input input-sm" aria-label={`${p.label} goes to`} disabled={!canEdit} value={col(p.label)} onChange={(e) => setMap((m) => ({ ...m, [p.label]: e.target.value }))}>
+                            <option value="">— leave out —</option>
+                            {SHEET_COLUMNS.filter((c) => c.name !== 'Sr No').map((c) => (
+                              <option key={c.name} value={c.name}>
+                                {c.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {missing.length > 0 && (
+                <div className="alert alert-warning small">
+                  <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                    <AlertTriangle size={14} /> Nothing goes to {missing.join(', ')}. Rows without {missing.length > 1 ? 'them' : 'it'} are skipped.
+                  </span>
+                </div>
+              )}
+
+              <div className="row-between">
+                <span className="field-label">3. Send this to Perisclaw on WhatsApp</span>
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => copy(`pc-${sheet.id}`, message)}>
+                  {copied === `pc-${sheet.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `pc-${sheet.id}` ? 'Copied' : 'Copy message'}
+                </button>
+              </div>
+              <div className="snippet">
+                <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
+              </div>
+              <Hint>
+                Put these column names in row 1 of the sheet first: <b>{SHEET_COLUMNS.map((c) => c.name).join(' | ')}</b>
+              </Hint>
+              {canEdit && (
+                <div className="row" style={{ justifyContent: 'flex-end' }}>
+                  {dirty && <span className="muted small">Not saved</span>}
+                  <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={busy || !dirty}>
+                    <Save size={14} /> Save setup
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
