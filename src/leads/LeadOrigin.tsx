@@ -42,7 +42,7 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
   const formOf = (s: Pick<SubmissionRow, 'webhook_id' | 'landing_page_id'>) => hookName(s.webhook_id) ?? pageName(s.landing_page_id)
 
   return (
-    <FormSection title="Source & form submissions" description="Filled in by a webhook form or an import.">
+    <FormSection title="Source & form submissions" description="Filled in by a webhook form, a Google Sheet or an import.">
       <dl className="origin-grid">
         {lead.webhook_id && (
           <>
@@ -73,7 +73,7 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
                 <span className="tl-dot" />
                 <div>
                   <b>
-                    {s.via === 'import' ? (s.is_new ? 'Imported' : 'Updated by an import') : s.is_new ? 'Submitted the form' : 'Submitted the form again'}
+                    {s.via === 'sheet' ? (s.is_new ? 'Added from the Google Sheet' : 'Updated from the Google Sheet') : s.via === 'import' ? (s.is_new ? 'Imported' : 'Updated by an import') : s.is_new ? 'Submitted the form' : 'Submitted the form again'}
                     {formOf(s) ? ` · ${formOf(s)}` : ''}
                   </b>
                   {(s.utm_source || s.utm_campaign) && (

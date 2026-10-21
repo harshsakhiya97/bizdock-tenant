@@ -30,6 +30,7 @@ export type LeadRow = {
   updated_at: string
   landing_page_id: string | null
   webhook_id: string | null
+  sheet_id: string | null
   utm_source: string | null
   utm_medium: string | null
   utm_campaign: string | null

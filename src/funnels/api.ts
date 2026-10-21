@@ -1,5 +1,5 @@
 import { db } from '@/lib/supabase'
-import type { FunnelInput, FunnelRow, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook } from './types'
+import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
@@ -213,7 +213,7 @@ export async function deleteUtmLink(id: string) {
 export async function listFunnelSubmissions(funnelId: string): Promise<SubmissionRow[]> {
   const { data, error } = await db()
     .from('lead_submissions')
-    .select('id, lead_id, landing_page_id, webhook_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
+    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
     .eq('funnel_id', funnelId)
     .order('created_at', { ascending: false })
     .limit(2000)
@@ -224,7 +224,7 @@ export async function listFunnelSubmissions(funnelId: string): Promise<Submissio
 export async function listLeadSubmissions(leadId: string): Promise<SubmissionRow[]> {
   const { data, error } = await db()
     .from('lead_submissions')
-    .select('id, lead_id, landing_page_id, webhook_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
+    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: false })
   if (error) throw error
@@ -242,3 +242,74 @@ export function matchesUtm(s: Pick<SubmissionRow, 'utm_source' | 'utm_medium' | 
     eq(s.utm_content, u.utm_content)
   )
 }
+
+// ---------- WhatsApp tab: Google Sheet links ----------
+
+/** "https://docs.google.com/spreadsheets/d/<id>/edit#gid=<gid>" → { spreadsheet_id, gid } */
+export function parseSheetUrl(url: string): { spreadsheet_id: string; gid: string | null } | null {
+  const m = url.trim().match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]{20,})/)
+  if (!m) return null
+  const g = url.match(/[#&?]gid=(\d+)/)
+  return { spreadsheet_id: m[1], gid: g ? g[1] : null }
+}
+
+export async function listSheets(funnelId: string): Promise<FunnelSheet[]> {
+  const { data, error } = await db().from('funnel_sheets').select('*').eq('funnel_id', funnelId).order('created_at')
+  if (error) throw error
+  return (data ?? []) as FunnelSheet[]
+}
+
+/** adds or edits a sheet link; a new link (or a changed one) starts again with the first sync */
+export async function saveSheet(tenantId: string, funnelId: string, existing: FunnelSheet | null, input: SheetInput) {
+  const parsed = parseSheetUrl(input.sheet_url)
+  if (!parsed) throw new Error('Paste the full Google Sheet link (https://docs.google.com/spreadsheets/d/…).')
+  const linkChanged = !existing || existing.spreadsheet_id !== parsed.spreadsheet_id || existing.gid !== parsed.gid
+  const row = {
+    name: input.name.trim(),
+    sheet_url: input.sheet_url.trim(),
+    ...parsed,
+    import_existing: input.import_existing,
+    ...(linkChanged ? { synced_rows: null, headers: null, sample: null, last_error: null, last_synced_at: null } : {}),
+  }
+  const { data, error } = existing
+    ? await db().from('funnel_sheets').update(row).eq('id', existing.id).select('id').single()
+    : await db().from('funnel_sheets').insert({ ...row, tenant_id: tenantId, funnel_id: funnelId }).select('id').single()
+  if (error) throw error
+  return data.id as string
+}
+
+export async function setSheetActive(id: string, active: boolean) {
+  const { error } = await db().from('funnel_sheets').update({ is_active: active }).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteSheet(id: string) {
+  const { error } = await db().from('funnel_sheets').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function saveSheetMap(id: string, map: Record<string, string>) {
+  const { error } = await db().from('funnel_sheets').update({ field_map: map }).eq('id', id)
+  if (error) throw error
+}
+
+async function sheetsCall<T>(body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await db().functions.invoke('sheets-sync', { body })
+  if (error) {
+    let msg = error.message
+    try {
+      const j = await (error as { context?: Response }).context?.json()
+      if (j?.error) msg = j.error
+    } catch {
+      /* keep the generic message */
+    }
+    throw new Error(msg)
+  }
+  return data as T
+}
+
+/** reads the sheet now: its columns, and any new rows become leads */
+export const syncSheetNow = (id: string) => sheetsCall<{ added: number; updated: number; skipped: number }>({ action: 'sync', sheet_id: id })
+
+/** the Google service account email the sheets must be shared with (null = not set up yet) */
+export const sheetsAccount = () => sheetsCall<{ email: string | null }>({ action: 'info' })

@@ -119,6 +119,7 @@ export type SubmissionRow = {
   lead_id: string
   landing_page_id: string | null
   webhook_id: string | null
+  sheet_id: string | null
   via: 'webhook' | 'import' | 'sheet'
   is_new: boolean
   utm_source: string | null
@@ -129,3 +130,31 @@ export type SubmissionRow = {
   data: Record<string, string>
   created_at: string
 }
+
+/** A Google Sheet link on a funnel's WhatsApp tab: new rows become leads (synced every minute). */
+export type FunnelSheet = {
+  id: string
+  tenant_id: string
+  funnel_id: string
+  name: string
+  sheet_url: string
+  spreadsheet_id: string
+  gid: string | null
+  /** rows already in the sheet are imported on the first sync */
+  import_existing: boolean
+  /** sheet column → lead field */
+  field_map: Record<string, string>
+  headers: string[] | null
+  sample: Record<string, string> | null
+  /** data rows already handled (null = first sync not done yet) */
+  synced_rows: number | null
+  last_synced_at: string | null
+  last_error: string | null
+  leads_added: number
+  leads_updated: number
+  rows_skipped: number
+  is_active: boolean
+  created_at: string
+}
+
+export type SheetInput = { name: string; sheet_url: string; import_existing: boolean }

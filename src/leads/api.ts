@@ -2,7 +2,7 @@ import { db } from '@/lib/supabase'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option, Temperature } from './types'
 
 const COLS =
-  'id, tenant_id, business_id, sub_business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, webhook_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra, purpose, required_on, required_hours'
+  'id, tenant_id, business_id, sub_business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, webhook_id, sheet_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra, purpose, required_on, required_hours'
 
 export async function listLeads(tenantId: string): Promise<LeadRow[]> {
   const { data, error } = await db().from('leads').select(COLS).eq('tenant_id', tenantId).order('created_at', { ascending: false })
