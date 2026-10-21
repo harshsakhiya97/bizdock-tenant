@@ -13,6 +13,35 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.3',
+    date: '2026-10-21',
+    title: 'Podcast Studio flow: sub-businesses, bookings, funnels and dashboard',
+    summary: 'The full flow for a Podcast Studio Rental sub-business, from enquiry to booking, invoice and dashboard.',
+    new: [
+      'Sub-businesses: split a business into sub-businesses (Editing service, Podcast, Podcast studio rental); the switcher at the top, leads, funnels, bookings and the dashboard follow it.',
+      'Dashboard: a month view with enquiries, action required, follow-ups logged, bookings, money collected, billed and outstanding, enquiry-to-client rate, a collections breakdown, the action-required list with Follow-up and Book, upcoming shoots and enquiry sources.',
+      'Booking Calendar: a simpler New booking form (linked enquiry or direct booking, client, date and time, amount, status, advance, GST) and Add another date for multi-day shoots, each date with its own amount.',
+      'Invoices: an Invoice button on every booking opens a printable invoice in a new tab, with a Paid / Due stamp, payments received, balance due and the amount in words.',
+      'Funnels: Webhooks tab (webhook URLs belong to the funnel, not a landing page) and WhatsApp tab (Google Sheets synced every minute, with a Perisclaw setup that writes the message to send Perisclaw).',
+      'Workflows: Switch step with several paths, Go to workflow step, send WhatsApp or email to the lead or a team member, and a name on every box.',
+      'System Connections: connect WhatsApp (WATI) with its templates, Facebook Ads accounts and more, as allowed for your workspace.',
+      'Lead page: Bookings tab with Book slot; follow-ups open the WhatsApp message templates on the Follow-up tab.',
+    ],
+    improved: [
+      'Add and edit lead: just Name, Phone, City, Source, Purpose and Sub-business.',
+      'Leads list: stat cards, funnel filter after search, and leads can be added without a funnel.',
+      'Funnels: only Webinar and VSL, cards show total, unassigned, in pipeline and closed leads.',
+      'Products: no code, category, validity or order; GST rate is a number.',
+      'Access Control: roles follow the side menu, and the menu and pages hide by the same rules.',
+      'Success messages hide themselves after 3 seconds.',
+    ],
+    removed: [
+      'Sales, Collections & EMI, Payments, Ledger and client pages (to be rebuilt).',
+      'Lead stages board, stage tabs and Archived view; the Leads by stage list on funnels.',
+      'Workflow triggers Lead moved to a stage and Tag added (existing workflows keep them).',
+    ],
+  },
+  {
     version: '0.2',
     date: '2026-10-12',
     title: 'The full CRM: leads to payments, calendar and attendance',
