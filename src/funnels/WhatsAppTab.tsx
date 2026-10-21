@@ -60,33 +60,34 @@ export function WhatsAppTab({
 
   return (
     <>
-      <div className="row-between" style={{ marginBottom: 14 }}>
-        <p className="muted small" style={{ margin: 0 }}>
-          Google Sheets your WhatsApp leads are written to. Every minute new rows become leads in the funnel’s first stage (source WhatsApp, with the funnel’s tags). Row 1 must hold
-          the column names. The same phone again updates that lead.
-        </p>
-        {canEdit && (
+      <p className="muted small" style={{ margin: '0 0 12px' }}>
+        Google Sheets your WhatsApp leads are written to. Every minute new rows become leads in the funnel’s first stage (source WhatsApp, with the funnel’s tags). Row 1 must hold the
+        column names. The same phone again updates that lead.
+      </p>
+      <div className="row-between" style={{ marginBottom: 14, alignItems: 'center', gap: 12 }}>
+        {canEdit ? (
           <button type="button" className="btn btn-primary" onClick={() => setEditing({ sheet: null })}>
             <Plus size={16} /> Add sheet
           </button>
-        )}
-      </div>
-
-      <div className={cn('alert', account ? 'alert-info' : 'alert-warning', 'small')}>
-        {account === undefined ? (
-          'Checking the Google connection…'
-        ) : account ? (
-          <span className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            Share each sheet with <b>{account}</b> as <b>Viewer</b> (Share → add this email).
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => copy('sa', account)}>
-              {copied === 'sa' ? <Check size={14} /> : <Copy size={14} />} {copied === 'sa' ? 'Copied' : 'Copy email'}
-            </button>
-          </span>
         ) : (
-          <span>
-            <AlertTriangle size={14} /> The Google service account isn’t set up yet, so sheets can’t be read. Sheets you add start syncing once it is.
-          </span>
+          <span />
         )}
+        <div className={cn('alert', account ? 'alert-info' : 'alert-warning', 'small')} style={{ margin: 0, marginLeft: 'auto', textAlign: 'right' }}>
+          {account === undefined ? (
+            'Checking the Google connection…'
+          ) : account ? (
+            <span className="row" style={{ gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              Share each sheet with <b>{account}</b> as <b>Viewer</b>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => copy('sa', account)}>
+                {copied === 'sa' ? <Check size={14} /> : <Copy size={14} />} {copied === 'sa' ? 'Copied' : 'Copy email'}
+              </button>
+            </span>
+          ) : (
+            <span className="row" style={{ gap: 6 }}>
+              <AlertTriangle size={14} /> The Google service account isn’t set up yet, so sheets can’t be read.
+            </span>
+          )}
+        </div>
       </div>
 
       {sheets.length === 0 ? (
