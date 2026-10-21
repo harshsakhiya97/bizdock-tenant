@@ -53,6 +53,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads' },
         ],
       },
+      { key: 'customers', label: 'Customers', open: { kind: 'with', note: 'With Leads' }, actions: [] },
       {
         key: 'follow_ups',
         label: 'Follow-ups',
@@ -64,10 +65,11 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         label: 'Booking Calendar',
         open: { kind: 'action', module: 'bookings', action: 'view', hint: 'Bookings of the businesses they work in' },
         actions: [
-          { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, advance payments' },
-          { module: 'bookings', action: 'edit', label: 'Edit bookings & invoices', hint: 'Change, cancel, add payments, create invoices' },
+          { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, services and payment plan' },
+          { module: 'bookings', action: 'edit', label: 'Edit bookings', hint: 'Change, cancel, mark payment parts paid' },
         ],
       },
+      { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Booking Calendar' }, actions: [] },
       {
         key: 'funnels',
         label: 'Funnels',
@@ -120,7 +122,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'businesses', action: 'delete', label: 'Delete businesses' },
         ],
       },
-      { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Products, sources, statuses, billing companies' }, actions: [] },
+      { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Services, sources, statuses, billing companies' }, actions: [] },
       {
         key: 'access',
         label: 'Access Control',

@@ -11,6 +11,7 @@ export type ProductRow = {
   id: string
   tenant_id: string
   business_id: string
+  sub_business_id: string | null
   name: string
   code: string | null
   description: string | null

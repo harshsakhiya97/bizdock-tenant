@@ -10,13 +10,17 @@ import { SearchSelect } from '@/components/SearchSelect'
 import { fullName, money } from '@/leads/labels'
 import type { LeadRow } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { addBookingPayment, deleteBookingPayment, getBooking, saveBooking } from './api'
+import { saveBooking } from './api'
 import { invoiceHref } from './BookingsTab'
 import type { BookingRefs } from './useBookingRefs'
-import { STATUS_META, type BookingInput, type BookingRow, type BookingStatus } from './types'
+import { STATUS_META, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type PartDraft } from './types'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : '')
+const key = () => Math.random().toString(36).slice(2)
+const num = (v: string) => Math.max(0, Number(v) || 0)
+/** payment parts offered as labels (any text can be typed) */
+const PART_LABELS = ['Advance', 'Pre-shoot', 'After shoot', 'After service', 'Final payment']
 
 /**
  * Add / edit a booking. From a lead or client page the enquiry is fixed; from the calendar it is
@@ -45,16 +49,8 @@ export function BookingDrawer({
   const { can, membership, businesses } = useAuth()
   const { selected, sub } = useBusiness()
   const me = membership?.id
-  // payments are added / removed in place; the page reloads when the drawer closes
-  const [booking, setBooking] = useState(initial)
-  const [paid, setPaid] = useState(false)
-  const close = () => (paid ? onSaved('Payments updated.') : onClose())
-  async function refresh() {
-    if (!booking) return
-    const b = await getBooking(booking.id)
-    if (b) setBooking(b)
-    setPaid(true)
-  }
+  const booking = initial
+  const close = onClose
   const canEdit = booking ? can('bookings', 'edit') : can('bookings', 'add')
   const fixed = !!lead || !!booking
   // calendar: a lead to link, or '' for a direct booking (no enquiry)
@@ -75,16 +71,27 @@ export function BookingDrawer({
     start_time: hm(booking?.start_time) || defaults?.start || '10:00',
     end_time: hm(booking?.end_time) || defaults?.end || '12:00',
     amount: booking ? String(booking.amount) : '',
+    items: booking
+      ? booking.booking_items?.length
+        ? [...booking.booking_items].sort((a, b) => a.sort_order - b.sort_order).map((i) => ({ key: i.id, product_id: i.product_id ?? '', name: i.name, price: String(i.price) }))
+        : Number(booking.amount) > 0
+          ? [{ key: key(), product_id: '', name: booking.purpose || 'Booking', price: String(booking.amount) }]
+          : []
+      : [],
+    parts: booking
+      ? [...booking.booking_payments]
+          .sort((a, b) => (a.due_on ?? a.paid_on ?? '').localeCompare(b.due_on ?? b.paid_on ?? ''))
+          .map((p) => ({ key: p.id, id: p.id, label: p.label ?? 'Payment', due_on: p.due_on ?? p.paid_on ?? '', amount: String(p.amount), mode: p.payment_mode_id ?? '', note: p.note ?? p.reference ?? '', status: p.status, paid_on: p.paid_on ?? '' }))
+      : [],
     gst_applicable: booking?.gst_applicable ?? false,
     gst_rate: booking ? String(booking.gst_rate) : '18',
     status: booking?.status ?? 'confirmed',
     billing_company_id: booking?.billing_company_id ?? refs.companies[0]?.id ?? '',
     notes: booking?.notes ?? '',
-    advance: '',
-    advance_mode_id: refs.modes[0]?.id ?? '',
   }))
   const set = <K extends keyof BookingInput>(k: K, v: BookingInput[K]) => setInput((p) => ({ ...p, [k]: v }))
-  const [pay, setPay] = useState({ amount: '', mode: refs.modes[0]?.id ?? '', reference: '', paid_on: '' })
+  const setItem = (k: string, patch: Partial<ItemDraft>) => setInput((d) => ({ ...d, items: d.items.map((i) => (i.key === k ? { ...i, ...patch } : i)) }))
+  const setPart = (k: string, patch: Partial<PartDraft>) => setInput((d) => ({ ...d, parts: d.parts.map((p) => (p.key === k ? { ...p, ...patch } : p)) }))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -99,7 +106,8 @@ export function BookingDrawer({
     const [h, m] = t.split(':').map(Number)
     return h * 60 + m
   }
-  const amount = Number(input.amount) || 0
+  // the booking amount is the sum of its services
+  const amount = input.items.reduce((s2, i) => s2 + num(i.price), 0)
   const gst = input.gst_applicable ? Math.round(amount * (Number(input.gst_rate) || 0)) / 100 : 0
   const total = amount + gst
   const hours = (() => {
@@ -111,6 +119,23 @@ export function BookingDrawer({
   })()
 
   const subs = useSubBusinesses(input.business_id)
+  // services of this business (and its sub-business, when the service has one)
+  const services = refs.products.filter(
+    (p) => p.is_active && p.business_id === input.business_id && (!p.sub_business_id || !input.sub_business_id || p.sub_business_id === input.sub_business_id),
+  )
+  const planned = input.parts.reduce((s2, p) => s2 + num(p.amount), 0)
+  const paidSum = input.parts.filter((p) => p.status === 'paid').reduce((s2, p) => s2 + num(p.amount), 0)
+  function addPart() {
+    const left = Math.max(0, Math.round((total - planned) * 100) / 100)
+    const used = new Set(input.parts.map((p) => p.label))
+    setInput((d) => ({
+      ...d,
+      parts: [
+        ...d.parts,
+        { key: key(), label: PART_LABELS.find((l) => !used.has(l)) ?? 'Payment', due_on: d.booking_date, amount: left ? String(left) : '', mode: refs.modes[0]?.id ?? '', note: '', status: 'pending', paid_on: '' },
+      ],
+    }))
+  }
   function pickLead(id: string | null) {
     setPickedLead(id ?? '')
     const l = leads?.find((x) => x.id === id)
@@ -120,11 +145,14 @@ export function BookingDrawer({
   }
 
   async function save() {
-    const data: BookingInput = { ...input, new_lead: null, lead_id: fixed ? input.lead_id : pickedLead || null }
+    const data: BookingInput = { ...input, amount: String(amount), new_lead: null, lead_id: fixed ? input.lead_id : pickedLead || null }
     if (!data.business_id) return setError('Pick the business.')
     if (!data.client_name.trim()) return setError('Client name is required.')
     if (!data.booking_date) return setError('Pick the date.')
     if (hours <= 0) return setError('End time must be after the start time.')
+    if (input.items.some((i) => !i.name.trim())) return setError('Pick or name every service, or remove it.')
+    if (input.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
+    if (planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
     for (const x of extra) {
       if (!x.date) return setError('Pick a date for every extra day, or remove it.')
       if (!x.start || !x.end || minutes(x.end) <= minutes(x.start)) return setError(`On ${x.date} the end time must be after the start time.`)
@@ -135,7 +163,12 @@ export function BookingDrawer({
       const clean = { ...data, sub_business_id: subOf(subs, data.sub_business_id) }
       await saveBooking(tenant.id, me, booking, clean, null)
       // extra dates: same client, GST, status and note; the advance stays on the first date
-      for (const x of extra) await saveBooking(tenant.id, me, null, { ...clean, booking_date: x.date, start_time: x.start, end_time: x.end, amount: x.amount, advance: '' }, null)
+      // extra dates: the same services (or one line with that date's amount); payment parts stay on the first date
+      for (const x of extra) {
+        const same = Math.abs(num(x.amount) - amount) < 0.01
+        const items = same ? clean.items : [{ key: key(), product_id: '', name: clean.items.map((i) => i.name).join(' + ') || clean.purpose || 'Booking', price: x.amount }]
+        await saveBooking(tenant.id, me, null, { ...clean, booking_date: x.date, start_time: x.start, end_time: x.end, amount: x.amount, items, parts: [] }, null)
+      }
       const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
       onSaved(
         booking
@@ -148,32 +181,16 @@ export function BookingDrawer({
     }
   }
 
-  async function addPayment() {
-    if (!booking) return
-    if (!(Number(pay.amount) > 0)) return setError('Enter the amount received.')
-    setBusy(true)
-    try {
-      await addBookingPayment(tenant.id, me, booking.id, pay)
-      await refresh()
-      setPay({ amount: '', mode: pay.mode, reference: '', paid_on: '' })
-      setError(null)
-    } catch (e) {
-      setError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
     <Drawer
       open
       onClose={close}
-      width={600}
+      width={720}
       title={booking ? `Booking · ${booking.client_name}` : 'New booking'}
       footer={
         <>
           <Button variant="outline" onClick={close}>
-            {canEdit && !paid ? 'Cancel' : 'Close'}
+            {canEdit ? 'Cancel' : 'Close'}
           </Button>
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
@@ -232,10 +249,6 @@ export function BookingDrawer({
               <TextInput id="bk-end" type="time" step={900} value={input.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit} />
             </div>
             <div>
-              <Label htmlFor="bk-amt">Booking amount (₹)</Label>
-              <TextInput id="bk-amt" type="number" min={0} placeholder="Charge before GST" value={input.amount} onChange={(e) => set('amount', e.target.value)} disabled={!canEdit} />
-            </div>
-            <div>
               <Label htmlFor="bk-status">Status</Label>
               <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit}>
                 {(Object.keys(STATUS_META) as BookingStatus[]).map((st) => (
@@ -244,37 +257,6 @@ export function BookingDrawer({
                   </option>
                 ))}
               </Select>
-            </div>
-            {!booking && (
-              <>
-                <div>
-                  <Label htmlFor="bk-adv">Advance received (₹)</Label>
-                  <TextInput id="bk-adv" type="number" min={0} placeholder="Optional" value={input.advance} onChange={(e) => set('advance', e.target.value)} />
-                </div>
-                <div>
-                  <Label htmlFor="bk-advm">Advance mode</Label>
-                  <Select id="bk-advm" value={input.advance_mode_id} onChange={(e) => set('advance_mode_id', e.target.value)}>
-                    {refs.modes.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </>
-            )}
-            <div className="span-2 bk-gst">
-              <div className="row" style={{ alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
-                <Checkbox id="bk-gst" checked={input.gst_applicable} onChange={(v) => set('gst_applicable', v)} label="Add GST on this booking" />
-                {input.gst_applicable && (
-                  <TextInput aria-label="GST %" type="number" min={0} style={{ width: 80 }} value={input.gst_rate} onChange={(e) => set('gst_rate', e.target.value)} disabled={!canEdit} />
-                )}
-              </div>
-              <div className="bk-total">
-                <span className="muted small">Total payable</span>
-                <b>{amount ? money(total) : '—'}</b>
-                <span className="muted small">{input.gst_applicable ? `incl. GST ${money(gst)}` : 'No GST'}</span>
-              </div>
             </div>
             <div className="span-2">
               <Label htmlFor="bk-notes">Note</Label>
@@ -326,99 +308,153 @@ export function BookingDrawer({
                     const [y, m, d] = last.split('-').map(Number)
                     const next = new Date(y, m - 1, d + 1)
                     const iso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
-                    setExtra((l) => [...l, { date: iso, start: input.start_time, end: input.end_time, amount: input.amount }])
+                    setExtra((l) => [...l, { date: iso, start: input.start_time, end: input.end_time, amount: String(amount) }])
                   }}
                 >
                   <Plus /> Add another date
                 </Button>
-                <Hint>For multi-day shoots: each date is saved as a separate booking for this client. GST, status and note are copied; the advance is recorded on the first date.</Hint>
+                <Hint>For multi-day shoots: each date is saved as a separate booking for this client. Services, GST, status and note are copied; the payment plan stays on the first date.</Hint>
               </div>
             </div>
           )}
         </FormSection>
 
-        {booking && (
-          <FormSection title="Payments" description={`Paid ${money(booking.paid_amount)} of ${money(booking.total_amount)} · balance ${money(Math.max(0, booking.total_amount - booking.paid_amount))}`}>
-            {(booking.booking_payments.length > 0 || ((canEdit || can('payments', 'add')) && booking.status !== 'cancelled')) && (
-              <table className="table table-compact bk-pay-table">
-                <colgroup>
-                  <col style={{ width: 150 }} />
-                  <col style={{ width: 110 }} />
-                  <col />
-                  <col style={{ width: 120 }} />
-                  <col style={{ width: 64 }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Mode</th>
-                    <th>Reference</th>
-                    <th className="num">Amount</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...booking.booking_payments]
-                    .sort((a, b) => a.paid_on.localeCompare(b.paid_on))
-                    .map((p) => (
-                      <tr key={p.id}>
-                        <td className="nowrap">{new Date(`${p.paid_on}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                        <td>{refs.modeName(p.payment_mode_id) ?? '—'}</td>
-                        <td className="muted">{p.reference ?? ''}</td>
-                        <td className="num">{money(p.amount)}</td>
-                        <td className="num">
-                          {canEdit && (
-                            <button
-                              type="button"
-                              className="btn btn-ghost btn-icon btn-sm"
-                              aria-label="Remove payment"
-                              onClick={() => void deleteBookingPayment(p.id).then(refresh, (e: Error) => setError(e.message))}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+        <FormSection title="Services" description="Pick the services for this booking; the price comes from Masters → Services and can be changed here.">
+          {input.items.length > 0 && (
+            <div className="stack" style={{ gap: 8 }}>
+              {input.items.map((i) => (
+                <div key={i.key} className="bk-item">
+                  <Select
+                    aria-label="Service"
+                    value={i.product_id}
+                    disabled={!canEdit}
+                    onChange={(e) => {
+                      const p = services.find((x) => x.id === e.target.value)
+                      setItem(i.key, p ? { product_id: p.id, name: p.name, price: String(Number(p.price)) } : { product_id: '' })
+                    }}
+                  >
+                    <option value="">Other (type a name)</option>
+                    {services.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} · {money(p.price)}
+                      </option>
                     ))}
-                </tbody>
-                {(canEdit || can('payments', 'add')) && booking.status !== 'cancelled' && (
-                  <tfoot>
-                    <tr className="bk-pay-row">
-                      <td>
-                        <input className="input" type="date" aria-label="Paid on" value={pay.paid_on} onChange={(e) => setPay({ ...pay, paid_on: e.target.value })} />
-                      </td>
-                      <td>
-                        <select className="input" aria-label="Mode" value={pay.mode} onChange={(e) => setPay({ ...pay, mode: e.target.value })}>
-                          {refs.modes.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <input className="input" aria-label="Reference" placeholder="Ref / UTR" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} />
-                      </td>
-                      <td>
-                        <input className="input num" aria-label="Amount" type="number" min={0} placeholder="Amount" value={pay.amount} onChange={(e) => setPay({ ...pay, amount: e.target.value })} />
-                      </td>
-                      <td className="num">
-                        <Button variant="outline" onClick={addPayment} disabled={busy}>
-                          Add
-                        </Button>
-                      </td>
-                    </tr>
-                  </tfoot>
+                  </Select>
+                  <TextInput aria-label="Service name" placeholder="Service" value={i.name} onChange={(e) => setItem(i.key, { name: e.target.value })} disabled={!canEdit || !!i.product_id} />
+                  <TextInput aria-label="Price" type="number" min={0} placeholder="Price" value={i.price} onChange={(e) => setItem(i.key, { price: e.target.value })} disabled={!canEdit} />
+                  {canEdit && (
+                    <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove service" onClick={() => setInput((d) => ({ ...d, items: d.items.filter((x) => x.key !== i.key) }))}>
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {canEdit && (
+            <div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = services.find((p) => !input.items.some((i) => i.product_id === p.id))
+                  setInput((d) => ({ ...d, items: [...d.items, next ? { key: key(), product_id: next.id, name: next.name, price: String(Number(next.price)) } : { key: key(), product_id: '', name: '', price: '' }] }))
+                }}
+              >
+                <Plus /> Add service
+              </Button>
+              {!services.length && <Hint>No services in Masters yet; type a name and price, or add them in Masters → Services.</Hint>}
+            </div>
+          )}
+            <div className="span-2 bk-gst">
+              <div className="row" style={{ alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
+                <Checkbox id="bk-gst" checked={input.gst_applicable} onChange={(v) => set('gst_applicable', v)} label="Add GST on this booking" />
+                {input.gst_applicable && (
+                  <TextInput aria-label="GST %" type="number" min={0} style={{ width: 80 }} value={input.gst_rate} onChange={(e) => set('gst_rate', e.target.value)} disabled={!canEdit} />
                 )}
-              </table>
+              </div>
+              <div className="bk-total">
+                <span className="muted small">Booking amount {money(amount)} · Total payable</span>
+                <b>{amount ? money(total) : '—'}</b>
+                <span className="muted small">{input.gst_applicable ? `incl. GST ${money(gst)}` : 'No GST'}</span>
+              </div>
+            </div>
+        </FormSection>
+
+        <FormSection title="Payment plan" description="Split the amount into parts (advance, pre-shoot, after shoot…); mark each Paid when the money comes in.">
+          {input.parts.length > 0 && (
+            <div className="stack" style={{ gap: 8 }}>
+              {input.parts.map((p) => {
+                const st = partState({ status: p.status, due_on: p.due_on || null })
+                return (
+                  <div key={p.key} className={`bk-part is-${st}`}>
+                    <div className="bk-part-row">
+                      <TextInput aria-label="Part" list="bk-part-labels" placeholder="e.g. Advance" value={p.label} onChange={(e) => setPart(p.key, { label: e.target.value })} disabled={!canEdit} />
+                      <TextInput aria-label="Due date" type="date" value={p.due_on} onChange={(e) => setPart(p.key, { due_on: e.target.value })} disabled={!canEdit} />
+                      <TextInput aria-label="Amount" type="number" min={0} placeholder="Amount" value={p.amount} onChange={(e) => setPart(p.key, { amount: e.target.value })} disabled={!canEdit} />
+                      <Select
+                        aria-label="Status"
+                        value={p.status}
+                        disabled={!canEdit}
+                        onChange={(e) => {
+                          const v = e.target.value as PartDraft['status']
+                          setPart(p.key, { status: v, paid_on: v === 'paid' ? p.paid_on || today() : '' })
+                        }}
+                      >
+                        <option value="pending">{st === 'overdue' ? 'Overdue' : 'Pending'}</option>
+                        <option value="paid">Paid</option>
+                      </Select>
+                      {canEdit && (
+                        <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove part" onClick={() => setInput((d) => ({ ...d, parts: d.parts.filter((x) => x.key !== p.key) }))}>
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="bk-part-row2">
+                      <Select aria-label="Mode" value={p.mode} onChange={(e) => setPart(p.key, { mode: e.target.value })} disabled={!canEdit}>
+                        <option value="">Mode</option>
+                        {refs.modes.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
+                          </option>
+                        ))}
+                      </Select>
+                      <TextInput aria-label="Comment" placeholder="Comment (UTR, who paid…)" value={p.note} onChange={(e) => setPart(p.key, { note: e.target.value })} disabled={!canEdit} />
+                      {p.status === 'paid' ? (
+                        <TextInput aria-label="Paid on" type="date" value={p.paid_on} onChange={(e) => setPart(p.key, { paid_on: e.target.value })} disabled={!canEdit} />
+                      ) : (
+                        <span className={`badge ${st === 'overdue' ? 'badge-danger' : 'badge-warning'}`}>{st === 'overdue' ? 'Overdue' : 'Pending'}</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+              <datalist id="bk-part-labels">
+                {PART_LABELS.map((l) => (
+                  <option key={l} value={l} />
+                ))}
+              </datalist>
+            </div>
+          )}
+          <div className="row-between">
+            {canEdit ? (
+              <Button variant="outline" size="sm" onClick={addPart}>
+                <Plus /> Add payment part
+              </Button>
+            ) : (
+              <span />
             )}
-          </FormSection>
-        )}
+            <span className="small muted">
+              Planned {money(planned)} of {money(total)} · paid <b className="tone-success">{money(paidSum)}</b> · balance <b>{money(Math.max(0, total - paidSum))}</b>
+              {total - planned > 0.01 && input.parts.length > 0 && <span className="tone-warning"> · {money(total - planned)} not planned yet</span>}
+            </span>
+          </div>
+        </FormSection>
 
         {booking && booking.status !== 'cancelled' && (
           <FormSection title="Invoice">
             <div className="row-between">
-              <span className="muted small">{booking.invoice_no ? <b>{booking.invoice_no}</b> : 'The invoice number is given when it is first opened.'}</span>
+              <span className="muted small">{booking.invoice_no ? <b>{booking.invoice_no}</b> : 'No invoice number yet.'}</span>
               <a className="btn btn-outline btn-sm" href={invoiceHref(booking.id)} target="_blank" rel="noreferrer">
                 <FileText size={14} /> Invoice
               </a>

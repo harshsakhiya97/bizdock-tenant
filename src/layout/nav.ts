@@ -1,4 +1,4 @@
-import { Building2, CalendarClock, CalendarDays, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
+import { Building2, Contact, FileText, CalendarClock, CalendarDays, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -21,8 +21,10 @@ export const navSections: { title: string; items: NavItem[] }[] = [
       { to: '/my-day', label: 'My Day', icon: Sun },
       { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid, area: 'dashboards' },
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
+      { to: '/customers', label: 'Customers', icon: Contact, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
       { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings' },
+      { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
     ],
@@ -61,6 +63,8 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/attendance': { title: 'Attendance', crumb: 'Check in & discipline', icon: Clock3 },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
+  '/customers': { title: 'Customers', crumb: 'Booked clients & revenue', icon: Contact },
+  '/invoices': { title: 'Invoices', crumb: 'One invoice per booking', icon: FileText },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, MessageCircle, Pencil, PhoneCall, Star, Trash2 } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
@@ -9,8 +9,7 @@ import { FollowUpsTab } from '@/bookings/FollowUpsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
 import type { BookingRow } from '@/bookings/types'
-import { ConfirmModal, Empty } from '@/components/ui'
-import { db } from '@/lib/supabase'
+import { ConfirmModal, Empty, StatCard } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
@@ -18,7 +17,7 @@ import { ActivityLog } from './ActivityLog'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
-import { fullName } from './labels'
+import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -38,7 +37,6 @@ export function LeadPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [bookings, setBookings] = useState<BookingRow[] | null>(null)
-  const [client, setClient] = useState<{ id: string } | null>(null)
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
@@ -61,14 +59,6 @@ export function LeadPage() {
     listBookings(tenant.id, { leadId: id })
       .then(setBookings)
       .catch(() => setBookings([]))
-    void db()
-      .from('customers')
-      .select('id')
-      .eq('lead_id', id)
-      .eq('is_archived', false)
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setClient(data as { id: string } | null))
   }, [id, tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -110,6 +100,13 @@ export function LeadPage() {
   const nextBooking = (bookings ?? [])
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
+  // a confirmed / completed booking makes the lead a customer
+  const won = (bookings ?? []).filter((b) => b.status === 'confirmed' || b.status === 'completed')
+  const isCustomer = won.length > 0
+  const billed = won.reduce((n, b) => n + Number(b.total_amount), 0)
+  const received = won.reduce((n, b) => n + Number(b.paid_amount), 0)
+  const today = new Date().toISOString().slice(0, 10)
+  const overdue = won.flatMap((b) => b.booking_payments).filter((p) => p.status !== 'paid' && p.due_on && p.due_on < today)
   const sourceName = refs.sources.find((s) => s.id === lead.source_id)?.name
 
   const vars = {
@@ -157,9 +154,9 @@ export function LeadPage() {
                 {stage.name}
               </span>
             )}
-            {client && (
+            {isCustomer && (
               <span className="badge badge-success">
-                <Star size={12} /> Client
+                <Star size={12} /> Customer
               </span>
             )}
           </div>
@@ -190,6 +187,21 @@ export function LeadPage() {
           )}
         </div>
       </section>
+
+      {isCustomer && (
+        <div className="stat-grid">
+          <StatCard icon={CalendarCheck} tone="info" value={won.length} label="Bookings" hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
+          <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" />
+          <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" />
+          <StatCard
+            icon={Receipt}
+            tone="warning"
+            value={money(Math.max(0, billed - received))}
+            label="Balance"
+            hint={overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : undefined}
+          />
+        </div>
+      )}
 
       <div className="tabs rec-tabs">
         {TABS.map((t) => (
@@ -281,7 +293,7 @@ export function LeadPage() {
           setRemoving(false)
           try {
             await deleteLeads([lead.id])
-            navigate('/leads', { replace: true })
+            navigate(isCustomer ? '/customers' : '/leads', { replace: true })
           } catch (e) {
             setNotice({ error: (e as Error).message })
           }

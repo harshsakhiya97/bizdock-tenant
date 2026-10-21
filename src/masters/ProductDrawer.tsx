@@ -4,6 +4,7 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { money } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
+import { SubBusinessSelect } from '@/business/SubBusinessSelect'
 import { saveProduct, type ProductInput } from './api'
 import type { ProductRow } from './types'
 
@@ -31,6 +32,7 @@ export function ProductDrawer({
   const tenant = useTenant()
   const [f, setF] = useState({
     business_id: product?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
+    sub_business_id: product?.sub_business_id ?? '',
     name: product?.name ?? '',
     code: product?.code ?? '',
     category: product?.category ?? '',
@@ -53,7 +55,7 @@ export function ProductDrawer({
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!f.business_id) return setError('Pick a business.')
-    if (!f.name.trim()) return setError('Enter the product name.')
+    if (!f.name.trim()) return setError('Enter the service name.')
     if (f.price.trim() === '' || Number.isNaN(Number(f.price)) || Number(f.price) < 0) return setError('Enter a valid price.')
     const rate = Number(f.gst_rate)
     if (f.gst_applicable && (f.gst_rate.trim() === '' || Number.isNaN(rate) || rate < 0 || rate > 100)) return setError('Enter a GST rate between 0 and 100.')
@@ -61,6 +63,7 @@ export function ProductDrawer({
     setError(null)
     const input: ProductInput = {
       business_id: f.business_id,
+      sub_business_id: f.sub_business_id || null,
       name: f.name.trim(),
       // code and category are no longer asked; an existing product keeps its own
       code: f.code.trim() || slug(f.name),
@@ -88,7 +91,7 @@ export function ProductDrawer({
       open
       width={640}
       onClose={onClose}
-      title={product ? 'Edit product' : 'Add product'}
+      title={product ? 'Edit service' : 'Add service'}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -97,20 +100,20 @@ export function ProductDrawer({
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             <Button type="submit" form="product-form" disabled={busy}>
-              {busy ? 'Saving…' : product ? 'Save changes' : 'Add product'}
+              {busy ? 'Saving…' : product ? 'Save changes' : 'Add service'}
             </Button>
           </div>
         </>
       }
     >
       <form id="product-form" onSubmit={submit} className="stack">
-        <FormSection title="Product">
+        <FormSection title="Service">
           <div className="form-grid">
             <div>
               <Label htmlFor="p-biz" required>
                 Business
               </Label>
-              <Select id="p-biz" value={f.business_id} onChange={(e) => set('business_id', e.target.value)}>
+              <Select id="p-biz" value={f.business_id} onChange={(e) => setF((d) => ({ ...d, business_id: e.target.value, sub_business_id: '' }))}>
                 <option value="">— select —</option>
                 {businesses.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -125,6 +128,7 @@ export function ProductDrawer({
               </Label>
               <TextInput id="p-name" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!product} />
             </div>
+            <SubBusinessSelect id="p-sub" businessId={f.business_id} value={f.sub_business_id} onChange={(v) => set('sub_business_id', v)} />
             <div className="span-2">
               <Label htmlFor="p-desc">Description</Label>
               <TextArea id="p-desc" rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
@@ -132,7 +136,7 @@ export function ProductDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Price & GST" description="The default price; it can be changed on each sale.">
+        <FormSection title="Price & GST" description="The default price; it can be changed on each booking.">
           <div className="form-grid">
             <div>
               <Label htmlFor="p-price" required>
@@ -154,7 +158,7 @@ export function ProductDrawer({
         </FormSection>
 
         <div className="check-box">
-          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description="Inactive products can’t be picked on a new sale." />
+          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description="Inactive services can’t be picked on a new booking." />
         </div>
       </form>
     </Drawer>

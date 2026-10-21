@@ -20,6 +20,7 @@ import { MyDayPage } from '@/pages/MyDay'
 import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
+import { InvoicesPage } from '@/bookings/InvoicesPage'
 import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
@@ -54,8 +55,11 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/leads" element={<RequirePermission area="leads"><LeadsPage /></RequirePermission>} />
+                <Route path="/leads" element={<RequirePermission area="leads"><LeadsPage key="leads" /></RequirePermission>} />
                 <Route path="/leads/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
+                <Route path="/customers" element={<RequirePermission area="leads"><LeadsPage customers key="customers" /></RequirePermission>} />
+                <Route path="/customers/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
+                <Route path="/invoices" element={<RequirePermission module="bookings"><InvoicesPage /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
                 <Route
                   path="/bookings"

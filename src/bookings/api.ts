@@ -1,7 +1,7 @@
 import { db } from '@/lib/supabase'
 import type { BookingInput, BookingRow, LeadMessage, MessageTemplate } from './types'
 
-const COLS = '*, booking_payments(*)'
+const COLS = '*, booking_payments(*), booking_items(*)'
 
 export async function listBookings(
   tenantId: string,
@@ -83,18 +83,60 @@ export async function saveBooking(
     billing_company_id: input.billing_company_id || null,
     notes: input.notes.trim() || null,
   }
+  let id = existing?.id
   if (existing) {
     const { error } = await db().from('bookings').update(row).eq('id', existing.id)
     if (error) throw new Error(error.message)
-    return existing.id
+  } else {
+    id = crypto.randomUUID()
+    const { error } = await db()
+      .from('bookings')
+      .insert({ ...row, id, tenant_id: tenantId, owner_id: memberId ?? null, created_by: memberId ?? null })
+    if (error) throw new Error(error.message)
   }
-  const id = crypto.randomUUID()
-  const { error } = await db()
-    .from('bookings')
-    .insert({ ...row, id, tenant_id: tenantId, owner_id: memberId ?? null, created_by: memberId ?? null })
-  if (error) throw new Error(error.message)
-  if (money(input.advance) > 0) await addBookingPayment(tenantId, memberId, id, { amount: input.advance, mode: input.advance_mode_id, reference: 'Advance', paid_on: '' })
-  return id
+  await saveItems(tenantId, id!, input.items)
+  await saveParts(tenantId, memberId, id!, existing?.booking_payments ?? [], input.parts)
+  return id!
+}
+
+/** replaces the booking's services */
+async function saveItems(tenantId: string, bookingId: string, items: BookingInput['items']) {
+  const del = await db().from('booking_items').delete().eq('booking_id', bookingId)
+  if (del.error) throw new Error(del.error.message)
+  const rows = items
+    .filter((i) => i.name.trim())
+    .map((i, n) => ({ tenant_id: tenantId, booking_id: bookingId, product_id: i.product_id || null, name: i.name.trim(), price: money(i.price), sort_order: n }))
+  if (rows.length) {
+    const { error } = await db().from('booking_items').insert(rows)
+    if (error) throw new Error(error.message)
+  }
+}
+
+/** saves the payment plan: updates kept parts, adds new ones, removes deleted ones */
+async function saveParts(tenantId: string, memberId: string | undefined, bookingId: string, before: BookingRow['booking_payments'], parts: BookingInput['parts']) {
+  const keep = new Set(parts.map((p) => p.id).filter(Boolean))
+  const gone = before.filter((p) => !keep.has(p.id)).map((p) => p.id)
+  if (gone.length) {
+    const { error } = await db().from('booking_payments').delete().in('id', gone)
+    if (error) throw new Error(error.message)
+  }
+  const today = new Date().toISOString().slice(0, 10)
+  for (const p of parts) {
+    if (!(money(p.amount) > 0)) continue
+    const row = {
+      label: p.label.trim() || 'Payment',
+      due_on: p.due_on || null,
+      amount: money(p.amount),
+      status: p.status,
+      paid_on: p.status === 'paid' ? p.paid_on || p.due_on || today : null,
+      payment_mode_id: p.mode || null,
+      note: p.note.trim() || null,
+    }
+    const { error } = p.id
+      ? await db().from('booking_payments').update(row).eq('id', p.id)
+      : await db().from('booking_payments').insert({ ...row, tenant_id: tenantId, booking_id: bookingId, received_by: p.status === 'paid' ? (memberId ?? null) : null })
+    if (error) throw new Error(error.message)
+  }
 }
 
 export async function addBookingPayment(

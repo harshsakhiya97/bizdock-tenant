@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
-import { CalendarClock, Download, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { ConfirmModal, Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
@@ -16,6 +16,7 @@ import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
 import { Flash } from '@/components/Flash'
+import { listCustomerRevenue, type Revenue } from './customers'
 
 const FUNNEL_KEY = (t: string) => `leads.funnel.${t}`
 const read = (k: string) => {
@@ -38,13 +39,22 @@ const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', a
 
 type PendingMove = { ids: string[]; stage: StageRow }
 
-export function LeadsPage() {
+/** Leads, or (customers) leads with a confirmed / completed booking and their revenue. */
+export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const tenant = useTenant()
   const { can, scope, membership } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const me = membership?.id
 
-  const [leads, setLeads] = useState<LeadRow[] | null>(null)
+  const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
+  const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
+  // a lead becomes a customer once it has a confirmed / completed booking
+  const leads = useMemo(
+    () => (allLeads && revenue ? allLeads.filter((l) => revenue.has(l.id) === customers) : null),
+    [allLeads, revenue, customers],
+  )
+  const word = customers ? 'customer' : 'lead'
+  const Word = customers ? 'Customer' : 'Lead'
   const [funnels, setFunnels] = useState<FunnelRow[]>([])
   const [sources, setSources] = useState<Option[]>([])
   const [lostReasons, setLostReasons] = useState<Option[]>([])
@@ -58,9 +68,10 @@ export function LeadsPage() {
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
   const load = useCallback(() => {
-    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id)])
-      .then(([l, f, s, r, m]) => {
+    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id)])
+      .then(([l, f, s, r, m, rv]) => {
         setLeads(l)
+        setRevenue(rv)
         setFunnels(f)
         setSources(s)
         setLostReasons(r)
@@ -174,9 +185,12 @@ export function LeadsPage() {
       overdue: due.filter((l) => new Date(l.next_follow_up_at!) < now).length,
       hot: base.filter((l) => l.temperature === 'hot').length,
       won: base.filter((l) => kindOf(l) === 'won').length,
+      bookings: base.reduce((n, l) => n + (revenue?.get(l.id)?.count ?? 0), 0),
+      billed: base.reduce((n, l) => n + (revenue?.get(l.id)?.billed ?? 0), 0),
+      paid: base.reduce((n, l) => n + (revenue?.get(l.id)?.paid ?? 0), 0),
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [base, stageById])
+  }, [base, stageById, revenue])
 
   const pickedIds = visible.filter((l) => picked.has(l.id)).map((l) => l.id)
   const allPicked = visible.length > 0 && pickedIds.length === visible.length
@@ -212,7 +226,7 @@ export function LeadsPage() {
       await updateLeads(ids, { stage_id: stage.id, lost_reason_id: stage.kind === 'lost' ? lostReasonId : null })
       for (const id of ids)
         await logActivity(tenant.id, me, [id], { kind: 'stage', from_stage_id: from.get(id) ?? null, to_stage_id: stage.id, note: note.trim() || null })
-    }, `${ids.length === 1 ? 'Lead' : `${ids.length} leads`} moved to ${stage.name}.`)
+    }, `${ids.length === 1 ? Word : `${ids.length} ${word}s`} moved to ${stage.name}.`)
   }
 
   function exportCsv() {
@@ -238,7 +252,7 @@ export function LeadsPage() {
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    a.download = `leads${funnel ? ` - ${funnel.name}` : ''}.csv`
+    a.download = `${word}s${funnel ? ` - ${funnel.name}` : ''}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -247,12 +261,13 @@ export function LeadsPage() {
     setFilters((f) => ({ ...f, [k]: v }))
     setPicked(new Set())
   }
-  const scopeText = { all: 'all leads', team: 'your and your team’s leads', own: 'your own leads', none: 'no leads' }[scope('leads')]
+  const scopeText = { all: `all ${word}s`, team: `your and your team’s ${word}s`, own: `your own ${word}s`, none: `no ${word}s` }[scope('leads')]
+  const openRow = (id: string) => navigate(customers ? `/customers/${id}` : `/leads/${id}`)
 
   return (
     <>
       <PageHead
-        title="Leads"
+        title={customers ? 'Customers' : 'Leads'}
         subtitle={`Showing ${scopeText}${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}.`}
         actions={
           <>
@@ -261,7 +276,7 @@ export function LeadsPage() {
                 <Download size={15} /> Export CSV
               </button>
             )}
-            {can('leads', 'add') && (
+            {can('leads', 'add') && !customers && (
               <button
                 type="button"
                 className="btn btn-outline"
@@ -270,7 +285,7 @@ export function LeadsPage() {
                 <Upload size={15} /> Import
               </button>
             )}
-            {can('leads', 'add') && (
+            {can('leads', 'add') && !customers && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -285,12 +300,21 @@ export function LeadsPage() {
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       <Flash msg={notice.ok} dep={notice} />
 
+      {customers ? (
+        <div className="stat-grid">
+          <StatCard icon={Users} tone="brand" value={stats.total} label="Customers" hint={`${stats.newWeek} new this week`} />
+          <StatCard icon={CalendarCheck} tone="info" value={stats.bookings} label="Bookings" hint="Confirmed & completed" />
+          <StatCard icon={BadgeIndianRupee} tone="success" value={money(stats.billed)} label="Revenue" hint="Billed, with GST" />
+          <StatCard icon={Wallet} tone="warning" value={money(stats.paid)} label="Received" hint={`${money(Math.max(0, stats.billed - stats.paid))} balance`} />
+        </div>
+      ) : (
       <div className="stat-grid">
         <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={`${stats.hot} hot`} />
         <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" />
         <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} />
         <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} />
       </div>
+      )}
 
       <div className="panel">
         <div className="panel-filters">
@@ -475,11 +499,11 @@ export function LeadsPage() {
         )}
 
         {!leads ? (
-          <div className="empty">Loading leads…</div>
+          <div className="empty">Loading {word}s…</div>
         ) : scope('leads') === 'none' ? (
-          <Empty icon={Users}>Your access doesn’t include leads.</Empty>
+          <Empty icon={Users}>Your access doesn’t include {word}s.</Empty>
         ) : visible.length === 0 ? (
-          <Empty icon={Users}>{filters.archived ? 'No archived leads.' : 'No leads here yet.'}</Empty>
+          <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed.' : 'No leads here yet.'}</Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -494,13 +518,21 @@ export function LeadsPage() {
                       onChange={() => setPicked(allPicked ? new Set() : new Set(visible.map((l) => l.id)))}
                     />
                   </th>
-                  <th>Lead</th>
+                  <th>{Word}</th>
                   <th>Temp</th>
                   <th>Source</th>
                   {!funnel && <th>Funnel</th>}
                   <th>Owner</th>
                   <th>Next follow-up</th>
-                  <th style={{ textAlign: 'right' }}>Value</th>
+                  {customers ? (
+                    <>
+                      <th style={{ textAlign: 'right' }}>Bookings</th>
+                      <th style={{ textAlign: 'right' }}>Revenue</th>
+                      <th style={{ textAlign: 'right' }}>Balance</th>
+                    </>
+                  ) : (
+                    <th style={{ textAlign: 'right' }}>Value</th>
+                  )}
                   <th>Created</th>
                 </tr>
               </thead>
@@ -509,7 +541,7 @@ export function LeadsPage() {
                   const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
-                    <tr key={l.id} className="is-clickable" onClick={() => navigate(`/leads/${l.id}`)}>
+                    <tr key={l.id} className="is-clickable" onClick={() => openRow(l.id)}>
                       <td onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="am-check" aria-label={`Select ${fullName(l)}`} checked={picked.has(l.id)} onChange={() => toggle(l.id)} />
                       </td>
@@ -525,9 +557,23 @@ export function LeadsPage() {
                       {!funnel && <td className="muted">{funnelName(l.funnel_id)}</td>}
                       <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
                       <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
-                      <td className="num" style={{ textAlign: 'right' }}>
-                        {money(l.estimated_amount)}
-                      </td>
+                      {customers ? (
+                        <>
+                          <td className="num" style={{ textAlign: 'right' }}>
+                            {revenue?.get(l.id)?.count ?? 0}
+                          </td>
+                          <td className="num nowrap" style={{ textAlign: 'right' }}>
+                            {money(revenue?.get(l.id)?.billed ?? 0)}
+                          </td>
+                          <td className="num nowrap" style={{ textAlign: 'right' }}>
+                            {money(Math.max(0, (revenue?.get(l.id)?.billed ?? 0) - (revenue?.get(l.id)?.paid ?? 0)))}
+                          </td>
+                        </>
+                      ) : (
+                        <td className="num" style={{ textAlign: 'right' }}>
+                          {money(l.estimated_amount)}
+                        </td>
+                      )}
                       <td className="muted nowrap">
                         {new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
@@ -580,14 +626,14 @@ export function LeadsPage() {
         open={deleting}
         danger
         icon={Trash2}
-        title={`Delete ${pickedIds.length} lead${pickedIds.length === 1 ? '' : 's'}?`}
+        title={`Delete ${pickedIds.length} ${word}${pickedIds.length === 1 ? '' : 's'}?`}
         message="They are removed for good, with their follow-ups, activity and form submissions. Bookings stay, without the link to the lead."
         confirmLabel="Delete"
         onCancel={() => setDeleting(false)}
         onConfirm={() => {
           setDeleting(false)
           const n = pickedIds.length
-          void run(() => deleteLeads(pickedIds), `${n} lead${n === 1 ? '' : 's'} deleted.`)
+          void run(() => deleteLeads(pickedIds), `${n} ${word}${n === 1 ? '' : 's'} deleted.`)
         }}
       />
     </>

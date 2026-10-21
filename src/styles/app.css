@@ -776,3 +776,21 @@ a.db-card:hover { border-color: var(--brand); }
 @media (max-width: 1000px) { .db-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .db-grid { grid-template-columns: 1fr; } }
 .db-table td:first-child { min-width: 150px; }
 .db-table .db-name { white-space: nowrap; }
+
+/* booking services & payment plan */
+.bk-item { display: grid; grid-template-columns: 1.3fr 1.2fr 0.8fr auto; gap: 8px; align-items: center; }
+.bk-part { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--warning, #d97706); border-radius: 10px; }
+.bk-part.is-paid { border-left-color: var(--success, #16a34a); }
+.bk-part.is-overdue { border-left-color: var(--danger, #dc2626); }
+.bk-part-row { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr 0.9fr auto; gap: 8px; align-items: center; }
+.bk-part-row2 { display: grid; grid-template-columns: 0.9fr 2fr 1fr; gap: 8px; align-items: center; }
+.bk-part-row2 .badge { justify-self: start; }
+@media (max-width: 640px) {
+  .bk-item, .bk-part-row, .bk-part-row2 { grid-template-columns: 1fr 1fr; }
+}
+.inv2-receipts { margin-top: 18px; }
+.inv2-receipts .inv2-label { margin-bottom: 6px; }
+.inv2-receipts .inv2-table { margin-top: 0; }
+.inv2-st { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; }
+.inv2-st.is-paid { background: #dcfce7; color: #166534; }
+.inv2-st.is-overdue { background: #fee2e2; color: #991b1b; }

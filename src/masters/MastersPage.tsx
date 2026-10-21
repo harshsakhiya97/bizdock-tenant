@@ -30,7 +30,7 @@ const SIMPLE: Record<SimpleTable, { title: string; purpose: string }> = {
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
-  { id: 'products', label: 'Products' },
+  { id: 'products', label: 'Services' },
   { id: 'billing', label: 'Billing companies' },
   { id: 'customer_stages', label: 'Client stages' },
   { id: 'payment_modes', label: 'Payment modes' },
@@ -108,7 +108,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   }, [tenant.id])
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
-    { tab: 'products', label: 'Products', table: 'products', purpose: 'What you sell: price and GST, per business.' },
+    { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
     { tab: 'billing', label: 'Billing companies', table: 'billing_companies', purpose: 'Which legal company bills the sale.' },
     ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t].title, table: t, purpose: SIMPLE[t].purpose })),
   ]
@@ -152,7 +152,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
 function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void }) {
   const tenant = useTenant()
   const { businesses } = useAuth()
-  const { selected } = useBusiness()
+  const { selected, sub } = useBusiness()
   const [rows, setRows] = useState<ProductRow[] | null>(null)
   const [drawer, setDrawer] = useState<{ product: ProductRow | null } | null>(null)
   const [showOff, setShowOff] = useState(false)
@@ -167,15 +167,16 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
   const bizName = useMemo(() => new Map(businesses.map((b) => [b.id, b.name])), [businesses])
   const visible = (rows ?? [])
     .filter((p) => (selected ? p.business_id === selected.id : bizName.has(p.business_id)))
+    .filter((p) => !sub || !p.sub_business_id || p.sub_business_id === sub.id)
     .filter((p) => showOff || p.is_active)
 
   return (
     <>
       <div className="panel-bar">
         <div>
-          <b>Products</b>
+          <b>Services</b>
           <div className="muted small">
-            {selected ? `Products of ${selected.name}.` : 'Products of every business.'} Pick the business in the top bar to narrow the list.
+            {selected ? `Services of ${selected.name}${sub ? ` · ${sub.name}` : ''}.` : 'Services of every business.'} Pick the business in the top bar to narrow the list.
           </div>
         </div>
         <div className="row">
@@ -184,7 +185,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
           </label>
           {canEdit && (
             <button type="button" className="btn btn-primary" onClick={() => setDrawer({ product: null })} disabled={!businesses.length}>
-              <Plus size={16} /> Add product
+              <Plus size={16} /> Add service
             </button>
           )}
         </div>
@@ -192,13 +193,13 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
       {!rows ? (
         <div className="empty">Loading…</div>
       ) : visible.length === 0 ? (
-        <Empty icon={Package}>No products yet. Add what you sell so it can be picked on a new sale.</Empty>
+        <Empty icon={Package}>No services yet. Add the services you offer (studio, editing, host…) so they can be picked on a booking.</Empty>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Product</th>
+                <th>Service</th>
                 {!selected && <th>Business</th>}
                 <th className="right">Price</th>
                 <th>GST</th>
@@ -214,6 +215,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
                   <tr key={p.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ product: p })}>
                     <td>
                       <b>{p.name}</b>
+                      {p.sub_business_id && <div className="muted small">{businesses.find((b) => b.id === p.business_id)?.subs.find((x) => x.id === p.sub_business_id)?.name}</div>}
                     </td>
                     {!selected && <td>{bizName.get(p.business_id) ?? '—'}</td>}
                     <td className="right nowrap">{money(p.price)}</td>

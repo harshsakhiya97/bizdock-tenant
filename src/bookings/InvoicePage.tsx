@@ -4,7 +4,7 @@ import { Printer } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import type { BillingCompanyRow } from '@/masters/types'
 import { createBookingInvoice, getBooking } from './api'
-import type { BookingRow } from './types'
+import { partState, type BookingRow } from './types'
 
 const inr = (n: number) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
@@ -81,6 +81,14 @@ export function InvoicePage() {
     const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
     return (m(b.end_time) - m(b.start_time)) / 60
   })()
+  const items = b.booking_items?.length
+    ? [...b.booking_items].sort((x, y) => x.sort_order - y.sort_order)
+    : [{ id: 'one', name: sellerSubName(), price: b.amount }]
+  const parts = [...b.booking_payments].sort((x, y) => (x.due_on ?? x.paid_on ?? '').localeCompare(y.due_on ?? y.paid_on ?? ''))
+  const paidParts = parts.filter((p) => p.status === 'paid')
+  function sellerSubName() {
+    return b!.purpose || 'Studio booking'
+  }
   const half = Math.round((b.gst_amount / 2) * 100) / 100
   const balance = Math.max(0, b.total_amount - b.paid_amount)
 
@@ -156,15 +164,26 @@ export function InvoicePage() {
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                <b>{sellerSub ? `${sellerSub}${b.purpose ? ` - ${b.purpose}` : ''}` : b.purpose || 'Studio booking'}</b>
-                <div className="inv2-muted">
-                  {shortDay(b.booking_date)} · {clock(b.start_time)} - {clock(b.end_time)} · {hours} hr{hours === 1 ? '' : 's'}
-                </div>
-              </td>
-              <td className="r">{inr(b.amount)}</td>
-            </tr>
+            {items.map((it, i) => (
+              <tr key={it.id}>
+                <td>
+                  <b>{it.name}</b>
+                  {i === 0 && (
+                    <div className="inv2-muted">
+                      {b.purpose ? `${b.purpose} · ` : ''}
+                      {shortDay(b.booking_date)} · {clock(b.start_time)} - {clock(b.end_time)} · {hours} hr{hours === 1 ? '' : 's'}
+                    </div>
+                  )}
+                </td>
+                <td className="r">{inr(it.price)}</td>
+              </tr>
+            ))}
+            {items.length > 1 && (
+              <tr className="inv2-tax">
+                <td>Sub-total</td>
+                <td className="r">{inr(b.amount)}</td>
+              </tr>
+            )}
             {b.gst_applicable && (
               <>
                 <tr className="inv2-tax">
@@ -185,21 +204,60 @@ export function InvoicePage() {
             <span>Total</span>
             <span>{inr(b.total_amount)}</span>
           </div>
-          {b.booking_payments.map((p) => (
-            <div key={p.id} className="inv2-row">
+          {paidParts.length === 1 && parts.length === 1 && (
+            <div className="inv2-row">
               <span>
-                Received {shortDay(p.paid_on)}
-                {p.payment_mode_id ? ` · ${modes.get(p.payment_mode_id) ?? ''}` : ''}
-                {p.reference ? ` · ${p.reference}` : ''}
+                Received {shortDay(paidParts[0].paid_on ?? b.booking_date)}
+                {paidParts[0].payment_mode_id ? ` · ${modes.get(paidParts[0].payment_mode_id) ?? ''}` : ''}
               </span>
-              <span>- {inr(p.amount)}</span>
+              <span>- {inr(paidParts[0].amount)}</span>
             </div>
-          ))}
+          )}
+          {parts.length > 1 && (
+            <div className="inv2-row">
+              <span>Received</span>
+              <span>- {inr(b.paid_amount)}</span>
+            </div>
+          )}
           <div className="inv2-row">
             <span>Balance Due</span>
             <span>{inr(balance)}</span>
           </div>
         </div>
+        {parts.length > 1 && (
+          <section className="inv2-receipts">
+            <div className="inv2-label">Receipts</div>
+            <table className="inv2-table">
+              <thead>
+                <tr>
+                  <th>Part</th>
+                  <th>Date</th>
+                  <th>Mode</th>
+                  <th>Comment</th>
+                  <th>Status</th>
+                  <th className="r">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {parts.map((p) => {
+                  const st = partState(p)
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.label || 'Payment'}</td>
+                      <td>{st === 'paid' ? shortDay(p.paid_on ?? p.due_on ?? b.booking_date) : p.due_on ? `Due ${shortDay(p.due_on)}` : '—'}</td>
+                      <td>{p.payment_mode_id ? (modes.get(p.payment_mode_id) ?? '—') : '—'}</td>
+                      <td>{p.note || p.reference || '—'}</td>
+                      <td>
+                        <span className={`inv2-st is-${st}`}>{st === 'paid' ? 'Paid' : st === 'overdue' ? 'Overdue' : 'Pending'}</span>
+                      </td>
+                      <td className="r">{inr(p.amount)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </section>
+        )}
         <p className="inv2-words">Amount in words: {inWords(b.total_amount)}</p>
         {b.notes && <p className="inv2-words">{b.notes}</p>}
 

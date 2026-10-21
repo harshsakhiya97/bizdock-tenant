@@ -1,10 +1,16 @@
 export type BookingStatus = 'tentative' | 'confirmed' | 'completed' | 'cancelled'
 
+/** one planned part of a booking's payment (advance, pre-shoot, after-shoot…) */
 export type BookingPayment = {
   id: string
   booking_id: string
   amount: number
-  paid_on: string
+  /** e.g. Advance, Pre-shoot, After-shoot */
+  label: string | null
+  due_on: string | null
+  status: 'pending' | 'paid'
+  /** the day it was received (paid parts) */
+  paid_on: string | null
   payment_mode_id: string | null
   reference: string | null
   note: string | null
@@ -41,7 +47,18 @@ export type BookingRow = {
   created_by: string | null
   created_at: string
   booking_payments: BookingPayment[]
+  booking_items: BookingItem[]
 }
+
+/** a service on a booking (from the services master, price editable) */
+export type BookingItem = { id: string; booking_id: string; product_id: string | null; name: string; price: number; sort_order: number }
+
+export type ItemDraft = { key: string; product_id: string; name: string; price: string }
+export type PartDraft = { key: string; id?: string; label: string; due_on: string; amount: string; mode: string; note: string; status: 'pending' | 'paid'; paid_on: string }
+
+/** overdue = still pending after its due date */
+export const partState = (p: Pick<BookingPayment, 'status' | 'due_on'>, today = new Date().toISOString().slice(0, 10)) =>
+  p.status === 'paid' ? 'paid' : p.due_on && p.due_on < today ? 'overdue' : 'pending'
 
 export type BookingInput = {
   business_id: string
@@ -64,8 +81,8 @@ export type BookingInput = {
   status: BookingStatus
   billing_company_id: string
   notes: string
-  advance: string
-  advance_mode_id: string
+  items: ItemDraft[]
+  parts: PartDraft[]
 }
 
 export type TemplateCategory = 'call_not_received' | 'booking' | 'follow_up' | 'other'

@@ -93,7 +93,7 @@ export function DashboardPage() {
 
     // money
     const pays = B.flatMap((b) => b.booking_payments.map((p) => ({ ...p, booking: b })))
-    const paidInMonth = pays.filter((p) => inMonth(p.paid_on))
+    const paidInMonth = pays.filter((p) => p.status === 'paid' && inMonth(p.paid_on))
     const collected = paidInMonth.reduce((s, p) => s + Number(p.amount), 0)
     const billed = mb.reduce((s, b) => s + Number(b.total_amount), 0)
     const pendingMonth = mb.reduce((s, b) => s + Math.max(0, b.total_amount - b.paid_amount), 0)
