@@ -7,7 +7,7 @@ import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { ago } from '@/team/time'
 import { clearLeadFollowUps, scheduleFollowUp } from '@/followups/api'
-import { createLead, listActivities, logActivity, phoneExists, updateLead } from './api'
+import { createLead, listActivities, logActivity, updateLead } from './api'
 import { toLocalInput } from './labels'
 import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
@@ -114,12 +114,6 @@ export function LeadDrawer({
       const businessId = funnel?.business_id ?? lead!.business_id
       // a sub-business only stays when it belongs to the lead's business
       const clean = { ...input, sub_business_id: subOf(subs, input.sub_business_id) }
-      if (!lead || businessId !== lead.business_id || input.phone !== lead.phone) {
-        if (await phoneExists(businessId, input.phone, lead?.id)) {
-          setBusy(false)
-          return setError('A lead with this phone number already exists in this business.')
-        }
-      }
       const leadId = lead
         ? (await updateLead(tenant.id, me, lead, clean, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
         : await createLead(tenant.id, businessId, me, clean)

@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
-import { createLead, phoneExists } from './api'
+import { createLead } from './api'
 import type { LeadInput, Option } from './types'
 import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
@@ -50,10 +50,6 @@ export function QuickAddLead({
     setBusy(true)
     setError(null)
     try {
-      if (await phoneExists(bizId, phone)) {
-        setBusy(false)
-        return setError('A lead with this phone number already exists in this business.')
-      }
       const first = name.trim().split(/\s+/)[0]
       const input: LeadInput = {
         funnel_id: funnel?.id ?? '',
