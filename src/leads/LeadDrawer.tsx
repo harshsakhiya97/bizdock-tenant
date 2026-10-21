@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
+import { FormSection, Label, Select, TextInput } from '@/components/Field'
 import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { ago } from '@/team/time'
 import { clearLeadFollowUps, scheduleFollowUp } from '@/followups/api'
 import { createLead, listActivities, logActivity, phoneExists, updateLead } from './api'
-import { TEMPERATURES, toLocalInput } from './labels'
+import { toLocalInput } from './labels'
 import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
 import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
@@ -19,7 +19,6 @@ export function LeadDrawer({
   lead,
   funnels,
   sources,
-  lostReasons,
   members,
   defaultFunnelId,
   onClose,
@@ -41,7 +40,6 @@ export function LeadDrawer({
   const me = membership?.id
   // a lead imported without a funnel can stay without one, or be put into a funnel of its business
   const noFunnelLead = !!lead && !lead.funnel_id
-  const funnelChoices = noFunnelLead ? funnels.filter((f) => f.business_id === lead!.business_id) : funnels
   const firstFunnel = noFunnelLead ? undefined : (funnels.find((f) => f.id === (lead?.funnel_id ?? defaultFunnelId)) ?? funnels[0])
   const [input, setInput] = useState<LeadInput>(() => ({
     funnel_id: noFunnelLead ? '' : (lead?.funnel_id ?? firstFunnel?.id ?? ''),
@@ -65,8 +63,10 @@ export function LeadDrawer({
     required_hours: lead?.required_hours != null ? String(lead.required_hours) : '',
     sub_business_id: lead?.sub_business_id ?? '',
   }))
-  const [stageNote, setStageNote] = useState('')
-  const [lostReason, setLostReason] = useState('')
+  // stage / lost reason are no longer changed here
+  const stageNote = ''
+  const [name, setName] = useState(() => `${lead?.first_name ?? ''} ${lead?.last_name ?? ''}`.trim())
+  const lostReason = ''
   const [activities, setActivities] = useState<ActivityRow[] | null>(null)
   const [newNote, setNewNote] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -103,7 +103,7 @@ export function LeadDrawer({
     e.preventDefault()
     const keepNoFunnel = noFunnelLead && !input.funnel_id
     if (!keepNoFunnel && (!funnel || !stage)) return setError('Pick a funnel and stage.')
-    if (!input.first_name.trim()) return setError('First name is required.')
+    if (!input.first_name.trim()) return setError('Name is required.')
     if (!phoneOk(input.phone)) return setError('Enter a valid phone number (10 digits).')
     if (input.estimated_amount.trim() && Number.isNaN(Number(input.estimated_amount))) return setError('Estimated amount must be a number.')
     if (needsNote && stage.note_required && !stageNote.trim()) return setError(`A note is required when moving to ${stage.name}.`)
@@ -203,16 +203,24 @@ export function LeadDrawer({
           <div className="alert alert-warning">Archived{lead.archive_reason ? `: ${lead.archive_reason}` : ''}.</div>
         )}
         <FormSection title="Lead details">
-          <div className="form-grid form-grid-3">
+          <div className="form-grid">
             <div>
-              <Label htmlFor="l-first" required>
-                First name
+              <Label htmlFor="l-name" required>
+                Name
               </Label>
-              <TextInput id="l-first" value={input.first_name} onChange={set('first_name')} disabled={!canEdit} autoFocus={!lead} />
-            </div>
-            <div>
-              <Label htmlFor="l-last">Last name</Label>
-              <TextInput id="l-last" value={input.last_name} onChange={set('last_name')} disabled={!canEdit} />
+              <TextInput
+                id="l-name"
+                value={name}
+                onChange={(e) => {
+                  // the full name is kept as first name + the rest
+                  const v = e.target.value
+                  setName(v)
+                  const first = v.trim().split(/\s+/)[0] ?? ''
+                  setInput((d) => ({ ...d, first_name: first, last_name: v.trim().slice(first.length).trim() }))
+                }}
+                disabled={!canEdit}
+                autoFocus={!lead}
+              />
             </div>
             <div>
               <Label htmlFor="l-phone" required>
@@ -221,148 +229,26 @@ export function LeadDrawer({
               <TextInput id="l-phone" type="tel" placeholder="10 digit / +91…" value={input.phone} onChange={set('phone')} disabled={!canEdit} />
             </div>
             <div>
-              <Label htmlFor="l-wa">WhatsApp</Label>
-              <TextInput id="l-wa" type="tel" placeholder="Empty = same as phone" value={input.whatsapp} onChange={set('whatsapp')} disabled={!canEdit} />
-            </div>
-            <div>
-              <Label htmlFor="l-email">Email</Label>
-              <TextInput id="l-email" type="email" value={input.email} onChange={set('email')} disabled={!canEdit} />
-            </div>
-            <div>
-              <Label htmlFor="l-city">Location / City</Label>
+              <Label htmlFor="l-city">City</Label>
               <TextInput id="l-city" value={input.city} onChange={set('city')} disabled={!canEdit} />
             </div>
-            <SubBusinessSelect id="l-sub" businessId={bizId} value={input.sub_business_id} onChange={(v) => setInput((d) => ({ ...d, sub_business_id: v }))} disabled={!canEdit} />
-            <div>
-              <Label htmlFor="l-purpose">Purpose</Label>
-              <TextInput id="l-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={set('purpose')} disabled={!canEdit} />
-            </div>
-            <div>
-              <Label htmlFor="l-req">Required on</Label>
-              <div className="row" style={{ flexWrap: 'nowrap' }}>
-                <TextInput id="l-req" type="date" value={input.required_on} onChange={set('required_on')} disabled={!canEdit} />
-                <TextInput aria-label="Hours" type="number" min={0} step={0.5} placeholder="hrs" style={{ width: 80 }} value={input.required_hours} onChange={set('required_hours')} disabled={!canEdit} />
-              </div>
-            </div>
-          </div>
-        </FormSection>
-
-        <FormSection title="Pipeline">
-          <div className="form-grid form-grid-3">
-            <div>
-              <Label htmlFor="l-funnel" required={!noFunnelLead}>
-                Funnel
-              </Label>
-              <Select
-                id="l-funnel"
-                value={input.funnel_id}
-                disabled={!canEdit}
-                onChange={(e) => {
-                  const f = funnels.find((x) => x.id === e.target.value)
-                  setInput((d) => ({ ...d, funnel_id: e.target.value, stage_id: f?.funnel_stages[0]?.id ?? '' }))
-                }}
-              >
-                {noFunnelLead && <option value="">— No funnel —</option>}
-                {funnelChoices.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="l-stage" required={!!input.funnel_id}>
-                Stage
-              </Label>
-              <Select id="l-stage" value={input.stage_id} onChange={set('stage_id')} disabled={!canEdit || !input.funnel_id}>
-                {!input.funnel_id && <option value="">—</option>}
-                {(funnel?.funnel_stages ?? []).map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="l-temp">Temperature</Label>
-              <Select id="l-temp" value={input.temperature} onChange={set('temperature')} disabled={!canEdit}>
-                <option value="">— select —</option>
-                {TEMPERATURES.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {needsNote && (
-              <>
-                {stage?.kind === 'lost' && (
-                  <div>
-                    <Label htmlFor="l-lost" required>
-                      Lost reason
-                    </Label>
-                    <Select id="l-lost" value={lostReason} onChange={(e) => setLostReason(e.target.value)}>
-                      <option value="">— select —</option>
-                      {lostReasons.map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                )}
-                <div className={stage?.kind === 'lost' ? 'span-2' : 'span-3'}>
-                  <Label htmlFor="l-stagenote" required={stage?.note_required}>
-                    Note for moving to {stage?.name}
-                  </Label>
-                  <TextInput id="l-stagenote" value={stageNote} onChange={(e) => setStageNote(e.target.value)} />
-                </div>
-              </>
-            )}
             <div>
               <Label htmlFor="l-source">Source</Label>
               <Select id="l-source" value={input.source_id} onChange={set('source_id')} disabled={!canEdit}>
                 <option value="">— select —</option>
-                {sources.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
+                {sources.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.name}
                   </option>
                 ))}
               </Select>
             </div>
             <div>
-              <Label htmlFor="l-ref">Referred by</Label>
-              <TextInput id="l-ref" value={input.referred_by} onChange={set('referred_by')} disabled={!canEdit} />
+              <Label htmlFor="l-purpose">Purpose</Label>
+              <TextInput id="l-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={set('purpose')} disabled={!canEdit} />
             </div>
-            <div>
-              <Label htmlFor="l-amount">Estimated amount (₹)</Label>
-              <TextInput id="l-amount" inputMode="decimal" value={input.estimated_amount} onChange={set('estimated_amount')} disabled={!canEdit} />
-            </div>
-            <div>
-              <Label htmlFor="l-owner">Owner</Label>
-              <Select id="l-owner" value={input.owner_id} onChange={set('owner_id')} disabled={!(canAssign || (!lead && canEdit))}>
-                <option value="">— unassigned —</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="l-fu">Next follow-up</Label>
-              <TextInput id="l-fu" type="datetime-local" value={input.next_follow_up_at} onChange={set('next_follow_up_at')} disabled={!canFollowUp} />
-            </div>
-            <div>
-              <Label htmlFor="l-tags">Tags</Label>
-              <TextInput id="l-tags" placeholder="Comma separated" value={input.tags} onChange={set('tags')} disabled={!canEdit} />
-            </div>
-            <div className="span-3">
-              <Label htmlFor="l-notes">Notes</Label>
-              <TextArea id="l-notes" rows={2} value={input.notes} onChange={set('notes')} disabled={!canEdit} />
-            </div>
+            <SubBusinessSelect id="l-sub" businessId={bizId} value={input.sub_business_id} onChange={(v) => setInput((d) => ({ ...d, sub_business_id: v }))} disabled={!canEdit} />
           </div>
-          {!lead && funnel && <Hint>The lead is added to {funnel.name}.</Hint>}
         </FormSection>
 
         {lead && <LeadOrigin lead={lead} />}
