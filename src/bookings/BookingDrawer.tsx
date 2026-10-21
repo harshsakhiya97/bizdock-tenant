@@ -132,7 +132,7 @@ export function BookingDrawer({
       ...d,
       parts: [
         ...d.parts,
-        { key: key(), label: PART_LABELS.find((l) => !used.has(l)) ?? 'Payment', due_on: d.booking_date, amount: left ? String(left) : '', mode: refs.modes[0]?.id ?? '', note: '', status: 'pending', paid_on: '' },
+        { key: key(), label: PART_LABELS.find((l) => !used.has(l)) ?? 'Payment', due_on: d.booking_date, amount: left ? String(left) : '', mode: '', note: '', status: 'pending', paid_on: '' },
       ],
     }))
   }
@@ -389,51 +389,72 @@ export function BookingDrawer({
                 return (
                   <div key={p.key} className={`bk-part is-${st}`}>
                     <div className="bk-part-row">
-                      <TextInput aria-label="Part" list="bk-part-labels" placeholder="e.g. Advance" value={p.label} onChange={(e) => setPart(p.key, { label: e.target.value })} disabled={!canEdit} />
-                      <TextInput aria-label="Due date" type="date" value={p.due_on} onChange={(e) => setPart(p.key, { due_on: e.target.value })} disabled={!canEdit} />
-                      <TextInput aria-label="Amount" type="number" min={0} placeholder="Amount" value={p.amount} onChange={(e) => setPart(p.key, { amount: e.target.value })} disabled={!canEdit} />
-                      <Select
-                        aria-label="Status"
-                        value={p.status}
-                        disabled={!canEdit}
-                        onChange={(e) => {
-                          const v = e.target.value as PartDraft['status']
-                          setPart(p.key, { status: v, paid_on: v === 'paid' ? p.paid_on || today() : '' })
-                        }}
-                      >
-                        <option value="pending">{st === 'overdue' ? 'Overdue' : 'Pending'}</option>
-                        <option value="paid">Paid</option>
-                      </Select>
-                      {canEdit && (
+                      <label className="bk-cell">
+                        <span>Part</span>
+                        <TextInput placeholder="e.g. Advance" value={p.label} onChange={(e) => setPart(p.key, { label: e.target.value })} disabled={!canEdit} />
+                      </label>
+                      <label className="bk-cell">
+                        <span>Due date</span>
+                        <TextInput type="date" value={p.due_on} onChange={(e) => setPart(p.key, { due_on: e.target.value })} disabled={!canEdit} />
+                      </label>
+                      <label className="bk-cell">
+                        <span>Amount (₹)</span>
+                        <TextInput type="number" min={0} placeholder="Amount" value={p.amount} onChange={(e) => setPart(p.key, { amount: e.target.value })} disabled={!canEdit} />
+                      </label>
+                      <label className="bk-cell">
+                        <span>Status</span>
+                        <Select
+                          className={st === 'overdue' ? 'is-overdue' : undefined}
+                          value={p.status}
+                          disabled={!canEdit}
+                          onChange={(e) => {
+                            const v = e.target.value as PartDraft['status']
+                            setPart(p.key, v === 'paid' ? { status: v, paid_on: p.paid_on || today(), mode: p.mode || refs.modes[0]?.id || '' } : { status: v, paid_on: '', mode: '' })
+                          }}
+                        >
+                          <option value="pending">{st === 'overdue' ? 'Overdue' : 'Pending'}</option>
+                          <option value="paid">Paid</option>
+                        </Select>
+                      </label>
+                      {canEdit ? (
                         <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove part" onClick={() => setInput((d) => ({ ...d, parts: d.parts.filter((x) => x.key !== p.key) }))}>
                           <Trash2 size={15} />
                         </button>
-                      )}
-                    </div>
-                    <div className="bk-part-row2">
-                      <Select aria-label="Mode" value={p.mode} onChange={(e) => setPart(p.key, { mode: e.target.value })} disabled={!canEdit}>
-                        <option value="">Mode</option>
-                        {refs.modes.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                      </Select>
-                      <TextInput aria-label="Comment" placeholder="Comment (UTR, who paid…)" value={p.note} onChange={(e) => setPart(p.key, { note: e.target.value })} disabled={!canEdit} />
-                      {p.status === 'paid' ? (
-                        <TextInput aria-label="Paid on" type="date" value={p.paid_on} onChange={(e) => setPart(p.key, { paid_on: e.target.value })} disabled={!canEdit} />
                       ) : (
-                        <span className={`badge ${st === 'overdue' ? 'badge-danger' : 'badge-warning'}`}>{st === 'overdue' ? 'Overdue' : 'Pending'}</span>
+                        <span />
                       )}
                     </div>
+                    {p.status === 'paid' ? (
+                      <div className="bk-part-row2">
+                        <label className="bk-cell">
+                          <span>Received on</span>
+                          <TextInput type="date" value={p.paid_on} onChange={(e) => setPart(p.key, { paid_on: e.target.value })} disabled={!canEdit} />
+                        </label>
+                        <label className="bk-cell">
+                          <span>Mode</span>
+                          <Select value={p.mode} onChange={(e) => setPart(p.key, { mode: e.target.value })} disabled={!canEdit}>
+                            <option value="">—</option>
+                            {refs.modes.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </Select>
+                        </label>
+                        <label className="bk-cell">
+                          <span>Comment</span>
+                          <TextInput placeholder="UTR, who paid…" value={p.note} onChange={(e) => setPart(p.key, { note: e.target.value })} disabled={!canEdit} />
+                        </label>
+                      </div>
+                    ) : (
+                      <label className="bk-cell">
+                        <span>Comment</span>
+                        <TextInput placeholder="e.g. after reels are delivered" value={p.note} onChange={(e) => setPart(p.key, { note: e.target.value })} disabled={!canEdit} />
+                      </label>
+                    )}
                   </div>
                 )
               })}
-              <datalist id="bk-part-labels">
-                {PART_LABELS.map((l) => (
-                  <option key={l} value={l} />
-                ))}
-              </datalist>
             </div>
           )}
           <div className="row-between">

@@ -782,9 +782,11 @@ a.db-card:hover { border-color: var(--brand); }
 .bk-part { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid var(--warning, #d97706); border-radius: 10px; }
 .bk-part.is-paid { border-left-color: var(--success, #16a34a); }
 .bk-part.is-overdue { border-left-color: var(--danger, #dc2626); }
-.bk-part-row { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr 0.9fr auto; gap: 8px; align-items: center; }
-.bk-part-row2 { display: grid; grid-template-columns: 0.9fr 2fr 1fr; gap: 8px; align-items: center; }
-.bk-part-row2 .badge { justify-self: start; }
+.bk-part-row { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr 0.9fr 34px; gap: 8px; align-items: end; }
+.bk-part-row2 { display: grid; grid-template-columns: 1fr 0.9fr 2fr; gap: 8px; align-items: end; }
+.bk-cell { display: grid; gap: 4px; min-width: 0; }
+.bk-cell > span { font-size: 12px; color: var(--muted, #6b7280); font-weight: 500; }
+.bk-part select.is-overdue { color: var(--danger, #dc2626); font-weight: 600; }
 @media (max-width: 640px) {
   .bk-item, .bk-part-row, .bk-part-row2 { grid-template-columns: 1fr 1fr; }
 }
