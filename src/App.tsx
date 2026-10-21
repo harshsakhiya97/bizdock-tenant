@@ -57,7 +57,7 @@ export default function App() {
               />
               <Route element={<AppLayout />}>
                 <Route path="/my-day" element={<MyDayPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/dashboard" element={<RequirePermission area="dashboards"><DashboardPage /></RequirePermission>} />
                 <Route
                   path="/businesses"
                   element={
@@ -66,12 +66,12 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/leads" element={<LeadsPage />} />
-                <Route path="/leads/:id" element={<LeadPage />} />
-                <Route path="/follow-ups" element={<FollowUpsPage />} />
-                <Route path="/sales" element={<SalesPage />} />
+                <Route path="/leads" element={<RequirePermission area="leads"><LeadsPage /></RequirePermission>} />
+                <Route path="/leads/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
+                <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
+                <Route path="/sales" element={<RequirePermission area="sales"><SalesPage /></RequirePermission>} />
                 <Route path="/customers" element={<ToSales />} />
-                <Route path="/customers/:id" element={<ClientPage />} />
+                <Route path="/customers/:id" element={<RequirePermission area="customers"><ClientPage /></RequirePermission>} />
                 <Route
                   path="/bookings"
                   element={
@@ -80,12 +80,12 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/attendance" element={<AttendancePage />} />
+                <Route path="/calendar" element={<RequirePermission area="calendars"><CalendarPage /></RequirePermission>} />
+                <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
                 <Route
                   path="/collections"
                   element={
-                    <RequirePermission module="collections">
+                    <RequirePermission module="collections" area="sales">
                       <CollectionsPage />
                     </RequirePermission>
                   }
@@ -93,7 +93,7 @@ export default function App() {
                 <Route
                   path="/payments"
                   element={
-                    <RequirePermission module="payments">
+                    <RequirePermission module="payments" area="sales">
                       <PaymentsPage />
                     </RequirePermission>
                   }
@@ -101,7 +101,7 @@ export default function App() {
                 <Route
                   path="/ledger"
                   element={
-                    <RequirePermission module="finance">
+                    <RequirePermission module="finance" area="sales">
                       <LedgerPage />
                     </RequirePermission>
                   }

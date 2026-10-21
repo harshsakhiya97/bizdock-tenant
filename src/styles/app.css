@@ -706,3 +706,6 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cb-paths span.is-else { color: var(--text-muted); }
 .cb-case { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
 .sub-biz-row { display: grid; grid-template-columns: 1fr 200px auto; gap: 8px; align-items: center; }
+.access-matrix .am-module td:first-child b { font-size: 14px; }
+.access-matrix .am-sub td:first-child { padding-left: 32px; }
+.access-matrix .am-sub td:first-child b { font-weight: 500; }

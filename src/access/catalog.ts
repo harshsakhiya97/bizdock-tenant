@@ -2,7 +2,7 @@
  * What a role (or one person) can see and do. Stored as jsonb on roles.permissions
  * and tenant_members.permissions (null = follows the role):
  *   { scope: { leads: 'all' | 'team' | 'own' | 'none', ... }, leads: { add: true }, ..., mode: { view_only: true } }
- * Modules that aren't built yet are listed too, so roles can be set up once.
+ * The list follows the side menu: each item says who can open it, then what they can do there.
  */
 
 export type Scope = 'all' | 'team' | 'own' | 'none'
@@ -18,108 +18,157 @@ export const SCOPES: { value: Scope; label: string }[] = [
   { value: 'none', label: 'None' },
 ]
 
-/** Data visibility: whose records a person sees in each area. */
-export const SCOPE_AREAS: { key: string; label: string; hint: string }[] = [
-  { key: 'leads', label: 'Leads', hint: 'Which leads they can see and work on' },
-  { key: 'customers', label: 'Clients', hint: 'Which clients they can see' },
-  { key: 'sales', label: 'Sales, payments & collections', hint: 'Sales, payments and dues they can see' },
-  { key: 'dashboards', label: 'Dashboards', hint: 'Whose numbers their dashboards show' },
-  { key: 'calendars', label: 'Staff calendars', hint: 'Whose week-offs, leaves and events they see' },
-  { key: 'attendance', label: 'Attendance', hint: 'Whose attendance they can see' },
-]
-
 export type ActionRow = { module: string; action: string; label: string; hint?: string }
 
-export const ACTION_GROUPS: { title: string; rows: ActionRow[] }[] = [
+/**
+ * Who can open a page (the side menu item shows only for them):
+ * - scope: their visibility in this area (All / Team / Own); None hides it
+ * - action: a permission checkbox
+ * - always: everyone · with: opens together with another item
+ */
+export type OpenRule =
+  | { kind: 'scope'; area: string; hint: string }
+  | { kind: 'action'; module: string; action: string; hint?: string }
+  | { kind: 'always'; note: string }
+  | { kind: 'with'; note: string }
+
+export type ModuleDef = { key: string; label: string; open: OpenRule; extraScopes?: { area: string; label: string; hint: string }[]; actions: ActionRow[] }
+
+/** Same sections, names and order as the side menu. */
+export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
   {
-    title: 'Leads & follow-ups',
-    rows: [
-      { module: 'leads', action: 'add', label: 'Add leads' },
-      { module: 'leads', action: 'edit', label: 'Edit leads' },
-      { module: 'leads', action: 'delete', label: 'Delete leads' },
-      { module: 'leads', action: 'assign', label: 'Assign / transfer leads', hint: 'Change the owner (within the leads they can see)' },
-      { module: 'follow_ups', action: 'add', label: 'Add follow-ups', hint: 'Schedule and log follow-ups' },
-      { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads, deals and payments' },
+    title: 'Workspace',
+    modules: [
+      { key: 'my_day', label: 'My Day', open: { kind: 'always', note: 'Everyone' }, actions: [] },
+      { key: 'dashboards', label: 'Dashboards', open: { kind: 'scope', area: 'dashboards', hint: 'Whose numbers their dashboards show' }, actions: [] },
+      {
+        key: 'leads',
+        label: 'Leads',
+        open: { kind: 'scope', area: 'leads', hint: 'Which leads they can see and work on' },
+        actions: [
+          { module: 'leads', action: 'add', label: 'Add leads' },
+          { module: 'leads', action: 'edit', label: 'Edit leads' },
+          { module: 'leads', action: 'delete', label: 'Delete leads' },
+          { module: 'leads', action: 'assign', label: 'Assign / transfer leads', hint: 'Change the owner (within the leads they can see)' },
+          { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads, sales and payments' },
+        ],
+      },
+      {
+        key: 'follow_ups',
+        label: 'Follow-ups',
+        open: { kind: 'with', note: 'With Leads' },
+        actions: [{ module: 'follow_ups', action: 'add', label: 'Add follow-ups', hint: 'Schedule and log follow-ups' }],
+      },
+      {
+        key: 'sales',
+        label: 'Sales',
+        open: { kind: 'scope', area: 'sales', hint: 'Sales, payments and dues they can see' },
+        extraScopes: [{ area: 'customers', label: 'Clients', hint: 'Which client pages they can open' }],
+        actions: [
+          { module: 'deals', action: 'add', label: 'New sale' },
+          { module: 'deals', action: 'edit', label: 'Edit or cancel sales' },
+          { module: 'customers', action: 'edit', label: 'Edit clients', hint: 'Profile, journey status' },
+        ],
+      },
+      {
+        key: 'bookings',
+        label: 'Booking Calendar',
+        open: { kind: 'action', module: 'bookings', action: 'view', hint: 'Bookings of the businesses they work in' },
+        actions: [
+          { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, advance payments' },
+          { module: 'bookings', action: 'edit', label: 'Edit bookings & invoices', hint: 'Change, cancel, add payments, create invoices' },
+        ],
+      },
+      {
+        key: 'funnels',
+        label: 'Funnels',
+        open: { kind: 'action', module: 'funnels', action: 'view' },
+        actions: [
+          { module: 'funnels', action: 'add', label: 'Add funnels' },
+          { module: 'funnels', action: 'edit', label: 'Edit funnels', hint: 'Landing pages, webhooks, WhatsApp sheets' },
+          { module: 'funnels', action: 'delete', label: 'Delete funnels' },
+        ],
+      },
+      {
+        key: 'workflows',
+        label: 'Workflows',
+        open: { kind: 'action', module: 'workflows', action: 'view' },
+        actions: [
+          { module: 'workflows', action: 'add', label: 'Create workflows' },
+          { module: 'workflows', action: 'edit', label: 'Edit workflows', hint: 'Steps, trigger, turn on / off' },
+          { module: 'workflows', action: 'delete', label: 'Delete workflows' },
+        ],
+      },
     ],
   },
   {
-    title: 'Sales & payments',
-    rows: [
-      { module: 'deals', action: 'add', label: 'Create deals / new sale' },
-      { module: 'deals', action: 'edit', label: 'Edit or cancel deals' },
-      { module: 'payments', action: 'view', label: 'Payments list', hint: 'Payments on deals they can see' },
-      { module: 'payments', action: 'add', label: 'Record payments' },
-      { module: 'payments', action: 'verify', label: 'Verify payments', hint: 'Only verified payments count as revenue' },
-      { module: 'collections', action: 'view', label: 'Collections & EMI', hint: 'Dues on deals they can see' },
-      { module: 'finance', action: 'view', label: 'Ledger & finance reports', hint: 'Invoices, payments, balances, GST' },
+    title: 'Finance',
+    modules: [
+      { key: 'collections', label: 'Collections & EMI', open: { kind: 'action', module: 'collections', action: 'view', hint: 'Dues on sales they can see (needs Sales visibility)' }, actions: [] },
+      {
+        key: 'payments',
+        label: 'Payments',
+        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments on sales they can see (needs Sales visibility)' },
+        actions: [
+          { module: 'payments', action: 'add', label: 'Record payments' },
+          { module: 'payments', action: 'verify', label: 'Verify payments', hint: 'Only verified payments count as revenue' },
+        ],
+      },
+      { key: 'ledger', label: 'Ledger', open: { kind: 'action', module: 'finance', action: 'view', hint: 'Accounts, balances, GST (needs Sales visibility)' }, actions: [] },
     ],
   },
   {
-    title: 'Bookings',
-    rows: [
-      { module: 'bookings', action: 'view', label: 'Booking calendar', hint: 'See bookings of the businesses they work in' },
-      { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, advance payments' },
-      { module: 'bookings', action: 'edit', label: 'Edit bookings & invoices', hint: 'Change, cancel, add payments, create invoices' },
-    ],
-  },
-  {
-    title: 'Clients',
-    rows: [{ module: 'customers', action: 'edit', label: 'Edit clients', hint: 'Profile, journey status, products' }],
-  },
-  {
-    title: 'Work & team',
-    rows: [
-      { module: 'tasks', action: 'view', label: 'Tasks' },
-      { module: 'calendar', action: 'add', label: 'Create company events', hint: 'Add / edit events, holidays and assign people' },
-      { module: 'attendance', action: 'edit', label: 'Correct attendance', hint: 'Fix check-in / out, weekly offs and attendance rules' },
-      { module: 'team', action: 'view', label: 'See the team' },
-      { module: 'team', action: 'add', label: 'Add team members' },
-      { module: 'team', action: 'edit', label: 'Edit team members', hint: 'Role, businesses, reset password, deactivate' },
-    ],
-  },
-  {
-    title: 'Funnels',
-    rows: [
-      { module: 'funnels', action: 'view', label: 'See funnels', hint: 'Funnels of the businesses they work in are always visible' },
-      { module: 'funnels', action: 'add', label: 'Add funnels' },
-      { module: 'funnels', action: 'edit', label: 'Edit funnels & stages' },
-      { module: 'funnels', action: 'delete', label: 'Delete funnels' },
-    ],
-  },
-  {
-    title: 'Workflows',
-    rows: [
-      { module: 'workflows', action: 'view', label: 'See workflows' },
-      { module: 'workflows', action: 'add', label: 'Create workflows' },
-      { module: 'workflows', action: 'edit', label: 'Edit workflows', hint: 'Steps, trigger, turn on / off' },
-      { module: 'workflows', action: 'delete', label: 'Delete workflows' },
+    title: 'Company',
+    modules: [
+      {
+        key: 'calendar',
+        label: 'Calendar & Webinars',
+        open: { kind: 'scope', area: 'calendars', hint: 'Whose week-offs, leaves and events they see' },
+        actions: [{ module: 'calendar', action: 'add', label: 'Create company events', hint: 'Add / edit events, holidays and assign people' }],
+      },
+      {
+        key: 'attendance',
+        label: 'Attendance',
+        open: { kind: 'scope', area: 'attendance', hint: 'Whose attendance they can see' },
+        actions: [{ module: 'attendance', action: 'edit', label: 'Correct attendance', hint: 'Fix check-in / out, weekly offs and attendance rules' }],
+      },
     ],
   },
   {
     title: 'Admin',
-    rows: [
-      { module: 'businesses', action: 'view', label: 'See businesses' },
-      { module: 'businesses', action: 'add', label: 'Add businesses' },
-      { module: 'businesses', action: 'edit', label: 'Edit businesses' },
-      { module: 'businesses', action: 'delete', label: 'Delete businesses' },
-      { module: 'masters', action: 'edit', label: 'Masters', hint: 'Products, sources, statuses, billing companies' },
-      { module: 'settings', action: 'edit', label: 'Settings & integrations' },
-      { module: 'activity', action: 'view', label: 'Activity log', hint: 'Full audit trail' },
-      { module: 'access', action: 'edit', label: 'Access control', hint: 'Roles and what each person can see' },
-    ],
-  },
-  {
-    title: 'Mode',
-    rows: [
+    modules: [
       {
-        module: 'mode',
-        action: 'view_only',
-        label: 'View-only',
-        hint: 'Can look at everything allowed above but cannot add or change anything',
+        key: 'businesses',
+        label: 'Businesses',
+        open: { kind: 'action', module: 'businesses', action: 'view' },
+        actions: [
+          { module: 'businesses', action: 'add', label: 'Add businesses' },
+          { module: 'businesses', action: 'edit', label: 'Edit businesses' },
+          { module: 'businesses', action: 'delete', label: 'Delete businesses' },
+        ],
       },
+      { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Products, sources, statuses, billing companies' }, actions: [] },
+      {
+        key: 'access',
+        label: 'Access Control',
+        open: { kind: 'action', module: 'team', action: 'view', hint: 'See the team' },
+        actions: [
+          { module: 'team', action: 'add', label: 'Add team members' },
+          { module: 'team', action: 'edit', label: 'Edit team members', hint: 'Role, businesses, reset password, deactivate' },
+          { module: 'access', action: 'edit', label: 'Change roles & access', hint: 'Also opens Access Control on its own' },
+        ],
+      },
+      { key: 'integrations', label: 'System Connections', open: { kind: 'action', module: 'settings', action: 'edit', hint: 'WhatsApp, Facebook ads and other connections' }, actions: [] },
     ],
   },
 ]
+
+export const MODE_ROW: ActionRow = {
+  module: 'mode',
+  action: 'view_only',
+  label: 'View-only',
+  hint: 'Can open everything allowed above but cannot add or change anything',
+}
 
 export function getScope(p: Permissions | null | undefined, area: string): Scope {
   return (p?.scope?.[area] as Scope | undefined) ?? 'none'
@@ -140,9 +189,13 @@ export function setAction(p: Permissions, module: string, action: string, value:
 /** Everything on: shown for the Owner and Tech Support columns. */
 export const FULL_ACCESS: Permissions = (() => {
   let p: Permissions = {}
-  for (const a of SCOPE_AREAS) p = setScope(p, a.key, 'all')
-  for (const g of ACTION_GROUPS)
-    for (const r of g.rows) if (r.module !== 'mode') p = setAction(p, r.module, r.action, true)
+  for (const sec of MODULE_SECTIONS)
+    for (const m of sec.modules) {
+      if (m.open.kind === 'scope') p = setScope(p, m.open.area, 'all')
+      if (m.open.kind === 'action') p = setAction(p, m.open.module, m.open.action, true)
+      for (const x of m.extraScopes ?? []) p = setScope(p, x.area, 'all')
+      for (const r of m.actions) p = setAction(p, r.module, r.action, true)
+    }
   return p
 })()
 

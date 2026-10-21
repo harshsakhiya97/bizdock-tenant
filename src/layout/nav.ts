@@ -19,7 +19,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
     title: 'Workspace',
     items: [
       { to: '/my-day', label: 'My Day', icon: Sun },
-      { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid },
+      { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid, area: 'dashboards' },
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
       { to: '/sales', label: 'Sales', icon: ReceiptText, area: 'sales' },
@@ -40,7 +40,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
     title: 'Company',
     items: [
       { to: '/calendar', label: 'Calendar & Webinars', icon: CalendarDays, area: 'calendars' },
-      { to: '/attendance', label: 'Attendance', icon: Clock3 },
+      { to: '/attendance', label: 'Attendance', icon: Clock3, area: 'attendance' },
     ],
   },
   {
