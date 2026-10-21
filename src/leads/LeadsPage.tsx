@@ -207,17 +207,11 @@ export function LeadsPage() {
   }
   async function doMove(ids: string[], stage: StageRow, note: string, lostReasonId: string | null) {
     const from = new Map((leads ?? []).map((l) => [l.id, l.stage_id]))
-    const ok = await run(async () => {
+    await run(async () => {
       await updateLeads(ids, { stage_id: stage.id, lost_reason_id: stage.kind === 'lost' ? lostReasonId : null })
       for (const id of ids)
         await logActivity(tenant.id, me, [id], { kind: 'stage', from_stage_id: from.get(id) ?? null, to_stage_id: stage.id, note: note.trim() || null })
     }, `${ids.length === 1 ? 'Lead' : `${ids.length} leads`} moved to ${stage.name}.`)
-    if (ok && stage.kind === 'won' && ids.length === 1) wonToSale(ids[0])
-  }
-
-  // a won lead goes straight to New sale, filled from the lead
-  function wonToSale(leadId: string) {
-    if (can('deals', 'add')) navigate(`/sales?sale_lead=${leadId}`)
   }
 
   function exportCsv() {

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CalendarPlus, MessageCircle, Pencil, PhoneCall, Star } from 'lucide-react'
+import { ArrowLeft, MessageCircle, Pencil, PhoneCall, Star } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { listBookings, createBookingInvoice } from '@/bookings/api'
-import { BookingDrawer } from '@/bookings/BookingDrawer'
-import { BookingsTab, InvoicesTab, slotText } from '@/bookings/BookingsTab'
+import { listBookings } from '@/bookings/api'
+import { slotText } from '@/bookings/BookingsTab'
 import { FollowUpsTab } from '@/bookings/FollowUpsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
@@ -22,12 +21,12 @@ import { followUp, fullName, money, tempOf } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'details' | 'followups' | 'bookings' | 'invoices'
+type Tab = 'details' | 'followups'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
 
-/** One lead: details, follow-ups (calls / WhatsApp), bookings and invoices. */
+/** One lead: details and follow-ups (calls / WhatsApp). */
 export function LeadPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
@@ -42,7 +41,6 @@ export function LeadPage() {
   const [tab, setTab] = useState<Tab>('details')
   const [editing, setEditing] = useState(false)
   const [wa, setWa] = useState(false)
-  const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
@@ -98,7 +96,6 @@ export function LeadPage() {
   const name = fullName(lead)
   const canEdit = can('leads', 'edit')
   const canFollow = canEdit || can('follow_ups', 'add')
-  const canBook = can('bookings', 'add')
   const bizRow = businesses.find((b) => b.id === lead.business_id)
   const biz = bizRow?.name
   const subName = bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.name
@@ -109,7 +106,6 @@ export function LeadPage() {
   const temp = tempOf(lead.temperature)
   const sourceName = refs.sources.find((s) => s.id === lead.source_id)?.name
   const owner = members.find((m) => m.id === lead.owner_id)?.name
-  const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
 
   const vars = {
     first_name: lead.first_name,
@@ -143,8 +139,6 @@ export function LeadPage() {
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
-    { id: 'bookings', label: 'Bookings', count: live.length },
-    { id: 'invoices', label: 'Invoices', count: live.filter((b) => b.invoice_no).length },
   ]
 
   return (
@@ -168,9 +162,9 @@ export function LeadPage() {
               </span>
             )}
             {client && (
-              <Link to={`/customers/${client.id}`} className="badge badge-success">
+              <span className="badge badge-success">
                 <Star size={12} /> Client
-              </Link>
+              </span>
             )}
           </div>
           <div className="muted small">
@@ -186,11 +180,6 @@ export function LeadPage() {
           {canFollow && (
             <button type="button" className="btn btn-outline" onClick={() => setTab('followups')}>
               <PhoneCall size={15} /> Log call
-            </button>
-          )}
-          {canBook && (
-            <button type="button" className="btn btn-outline" onClick={() => setBk({ booking: null })}>
-              <CalendarPlus size={15} /> Book
             </button>
           )}
           {canEdit && (
@@ -237,20 +226,6 @@ export function LeadPage() {
         {tab === 'followups' && (
           <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
         )}
-        {tab === 'bookings' && <BookingsTab bookings={bookings} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
-        {tab === 'invoices' && (
-          <InvoicesTab
-            bookings={bookings}
-            refs={refs}
-            canCreate={can('bookings', 'edit')}
-            onCreate={(b) =>
-              void createBookingInvoice(b.id, b.billing_company_id).then(
-                (no) => done(`Invoice ${no} created.`),
-                (e: Error) => setNotice({ error: e.message }),
-              )
-            }
-          />
-        )}
       </section>
 
       {editing && (
@@ -275,24 +250,6 @@ export function LeadPage() {
           onClose={() => setWa(false)}
           onSent={(msg) => {
             setWa(false)
-            done(msg)
-          }}
-        />
-      )}
-      {bk && (
-        <BookingDrawer
-          key={bk.booking?.id ?? 'new'}
-          booking={bk.booking}
-          defaults={{
-            date: lead.required_on ?? undefined,
-            start: '10:00',
-            end: lead.required_hours ? `${String(Math.min(23, 10 + Math.ceil(lead.required_hours))).padStart(2, '0')}:00` : undefined,
-          }}
-          lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id, sub_business_id: lead.sub_business_id }}
-          refs={refs}
-          onClose={() => setBk(null)}
-          onSaved={(msg) => {
-            setBk(null)
             done(msg)
           }}
         />

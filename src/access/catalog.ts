@@ -50,7 +50,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'leads', action: 'edit', label: 'Edit leads' },
           { module: 'leads', action: 'delete', label: 'Delete leads' },
           { module: 'leads', action: 'assign', label: 'Assign / transfer leads', hint: 'Change the owner (within the leads they can see)' },
-          { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads, sales and payments' },
+          { module: 'leads', action: 'export', label: 'Export CSV', hint: 'Download leads' },
         ],
       },
       {
@@ -58,17 +58,6 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         label: 'Follow-ups',
         open: { kind: 'with', note: 'With Leads' },
         actions: [{ module: 'follow_ups', action: 'add', label: 'Add follow-ups', hint: 'Schedule and log follow-ups' }],
-      },
-      {
-        key: 'sales',
-        label: 'Sales',
-        open: { kind: 'scope', area: 'sales', hint: 'Sales, payments and dues they can see' },
-        extraScopes: [{ area: 'customers', label: 'Clients', hint: 'Which client pages they can open' }],
-        actions: [
-          { module: 'deals', action: 'add', label: 'New sale' },
-          { module: 'deals', action: 'edit', label: 'Edit or cancel sales' },
-          { module: 'customers', action: 'edit', label: 'Edit clients', hint: 'Profile, journey status' },
-        ],
       },
       {
         key: 'bookings',
@@ -99,22 +88,6 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'workflows', action: 'delete', label: 'Delete workflows' },
         ],
       },
-    ],
-  },
-  {
-    title: 'Finance',
-    modules: [
-      { key: 'collections', label: 'Collections & EMI', open: { kind: 'action', module: 'collections', action: 'view', hint: 'Dues on sales they can see (needs Sales visibility)' }, actions: [] },
-      {
-        key: 'payments',
-        label: 'Payments',
-        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments on sales they can see (needs Sales visibility)' },
-        actions: [
-          { module: 'payments', action: 'add', label: 'Record payments' },
-          { module: 'payments', action: 'verify', label: 'Verify payments', hint: 'Only verified payments count as revenue' },
-        ],
-      },
-      { key: 'ledger', label: 'Ledger', open: { kind: 'action', module: 'finance', action: 'view', hint: 'Accounts, balances, GST (needs Sales visibility)' }, actions: [] },
     ],
   },
   {

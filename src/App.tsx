@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { TenantProvider } from '@/tenant/TenantProvider'
 import { RequireAuth } from '@/auth/RequireAuth'
@@ -17,8 +17,6 @@ import { WorkflowPage } from '@/workflows/WorkflowPage'
 import { LeadsPage } from '@/leads/LeadsPage'
 import { FollowUpsPage } from '@/followups/FollowUpsPage'
 import { MyDayPage } from '@/pages/MyDay'
-import { SalesPage } from '@/customers/CustomersPage'
-import { ClientPage } from '@/customers/ClientPage'
 import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
@@ -26,18 +24,8 @@ import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
-import { CollectionsPage } from '@/collections/CollectionsPage'
-import { PaymentsPage } from '@/collections/PaymentsPage'
-import { LedgerPage } from '@/collections/LedgerPage'
 import { CalendarPage } from '@/calendar/CalendarPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
-
-/** old /customers links (?open=<client>, ?sale_lead=<lead>) */
-function ToSales() {
-  const { search } = useLocation()
-  const open = new URLSearchParams(search).get('open')
-  return <Navigate to={open ? `/customers/${open}` : `/sales${search}`} replace />
-}
 
 export default function App() {
   return (
@@ -69,9 +57,6 @@ export default function App() {
                 <Route path="/leads" element={<RequirePermission area="leads"><LeadsPage /></RequirePermission>} />
                 <Route path="/leads/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
-                <Route path="/sales" element={<RequirePermission area="sales"><SalesPage /></RequirePermission>} />
-                <Route path="/customers" element={<ToSales />} />
-                <Route path="/customers/:id" element={<RequirePermission area="customers"><ClientPage /></RequirePermission>} />
                 <Route
                   path="/bookings"
                   element={
@@ -82,30 +67,6 @@ export default function App() {
                 />
                 <Route path="/calendar" element={<RequirePermission area="calendars"><CalendarPage /></RequirePermission>} />
                 <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
-                <Route
-                  path="/collections"
-                  element={
-                    <RequirePermission module="collections" area="sales">
-                      <CollectionsPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route
-                  path="/payments"
-                  element={
-                    <RequirePermission module="payments" area="sales">
-                      <PaymentsPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route
-                  path="/ledger"
-                  element={
-                    <RequirePermission module="finance" area="sales">
-                      <LedgerPage />
-                    </RequirePermission>
-                  }
-                />
                 <Route
                   path="/funnels"
                   element={
