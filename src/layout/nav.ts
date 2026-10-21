@@ -1,4 +1,4 @@
-import { Building2, Contact, FileText, CalendarClock, CalendarDays, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
+import { Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -32,7 +32,6 @@ export const navSections: { title: string; items: NavItem[] }[] = [
   {
     title: 'Company',
     items: [
-      { to: '/calendar', label: 'Calendar & Webinars', icon: CalendarDays, area: 'calendars' },
       { to: '/attendance', label: 'Attendance', icon: Clock3, area: 'attendance' },
     ],
   },
@@ -59,7 +58,6 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
   '/bookings': { title: 'Booking Calendar', crumb: 'Slots & bookings', icon: CalendarCheck },
-  '/calendar': { title: 'Calendar & Webinars', crumb: 'Events & leaves', icon: CalendarDays },
   '/attendance': { title: 'Attendance', crumb: 'Check in & discipline', icon: Clock3 },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Label, TextInput } from '@/components/Field'
@@ -338,7 +337,7 @@ export function AttendancePage() {
               ))
             )}
             <span className="muted small">
-              Holidays and leaves come from the <Link to="/calendar">Calendar</Link>; nobody is marked absent on them.
+              Nobody is marked absent on holidays and leaves.
             </span>
           </div>
         </aside>

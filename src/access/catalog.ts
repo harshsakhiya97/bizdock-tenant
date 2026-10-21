@@ -96,12 +96,6 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
     title: 'Company',
     modules: [
       {
-        key: 'calendar',
-        label: 'Calendar & Webinars',
-        open: { kind: 'scope', area: 'calendars', hint: 'Whose week-offs, leaves and events they see' },
-        actions: [{ module: 'calendar', action: 'add', label: 'Create company events', hint: 'Add / edit events, holidays and assign people' }],
-      },
-      {
         key: 'attendance',
         label: 'Attendance',
         open: { kind: 'scope', area: 'attendance', hint: 'Whose attendance they can see' },
@@ -122,7 +116,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'businesses', action: 'delete', label: 'Delete businesses' },
         ],
       },
-      { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Services, sources, statuses, billing companies' }, actions: [] },
+      { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Services, payment modes, sources, outcomes, WhatsApp messages' }, actions: [] },
       {
         key: 'access',
         label: 'Access Control',

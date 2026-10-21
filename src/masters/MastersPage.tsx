@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { Package, Pencil, Plus, Receipt } from 'lucide-react'
+import { Package, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead } from '@/components/ui'
@@ -8,38 +8,28 @@ import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { listBillingCompanies, listProducts } from './api'
-import { BillingCompanyDrawer } from './BillingCompanyDrawer'
+import { listProducts } from './api'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
 import { TemplatesTab } from './TemplatesTab'
-import type { BillingCompanyRow, ProductRow, SimpleTable } from './types'
+import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'products' | 'billing' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'products' | 'whatsapp' | SimpleTable
 
-const SIMPLE: Record<SimpleTable, { title: string; purpose: string }> = {
-  customer_stages: { title: 'Client stages', purpose: 'The client journey (tabs on Clients).' },
+const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
   lead_sources: { title: 'Lead sources', purpose: 'Where a lead came from.' },
-  lost_reasons: { title: 'Lost reasons', purpose: 'Why a lead was lost.' },
   follow_up_outcomes: { title: 'Follow-up outcomes', purpose: 'The result of a call or follow-up.' },
-  event_types: { title: 'Calendar event types', purpose: 'Kinds of events on the calendar; the kind decides the form (webinar, holiday, leave).' },
-  webinar_types: { title: 'Webinar types', purpose: 'Kinds of webinars.' },
 }
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'products', label: 'Services' },
-  { id: 'billing', label: 'Billing companies' },
-  { id: 'customer_stages', label: 'Client stages' },
   { id: 'payment_modes', label: 'Payment modes' },
   { id: 'lead_sources', label: 'Lead sources' },
-  { id: 'lost_reasons', label: 'Lost reasons' },
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
   { id: 'whatsapp', label: 'WhatsApp messages' },
-  { id: 'event_types', label: 'Event types' },
-  { id: 'webinar_types', label: 'Webinar types' },
 ]
 
 /** Masters: the editable lists every module picks from. */
@@ -73,14 +63,13 @@ export function MastersPage() {
         </div>
         {tab === 'overview' && <Overview go={go} />}
         {tab === 'products' && <ProductsTab canEdit={canEdit} onNotice={onNotice} />}
-        {tab === 'billing' && <BillingTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
           <SimpleList
             key={tab}
             table={tab as SimpleTable}
-            title={SIMPLE[tab as SimpleTable].title}
-            description={SIMPLE[tab as SimpleTable].purpose}
+            title={SIMPLE[tab as SimpleTable]!.title}
+            description={SIMPLE[tab as SimpleTable]!.purpose}
             canEdit={canEdit}
             onNotice={onNotice}
           />
@@ -94,7 +83,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   useEffect(() => {
-    const tables = ['products', 'billing_companies', ...Object.keys(SIMPLE)]
+    const tables = ['products', ...Object.keys(SIMPLE)]
     void Promise.all(
       tables.map((t) =>
         db()
@@ -109,8 +98,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
     { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
-    { tab: 'billing', label: 'Billing companies', table: 'billing_companies', purpose: 'Which legal company bills the sale.' },
-    ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t].title, table: t, purpose: SIMPLE[t].purpose })),
+    ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t]!.title, table: t, purpose: SIMPLE[t]!.purpose })),
   ]
   return (
     <div className="table-wrap">
@@ -243,90 +231,6 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
           product={drawer.product}
           businesses={businesses}
           defaultBusinessId={selected?.id ?? null}
-          nextOrder={Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1}
-          onClose={() => setDrawer(null)}
-          onSaved={(msg) => {
-            setDrawer(null)
-            onNotice({ ok: msg })
-            load()
-          }}
-        />
-      )}
-    </>
-  )
-}
-
-function BillingTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void }) {
-  const tenant = useTenant()
-  const [rows, setRows] = useState<BillingCompanyRow[] | null>(null)
-  const [drawer, setDrawer] = useState<{ company: BillingCompanyRow | null } | null>(null)
-
-  const load = useCallback(() => {
-    listBillingCompanies(tenant.id)
-      .then(setRows)
-      .catch((e: Error) => onNotice({ error: e.message }))
-  }, [tenant.id, onNotice])
-  useEffect(load, [load])
-
-  return (
-    <>
-      <div className="panel-bar">
-        <div>
-          <b>Billing companies</b>
-          <div className="muted small">Legal companies that bill your customers. Any business can bill through any of them.</div>
-        </div>
-        {canEdit && (
-          <button type="button" className="btn btn-primary" onClick={() => setDrawer({ company: null })}>
-            <Plus size={16} /> Add company
-          </button>
-        )}
-      </div>
-      {!rows ? (
-        <div className="empty">Loading…</div>
-      ) : rows.length === 0 ? (
-        <Empty icon={Receipt}>No billing companies yet. Add at least one to record sales.</Empty>
-      ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>GSTIN</th>
-                <th>State</th>
-                <th>Invoice prefix</th>
-                <th>Status</th>
-                {canEdit && <th />}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => (
-                <tr key={c.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ company: c })}>
-                  <td>
-                    <b>{c.name}</b>
-                    {c.legal_name && <div className="muted small">{c.legal_name}</div>}
-                  </td>
-                  <td className="mono">{c.gst_number ?? <span className="muted">—</span>}</td>
-                  <td>{c.state ?? '—'}</td>
-                  <td>{c.invoice_prefix ?? '—'}</td>
-                  <td>
-                    <span className={cn('badge', c.is_active ? 'badge-success' : 'badge-muted')}>{c.is_active ? 'Active' : 'Inactive'}</span>
-                  </td>
-                  {canEdit && (
-                    <td className="right">
-                      <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Edit ${c.name}`}>
-                        <Pencil size={15} />
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {drawer && (
-        <BillingCompanyDrawer
-          company={drawer.company}
           nextOrder={Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {

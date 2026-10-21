@@ -25,7 +25,6 @@ import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
-import { CalendarPage } from '@/calendar/CalendarPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
 
 export default function App() {
@@ -69,7 +68,6 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/calendar" element={<RequirePermission area="calendars"><CalendarPage /></RequirePermission>} />
                 <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
                 <Route
                   path="/funnels"
