@@ -26,6 +26,7 @@ export const releases: Release[] = [
       'Workflows: Switch step with several paths, Go to workflow step, send WhatsApp or email to the lead or a team member, and a name on every box.',
       'System Connections: connect WhatsApp (WATI) with its templates, Facebook Ads accounts and more, as allowed for your workspace.',
       'Lead page: Bookings tab with Book slot; follow-ups open the WhatsApp message templates on the Follow-up tab.',
+      'Delete leads: select leads and delete them, or delete one from its page (Tech Support, Owner and roles with Delete leads).',
     ],
     improved: [
       'Add and edit lead: just Name, Phone, City, Source, Purpose and Sub-business.',
