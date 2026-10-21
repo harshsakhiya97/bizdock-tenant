@@ -11,6 +11,8 @@ export type FollowUpLead = {
   funnel_id: string
   stage_id: string
   owner_id: string | null
+  purpose?: string | null
+  required_on?: string | null
 }
 
 export type FollowUpRow = {

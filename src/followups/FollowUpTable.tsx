@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { useAuth } from '@/auth/useAuth'
+import { WhatsAppModal } from '@/bookings/WhatsAppModal'
+import { fmtDay } from '@/leads/LeadPage'
 import { CalendarClock, Check, MessageCircle, Phone } from 'lucide-react'
 import type { StageRow } from '@/funnels/types'
 import { followUp as fmtDue } from '@/leads/labels'
 import type { MemberOption, Option } from '@/leads/types'
 import { cn } from '@/lib/cn'
-import { lateBy, modeOf, telHref, waHref } from './labels'
+import { lateBy, modeOf, telHref } from './labels'
 import type { FollowUpRow } from './types'
 
 /** Follow-up rows with call / WhatsApp / done / reschedule actions. */
@@ -31,8 +35,16 @@ export function FollowUpTable({
   onReschedule: (f: FollowUpRow) => void
 }) {
   const now = Date.now()
+  const { businesses } = useAuth()
+  // WhatsApp icon opens the message templates (same as on the lead page)
+  const [wa, setWa] = useState<FollowUpRow | null>(null)
+  const [sent, setSent] = useState<string | null>(null)
   const member = (id: string | null) => members.find((m) => m.id === id)?.name
+  const wl = wa?.leads
+  const waName = wl ? `${wl.first_name} ${wl.last_name ?? ''}`.trim() : ''
   return (
+    <>
+    {sent && <div className="alert alert-info">{sent}</div>}
     <div className="table-wrap">
       <table className="table fu-table">
         <thead>
@@ -117,16 +129,9 @@ export function FollowUpTable({
                         <a className="btn btn-ghost btn-icon" href={telHref(l.phone)} title="Call" aria-label={`Call ${l.first_name}`}>
                           <Phone size={15} />
                         </a>
-                        <a
-                          className="btn btn-ghost btn-icon"
-                          href={waHref(l.whatsapp || l.phone)}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="WhatsApp"
-                          aria-label={`WhatsApp ${l.first_name}`}
-                        >
+                        <button type="button" className="btn btn-ghost btn-icon" title="WhatsApp" aria-label={`WhatsApp ${l.first_name}`} onClick={() => setWa(f)}>
                           <MessageCircle size={15} />
-                        </a>
+                        </button>
                       </>
                     )}
                     {canAct && f.status === 'pending' && (
@@ -153,5 +158,24 @@ export function FollowUpTable({
         </tbody>
       </table>
     </div>
+    {wa && wl && (
+      <WhatsAppModal
+        lead={{ id: wl.id, name: waName, phone: wl.phone, whatsapp: wl.whatsapp, subtitle: [wl.purpose, wl.required_on ? fmtDay(wl.required_on) : null].filter(Boolean).join(' · ') }}
+        vars={{
+          first_name: wl.first_name,
+          name: waName,
+          purpose: wl.purpose,
+          required_on: wl.required_on ? fmtDay(wl.required_on) : null,
+          business: businesses.find((b) => b.id === wl.business_id)?.name,
+        }}
+        onClose={() => setWa(null)}
+        onSent={(msg) => {
+          setWa(null)
+          setSent(msg)
+          setTimeout(() => setSent(null), 3000)
+        }}
+      />
+    )}
+    </>
   )
 }

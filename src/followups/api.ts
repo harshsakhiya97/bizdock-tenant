@@ -4,7 +4,7 @@ import type { Option } from '@/leads/types'
 import type { FollowUpRow, ScheduleInput } from './types'
 
 const COLS =
-  'id, tenant_id, lead_id, assigned_to, due_at, mode, purpose, status, outcome_id, result_note, completed_at, completed_by, created_at, leads(id, first_name, last_name, phone, whatsapp, business_id, funnel_id, stage_id, owner_id)'
+  'id, tenant_id, lead_id, assigned_to, due_at, mode, purpose, status, outcome_id, result_note, completed_at, completed_by, created_at, leads(id, first_name, last_name, phone, whatsapp, business_id, funnel_id, stage_id, owner_id, purpose, required_on)'
 
 export async function listFollowUps(tenantId: string): Promise<FollowUpRow[]> {
   const { data, error } = await db().from('follow_ups').select(COLS).eq('tenant_id', tenantId).order('due_at')
