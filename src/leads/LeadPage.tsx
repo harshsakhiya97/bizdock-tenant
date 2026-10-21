@@ -39,7 +39,11 @@ export function LeadPage() {
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [bookings, setBookings] = useState<BookingRow[] | null>(null)
   const [client, setClient] = useState<{ id: string } | null>(null)
-  const [tab, setTab] = useState<Tab>('details')
+  // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = new URLSearchParams(window.location.search).get('tab')
+    return t === 'followups' || t === 'bookings' ? t : 'details'
+  })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
   const [wa, setWa] = useState(false)
