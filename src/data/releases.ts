@@ -29,6 +29,7 @@ export const releases: Release[] = [
       'Workflow runs: a Runs button in the workflows list opens every run with its date and time, each step marked done, held here, pending, failed or skipped; the table scrolls sideways.',
       'Test run: the ▶ button runs a workflow once with typed-in details (name, phone, the funnel’s fields), even while it’s off; no lead is added.',
       'Lead tags: add several tags in Add / Edit lead; they show on the lead page and in the leads list, and Switch / Yes-No conditions can pick them.',
+      'Businesses: Add / Edit business asks “Does this business contain multiple sub-businesses?” — if yes, list them with their types; if not, pick the business’s own type.',
     ],
     improved: [
       'The invoice page is narrower, like a printed page.',
