@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Empty } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { getWorkflow, loadRefData } from './api'
+import { RunsPanel } from './RunsPanel'
 import type { RefData, WorkflowRow } from './types'
 
 // the canvas library is large: loaded only on this page
@@ -51,6 +52,7 @@ export function WorkflowPage() {
           </Suspense>
         </div>
       </div>
+      <RunsPanel workflowId={wf.id} />
     </>
   )
 }

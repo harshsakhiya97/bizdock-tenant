@@ -866,3 +866,6 @@ a.db-card:hover { border-color: var(--brand); }
   .att-cell-body .lbl-short { display: inline; }
   .att-cell { padding: 7px 8px; }
 }
+.run-log { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
+.run-log .is-failed { color: var(--danger, #dc2626); }
+.run-log .is-skipped, .run-log .is-stopped { color: var(--text-muted); }
