@@ -86,7 +86,7 @@ export function WhatsAppFields({
             ))}
           </Select>
         )}
-        {!error && <Hint>Approved templates from your WhatsApp provider. A template is needed when the lead hasn’t messaged you in the last 24 hours.</Hint>}
+        {!error && <Hint>Approved templates from your WhatsApp provider. Workflows send templates only: a free message can’t reach a lead who hasn’t written to you in the last 24 hours.</Hint>}
       </div>
 
       {name ? (
