@@ -4,9 +4,9 @@ import { ArrowLeft, CalendarDays, Pencil, Tag, Users, Workflow } from 'lucide-re
 import { useAuth } from '@/auth/useAuth'
 import { Empty } from '@/components/ui'
 import { listEvents, type EventRow } from '@/calendar/api'
-import { listFunnelLeads, listSources } from '@/leads/api'
-import { fullName } from '@/leads/labels'
-import type { LeadRow, Option } from '@/leads/types'
+import { listFunnelLeads, listMemberOptions, listSources } from '@/leads/api'
+import { followUp, fullName, money, tempOf } from '@/leads/labels'
+import type { LeadRow, MemberOption, Option } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listFunnelSubmissions, listFunnels, listLandingPages, listSheets, listWebhooks } from './api'
@@ -46,6 +46,7 @@ export function FunnelPage() {
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [sources, setSources] = useState<Option[]>([])
+  const [members, setMembers] = useState<MemberOption[]>([])
   const [event, setEvent] = useState<EventRow | null>(null)
   const [editing, setEditing] = useState(false)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -65,12 +66,10 @@ export function FunnelPage() {
     listFunnelSubmissions(id).then(setSubs).catch(() => setSubs([]))
     listFunnelLeads(id).then(setLeads).catch(() => setLeads([]))
     void listSources(tenant.id).then(setSources)
+    void listMemberOptions(tenant.id).then(setMembers)
   }, [id, tenant.id])
   useEffect(load, [load])
 
-  const pageName = useMemo(() => new Map((pages ?? []).map((p) => [p.id, p.name])), [pages])
-  const hookName = useMemo(() => new Map((hooks ?? []).map((h) => [h.id, h.name])), [hooks])
-  const sheetName = useMemo(() => new Map((sheets ?? []).map((h) => [h.id, h.name])), [sheets])
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
   const biz = businesses.find((b) => b.id === funnel?.business_id)
   const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
@@ -268,33 +267,45 @@ export function FunnelPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Stage</th>
-                      <th>Form</th>
-                      <th>UTM source / campaign</th>
+                      <th>Lead</th>
+                      <th>Temp</th>
                       <th>Source</th>
-                      <th>Added</th>
+                      <th>Owner</th>
+                      <th>Next follow-up</th>
+                      <th style={{ textAlign: 'right' }}>Value</th>
+                      <th>Created</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leads.map((l) => {
-                      const st = stageOf.get(l.stage_id ?? '')
+                      const t = tempOf(l.temperature)
+                      const fu = followUp(l.next_follow_up_at)
                       return (
                         <tr key={l.id} className="is-clickable" onClick={() => openLead(l.id)}>
-                          <td className="strong">{fullName(l)}</td>
-                          <td className="nowrap">{l.phone}</td>
                           <td>
-                            {st && (
-                              <span className="funnel-stage" style={{ ['--c' as string]: st.color }}>
-                                {st.name}
-                              </span>
+                            <span className="strong">{fullName(l)}</span>
+                            <div className="muted small">
+                              {l.phone}
+                              {l.city ? ` · ${l.city}` : ''}
+                            </div>
+                            {l.tags.length > 0 && (
+                              <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
+                                {l.tags.map((tg) => (
+                                  <span key={tg} className="tag-chip tag-chip-sm">
+                                    {tg}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </td>
-                          <td className="muted">{l.sheet_id ? `Sheet · ${sheetName.get(l.sheet_id) ?? 'deleted'}` : l.webhook_id ? (hookName.get(l.webhook_id) ?? 'Deleted webhook') : l.landing_page_id ? (pageName.get(l.landing_page_id) ?? 'Deleted page') : '—'}</td>
-                          <td className="muted small">{[l.utm_source, l.utm_campaign].filter(Boolean).join(' / ') || '—'}</td>
-                          <td className="muted">{sources.find((s) => s.id === l.source_id)?.name ?? '—'}</td>
-                          <td className="muted nowrap">{new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
+                          <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
+                          <td>{sources.find((x) => x.id === l.source_id)?.name ?? <span className="muted">—</span>}</td>
+                          <td className="nowrap">{members.find((m) => m.id === l.owner_id)?.name ?? <span className="muted">Unassigned</span>}</td>
+                          <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
+                          <td className="num" style={{ textAlign: 'right' }}>
+                            {money(l.estimated_amount)}
+                          </td>
+                          <td className="muted nowrap">{new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                         </tr>
                       )
                     })}
