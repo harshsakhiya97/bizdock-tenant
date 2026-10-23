@@ -869,3 +869,19 @@ a.db-card:hover { border-color: var(--brand); }
 .run-log { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 13px; }
 .run-log .is-failed { color: var(--danger, #dc2626); }
 .run-log .is-skipped, .run-log .is-stopped { color: var(--text-muted); }
+/* workflow runs */
+.run-track { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; }
+.run-arrow { color: var(--text-muted); font-size: 12px; padding: 0 2px; }
+.run-step { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface, #fff); color: var(--text-muted); white-space: nowrap; }
+.run-step b { font-weight: 600; color: inherit; }
+.run-extra { opacity: 0.8; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.run-step.is-done { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+.run-step.is-current { background: #fef3c7; border-color: #fcd34d; color: #92400e; box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25); }
+.run-step.is-failed, .run-step.is-stopped { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.run-step.is-skipped { background: #f1f5f9; color: #64748b; text-decoration: line-through; }
+.run-step.is-pending { border-style: dashed; }
+.run-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.run-dot { display: inline-flex; align-items: center; gap: 4px; }
+.run-dot.is-done { color: #166534; } .run-dot.is-current { color: #92400e; } .run-dot.is-failed { color: #991b1b; }
+.run-detail td { background: var(--surface-muted, #f8fafc); }
+.wf-runs-btn { display: inline-flex; align-items: center; gap: 6px; }
