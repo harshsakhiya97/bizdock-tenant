@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Activity, Network, Plus, Trash2 } from 'lucide-react'
+import { Activity, Network, Play, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
@@ -14,6 +14,7 @@ import type { RefData, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 import { db } from '@/lib/supabase'
 import { RunsList } from './RunsPanel'
+import { TestRunModal } from './TestRunModal'
 
 /** Sidebar → Workflows: every workflow with its trigger, steps and on / off. */
 export function WorkflowsPage() {
@@ -30,6 +31,7 @@ export function WorkflowsPage() {
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [runCounts, setRunCounts] = useState<Map<string, { total: number; waiting: number; failed: number }>>(new Map())
   const [viewing, setViewing] = useState<WorkflowRow | null>(null)
+  const [testing, setTesting] = useState<WorkflowRow | null>(null)
 
   const load = useCallback(() => {
     listWorkflows(tenant.id)
@@ -185,7 +187,12 @@ export function WorkflowsPage() {
                         )}
                       </td>
                       <td className="muted nowrap">{new Date(w.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right' }}>
+                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right' }} className="nowrap">
+                        {can('workflows', 'edit') && (
+                          <button type="button" className="btn btn-ghost btn-icon" aria-label={`Test run ${w.name}`} title="Test run" onClick={() => setTesting(w)}>
+                            <Play size={15} />
+                          </button>
+                        )}
                         {can('workflows', 'delete') && (
                           <button type="button" className="btn btn-ghost btn-icon danger-text" aria-label={`Delete ${w.name}`} onClick={() => setDeleting(w)}>
                             <Trash2 size={15} />
@@ -201,6 +208,19 @@ export function WorkflowsPage() {
         )}
       </div>
 
+      {testing && (
+        <TestRunModal
+          workflow={testing}
+          refData={refData}
+          onClose={() => setTesting(null)}
+          onStarted={() => {
+            setNotice({ ok: 'Test run started.' })
+            setViewing(testing)
+            setTesting(null)
+            load()
+          }}
+        />
+      )}
       {viewing && (
         <Modal open title={`Runs · ${viewing.name}`} width={1100} onClose={() => setViewing(null)}>
           <RunsList workflow={viewing} />
