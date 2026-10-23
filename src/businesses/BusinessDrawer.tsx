@@ -20,6 +20,8 @@ const emptyInput: BusinessInput = {
   has_gst: false,
   gst_number: '',
   legal_name: '',
+  has_sub_businesses: false,
+  type: 'studio_rental',
 }
 /** Create or edit a business, Nothing is saved until "Save". */
 export function BusinessDrawer({
@@ -45,6 +47,8 @@ export function BusinessDrawer({
           has_gst: business.has_gst,
           gst_number: business.gst_number ?? '',
           legal_name: business.legal_name ?? '',
+          has_sub_businesses: business.has_sub_businesses,
+          type: business.type ?? 'studio_rental',
         }
       : emptyInput,
   )
@@ -77,12 +81,15 @@ export function BusinessDrawer({
     if (email && !isValidEmail(email)) return setError('Enter a valid business email.')
     if (input.has_gst && !gst) return setError('Enter the GST number, or untick "Registered for GST?".')
     if (input.has_gst && !isValidGst(gst)) return setError('GST number should be 15 characters, like 24ABCDE1234F1Z5.')
-    if (subs.some((s) => !s.name.trim())) return setError('Give every sub-business a name, or remove it.')
+    if (input.has_sub_businesses && !subs.length) return setError('Add the sub-businesses, or untick "Has multiple sub-businesses".')
+    if (input.has_sub_businesses && subs.some((s) => !s.name.trim())) return setError('Give every sub-business a name, or remove it.')
     setBusy(true)
     setError(null)
     try {
       const saved = await saveBusiness({ tenantId: tenant.id, existing: business, input, logo })
-      await saveSubBusinesses(tenant.id, saved.id, subs, removedSubs)
+      // without sub-businesses, the existing ones are removed (their records stay in the business)
+      if (input.has_sub_businesses) await saveSubBusinesses(tenant.id, saved.id, subs, removedSubs)
+      else await saveSubBusinesses(tenant.id, saved.id, [], [...removedSubs, ...subs.filter((s) => s.id).map((s) => s.id!)])
       onSaved()
     } catch (err) {
       setError((err as Error).message)
@@ -150,7 +157,38 @@ export function BusinessDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Sub-businesses" description="Optional. Split this business into sub-businesses; leads, sales and bookings can then be tagged with one.">
+        <FormSection title="Business type" description="What this business does; the app works according to it.">
+          <div className="check-box">
+            <Checkbox
+              id="bz-has-subs"
+              checked={input.has_sub_businesses}
+              onChange={(v) => {
+                setInput((d) => ({ ...d, has_sub_businesses: v }))
+                if (v && !subs.length) setSubs([{ name: '', type: 'editing' }])
+              }}
+              label="Does this business contain multiple sub-businesses?"
+              description="Tick it to split the business (e.g. Editing service, Podcast, Podcast studio rental), each with its own type. Leave it off when the business does one thing."
+            />
+          </div>
+          {!input.has_sub_businesses && (
+            <div>
+              <Label htmlFor="bz-type" required>
+                Type
+              </Label>
+              <Select id="bz-type" value={input.type ?? ''} onChange={(e) => setInput((d) => ({ ...d, type: e.target.value }))}>
+                {SUB_BUSINESS_TYPES.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label}
+                  </option>
+                ))}
+              </Select>
+              {subs.some((s) => s.id) && <Hint>Its sub-businesses are removed when you save; their leads, sales and bookings stay in this business.</Hint>}
+            </div>
+          )}
+        </FormSection>
+
+        {input.has_sub_businesses && (
+        <FormSection title="Sub-businesses" description="Leads, funnels, bookings and services can then be tagged with one; each works by its type.">
           {subs.length > 0 && (
             <div className="stack" style={{ gap: 8 }}>
               {subs.map((s, i) => (
@@ -185,6 +223,7 @@ export function BusinessDrawer({
           </div>
           {removedSubs.length > 0 && <Hint>Leads, sales and bookings of a removed sub-business stay in this business.</Hint>}
         </FormSection>
+        )}
 
         <FormSection title="Contact" description="How customers and your team reach this business.">
           <div className="form-grid">

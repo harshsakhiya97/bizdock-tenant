@@ -12,6 +12,9 @@ export type BusinessRow = {
   legal_name: string | null
   has_gst: boolean
   has_branches: boolean
+  /** true: split into sub-businesses (each has a type); false: the business has a type of its own */
+  has_sub_businesses: boolean
+  type: string | null
   is_active: boolean
   archived_at: string | null
   sort_order: number
@@ -24,7 +27,7 @@ export type BusinessListRow = BusinessRow
 /** Editable business fields */
 export type BusinessInput = Pick<
   BusinessRow,
-  'name' | 'phone' | 'email' | 'address' | 'city' | 'state' | 'has_gst' | 'gst_number' | 'legal_name'
+  'name' | 'phone' | 'email' | 'address' | 'city' | 'state' | 'has_gst' | 'gst_number' | 'legal_name' | 'has_sub_businesses' | 'type'
 >
 
 export const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
