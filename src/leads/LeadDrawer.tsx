@@ -1,3 +1,4 @@
+import { TagInput } from '@/components/TagInput'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
@@ -242,6 +243,15 @@ export function LeadDrawer({
               <TextInput id="l-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={set('purpose')} disabled={!canEdit} />
             </div>
             <SubBusinessSelect id="l-sub" businessId={bizId} value={input.sub_business_id} onChange={(v) => setInput((d) => ({ ...d, sub_business_id: v }))} disabled={!canEdit} />
+            <div className="span-2">
+              <Label htmlFor="l-tags">Tags</Label>
+              <TagInput
+                id="l-tags"
+                value={input.tags.split(',').map((t) => t.trim()).filter(Boolean)}
+                onChange={(tags) => setInput((d) => ({ ...d, tags: tags.join(', ') }))}
+                disabled={!canEdit}
+              />
+            </div>
           </div>
         </FormSection>
 

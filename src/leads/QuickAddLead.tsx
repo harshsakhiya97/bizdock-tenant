@@ -1,3 +1,4 @@
+import { TagInput } from '@/components/TagInput'
 import { useState } from 'react'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
@@ -36,6 +37,7 @@ export function QuickAddLead({
   const [source, setSource] = useState('')
   const [purpose, setPurpose] = useState('')
   const [city, setCity] = useState('')
+  const [tags, setTags] = useState<string[]>([])
   const [subId, setSubId] = useState(sub?.id ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -65,7 +67,7 @@ export function QuickAddLead({
         temperature: '',
         estimated_amount: '',
         owner_id: me ?? '',
-        tags: '',
+        tags: tags.join(', '),
         notes: '',
         next_follow_up_at: '',
         purpose,
@@ -135,6 +137,10 @@ export function QuickAddLead({
             <TextInput id="q-purpose" placeholder="e.g. Podcast, Product shoot" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
           </div>
           <SubBusinessSelect id="q-sub" businessId={bizId} value={subId} onChange={setSubId} />
+          <div className="span-2">
+            <Label htmlFor="q-tags">Tags</Label>
+            <TagInput id="q-tags" value={tags} onChange={setTags} />
+          </div>
           {!funnel && businesses.length > 1 && (
             <div>
               <Label htmlFor="q-biz" required>

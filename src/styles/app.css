@@ -890,3 +890,4 @@ a.db-card:hover { border-color: var(--brand); }
 .wf-runs-btn { display: inline-flex; align-items: center; gap: 6px; }
 .modal-backdrop { grid-template-columns: minmax(0, 1fr); }
 .modal-lg, .modal-body { min-width: 0; }
+.tag-chip-sm { height: 20px; padding: 0 7px; font-size: 11px; }
