@@ -534,7 +534,7 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cb-name { border: 1px solid transparent; background: transparent; font: inherit; font-size: 15px; font-weight: 700; color: var(--text); padding: 4px 8px; border-radius: 6px; min-width: 200px; }
 .cb-name:hover:not(:disabled), .cb-name:focus { border-color: var(--line); background: var(--surface); outline: none; }
 .cb-note { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.cb-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; height: max(560px, calc(100vh - 150px)); }
+.cb-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; height: max(640px, calc(100vh - 120px)); }
 .cb-layout:not(:has(.cb-palette)) { grid-template-columns: minmax(0, 1fr); }
 @media (max-width: 900px) { .cb-layout { grid-template-columns: 1fr; height: auto; } .cb-canvas { height: 520px; } }
 .cb-palette { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
@@ -891,3 +891,13 @@ a.db-card:hover { border-color: var(--brand); }
 .modal-backdrop { grid-template-columns: minmax(0, 1fr); }
 .modal-lg, .modal-body { min-width: 0; }
 .tag-chip-sm { height: 20px; padding: 0 7px; font-size: 11px; }
+
+/* workflow builder: + button and the add-step panel */
+.page:has(.cb-canvas) { max-width: none; }
+.cb-add-fab { position: absolute; top: 12px; right: 12px; z-index: 6; width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer; box-shadow: 0 4px 14px rgba(15, 23, 42, .12); }
+.cb-add-fab:hover { border-color: var(--brand); color: var(--brand); }
+.cb-add-panel { width: 360px; }
+.cb-add-panel .cb-tool { cursor: pointer; width: 100%; }
+.cb-add-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border, var(--line)); border-radius: 10px; padding: 0 10px; height: 38px; color: var(--text-muted); }
+.cb-add-search:focus-within { border-color: var(--brand); }
+.cb-add-search input { border: 0; outline: 0; flex: 1; font: inherit; background: transparent; color: var(--text); }
