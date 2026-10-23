@@ -23,7 +23,7 @@ export const releases: Release[] = [
       'Customers: a lead with a confirmed or completed booking moves from Leads to Customers, with bookings, revenue, received and balance for each customer.',
       'Invoices: every invoice (one per booking) with search, payment status (Paid, Part paid, Due, Overdue) and month filters, totals and a View button.',
       'Invoice print: each service on its own line, and a Receipts table when the amount is paid in more than one part.',
-      'Attendance: a month calendar with check-in, breaks and check-out on each day; the Owner and Tech Support can pick any staff member.',
+      'Attendance: a month calendar with check-in, breaks and check-out on each day, month totals (present, late, half day, leave, absent) and a month switcher; the Owner and Tech Support can pick any staff member.',
       'Team: limit a person to some sub-businesses of a business; they see only those leads, bookings, invoices and funnels.',
     ],
     improved: ['The invoice page is narrower, like a printed page.'],
