@@ -18,6 +18,8 @@ export type Run = {
   updated_at: string
   lead_id: string | null
   leads: { first_name: string; last_name: string | null; phone: string } | null
+  is_test: boolean
+  test_data: Record<string, string> | null
 }
 
 const STATUS: Record<Run['status'], { label: string; tone: string }> = {
@@ -92,7 +94,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     setLoading(true)
     void db()
       .from('workflow_runs')
-      .select('id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, leads(first_name, last_name, phone)')
+      .select('id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, is_test, test_data, leads(first_name, last_name, phone)')
       .eq('workflow_id', workflow.id)
       .order('created_at', { ascending: false })
       .limit(100)
@@ -102,6 +104,13 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
       })
   }, [workflow.id])
   useEffect(load, [load])
+  // while a run is starting, check again every few seconds
+  const busy = (runs ?? []).some((r) => r.status === 'queued' || r.status === 'running')
+  useEffect(() => {
+    if (!busy) return
+    const t = setTimeout(load, 4000)
+    return () => clearTimeout(t)
+  }, [busy, runs, load])
 
   const counts = (runs ?? []).reduce<Record<string, number>>((m, r) => ({ ...m, [r.status]: (m[r.status] ?? 0) + 1 }), {})
 
@@ -152,10 +161,13 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                           <Link to={`/leads/${r.lead_id}`} onClick={(e) => e.stopPropagation()} className="strong">
                             {[r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ')}
                           </Link>
+                        ) : r.is_test ? (
+                          <span className="strong">{r.test_data?.name ?? 'Test'}</span>
                         ) : (
                           <span className="muted">—</span>
                         )}
-                        {r.leads && <div className="muted small">{r.leads.phone}</div>}
+                        {r.is_test && <span className="badge badge-purple" style={{ marginLeft: 6 }}>Test</span>}
+                        {(r.leads?.phone ?? r.test_data?.phone) && <div className="muted small">{r.leads?.phone ?? r.test_data?.phone}</div>}
                       </td>
                       <td className="nowrap">
                         <span className={cn('badge', st.tone)}>{st.label}</span>
