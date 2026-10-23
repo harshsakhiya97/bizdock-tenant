@@ -870,7 +870,10 @@ a.db-card:hover { border-color: var(--brand); }
 .run-log .is-failed { color: var(--danger, #dc2626); }
 .run-log .is-skipped, .run-log .is-stopped { color: var(--text-muted); }
 /* workflow runs */
-.run-track { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; }
+.run-track { display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.run-track > * { flex: none; }
+.run-table td:last-child { width: 100%; max-width: 0; }
+.run-detail td:last-child { max-width: none; }
 .run-arrow { color: var(--text-muted); font-size: 12px; padding: 0 2px; }
 .run-step { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface, #fff); color: var(--text-muted); white-space: nowrap; }
 .run-step b { font-weight: 600; color: inherit; }
