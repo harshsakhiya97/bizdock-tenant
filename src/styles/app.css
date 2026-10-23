@@ -870,10 +870,10 @@ a.db-card:hover { border-color: var(--brand); }
 .run-log .is-failed { color: var(--danger, #dc2626); }
 .run-log .is-skipped, .run-log .is-stopped { color: var(--text-muted); }
 /* workflow runs */
-.run-track { display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.run-track { display: flex; flex-wrap: nowrap; align-items: center; gap: 2px; }
 .run-track > * { flex: none; }
-.run-table td:last-child { width: 100%; max-width: 0; }
-.run-detail td:last-child { max-width: none; }
+.table-wrap.run-scroll { overflow-x: auto !important; }
+.run-scroll .run-table { width: max-content; min-width: 100%; }
 .run-arrow { color: var(--text-muted); font-size: 12px; padding: 0 2px; }
 .run-step { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface, #fff); color: var(--text-muted); white-space: nowrap; }
 .run-step b { font-weight: 600; color: inherit; }
@@ -888,3 +888,5 @@ a.db-card:hover { border-color: var(--brand); }
 .run-dot.is-done { color: #166534; } .run-dot.is-current { color: #92400e; } .run-dot.is-failed { color: #991b1b; }
 .run-detail td { background: var(--surface-muted, #f8fafc); }
 .wf-runs-btn { display: inline-flex; align-items: center; gap: 6px; }
+.modal-backdrop { grid-template-columns: minmax(0, 1fr); }
+.modal-lg, .modal-body { min-width: 0; }
