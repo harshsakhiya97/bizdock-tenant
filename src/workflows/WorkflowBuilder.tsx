@@ -226,7 +226,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         )}
       </div>
       <div className="alert alert-info small cb-note">
-        <Info size={15} /> WhatsApp, email and calls are connected later. Until then the workflow is saved but no message is sent.
+        <Info size={15} /> WhatsApp templates and Wait steps run now. Email, Call, Wait for event, Switch and Go to workflow are saved but don’t run yet.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {!dirty && <Flash msg={notice.ok} dep={notice} />}

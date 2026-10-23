@@ -53,7 +53,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
   const event = ref.events.find((e) => e.id === eventId) ?? null
   const pages = funnel ? ref.pages.filter((p) => p.funnel_id === funnel.id) : ref.pages
   const stages = funnel ? funnel.stages : []
-  const tags = [...new Set((funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags))].sort()
+  const tags = [...new Set([...(funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags), ...(ref.leadTags ?? [])])].sort((a, b) => a.localeCompare(b))
   const fieldKeys = [...new Set(pages.flatMap((p) => p.fields))].filter((k) => k !== 'city')
   return { ...ref, funnel, event, pages, stages, tags, fieldKeys }
 }

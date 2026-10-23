@@ -279,7 +279,16 @@ function CondEditor({ id, c, ctx, disabled, onChange }: { id: string; c: Conditi
           <option value="is">{field === 'field_filled' ? 'is filled' : field === 'tag' ? 'has' : 'is'}</option>
           <option value="is_not">{field === 'field_filled' ? 'is empty' : field === 'tag' ? 'doesn’t have' : 'is not'}</option>
         </Select>
-        {options ? (
+        {field === 'tag' ? (
+          <>
+            <TextInput aria-label="Tag" list={`${id}-tags`} placeholder="Pick or type a tag" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled} />
+            <datalist id={`${id}-tags`}>
+              {ctx.tags.map((t) => (
+                <option key={t} value={t} />
+              ))}
+            </datalist>
+          </>
+        ) : options ? (
           <Select aria-label="Value" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled}>
             <option value="">— select —</option>
             {options.map((o) => (
