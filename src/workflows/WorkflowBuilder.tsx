@@ -151,6 +151,8 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     setSelectedId(id)
     setAdding(false)
     touch()
+    // bring the new box into view
+    if (!position) void flow.setCenter(pos.x + 170, pos.y + 40, { zoom: flow.getZoom(), duration: 300 })
   }
 
   function onDrop(e: DragEvent) {
