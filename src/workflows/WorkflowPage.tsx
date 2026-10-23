@@ -52,7 +52,7 @@ export function WorkflowPage() {
           </Suspense>
         </div>
       </div>
-      <RunsPanel workflowId={wf.id} />
+      <RunsPanel workflow={wf} />
     </>
   )
 }

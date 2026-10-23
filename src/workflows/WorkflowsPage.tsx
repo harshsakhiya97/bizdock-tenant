@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Network, Plus, Trash2 } from 'lucide-react'
+import { Activity, Network, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
@@ -12,6 +12,8 @@ import { archiveWorkflow, createWorkflow, listWorkflows, loadRefData, setWorkflo
 import { STEP_META, TRIGGERS, flowContext, triggerLabel, triggerSummary } from './steps'
 import type { RefData, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
+import { db } from '@/lib/supabase'
+import { RunsList } from './RunsPanel'
 
 /** Sidebar → Workflows: every workflow with its trigger, steps and on / off. */
 export function WorkflowsPage() {
@@ -26,11 +28,29 @@ export function WorkflowsPage() {
   const [deleting, setDeleting] = useState<WorkflowRow | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
+  const [runCounts, setRunCounts] = useState<Map<string, { total: number; waiting: number; failed: number }>>(new Map())
+  const [viewing, setViewing] = useState<WorkflowRow | null>(null)
 
   const load = useCallback(() => {
     listWorkflows(tenant.id)
       .then(setRows)
       .catch((e: Error) => setNotice({ error: e.message }))
+    void db()
+      .from('workflow_runs')
+      .select('workflow_id, status')
+      .eq('tenant_id', tenant.id)
+      .limit(10000)
+      .then(({ data }) => {
+        const m = new Map<string, { total: number; waiting: number; failed: number }>()
+        for (const r of (data ?? []) as { workflow_id: string; status: string }[]) {
+          const c = m.get(r.workflow_id) ?? { total: 0, waiting: 0, failed: 0 }
+          c.total++
+          if (r.status === 'waiting' || r.status === 'queued' || r.status === 'running') c.waiting++
+          if (r.status === 'failed') c.failed++
+          m.set(r.workflow_id, c)
+        }
+        setRunCounts(m)
+      })
     loadRefData(tenant.id).then(setRefData).catch(() => setRefData({ funnels: [], pages: [], events: [], members: [], workflows: [] }))
   }, [tenant.id])
   useEffect(load, [load])
@@ -109,6 +129,7 @@ export function WorkflowsPage() {
                   <th>Workflow</th>
                   <th>Starts when</th>
                   <th>Steps</th>
+                  <th>Runs</th>
                   <th>Status</th>
                   <th>Updated</th>
                   <th />
@@ -142,6 +163,18 @@ export function WorkflowsPage() {
                         </div>
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="btn btn-outline btn-sm wf-runs-btn" onClick={() => setViewing(w)} title="View runs">
+                          <Activity size={14} /> {runCounts.get(w.id)?.total ?? 0}
+                        </button>
+                        {(runCounts.get(w.id)?.waiting || runCounts.get(w.id)?.failed) ? (
+                          <div className="muted small">
+                            {runCounts.get(w.id)?.waiting ? `${runCounts.get(w.id)?.waiting} in progress` : ''}
+                            {runCounts.get(w.id)?.waiting && runCounts.get(w.id)?.failed ? ' · ' : ''}
+                            {runCounts.get(w.id)?.failed ? <span className="text-danger">{runCounts.get(w.id)?.failed} failed</span> : ''}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         {can('workflows', 'edit') ? (
                           <label className="switch" title={w.is_active ? 'Turn off' : 'Turn on'}>
                             <input type="checkbox" checked={w.is_active} onChange={() => void toggle(w)} aria-label={`${w.name} on`} />
@@ -168,6 +201,11 @@ export function WorkflowsPage() {
         )}
       </div>
 
+      {viewing && (
+        <Modal open title={`Runs · ${viewing.name}`} width={1100} onClose={() => setViewing(null)}>
+          <RunsList workflow={viewing} />
+        </Modal>
+      )}
       {creating && (
         <NewWorkflowModal
           refData={refData}
