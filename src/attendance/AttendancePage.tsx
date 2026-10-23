@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Label, TextInput } from '@/components/Field'
@@ -146,13 +147,17 @@ export function AttendancePage() {
       {!isSupport && <TodayCard row={myRow} settings={settings} dayNote={dayNote} onChanged={done} onError={(m) => setNotice({ error: m })} />}
 
       <div className="panel att-cal-panel">
-        <div className="panel-bar">
-          <b>
-            {logOf.id === me ? 'My attendance' : `${logOf.name}’s attendance`} · {monthLabel}
-          </b>
-          <div className="row">
+        <div className="att-cal-bar">
+          <div className="att-cal-title">
+            <div className="att-avatar">{(logOf.id === me ? 'Me' : logOf.name).slice(0, 1).toUpperCase()}</div>
+            <div>
+              <b>{logOf.id === me ? 'My attendance' : logOf.name}</b>
+              <div className="muted small">Weekly off: {logOf.weekly_off.map((d) => WEEKDAY_SHORT[d]).join(', ') || 'none'}</div>
+            </div>
+          </div>
+          <div className="att-cal-tools">
             {canAll && people.length > 1 && (
-              <select className="input input-sm filter-select" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
+              <select className="input input-sm att-staff" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -160,19 +165,41 @@ export function AttendancePage() {
                 ))}
               </select>
             )}
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => shiftMonth(-1)} aria-label="Previous month">
-              ‹
-            </button>
-            <input type="month" className="input input-sm" value={month} max={today.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => shiftMonth(1)} disabled={month >= today.slice(0, 7)} aria-label="Next month">
-              ›
-            </button>
+            <div className="att-month">
+              <button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">
+                <ChevronLeft size={16} />
+              </button>
+              <span>{monthLabel}</span>
+              <button type="button" onClick={() => shiftMonth(1)} disabled={month >= today.slice(0, 7)} aria-label="Next month">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            {month !== today.slice(0, 7) && (
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => setMonth(today.slice(0, 7))}>
+                This month
+              </button>
+            )}
           </div>
         </div>
         {myStats && (
-          <div className="att-summary muted small">
-            {myStats.working} working days · {myStats.present} present · {myStats.late} late · {myStats.half} half day · {myStats.leave} leave · {myStats.absent} absent · weekly off{' '}
-            {logOf.weekly_off.map((d) => WEEKDAY_SHORT[d]).join(', ') || 'none'}
+          <div className="att-stats">
+            {(
+              [
+                ['Working days', myStats.working, ''],
+                ['Present', myStats.present, 'present'],
+                ['Late', myStats.late, 'late'],
+                ['Half day', myStats.half, 'half'],
+                ['Leave', myStats.leave, 'leave'],
+                ['Absent', myStats.absent, 'absent'],
+              ] as const
+            ).map(([label, n, k]) => (
+              <div key={label} className="att-stat">
+                <span className="small muted">
+                  {k && <span className={cn('att-dot', `dot-${k}`)} />} {label}
+                </span>
+                <b>{n}</b>
+              </div>
+            ))}
           </div>
         )}
         <div className="att-cal">
@@ -202,18 +229,25 @@ export function AttendancePage() {
                   {r?.check_in ? (
                     <>
                       <div>
-                        Check In: {clock(r.check_in)}
+                        <span className="lbl-long">Check In:</span>
+                        <span className="lbl-short">In</span> {clock(r.check_in)}
                         {r.is_late ? <span className="text-danger"> +{r.late_minutes}m</span> : null}
                       </div>
                       {breaks.map((b) => (
                         <div key={b.id}>
-                          {b.kind === 'lunch' ? 'Lunch' : b.kind === 'tea' ? 'Tea' : 'Break'}: {clock(b.started_at)} - {b.ended_at ? clock(b.ended_at) : 'now'}
+                          {b.kind === 'lunch' ? 'Lunch' : b.kind === 'tea' ? 'Tea' : 'Break'}
+                          <span className="lbl-long">:</span> {clock(b.started_at)} - {b.ended_at ? clock(b.ended_at) : 'now'}
                         </div>
                       ))}
-                      {r.check_out && <div>Check Out: {clock(r.check_out)}</div>}
+                      {r.check_out && (
+                        <div>
+                          <span className="lbl-long">Check Out:</span>
+                          <span className="lbl-short">Out</span> {clock(r.check_out)}
+                        </div>
+                      )}
                     </>
                   ) : st === 'future' ? null : (
-                    <div className="att-cell-label">{STATUS_LABEL[st].label}</div>
+                    <span className={cn("att-pill", `pill-${st}`)}>{STATUS_LABEL[st].label}</span>
                   )}
                 </div>
               </div>
