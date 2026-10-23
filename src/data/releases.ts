@@ -26,7 +26,10 @@ export const releases: Release[] = [
       'Attendance: a month calendar with check-in, breaks and check-out on each day, month totals (present, late, half day, leave, absent) and a month switcher; the Owner and Tech Support can pick any staff member.',
       'Team: limit a person to some sub-businesses of a business; they see only those leads, bookings, invoices and funnels.',
     ],
-    improved: ['The invoice page is narrower, like a printed page.'],
+    improved: [
+      'The invoice page is narrower, like a printed page.',
+      'Dashboard: enquiries that became customers show as converted (not open), drop out of Action required, and the last card shows Enquiry to customer.',
+    ],
     removed: [
       'Masters: Billing companies, Client stages, Lost reasons, Event types and Webinar types.',
       'The Calendar & Webinars module.',
