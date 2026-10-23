@@ -26,6 +26,9 @@ export const releases: Release[] = [
       'Attendance: a month calendar with check-in, breaks and check-out on each day, month totals (present, late, half day, leave, absent) and a month switcher; the Owner and Tech Support can pick any staff member.',
       'Team: limit a person to some sub-businesses of a business; they see only those leads, bookings, invoices and funnels.',
       'Workflows now run: a form submission starts the funnel’s Form submitted workflows, which send WhatsApp templates through WATI and follow Wait steps; each workflow shows its Runs (who, status, what each step did).',
+      'Workflow runs: a Runs button in the workflows list opens every run with its date and time, each step marked done, held here, pending, failed or skipped; the table scrolls sideways.',
+      'Test run: the ▶ button runs a workflow once with typed-in details (name, phone, the funnel’s fields), even while it’s off; no lead is added.',
+      'Lead tags: add several tags in Add / Edit lead; they show on the lead page and in the leads list, and Switch / Yes-No conditions can pick them.',
     ],
     improved: [
       'The invoice page is narrower, like a printed page.',
