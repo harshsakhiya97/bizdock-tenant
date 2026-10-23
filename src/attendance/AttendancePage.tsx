@@ -156,7 +156,7 @@ export function AttendancePage() {
             </div>
           </div>
           <div className="att-cal-tools">
-            {canAll && people.length > 1 && (
+            {canAll && people.length > 0 && (
               <select className="input input-sm att-staff" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
