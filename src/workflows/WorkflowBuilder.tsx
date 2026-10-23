@@ -14,7 +14,7 @@ import {
   type IsValidConnection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { AlertTriangle, Info, Save } from 'lucide-react'
+import { AlertTriangle, Info, Plus, Save, Search, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { saveWorkflow } from './api'
@@ -119,6 +119,9 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   const steps = nodes.filter((n) => n.type !== 'trigger').length
 
   const touch = () => setDirty(true)
+  // the + panel: pick the next step
+  const [adding, setAdding] = useState(false)
+  const [find, setFind] = useState('')
 
   const onConnect = useCallback(
     (c: Connection) => {
@@ -146,6 +149,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
     }
     setSelectedId(id)
+    setAdding(false)
     touch()
   }
 
@@ -232,41 +236,6 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       {!dirty && <Flash msg={notice.ok} dep={notice} />}
 
       <div className="cb-layout">
-        {canEdit && (
-          <div className="cb-palette">
-            <span className="lp-label">Steps</span>
-            {PALETTE.map((k) => {
-              const m = STEP_META[k]
-              const Icon = m.icon
-              return (
-                <button
-                  key={k}
-                  type="button"
-                  className="cb-tool"
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/x-workflow-step', k)
-                    e.dataTransfer.effectAllowed = 'move'
-                  }}
-                  onClick={() => addStep(k)}
-                  title={`${m.hint}. Drag onto the canvas, or click to add under the selected step.`}
-                >
-                  <span className="cb-icon" style={{ ['--c' as string]: m.color }}>
-                    <Icon size={15} />
-                  </span>
-                  <span>
-                    <b>{m.label}</b>
-                    <small>{m.hint}</small>
-                  </span>
-                </button>
-              )
-            })}
-            <p className="muted small" style={{ margin: '6px 2px 0' }}>
-              Drag a step onto the canvas, then drag from a box’s bottom dot to the next box. Select a line or box and press Delete to remove it.
-            </p>
-          </div>
-        )}
-
         <div className="cb-canvas" ref={wrap} onDragOver={(e) => (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))} onDrop={onDrop}>
           <ReactFlow<StepNode, FlowEdge>
             nodes={nodes}
@@ -285,7 +254,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             }}
             onConnect={onConnect}
             isValidConnection={isValidConnection}
-            onNodeClick={(_, n) => setSelectedId(n.id)}
+            onNodeClick={(_, n) => (setSelectedId(n.id), setAdding(false))}
             onPaneClick={() => setSelectedId(null)}
             defaultEdgeOptions={EDGE_DEFAULTS}
             nodesDraggable={canEdit}
@@ -299,7 +268,72 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
             <Controls showInteractive={false} />
           </ReactFlow>
-          {selected && (
+          {canEdit && !adding && (
+            <button type="button" className="cb-add-fab" onClick={() => (setAdding(true), setFind(''))} title="Add a step" aria-label="Add a step">
+              <Plus size={20} />
+            </button>
+          )}
+          {adding && (
+            <aside className="cb-panel cb-add-panel">
+              <div className="cb-panel-head">
+                <div style={{ flex: 1 }}>
+                  <b>What happens next?</b>
+                  <div className="muted small">
+                    Added under{' '}
+                    <b>{(() => {
+                      const a = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
+                      if (!a) return 'the trigger'
+                      return String((a.data as Record<string, unknown>).name || STEP_META[a.type as StepKind]?.label || 'the last step')
+                    })()}</b>
+                    . You can also drag a step onto the canvas.
+                  </div>
+                </div>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={() => setAdding(false)}>
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="cb-panel-body">
+                <div className="cb-add-search">
+                  <Search size={15} />
+                  <input autoFocus placeholder="Search steps…" value={find} onChange={(e) => setFind(e.target.value)} />
+                </div>
+                <div className="stack" style={{ gap: 6 }}>
+                  {PALETTE.filter((k) => {
+                    const q = find.trim().toLowerCase()
+                    return !q || STEP_META[k].label.toLowerCase().includes(q) || STEP_META[k].hint.toLowerCase().includes(q)
+                  }).map((k) => {
+                    const m = STEP_META[k]
+                    const Icon = m.icon
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        className="cb-tool"
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('application/x-workflow-step', k)
+                          e.dataTransfer.effectAllowed = 'move'
+                        }}
+                        onClick={() => addStep(k)}
+                      >
+                        <span className="cb-icon" style={{ ['--c' as string]: m.color }}>
+                          <Icon size={15} />
+                        </span>
+                        <span>
+                          <b>{m.label}</b>
+                          <small>{m.hint}</small>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="muted small" style={{ margin: 0 }}>
+                  Join boxes by dragging from a box’s bottom dot to the next box. Select a line or box and press Delete to remove it.
+                </p>
+              </div>
+            </aside>
+          )}
+          {selected && !adding && (
             <StepPanel
               node={selected}
               ctx={ctx}
