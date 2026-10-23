@@ -125,6 +125,20 @@ export function LeadPage() {
     ['City', lead.city || '—'],
     ['Source', sourceName ?? '—'],
     ['Purpose', lead.purpose || '—'],
+    [
+      'Tags',
+      lead.tags.length ? (
+        <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
+          {lead.tags.map((t) => (
+            <span key={t} className="tag-chip">
+              {t}
+            </span>
+          ))}
+        </span>
+      ) : (
+        '—'
+      ),
+    ],
     ['Business', biz ? (subName ? `${biz} · ${subName}` : biz) : '—'],
   ]
 

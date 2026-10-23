@@ -551,6 +551,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           {l.phone}
                           {l.city ? ` · ${l.city}` : ''}
                         </div>
+                        {l.tags.length > 0 && (
+                          <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
+                            {l.tags.map((t) => (
+                              <span key={t} className="tag-chip tag-chip-sm">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
