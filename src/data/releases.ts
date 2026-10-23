@@ -13,6 +13,26 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.4',
+    date: '2026-10-23',
+    title: 'Services, payment plans, Customers and Invoices',
+    summary: 'Client feedback: bookings are built from services and paid in parts; booked leads become customers; every booking has one invoice.',
+    new: [
+      'Services: Masters → Services (name, price, GST, optional sub-business). A booking picks several services; each price can be changed for that booking, then GST is added on the total.',
+      'Payment plan: split a booking into parts (Advance, Pre-shoot, After shoot, After service…) with a due date, amount and comment; mark a part Paid with the date and mode, and it shows Overdue once the due date passes.',
+      'Customers: a lead with a confirmed or completed booking moves from Leads to Customers, with bookings, revenue, received and balance for each customer.',
+      'Invoices: every invoice (one per booking) with search, payment status (Paid, Part paid, Due, Overdue) and month filters, totals and a View button.',
+      'Invoice print: each service on its own line, and a Receipts table when the amount is paid in more than one part.',
+      'Attendance: a month calendar with check-in, breaks and check-out on each day; the Owner and Tech Support can pick any staff member.',
+      'Team: limit a person to some sub-businesses of a business; they see only those leads, bookings, invoices and funnels.',
+    ],
+    improved: ['The invoice page is narrower, like a printed page.'],
+    removed: [
+      'Masters: Billing companies, Client stages, Lost reasons, Event types and Webinar types.',
+      'The Calendar & Webinars module.',
+    ],
+  },
+  {
     version: '0.3',
     date: '2026-10-21',
     title: 'Podcast Studio flow: sub-businesses, bookings, funnels and dashboard',
