@@ -34,6 +34,8 @@ export const releases: Release[] = [
     improved: [
       'The invoice page is narrower, like a printed page.',
       'Dashboard: enquiries that became customers show as converted (not open), drop out of Action required, and the last card shows Enquiry to customer.',
+      'Funnel → Leads tab has the same columns as the Leads module (lead, temperature, source, owner, next follow-up, value, created).',
+      'Workflow builder: a + button opens “What happens next?” to search and add a step under the selected one (or drag it); the canvas is wider and taller.',
     ],
     removed: [
       'Masters: Billing companies, Client stages, Lost reasons, Event types and Webinar types.',
