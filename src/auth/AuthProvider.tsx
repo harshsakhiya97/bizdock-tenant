@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: subRows }] = await Promise.all([
         db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
-        db().from('businesses').select('id, name').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
+        db().from('businesses').select('id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
           : db().from('member_businesses').select('business_id, sub_business_ids').eq('member_id', member.id),
@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? new Map((allowed as { business_id: string; sub_business_ids: string[] | null }[]).map((r) => [r.business_id, r.sub_business_ids?.length ? r.sub_business_ids : null]))
         : null
       const subs = (subRows ?? []) as SubBusiness[]
-      const list: Business[] = ((bizRows ?? []) as { id: string; name: string }[])
+      const list: Business[] = ((bizRows ?? []) as { id: string; name: string; type: SubBusiness['type'] | null }[])
         .filter((b) => !allowedMap || allowedMap.has(b.id))
         .map((b) => {
           const only = allowedMap?.get(b.id)

@@ -28,7 +28,7 @@ export const SUB_BUSINESS_TYPES: { id: SubBusinessType; label: string }[] = [
   { id: 'studio_rental', label: 'Podcast studio rental' },
 ]
 /** a business and its active sub-businesses */
-export type Business = { id: string; name: string; subs: SubBusiness[] }
+export type Business = { id: string; name: string; subs: SubBusiness[]; /** its own type when it has no sub-businesses */ type: SubBusinessType | null }
 
 export type PermissionAction = string
 

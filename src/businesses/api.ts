@@ -44,6 +44,8 @@ export async function saveBusiness(opts: {
     gst_number: input.has_gst ? (clean(input.gst_number)?.toUpperCase() ?? null) : null,
     legal_name: input.has_gst ? clean(input.legal_name) : null,
     has_branches: false,
+    has_sub_businesses: input.has_sub_businesses,
+    type: input.has_sub_businesses ? null : input.type || null,
   }
 
   // 1. business
