@@ -58,15 +58,16 @@ export function DashboardPage() {
     const F = fus.filter((f) => leadIds.has(f.lead_id))
     const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 7) === month
     const stageKind = new Map(refs.funnels.flatMap((f) => f.funnel_stages.map((s) => [s.id, s] as const)))
-    const isClosed = (l: LeadRow) => {
-      const k = stageKind.get(l.stage_id ?? '')?.kind
-      return k === 'won' || k === 'lost'
-    }
+    // a lead with a confirmed / completed booking is a customer (same rule as the Customers page)
+    const customerIds = new Set(B.filter((b) => b.status === 'confirmed' || b.status === 'completed').map((b) => b.lead_id).filter(Boolean))
+    const isLost = (l: LeadRow) => stageKind.get(l.stage_id ?? '')?.kind === 'lost'
+    const isClosed = (l: LeadRow) => customerIds.has(l.id) || isLost(l) || stageKind.get(l.stage_id ?? '')?.kind === 'won'
 
     // enquiries
     const monthLeads = L.filter((l) => inMonth(l.created_at))
     const open = L.filter((l) => !isClosed(l)).length
-    const lost = monthLeads.filter((l) => stageKind.get(l.stage_id ?? '')?.kind === 'lost').length
+    const lost = monthLeads.filter((l) => !customerIds.has(l.id) && isLost(l)).length
+    const customersThisMonth = monthLeads.filter((l) => customerIds.has(l.id)).length
 
     // action required: open leads with a pending follow-up due by today, or never contacted
     const fuByLead = new Map<string, FollowUpRow[]>()
@@ -106,9 +107,8 @@ export function DashboardPage() {
     const fromPrev = split((bm) => bm < month)
     const advance = split((bm) => bm > month)
 
-    // enquiry → client: this month's enquiries that have a booking
-    const bookedLeads = new Set(B.map((b) => b.lead_id).filter(Boolean))
-    const converted = monthLeads.filter((l) => bookedLeads.has(l.id)).length
+    // enquiry → customer: this month's enquiries with a confirmed / completed booking
+    const converted = customersThisMonth
 
     // sources this month
     const src = new Map<string, number>()
@@ -175,7 +175,7 @@ export function DashboardPage() {
           <b>{d.monthLeads.length}</b>
           <span>Enquiries · {ml}</span>
           <small>
-            {d.open} open right now · {d.lost} lost
+            {d.converted} converted to customers · {d.open} open · {d.lost} lost
           </small>
         </Link>
         <a href="#action" className="db-card">
@@ -210,13 +210,13 @@ export function DashboardPage() {
           <span>Outstanding balance (all)</span>
           <small>Across all confirmed bookings</small>
         </div>
-        <div className="db-card">
+        <Link to="/customers" className="db-card">
           <b>{pct}%</b>
-          <span>Enquiry to client</span>
+          <span>Enquiry to customer</span>
           <small>
-            {d.converted} of {d.monthLeads.length} booked this month
+            {d.converted} of {d.monthLeads.length} enquiries this month became customers
           </small>
-        </div>
+        </Link>
       </div>
 
       <section className="card card-pad db-section">
