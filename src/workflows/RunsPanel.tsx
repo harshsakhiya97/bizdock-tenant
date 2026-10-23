@@ -129,7 +129,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
       {!runs ? null : !runs.length ? (
         <div className="empty">No runs yet. When the workflow is on, each form submission of its funnel starts one.</div>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap run-scroll">
           <table className="table run-table">
             <thead>
               <tr>
