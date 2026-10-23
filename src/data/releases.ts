@@ -25,6 +25,7 @@ export const releases: Release[] = [
       'Invoice print: each service on its own line, and a Receipts table when the amount is paid in more than one part.',
       'Attendance: a month calendar with check-in, breaks and check-out on each day, month totals (present, late, half day, leave, absent) and a month switcher; the Owner and Tech Support can pick any staff member.',
       'Team: limit a person to some sub-businesses of a business; they see only those leads, bookings, invoices and funnels.',
+      'Workflows now run: a form submission starts the funnel’s Form submitted workflows, which send WhatsApp templates through WATI and follow Wait steps; each workflow shows its Runs (who, status, what each step did).',
     ],
     improved: [
       'The invoice page is narrower, like a printed page.',
