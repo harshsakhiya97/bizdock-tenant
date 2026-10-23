@@ -830,3 +830,7 @@ a.db-card:hover { border-color: var(--brand); }
   .att-cell-body { display: none; }
   .att-day { font-size: 14px; }
 }
+.sub-picks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin: 8px 0 2px 28px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.sub-picks > .muted { flex-basis: 100%; }
+.link-rows > div.biz-pick { display: block; }
+.sub-picks { margin-left: 26px; }

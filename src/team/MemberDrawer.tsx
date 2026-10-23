@@ -56,10 +56,25 @@ export function MemberDrawer({
     setInput((d) => ({
       ...d,
       businesses: on
-        ? [...d.businesses, { business_id: id, branch_id: null }]
+        ? [...d.businesses, { business_id: id, branch_id: null, sub_business_ids: null }]
         : d.businesses.filter((b) => b.business_id !== id),
     }))
   }
+  /** sub-business access inside a picked business: none ticked = all of them */
+  function toggleSub(bizId: string, subId: string, on: boolean) {
+    setInput((d) => ({
+      ...d,
+      businesses: d.businesses.map((b) => {
+        if (b.business_id !== bizId) return b
+        const cur = b.sub_business_ids ?? []
+        const next = on ? [...cur, subId] : cur.filter((x) => x !== subId)
+        return { ...b, sub_business_ids: next.length ? next : null }
+      }),
+    }))
+  }
+  const setAllSubs = (bizId: string) =>
+    setInput((d) => ({ ...d, businesses: d.businesses.map((b) => (b.business_id === bizId ? { ...b, sub_business_ids: null } : b)) }))
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!input.full_name.trim()) return setError('Name is required.')
@@ -216,11 +231,26 @@ export function MemberDrawer({
                 {businesses.map((b) => {
                   const p = picked(b.id)
                   return (
-                    <div key={b.id}>
+                    <div key={b.id} className="biz-pick">
                       <label className="check" style={{ alignItems: 'center' }}>
                         <input type="checkbox" checked={!!p} onChange={(e) => toggleBusiness(b.id, e.target.checked)} />
                         <b>{b.name}</b>
                       </label>
+                      {p && b.subs.length > 0 && (
+                        <div className="sub-picks">
+                          <span className="muted small">Sub-businesses</span>
+                          <label className="check">
+                            <input type="checkbox" checked={!p.sub_business_ids?.length} onChange={() => setAllSubs(b.id)} />
+                            All sub-businesses
+                          </label>
+                          {b.subs.map((s) => (
+                            <label key={s.id} className="check">
+                              <input type="checkbox" checked={!!p.sub_business_ids?.includes(s.id)} onChange={(e) => toggleSub(b.id, s.id, e.target.checked)} />
+                              {s.name}
+                            </label>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}

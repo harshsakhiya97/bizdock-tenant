@@ -17,7 +17,7 @@ export async function listMembers(tenantId: string): Promise<MemberRow[]> {
   const { data, error } = await db()
     .from('tenant_members')
     .select(
-      'id, user_id, role_id, status, is_support, all_businesses, reports_to, department, designation, joined_on, permissions, created_at, member_businesses(business_id, branch_id)',
+      'id, user_id, role_id, status, is_support, all_businesses, reports_to, department, designation, joined_on, permissions, created_at, member_businesses(business_id, branch_id, sub_business_ids)',
     )
     .eq('tenant_id', tenantId)
     .eq('is_support', false)
@@ -47,14 +47,16 @@ export async function listMembers(tenantId: string): Promise<MemberRow[]> {
 export async function listBusinessOptions(tenantId: string): Promise<BusinessOption[]> {
   const { data, error } = await db()
     .from('businesses')
-    .select('id, name')
+    .select('id, name, sub_businesses(id, name, is_active, sort_order)')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
   if (error) throw error
-  return (data ?? []).map((b) => ({
+  type Raw = { id: string; name: string; sub_businesses: { id: string; name: string; is_active: boolean; sort_order: number }[] }
+  return ((data ?? []) as Raw[]).map((b) => ({
     id: b.id,
     name: b.name,
+    subs: (b.sub_businesses ?? []).filter((x) => x.is_active).sort((x, y) => x.sort_order - y.sort_order).map(({ id, name }) => ({ id, name })),
   }))
 }
 
@@ -112,7 +114,7 @@ export async function updateMember(tenantId: string, member: MemberRow, input: M
   if (!input.all_businesses && input.businesses.length) {
     const { error: insError } = await db()
       .from('member_businesses')
-      .insert(input.businesses.map((b) => ({ ...b, member_id: member.id, tenant_id: tenantId })))
+      .insert(input.businesses.map((b) => ({ ...b, sub_business_ids: b.sub_business_ids?.length ? b.sub_business_ids : null, member_id: member.id, tenant_id: tenantId })))
     if (insError) throw insError
   }
 }

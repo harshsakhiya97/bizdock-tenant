@@ -22,7 +22,7 @@ export type MemberRow = {
   joined_on: string | null
   permissions: Permissions | null
   created_at: string
-  member_businesses: { business_id: string; branch_id: string | null }[]
+  member_businesses: BusinessPick[]
   // joined in by the api
   name: string
   email: string
@@ -30,9 +30,13 @@ export type MemberRow = {
   last_login: string | null
 }
 
+/** a business a member works in; sub_business_ids null / empty = every sub-business */
+export type BusinessPick = { business_id: string; branch_id: string | null; sub_business_ids: string[] | null }
+
 export type BusinessOption = {
   id: string
   name: string
+  subs: { id: string; name: string }[]
 }
 
 export type MemberInput = {
@@ -45,5 +49,5 @@ export type MemberInput = {
   designation: string
   joined_on: string
   all_businesses: boolean
-  businesses: { business_id: string; branch_id: string | null }[]
+  businesses: BusinessPick[]
 }

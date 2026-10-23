@@ -53,15 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         db().from('businesses').select('id, name').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
-          : db().from('member_businesses').select('business_id').eq('member_id', member.id),
+          : db().from('member_businesses').select('business_id, sub_business_ids').eq('member_id', member.id),
         db().from('sub_businesses').select('id, business_id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
       ])
 
-      const allowedIds = allowed ? new Set(allowed.map((r: { business_id: string }) => r.business_id)) : null
+      // business → allowed sub-business ids (null = all of them)
+      const allowedMap = allowed
+        ? new Map((allowed as { business_id: string; sub_business_ids: string[] | null }[]).map((r) => [r.business_id, r.sub_business_ids?.length ? r.sub_business_ids : null]))
+        : null
       const subs = (subRows ?? []) as SubBusiness[]
       const list: Business[] = ((bizRows ?? []) as { id: string; name: string }[])
-        .filter((b) => !allowedIds || allowedIds.has(b.id))
-        .map((b) => ({ ...b, subs: subs.filter((s) => s.business_id === b.id) }))
+        .filter((b) => !allowedMap || allowedMap.has(b.id))
+        .map((b) => {
+          const only = allowedMap?.get(b.id)
+          return { ...b, subs: subs.filter((s) => s.business_id === b.id && (!only || only.includes(s.id))) }
+        })
 
       setAccessError(null)
       setProfile(prof ?? null)

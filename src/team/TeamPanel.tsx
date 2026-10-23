@@ -96,6 +96,9 @@ export function TeamPanel() {
           return (
             <span key={mb.business_id} className="nowrap">
               {b?.name ?? 'Archived business'}
+              {mb.sub_business_ids?.length ? (
+                <span className="muted small"> · {mb.sub_business_ids.map((id) => b?.subs.find((x) => x.id === id)?.name).filter(Boolean).join(', ')}</span>
+              ) : null}
             </span>
           )
         })}
