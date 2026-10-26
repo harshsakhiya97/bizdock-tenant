@@ -30,11 +30,37 @@ export type ConditionData = { field: ConditionField; op: 'is' | 'is_not'; value:
 /** one path of a Switch box: leads matching it go down its line (checked top to bottom, else "Otherwise") */
 export type SwitchCase = ConditionData & { id: string; label: string }
 
+/** one message of a Bulk WhatsApp step: sent this long after the trigger */
+export type BulkRow = {
+  id: string
+  to: Recipient
+  member_id: string
+  custom_phone: string
+  template: string
+  template_language: string
+  template_body: string
+  params: Record<string, string>
+  amount: number
+  unit: Unit
+}
+export const newBulkRow = (amount = 0, unit: Unit = 'minutes'): BulkRow => ({
+  id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+  to: 'lead',
+  member_id: '',
+  custom_phone: '',
+  template: '',
+  template_language: '',
+  template_body: '',
+  params: {},
+  amount,
+  unit,
+})
+
 /** who a WhatsApp / email step goes to */
 export type Recipient = 'lead' | 'team' | 'custom'
 
 /** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
-export type StepKind = 'trigger' | 'whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
+export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -84,6 +110,7 @@ export type FlowContext = RefData & {
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
   whatsapp: { to: 'lead', member_id: '', template: '', message: 'Hi {{first_name}}, thanks for registering!' },
+  bulk_whatsapp: { rows: [], stop_on: false, stop: { field: 'tag', op: 'is', value: '' } },
   email: { to: 'lead', member_id: '', subject: '', body: '' },
   call: { script: '' },
   wait: { amount: 1, unit: 'days' },
