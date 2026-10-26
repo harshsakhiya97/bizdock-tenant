@@ -43,19 +43,9 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
 
   return (
     <FormSection title="Source & form submissions" description="Filled in by a webhook form, a Google Sheet or an import.">
-      <dl className="origin-grid">
-        {lead.webhook_id && (
-          <>
-            <dt>Form</dt>
-            <dd>{hookName(lead.webhook_id)}</dd>
-          </>
-        )}
-        {lead.landing_page_id && (
-          <>
-            <dt>Landing page</dt>
-            <dd>{pageName(lead.landing_page_id)}</dd>
-          </>
-        )}
+      <dl className="info-grid">
+        {lead.webhook_id && <FragmentRow k="Form" v={hookName(lead.webhook_id) ?? ''} />}
+        {lead.landing_page_id && <FragmentRow k="Landing page" v={pageName(lead.landing_page_id) ?? ''} />}
         {utms.map((k) => (
           <FragmentRow key={k} k={k} v={lead[k] as string} />
         ))}
@@ -97,9 +87,9 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
 
 function FragmentRow({ k, v }: { k: string; v: string }) {
   return (
-    <>
+    <div>
       <dt>{k}</dt>
       <dd>{v}</dd>
-    </>
+    </div>
   )
 }

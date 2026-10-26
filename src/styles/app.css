@@ -925,3 +925,4 @@ a.db-card:hover { border-color: var(--brand); }
 .mt-history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 13px; }
 .mt-history li { display: flex; gap: 8px; align-items: flex-start; }
 .mt-history svg { color: var(--text-muted); margin-top: 2px; flex-shrink: 0; }
+.form-section > .info-grid { margin-bottom: 14px; }
