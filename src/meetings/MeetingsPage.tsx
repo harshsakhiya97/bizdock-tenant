@@ -50,7 +50,7 @@ export function MeetingsPage() {
     return l ? fullName(l) : 'Guest'
   }, [leadById])
   const scoped = useMemo(() => (meetings ?? []).filter((m) => inScope(m.business_id, m.sub_business_id)), [meetings, inScope])
-  const visible = useMemo(() => scoped.filter((m) => (status ? m.status === status : m.status !== 'cancelled')), [scoped, status])
+  const visible = useMemo(() => scoped.filter((m) => !status || m.status === status), [scoped, status])
   const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
   // ---- stats for the month on screen ----
@@ -140,7 +140,7 @@ export function MeetingsPage() {
         }}
         filters={
           <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
-            <option value="">All but cancelled</option>
+            <option value="">All</option>
             {(Object.keys(MEETING_STATUS) as MeetingStatus[]).map((s) => (
               <option key={s} value={s}>
                 {MEETING_STATUS[s].label}
