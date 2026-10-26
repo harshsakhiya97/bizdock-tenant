@@ -21,12 +21,16 @@ export function BookingsTab({
   canAdd,
   onAdd,
   onOpen,
+  podcast = false,
 }: {
   bookings: BookingRow[] | null
   canAdd: boolean
   onAdd: () => void
   onOpen: (b: BookingRow) => void
+  /** Paid Podcast: shown as podcasts */
+  podcast?: boolean
 }) {
+  const one = podcast ? 'podcast' : 'booking'
   const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
   const total = live.reduce((s, b) => s + Number(b.total_amount), 0)
   const paid = live.reduce((s, b) => s + Number(b.paid_amount), 0)
@@ -34,24 +38,24 @@ export function BookingsTab({
     <div className="stack">
       <div className="row-between">
         <span className="muted small">
-          {live.length} booking{live.length === 1 ? '' : 's'} · {money(total)} · paid {money(paid)} · balance {money(Math.max(0, total - paid))}
+          {live.length} {one}{live.length === 1 ? '' : 's'} · {money(total)} · paid {money(paid)} · balance {money(Math.max(0, total - paid))}
         </span>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
-            <CalendarPlus size={14} /> Book slot
+            <CalendarPlus size={14} /> {podcast ? 'Book podcast' : 'Book slot'}
           </button>
         )}
       </div>
       {!bookings ? (
         <div className="muted small">Loading…</div>
       ) : bookings.length === 0 ? (
-        <div className="muted small">No bookings yet.</div>
+        <div className="muted small">No {one}s yet.</div>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Slot</th>
+                <th>{podcast ? 'Shoot' : 'Slot'}</th>
                 <th>Type</th>
                 <th>Status</th>
                 <th className="num">Total</th>

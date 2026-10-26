@@ -42,7 +42,7 @@ type PendingMove = { ids: string[]; stage: StageRow }
 /** Leads, or (customers) leads with a confirmed / completed booking and their revenue. */
 export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const tenant = useTenant()
-  const { can, scope, membership } = useAuth()
+  const { can, scope, membership, businesses } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const me = membership?.id
 
@@ -68,7 +68,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
   const load = useCallback(() => {
-    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id)])
+    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
       .then(([l, f, s, r, m, rv]) => {
         setLeads(l)
         setRevenue(rv)
@@ -78,7 +78,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         setMembers(m)
       })
       .catch((e: Error) => setNotice({ error: e.message }))
-  }, [tenant.id])
+  }, [tenant.id, businesses])
   useEffect(load, [load])
 
   // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
@@ -503,7 +503,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         ) : scope('leads') === 'none' ? (
           <Empty icon={Users}>Your access doesn’t include {word}s.</Empty>
         ) : visible.length === 0 ? (
-          <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed.' : 'No leads here yet.'}</Empty>
+          <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed (Paid Podcast: once a payment is received).' : 'No leads here yet.'}</Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">

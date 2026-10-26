@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ChevronLeft, ChevronRight, Phone, Plus, SquarePen } from 'lucide-react'
+import { makesCustomer, podcastCheck } from '@/leads/customers'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { listBookings } from '@/bookings/api'
@@ -31,7 +32,7 @@ const hoursOf = (b: BookingRow) => {
 export function DashboardPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
-  const { can } = useAuth()
+  const { can, businesses } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const refs = useBookingRefs()
   const today = isoDay(new Date())
@@ -58,8 +59,9 @@ export function DashboardPage() {
     const F = fus.filter((f) => leadIds.has(f.lead_id))
     const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 7) === month
     const stageKind = new Map(refs.funnels.flatMap((f) => f.funnel_stages.map((s) => [s.id, s] as const)))
-    // a lead with a confirmed / completed booking is a customer (same rule as the Customers page)
-    const customerIds = new Set(B.filter((b) => b.status === 'confirmed' || b.status === 'completed').map((b) => b.lead_id).filter(Boolean))
+    // same rule as the Customers page (Paid Podcast: once a payment is received)
+    const isPodcast = podcastCheck(businesses)
+    const customerIds = new Set(B.filter((b) => makesCustomer(b, isPodcast)).map((b) => b.lead_id).filter(Boolean))
     const isLost = (l: LeadRow) => stageKind.get(l.stage_id ?? '')?.kind === 'lost'
     const isClosed = (l: LeadRow) => customerIds.has(l.id) || isLost(l) || stageKind.get(l.stage_id ?? '')?.kind === 'won'
 
@@ -124,7 +126,7 @@ export function DashboardPage() {
     )
 
     return { monthLeads, open, lost, action, logged, mb, completed, upcoming, hours, collected, billed, pendingMonth, outstanding, fromThis, fromPrev, advance, converted, sources, shoots, stageKind }
-  }, [leads, fus, bookings, refs.funnels, refs.sources, inScope, month, today])
+  }, [leads, fus, bookings, refs.funnels, refs.sources, inScope, month, today, businesses])
 
   const shiftMonth = (dir: number) => {
     const [y, m] = month.split('-').map(Number)
