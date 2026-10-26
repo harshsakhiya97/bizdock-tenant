@@ -21,6 +21,7 @@ import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
 import { InvoicesPage } from '@/bookings/InvoicesPage'
+import { MeetingsPage } from '@/meetings/MeetingsPage'
 import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
@@ -68,6 +69,7 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route path="/meetings" element={<RequirePermission module="meetings"><MeetingsPage /></RequirePermission>} />
                 <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
                 <Route
                   path="/funnels"
