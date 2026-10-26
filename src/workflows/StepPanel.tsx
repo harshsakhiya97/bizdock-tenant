@@ -1,9 +1,11 @@
-import { useRef, type ReactNode } from 'react'
-import { ArrowUp, Plus, Trash2, X } from 'lucide-react'
+import { Fragment, useRef, useState, type ReactNode } from 'react'
+import { RefreshCw } from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
-import { WhatsAppFields } from './WhatsAppFields'
-import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem } from './steps'
-import { TRIGGER_DEFAULTS, VARIABLES, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
+import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
+import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem, rowMinutes, rowsOf } from './steps'
+import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
 
@@ -32,7 +34,7 @@ export function StepPanel({
   const ro = !canEdit
 
   return (
-    <aside className="cb-panel">
+    <aside className={kind === 'bulk_whatsapp' ? 'cb-panel is-wide' : 'cb-panel'}>
       <div className="cb-panel-head">
         <span className="cb-icon" style={{ ['--c' as string]: meta.color }}>
           <Icon size={16} />
@@ -55,6 +57,15 @@ export function StepPanel({
         </div>
         {kind === 'trigger' && <TriggerFields t={d as unknown as TriggerData} ctx={ctx} onChange={onChange} disabled={ro} />}
 
+        {kind === 'bulk_whatsapp' && (
+          <BulkFields
+            d={d}
+            ctx={ctx}
+            onChange={onChange}
+            disabled={ro}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+          />
+        )}
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
@@ -196,6 +207,183 @@ function RecipientField({ d, ctx, set, disabled, custom }: { d: Record<string, u
         </div>
       )}
     </div>
+  )
+}
+
+/** Bulk WhatsApp: a table of templates, each sent a set time after the workflow started; one optional stop condition. */
+function BulkFields({
+  d,
+  ctx,
+  onChange,
+  disabled,
+  extraFields,
+}: {
+  d: Record<string, unknown>
+  ctx: FlowContext
+  onChange: (data: Record<string, unknown>) => void
+  disabled: boolean
+  extraFields: string[]
+}) {
+  const { list, error, loading, reload } = useWatiTemplates()
+  const [open, setOpen] = useState<string | null>(null)
+  const rows = rowsOf(d)
+  const put = (next: BulkRow[]) => onChange({ ...d, rows: next })
+  const setRow = (id: string, patch: Partial<BulkRow>) => put(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+  const stop = (d.stop ?? { field: 'tag', op: 'is', value: '' }) as ConditionData
+  const outOfOrder = rows.some((r, i) => i > 0 && rowMinutes(r) < rowMinutes(rows[i - 1]))
+
+  function add() {
+    const last = rows[rows.length - 1]
+    // the next one a day after the last
+    put([...rows, last ? newBulkRow(last.unit === 'days' ? (Number(last.amount) || 0) + 1 : 1, last.unit === 'days' ? 'days' : 'days') : newBulkRow(0, 'minutes')])
+  }
+
+  return (
+    <>
+      <div>
+        <div className="row-between">
+          <span className="field-label">Messages</span>
+          <button type="button" className="link-btn small" onClick={reload} disabled={loading}>
+            <RefreshCw size={12} className={loading ? 'spin' : undefined} /> Refresh templates
+          </button>
+        </div>
+        {error && <Hint>Couldn’t load templates: {error}</Hint>}
+        <div className="table-wrap bulk-wrap">
+          <table className="table bulk-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Send to</th>
+                <th>Template</th>
+                <th>After the start</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const vars = templateVars(r as unknown as Record<string, unknown>)
+                const picked = findTemplate(list, r as unknown as Record<string, unknown>)
+                const missing = vars.filter((v) => !String(r.params?.[v] ?? '').trim()).length
+                return (
+                  <Fragment key={r.id}>
+                    <tr>
+                      <td className="muted">{i + 1}</td>
+                      <td>
+                        <select className="input input-sm" aria-label="Send to" value={r.to} onChange={(e) => setRow(r.id, { to: e.target.value as BulkRow['to'] })} disabled={disabled}>
+                          <option value="lead">Lead</option>
+                          <option value="team">Team</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                        {r.to === 'team' && (
+                          <select className="input input-sm" aria-label="Team member" value={r.member_id} onChange={(e) => setRow(r.id, { member_id: e.target.value })} disabled={disabled}>
+                            <option value="">— member —</option>
+                            {ctx.members.map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.name}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {r.to === 'custom' && (
+                          <div className="input-prefix input-prefix-sm">
+                            <span>+91</span>
+                            <input
+                              className="input input-sm"
+                              inputMode="numeric"
+                              maxLength={10}
+                              placeholder="10 digits"
+                              aria-label="Mobile number"
+                              value={r.custom_phone}
+                              onChange={(e) => setRow(r.id, { custom_phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                              disabled={disabled}
+                            />
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {error ? (
+                          <input className="input input-sm" placeholder="Template name" value={r.template} onChange={(e) => setRow(r.id, { template: e.target.value })} disabled={disabled} />
+                        ) : (
+                          <select
+                            className="input input-sm"
+                            aria-label="Template"
+                            value={picked ? `${picked.elementName}|${picked.language?.value ?? ''}` : r.template ? '__missing' : ''}
+                            onChange={(e) => {
+                              const t = e.target.value ? pickTemplate(list, e.target.value, r.params ?? {}, extraFields) : null
+                              setRow(r.id, t ? { template: t.template, template_language: t.template_language, template_body: t.template_body, params: t.params } : { template: '', template_language: '', template_body: '', params: {} })
+                              if (t && Object.keys(t.params).length) setOpen(r.id)
+                            }}
+                            disabled={disabled || !list}
+                          >
+                            <option value="">{list ? '— pick —' : 'Loading…'}</option>
+                            {r.template && !picked && list && <option value="__missing">{r.template} (not found)</option>}
+                            {(list ?? []).map((t) => (
+                              <option key={t.id} value={`${t.elementName}|${t.language?.value ?? ''}`}>
+                                {t.elementName} · {t.language?.value}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                      <td>
+                        <div className="bulk-when">
+                          <input className="input input-sm" type="number" min={0} aria-label="Amount" value={r.amount} onChange={(e) => setRow(r.id, { amount: Math.max(0, Number(e.target.value) || 0) })} disabled={disabled} />
+                          <select className="input input-sm" aria-label="Unit" value={r.unit} onChange={(e) => setRow(r.id, { unit: e.target.value as Unit })} disabled={disabled}>
+                            {UNITS.map((u) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </td>
+                      <td className="nowrap" style={{ textAlign: 'right' }}>
+                        {vars.length > 0 && (
+                          <button type="button" className={cn('btn btn-ghost btn-sm', missing > 0 && 'danger-text')} title="Template variables" onClick={() => setOpen(open === r.id ? null : r.id)}>
+                            <Braces size={14} /> {vars.length}
+                          </button>
+                        )}
+                        {!disabled && (
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove message ${i + 1}`} onClick={() => put(rows.filter((x) => x.id !== r.id))}>
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {open === r.id && vars.length > 0 && (
+                      <tr className="bulk-vars">
+                        <td />
+                        <td colSpan={4}>
+                          <TemplateParams vars={vars} params={r.params ?? {}} onChange={(p) => setRow(r.id, { params: p })} disabled={disabled} extraFields={extraFields} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+        {!rows.length && <div className="muted small" style={{ padding: '8px 2px' }}>No messages yet.</div>}
+        {!disabled && (
+          <button type="button" className="add-chip" style={{ marginTop: 8 }} onClick={add}>
+            <Plus size={13} /> Add message
+          </button>
+        )}
+        <Hint>
+          Each message goes this long after the workflow started for the lead (0 = right away). If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
+        </Hint>
+        {outOfOrder && <div className="alert alert-warning small">Messages go in time order, not row order: a row is earlier than the one above it.</div>}
+      </div>
+
+      <div className="stack" style={{ gap: 10 }}>
+        <label className="check-inline">
+          <input type="checkbox" checked={!!d.stop_on} onChange={(e) => onChange({ ...d, stop_on: e.target.checked, stop })} disabled={disabled} /> Stop sending when…
+        </label>
+        {!!d.stop_on && <CondEditor id="cb-bulk-stop" c={stop} ctx={ctx} disabled={disabled} onChange={(c) => onChange({ ...d, stop: c })} />}
+        {!!d.stop_on && <Hint>Checked before every message; once it matches, the rest aren’t sent and the workflow ends for that lead.</Hint>}
+      </div>
+    </>
   )
 }
 

@@ -1,9 +1,10 @@
-import { Clock, GitFork, Hourglass, Mail, MessageCircle, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
-import type { ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
+import { Clock, GitFork, Hourglass, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
   trigger: { label: 'Trigger', hint: 'What starts this workflow', icon: Zap, color: '#16a34a' },
   whatsapp: { label: 'WhatsApp', hint: 'Send a WhatsApp message', icon: MessageCircle, color: '#22a35a' },
+  bulk_whatsapp: { label: 'Bulk WhatsApp', hint: 'Several templates, each a set time after the trigger', icon: MessagesSquare, color: '#15803d' },
   email: { label: 'Email', hint: 'Send an email', icon: Mail, color: '#2563eb' },
   call: { label: 'Call', hint: 'One-way voice call (recorded message)', icon: PhoneCall, color: '#7c3aed' },
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
@@ -27,7 +28,7 @@ export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' &
 export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -99,6 +100,10 @@ export function conditionText(c: ConditionData, ctx: FlowContext): string {
   return value ? `${field} ${c.op === 'is' ? 'is' : 'is not'} ${value}` : `Pick a ${field.toLowerCase()}`
 }
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
+export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow[])
+const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
+/** minutes after the trigger */
+export const rowMinutes = (r: Pick<BulkRow, 'amount' | 'unit'>) => (Number(r.amount) || 0) * (UNIT_MIN[r.unit] ?? 1)
 export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (c.value ? conditionText(c, ctx) : `Path ${i + 1}`)
 const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
   d.to === 'team'
@@ -114,6 +119,13 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return triggerSummary(d as unknown as TriggerData, ctx)
     case 'whatsapp':
       return toWho(d, ctx) + ((d.template as string) || (d.message as string) || 'No message yet')
+    case 'bulk_whatsapp': {
+      const rows = rowsOf(d)
+      if (!rows.length) return 'No messages yet'
+      const last = rows[rows.length - 1]
+      const stop = d.stop_on ? ` · stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}` : ''
+      return `${rows.length} message${rows.length === 1 ? '' : 's'} · last ${unitText(Number(last.amount) || 0, last.unit)} after the start${stop}`
+    }
     case 'email':
       return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
     case 'call':
@@ -153,6 +165,19 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (!String(d.message ?? '').trim() && !String(d.template ?? '').trim()) return 'Write the message or pick a template'
       const params = (d.params ?? {}) as Record<string, string>
       if (d.template && Object.values(params).some((v) => !String(v ?? '').trim())) return 'Fill every template variable'
+      return null
+    }
+    case 'bulk_whatsapp': {
+      const rows = rowsOf(d)
+      if (!rows.length) return 'Add at least one message'
+      for (const [i, r] of rows.entries()) {
+        if (r.to === 'team' && !r.member_id) return `Message ${i + 1}: pick the team member`
+        if (r.to === 'custom' && !/^\d{10}$/.test(r.custom_phone ?? '')) return `Message ${i + 1}: enter the 10-digit number`
+        if (!r.template) return `Message ${i + 1}: pick a template`
+        if (Object.values(r.params ?? {}).some((v) => !String(v ?? '').trim())) return `Message ${i + 1}: fill every template variable`
+        if (!(Number(r.amount) >= 0)) return `Message ${i + 1}: set when it goes`
+      }
+      if (d.stop_on && !String((d.stop as ConditionData | undefined)?.value ?? '').trim()) return 'Finish the stop condition'
       return null
     }
     case 'email':

@@ -980,3 +980,17 @@ a.db-card:hover { border-color: var(--brand); }
 .sb-foot { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 12px; }
 .sb-open { border: 1px solid var(--line); background: none; border-radius: 99px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: var(--text); }
 .sb-open:hover { border-color: var(--brand); color: var(--brand); }
+
+/* Bulk WhatsApp step */
+.cb-panel.is-wide { width: 680px; }
+.bulk-wrap { border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; }
+.bulk-table { font-size: 13px; }
+.bulk-table th, .bulk-table td { padding: 8px 8px; vertical-align: top; }
+.bulk-table td > .input, .bulk-table td > select, .bulk-table td > .input-prefix { width: 100%; min-width: 0; }
+.bulk-table td > * + * { margin-top: 6px; }
+.bulk-table td:nth-child(2) { width: 130px; }
+.bulk-table td:nth-child(4) { width: 150px; }
+.bulk-when { display: grid; grid-template-columns: 56px 1fr; gap: 6px; }
+.bulk-vars td { background: var(--surface-muted, #f8fafc); padding-top: 4px; }
+.input-prefix-sm > span { font-size: 12px; padding: 0 6px; }
+.input-prefix-sm > input { flex: 1; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
