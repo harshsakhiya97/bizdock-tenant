@@ -909,3 +909,14 @@ a.db-card:hover { border-color: var(--brand); }
 .fm-toggle svg.is-open { transform: rotate(90deg); }
 .fm-toggle .lp-label { margin: 0; }
 .check-list { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+
+/* on/off toggle switch */
+.tgl { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-muted); user-select: none; }
+.tgl.is-on { color: var(--success, #16a34a); }
+.tgl input { position: absolute; opacity: 0; width: 0; height: 0; }
+.tgl-track { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--line); transition: background .15s; flex-shrink: 0; }
+.tgl-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .15s; }
+.tgl.is-on .tgl-track { background: var(--success, #16a34a); }
+.tgl.is-on .tgl-knob { transform: translateX(16px); }
+.tgl input:focus-visible + .tgl-track { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tgl:has(input:disabled) { opacity: .6; cursor: default; }
