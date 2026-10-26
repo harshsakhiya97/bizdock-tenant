@@ -4,12 +4,13 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { PageHead, StatCard } from '@/components/ui'
 import { SlotCalendar, clock, fmtDay as fmt, isoDay as iso, minutesOf as minutes } from '@/components/SlotCalendar'
-import { activeType, calendarName } from '@/business/activeType'
+import { activeType, calendarName, isStudioType } from '@/business/activeType'
+import { Modal } from '@/components/Modal'
 import { listLeads } from '@/leads/api'
 import { money } from '@/leads/labels'
 import type { LeadRow } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { listBookings } from './api'
+import { listBookings, studioBusy, type BusySlot } from './api'
 import { BookingDrawer } from './BookingDrawer'
 import { invoiceHref } from './BookingsTab'
 import { useBookingRefs } from './useBookingRefs'
@@ -21,7 +22,11 @@ export function BookingCalendarPage() {
   const tenant = useTenant()
   const { can } = useAuth()
   const { inScope, selected, sub } = useBusiness()
-  const title = calendarName(activeType(selected, sub))
+  const type = activeType(selected, sub)
+  const title = calendarName(type)
+  // one studio for Studio Rental and Paid Podcast: the other one's bookings show here, view only
+  const [others, setOthers] = useState<BusySlot[]>([])
+  const [viewing, setViewing] = useState<BusySlot | null>(null)
   const refs = useBookingRefs()
   const canAdd = can('bookings', 'add')
   const today = iso(new Date())
@@ -31,11 +36,14 @@ export function BookingCalendarPage() {
   const [status, setStatus] = useState<'' | BookingStatus>('')
   const [drawer, setDrawer] = useState<{ booking: BookingRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
+  const shared = !!selected && isStudioType(type)
   const load = useCallback(() => {
     listBookings(tenant.id)
       .then(setBookings)
       .catch((e: Error) => setNotice({ error: e.message }))
-  }, [tenant.id])
+    if (shared && selected) studioBusy(selected.id).then(setOthers, () => setOthers([]))
+    else setOthers([])
+  }, [tenant.id, shared, selected])
   useEffect(load, [load])
   useEffect(() => {
     if (canAdd) void listLeads(tenant.id).then(setLeads, () => setLeads([]))
@@ -63,6 +71,8 @@ export function BookingCalendarPage() {
 
   const open = (id: string) => {
     const b = bookings?.find((x) => x.id === id)
+    const o = others.find((x) => x.id === id)
+    if (o && (!b || !inScope(b.business_id, b.sub_business_id))) return setViewing(o)
     if (b) setDrawer({ booking: b })
   }
   const items = useMemo(
@@ -100,6 +110,23 @@ export function BookingCalendarPage() {
         : null,
     [bookings, visible],
   )
+  const otherItems = useMemo(() => {
+    const mine = new Set(visible.map((b) => b.id))
+    return others
+      .filter((o) => !mine.has(o.id) && o.sub_business_id !== sub?.id && (!status || o.status === status))
+      .map((o) => ({
+        id: o.id,
+        date: o.booking_date,
+        start: o.start_time,
+        end: o.end_time,
+        title: `${o.client_name} · ${o.sub_name}`,
+        detail: 'Studio booked · view only',
+        meta: `${clock(o.start_time)} – ${clock(o.end_time)} · Studio booked by ${o.sub_name} · view only`,
+        color: '#64748b',
+        faded: true,
+      }))
+  }, [others, visible, sub, status])
+  const allItems = useMemo(() => (items ? [...items, ...otherItems] : null), [items, otherItems])
 
   return (
     <>
@@ -125,7 +152,7 @@ export function BookingCalendarPage() {
       </div>
 
       <SlotCalendar
-        items={items}
+        items={allItems}
         anchor={anchor}
         setAnchor={setAnchor}
         storageKey="bookings.view"
@@ -152,6 +179,39 @@ export function BookingCalendarPage() {
           </span>
         ))}
       </div>
+
+      <Modal open={!!viewing} onClose={() => setViewing(null)} title="Studio booked" width={460} footer={<button type="button" className="btn btn-outline" onClick={() => setViewing(null)}>Close</button>}>
+        {viewing && (
+          <dl className="info-grid">
+            <div>
+              <dt>Booked by</dt>
+              <dd>{viewing.sub_name}</dd>
+            </div>
+            <div>
+              <dt>Client</dt>
+              <dd>{viewing.client_name}</dd>
+            </div>
+            <div>
+              <dt>Date</dt>
+              <dd>{fmt(viewing.booking_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</dd>
+            </div>
+            <div>
+              <dt>Time</dt>
+              <dd>
+                {clock(viewing.start_time)} – {clock(viewing.end_time)}
+              </dd>
+            </div>
+            <div>
+              <dt>Purpose</dt>
+              <dd>{viewing.purpose || '—'}</dd>
+            </div>
+            <div>
+              <dt>Status</dt>
+              <dd>{STATUS_META[viewing.status as BookingStatus]?.label ?? viewing.status}</dd>
+            </div>
+          </dl>
+        )}
+      </Modal>
 
       {drawer && (
         <BookingDrawer
