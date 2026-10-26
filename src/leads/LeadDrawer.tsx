@@ -1,5 +1,6 @@
 import { TagInput } from '@/components/TagInput'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { PhoneInput, fullPhone, localPhone, phoneValid } from '@/components/PhoneInput'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -14,7 +15,6 @@ import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
 import { SubBusinessSelect, subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 
-const phoneOk = (v: string) => v.replace(/\D/g, '').length >= 10
 
 export function LeadDrawer({
   lead,
@@ -47,7 +47,7 @@ export function LeadDrawer({
     stage_id: noFunnelLead ? '' : (lead?.stage_id ?? firstFunnel?.funnel_stages[0]?.id ?? ''),
     first_name: lead?.first_name ?? '',
     last_name: lead?.last_name ?? '',
-    phone: lead?.phone ?? '',
+    phone: localPhone(lead?.phone),
     whatsapp: lead?.whatsapp ?? '',
     email: lead?.email ?? '',
     city: lead?.city ?? '',
@@ -105,7 +105,7 @@ export function LeadDrawer({
     const keepNoFunnel = noFunnelLead && !input.funnel_id
     if (!keepNoFunnel && (!funnel || !stage)) return setError('Pick a funnel and stage.')
     if (!input.first_name.trim()) return setError('Name is required.')
-    if (!phoneOk(input.phone)) return setError('Enter a valid phone number (10 digits).')
+    if (!phoneValid(input.phone)) return setError('Enter a valid 10-digit mobile number.')
     if (input.estimated_amount.trim() && Number.isNaN(Number(input.estimated_amount))) return setError('Estimated amount must be a number.')
     if (needsNote && stage.note_required && !stageNote.trim()) return setError(`A note is required when moving to ${stage.name}.`)
     if (needsNote && stage.kind === 'lost' && !lostReason) return setError('Pick a lost reason.')
@@ -114,7 +114,7 @@ export function LeadDrawer({
     try {
       const businessId = funnel?.business_id ?? lead!.business_id
       // a sub-business only stays when it belongs to the lead's business
-      const clean = { ...input, sub_business_id: subOf(subs, input.sub_business_id) }
+      const clean = { ...input, phone: fullPhone(input.phone), sub_business_id: subOf(subs, input.sub_business_id) }
       const leadId = lead
         ? (await updateLead(tenant.id, me, lead, clean, { note: stageNote, lost_reason_id: lostReason || null }), lead.id)
         : await createLead(tenant.id, businessId, me, clean)
@@ -221,7 +221,7 @@ export function LeadDrawer({
               <Label htmlFor="l-phone" required>
                 Phone
               </Label>
-              <TextInput id="l-phone" type="tel" placeholder="10 digit / +91…" value={input.phone} onChange={set('phone')} disabled={!canEdit} />
+              <PhoneInput id="l-phone" value={input.phone} onChange={(v) => setInput((d) => ({ ...d, phone: v }))} disabled={!canEdit} />
             </div>
             <div>
               <Label htmlFor="l-city">City</Label>
