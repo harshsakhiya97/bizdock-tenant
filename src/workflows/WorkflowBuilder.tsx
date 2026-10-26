@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { AlertTriangle, Info, Plus, Save, Search, X } from 'lucide-react'
+import { useNavigate } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { saveWorkflow } from './api'
@@ -46,6 +47,7 @@ export function WorkflowBuilder(props: Props) {
 }
 
 function Builder({ workflow, refData, canEdit, onSaved }: Props) {
+  const navigate = useNavigate()
   const { membership } = useAuth()
   const flow = useReactFlow()
   const wrap = useRef<HTMLDivElement>(null)
@@ -222,9 +224,16 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         </span>
         {canEdit && (
           <div className="row" style={{ marginLeft: 'auto' }}>
-            <label className="check-inline" title={issues.size ? 'Fix the marked steps first' : undefined}>
-              <input type="checkbox" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} /> Workflow on
+            <label className={cn('tgl', active && 'is-on')} title={issues.size ? 'Fix the marked steps first' : undefined}>
+              <input type="checkbox" role="switch" checked={active} disabled={busy || !loaded} onChange={(e) => void save(e.target.checked)} />
+              <span className="tgl-track" aria-hidden="true">
+                <span className="tgl-knob" />
+              </span>
+              {active ? 'Active' : 'Inactive'}
             </label>
+            <button type="button" className="btn btn-outline" onClick={() => navigate('/workflows')} disabled={busy}>
+              Cancel
+            </button>
             <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={busy || !loaded || !dirty}>
               <Save size={15} /> {busy ? 'Saving…' : 'Save'}
             </button>
