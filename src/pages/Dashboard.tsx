@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Phone, Plus, SquarePen } from 'lucide-react'
 import { makesCustomer, podcastCheck } from '@/leads/customers'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
+import { activeType } from '@/business/activeType'
+import { PodcastDashboard } from './PodcastDashboard'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import type { BookingRow } from '@/bookings/types'
@@ -28,8 +30,14 @@ const hoursOf = (b: BookingRow) => {
   return Math.max(0, (m(b.end_time) - m(b.start_time)) / 60)
 }
 
-/** Month dashboard: enquiries, action required, follow-ups, bookings, money collected and enquiry sources. */
+/** Paid Podcast has its own dashboard; everything else gets the month dashboard below. */
 export function DashboardPage() {
+  const { selected, sub } = useBusiness()
+  return activeType(selected, sub) === 'podcast' ? <PodcastDashboard /> : <MonthDashboard />
+}
+
+/** Month dashboard: enquiries, action required, follow-ups, bookings, money collected and enquiry sources. */
+function MonthDashboard() {
   const tenant = useTenant()
   const navigate = useNavigate()
   const { can, businesses } = useAuth()

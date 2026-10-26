@@ -61,3 +61,9 @@ export async function deleteMeeting(id: string) {
   const { error } = await db().from('meetings').delete().eq('id', id)
   if (error) throw error
 }
+
+/** quick outcome from the dashboard (Qualified, Not qualified, No-show) */
+export async function setMeetingStatus(id: string, status: MeetingStatus) {
+  const { error } = await db().from('meetings').update({ status }).eq('id', id)
+  if (error) throw error
+}
