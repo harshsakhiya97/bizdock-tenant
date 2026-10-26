@@ -121,21 +121,24 @@ export function MeetingDrawer({
       title={meeting ? `Meeting · ${guest ? fullName(guest) : ''}` : 'Schedule meeting'}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
-            {canEdit ? 'Cancel' : 'Close'}
-          </Button>
-          {canDelete &&
-            (confirmDel ? (
+          {canDelete ? (
+            confirmDel ? (
               <Button variant="danger" onClick={remove} disabled={busy}>
                 Delete for good?
               </Button>
             ) : (
-              <Button variant="ghost" onClick={() => setConfirmDel(true)} disabled={busy}>
+              <Button variant="ghost" className="danger-text" onClick={() => setConfirmDel(true)} disabled={busy}>
                 <Trash2 size={15} /> Delete
               </Button>
-            ))}
+            )
+          ) : (
+            <span />
+          )}
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
+            <Button variant="outline" onClick={onClose}>
+              {canEdit ? 'Cancel' : 'Close'}
+            </Button>
             {meeting?.status === 'qualified' && guest && onBook && can('bookings', 'add') && (
               <Button variant="outline" onClick={() => onBook(guest)}>
                 <CalendarCheck size={15} /> Book podcast
