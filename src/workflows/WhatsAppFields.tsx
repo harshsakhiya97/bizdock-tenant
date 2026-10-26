@@ -18,12 +18,15 @@ export function WhatsAppFields({
   onChange,
   disabled,
   messageField,
+  extraFields = [],
 }: {
   d: Record<string, unknown>
   set: (k: string, v: unknown) => void
   onChange: (data: Record<string, unknown>) => void
   disabled: boolean
   messageField: React.ReactNode
+  /** extra lead fields (purpose, company, form / sheet columns) */
+  extraFields?: string[]
 }) {
   const tenant = useTenant()
   const [list, setList] = useState<WatiTemplate[] | null>(cache?.tenant === tenant.id ? cache.list : null)
@@ -57,7 +60,7 @@ export function WhatsAppFields({
     const b = t.bodyOriginal || t.body || ''
     // template variables that match a lead field are filled from the lead; the rest are typed in
     const next: Record<string, string> = {}
-    for (const v of varsIn(b)) next[v] = params[v] ?? (LEAD_VARS.has(v) ? `{{${v}}}` : v === 'name' ? '{{first_name}}' : '')
+    for (const v of varsIn(b)) next[v] = params[v] ?? (LEAD_VARS.has(v) || extraFields.includes(v) ? `{{${v}}}` : v === 'name' ? '{{first_name}}' : '')
     onChange({ ...d, template: t.elementName, template_language: t.language?.value ?? '', template_body: b, params: next, message: b })
   }
 
@@ -100,11 +103,22 @@ export function WhatsAppFields({
                   <TextInput value={params[v] ?? ''} placeholder="Text or a lead field" onChange={(e) => set('params', { ...params, [v]: e.target.value })} disabled={disabled} />
                   <select className="input input-sm" aria-label="Lead field" value="" onChange={(e) => e.target.value && set('params', { ...params, [v]: `{{${e.target.value}}}` })} disabled={disabled}>
                     <option value="">Lead field…</option>
-                    {VARIABLES.map(([k, l]) => (
-                      <option key={k} value={k}>
-                        {l}
-                      </option>
-                    ))}
+                    <optgroup label="Lead">
+                      {VARIABLES.map(([k, l]) => (
+                        <option key={k} value={k}>
+                          {l}
+                        </option>
+                      ))}
+                    </optgroup>
+                    {extraFields.length > 0 && (
+                      <optgroup label="Extra fields">
+                        {extraFields.map((k) => (
+                          <option key={k} value={k}>
+                            {k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
               ))}
