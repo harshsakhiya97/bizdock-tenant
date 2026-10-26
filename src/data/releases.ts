@@ -27,6 +27,7 @@ export const releases: Release[] = [
       'Paid Podcast dashboard: follow-ups due, inquiries, podcasts booked, collected, meetings done and clients; meetings by day with quick outcome buttons, the month’s funnel, overdue meetings, today’s tasks and upcoming recordings. Sections can be hidden.',
       'Business dashboard (e.g. TVS): a card per sub-business with enquiries, customers, bookings, billed, collected, outstanding, trend, top source and converted / collected bars.',
       'Access Control: Meetings (view, schedule, edit, delete).',
+      'Workflows: Bulk WhatsApp step — a table of messages (send to Lead / Team / Custom, template, time after the start, template variables per row) with one stop condition checked before every message.',
     ],
     improved: [
       'Add / Edit lead: phone with a +91 prefix and 10 digits.',
