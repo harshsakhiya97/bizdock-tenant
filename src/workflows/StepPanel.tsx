@@ -55,7 +55,7 @@ export function StepPanel({
         </div>
         {kind === 'trigger' && <TriggerFields t={d as unknown as TriggerData} ctx={ctx} onChange={onChange} disabled={ro} />}
 
-        {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} />}
+        {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
@@ -149,15 +149,16 @@ export function StepPanel({
   )
 }
 
-function RecipientField({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+function RecipientField({ d, ctx, set, disabled, custom }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; custom?: boolean }) {
   const to = (d.to as string) || 'lead'
   return (
-    <div className="form-grid" style={{ gridTemplateColumns: to === 'team' ? '110px 1fr' : '1fr' }}>
+    <div className="form-grid" style={{ gridTemplateColumns: to === 'team' || to === 'custom' ? '120px 1fr' : '1fr' }}>
       <div>
         <Label htmlFor="cb-to">Send to</Label>
         <Select id="cb-to" value={to} onChange={(e) => set('to', e.target.value)} disabled={disabled}>
           <option value="lead">Lead</option>
           <option value="team">Team</option>
+          {(custom || to === 'custom') && <option value="custom">Custom</option>}
         </Select>
       </div>
       {to === 'team' && (
@@ -173,6 +174,25 @@ function RecipientField({ d, ctx, set, disabled }: { d: Record<string, unknown>;
               </option>
             ))}
           </Select>
+        </div>
+      )}
+      {to === 'custom' && (
+        <div>
+          <Label htmlFor="cb-custom" required>
+            Mobile number
+          </Label>
+          <div className="input-prefix">
+            <span>+91</span>
+            <TextInput
+              id="cb-custom"
+              inputMode="numeric"
+              maxLength={10}
+              placeholder="10 digits"
+              value={String(d.custom_phone ?? '')}
+              onChange={(e) => set('custom_phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+              disabled={disabled}
+            />
+          </div>
         </div>
       )}
     </div>

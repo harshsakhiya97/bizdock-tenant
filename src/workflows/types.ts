@@ -31,7 +31,7 @@ export type ConditionData = { field: ConditionField; op: 'is' | 'is_not'; value:
 export type SwitchCase = ConditionData & { id: string; label: string }
 
 /** who a WhatsApp / email step goes to */
-export type Recipient = 'lead' | 'team'
+export type Recipient = 'lead' | 'team' | 'custom'
 
 /** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
 export type StepKind = 'trigger' | 'whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
