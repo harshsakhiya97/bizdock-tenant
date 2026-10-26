@@ -5,7 +5,7 @@ import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, Land
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
     .from('funnels')
-    .select('id, tenant_id, business_id, sub_business_id, name, type, description, is_active, sort_order, created_at, tags, event_id, funnel_stages(id, funnel_id, name, color, kind, note_required, sort_order)')
+    .select('id, tenant_id, business_id, sub_business_id, name, type, description, is_active, sort_order, created_at, tags, event_id, assign_mode, assign_members, funnel_stages(id, funnel_id, name, color, kind, note_required, sort_order)')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
@@ -27,6 +27,8 @@ export async function saveFunnel(tenantId: string, existing: FunnelRow | null, i
     description: input.description.trim() || null,
     tags: [...new Set(input.tags.map((t) => t.trim()).filter(Boolean))],
     event_id: input.event_id || null,
+    assign_mode: input.assign_mode,
+    assign_members: input.assign_mode === 'none' ? [] : input.assign_mode === 'single' ? input.assign_members.slice(0, 1) : input.assign_members,
   }
   let funnelId = existing?.id
   if (existing) {

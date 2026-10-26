@@ -8,6 +8,8 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { SubBusinessSelect, useSubBusinesses } from '@/business/SubBusinessSelect'
 import { saveFunnel } from './api'
+import { listMemberOptions } from '@/leads/api'
+import type { MemberOption } from '@/leads/types'
 import { FUNNEL_TYPES, templateStages } from './templates'
 import type { FunnelInput, FunnelRow, FunnelType, StageDraft } from './types'
 
@@ -37,7 +39,15 @@ export function FunnelDrawer({
     description: funnel?.description ?? '',
     tags: funnel?.tags ?? [],
     event_id: funnel?.event_id ?? '',
+    assign_mode: funnel?.assign_mode ?? 'none',
+    assign_members: funnel?.assign_members ?? [],
   }))
+  const [members, setMembers] = useState<MemberOption[]>([])
+  useEffect(() => {
+    void listMemberOptions(tenant.id).then(setMembers)
+  }, [tenant.id])
+  const toggleMember = (id: string, on: boolean) =>
+    setInput((d) => ({ ...d, assign_members: on ? [...d.assign_members, id] : d.assign_members.filter((x) => x !== id) }))
   const [events, setEvents] = useState<EventRow[] | null>(null)
   const subs = useSubBusinesses(input.business_id)
   const hasSubs = subs.length > 0
@@ -92,6 +102,8 @@ export function FunnelDrawer({
     e.preventDefault()
     if (!input.business_id) return setError('Pick a business.')
     if (!input.name.trim()) return setError('Funnel name is required.')
+    if (input.assign_mode === 'single' && !input.assign_members.length) return setError('Pick who new leads go to.')
+    if (input.assign_mode === 'round_robin' && input.assign_members.length < 2) return setError('Tick at least two people for round robin.')
     if (linked && !input.event_id) return setError('Pick the webinar.')
     setBusy(true)
     setError(null)
@@ -189,6 +201,46 @@ export function FunnelDrawer({
               <Hint>Added to every lead that comes in through this funnel (landing page forms and funnel imports).</Hint>
             </div>
           </div>
+        </FormSection>
+
+        <FormSection title="Lead owner" description="Who new leads from this funnel (forms, sheets, imports) are assigned to.">
+          <div>
+            <Label htmlFor="f-assign">Assign new leads to</Label>
+            <Select id="f-assign" value={input.assign_mode} onChange={(e) => setInput((d) => ({ ...d, assign_mode: e.target.value as FunnelInput['assign_mode'] }))}>
+              <option value="none">Nobody (unassigned)</option>
+              <option value="single">One person</option>
+              <option value="round_robin">Round robin (take turns)</option>
+            </Select>
+          </div>
+          {input.assign_mode === 'single' && (
+            <div>
+              <Label htmlFor="f-owner" required>
+                Team member
+              </Label>
+              <Select id="f-owner" value={input.assign_members[0] ?? ''} onChange={(e) => setInput((d) => ({ ...d, assign_members: e.target.value ? [e.target.value] : [] }))}>
+                <option value="">— select —</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          {input.assign_mode === 'round_robin' && (
+            <div>
+              <span className="field-label">Team members (in turn)</span>
+              <div className="check-list">
+                {members.map((m) => (
+                  <label key={m.id} className="check">
+                    <input type="checkbox" checked={input.assign_members.includes(m.id)} onChange={(e) => toggleMember(m.id, e.target.checked)} />
+                    {m.name}
+                  </label>
+                ))}
+              </div>
+              <Hint>Each new lead goes to the next ticked person, in this order. Inactive people are skipped.</Hint>
+            </div>
+          )}
         </FormSection>
 
         {linked && (
