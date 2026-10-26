@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { Activity, Network, Play, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
+import { useBusiness } from '@/business/useBusiness'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
@@ -57,14 +58,26 @@ export function WorkflowsPage() {
   }, [tenant.id])
   useEffect(load, [load])
 
+  // follows the business picked in the top bar through the workflow's funnel; workflows without a funnel show everywhere
+  const { inScope } = useBusiness()
+  const funnelOf = useMemo(() => new Map((refData?.funnels ?? []).map((f) => [f.id, f])), [refData])
+  const scoped = useMemo(
+    () =>
+      (rows ?? []).filter((w) => {
+        if (!w.funnel_id) return true
+        const f = funnelOf.get(w.funnel_id)
+        return !f || inScope(f.business_id, f.sub_business_id)
+      }),
+    [rows, funnelOf, inScope],
+  )
   const visible = useMemo(
     () =>
-      (rows ?? [])
+      scoped
         .filter((w) => filter === 'all' || (filter === 'on') === w.is_active)
         .filter((w) => !query.trim() || w.name.toLowerCase().includes(query.trim().toLowerCase())),
-    [rows, filter, query],
+    [scoped, filter, query],
   )
-  const count = (f: 'all' | 'on' | 'off') => (rows ?? []).filter((w) => f === 'all' || (f === 'on') === w.is_active).length
+  const count = (f: 'all' | 'on' | 'off') => scoped.filter((w) => f === 'all' || (f === 'on') === w.is_active).length
 
   async function toggle(w: WorkflowRow) {
     try {
@@ -231,7 +244,7 @@ export function WorkflowsPage() {
       )}
       {creating && (
         <NewWorkflowModal
-          refData={refData}
+          refData={refData && { ...refData, funnels: refData.funnels.filter((f) => inScope(f.business_id, f.sub_business_id)) }}
           onClose={() => setCreating(false)}
           onCreate={async (name, trigger, funnelId) => {
             const id = await createWorkflow(tenant.id, membership?.id, name, trigger, funnelId)

@@ -108,6 +108,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
       id: f.id,
       name: f.name,
       business_id: f.business_id,
+      sub_business_id: f.sub_business_id,
       event_id: f.event_id,
       tags: f.tags,
       stages: f.funnel_stages.map((s) => ({ id: s.id, name: s.name })),
