@@ -222,3 +222,32 @@ export async function sendWhatsApp(
 export function fillTemplate(body: string, v: Record<string, string | null | undefined>) {
   return body.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) => (v[k] ?? '').toString() || `{{${k}}}`)
 }
+
+/** a booking in the shared studio (Studio Rental or Paid Podcast) — slot only, no amounts */
+export type BusySlot = {
+  id: string
+  sub_business_id: string
+  sub_name: string
+  client_name: string
+  purpose: string | null
+  booking_date: string
+  start_time: string
+  end_time: string
+  status: string
+}
+
+/** studio bookings of a business, across its Studio Rental and Paid Podcast sub-businesses */
+export async function studioBusy(businessId: string): Promise<BusySlot[]> {
+  const { data, error } = await db().rpc('studio_busy', { p_business: businessId })
+  if (error) throw error
+  return (data ?? []) as BusySlot[]
+}
+
+/** the first studio booking that overlaps this slot (another booking, not cancelled) */
+export function studioClash(busy: BusySlot[], slot: { id?: string; date: string; start: string; end: string }) {
+  const m = (t: string) => {
+    const [h, mm] = t.split(':').map(Number)
+    return h * 60 + mm
+  }
+  return busy.find((b) => b.id !== slot.id && b.booking_date === slot.date && m(b.start_time) < m(slot.end) && m(b.end_time) > m(slot.start)) ?? null
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -10,7 +10,8 @@ import { SearchSelect } from '@/components/SearchSelect'
 import { fullName, money } from '@/leads/labels'
 import type { LeadRow } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { saveBooking } from './api'
+import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
+import { isStudioType } from '@/business/activeType'
 import { invoiceHref } from './BookingsTab'
 import type { BookingRefs } from './useBookingRefs'
 import { STATUS_META, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type PartDraft } from './types'
@@ -119,6 +120,34 @@ export function BookingDrawer({
   })()
 
   const subs = useSubBusinesses(input.business_id)
+  // Studio Rental and Paid Podcast share one studio: no two of their bookings at the same time
+  const bizType = businesses.find((b) => b.id === input.business_id)?.type ?? null
+  const studio = isStudioType(input.sub_business_id ? subs.find((x) => x.id === input.sub_business_id)?.type : subs.length ? null : bizType)
+  const [taken, setTaken] = useState<BusySlot[]>([])
+  useEffect(() => {
+    if (!studio || !input.business_id) return
+    let live = true
+    studioBusy(input.business_id).then(
+      (b) => live && setTaken(b),
+      () => live && setTaken([]),
+    )
+    return () => {
+      live = false
+    }
+  }, [studio, input.business_id])
+  const clockOf = (t: string) => new Date(2000, 0, 1, ...(t.split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
+  const clashText = (c: BusySlot | null) =>
+    c
+      ? `Studio not available on ${new Date(`${c.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${clockOf(c.start_time)} – ${clockOf(c.end_time)}: booked for ${c.client_name} (${c.sub_name}).`
+      : null
+  const clashes =
+    studio && input.status !== 'cancelled'
+      ? [
+          studioClash(taken, { id: booking?.id, date: input.booking_date, start: input.start_time, end: input.end_time }),
+          ...extra.map((x) => (x.date && x.start && x.end ? studioClash(taken, { date: x.date, start: x.start, end: x.end }) : null)),
+        ]
+      : []
+  const clash = clashes.find(Boolean) ?? null
   // services of this business (and its sub-business, when the service has one)
   const services = refs.products.filter(
     (p) => p.is_active && p.business_id === input.business_id && (!p.sub_business_id || !input.sub_business_id || p.sub_business_id === input.sub_business_id),
@@ -150,6 +179,7 @@ export function BookingDrawer({
     if (!data.client_name.trim()) return setError('Client name is required.')
     if (!data.booking_date) return setError('Pick the date.')
     if (hours <= 0) return setError('End time must be after the start time.')
+    if (clash) return setError(clashText(clash))
     if (input.items.some((i) => !i.name.trim())) return setError('Pick or name every service, or remove it.')
     if (input.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
     if (planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
@@ -195,7 +225,7 @@ export function BookingDrawer({
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
-              <Button onClick={save} disabled={busy}>
+              <Button onClick={save} disabled={busy || !!clash}>
                 {busy ? 'Saving…' : booking ? 'Save booking' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
               </Button>
             )}
@@ -248,6 +278,7 @@ export function BookingDrawer({
               </Label>
               <TextInput id="bk-end" type="time" step={900} value={input.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit} />
             </div>
+            {clashes[0] && <div className="span-2 alert alert-error small">{clashText(clashes[0])}</div>}
             <div>
               <Label htmlFor="bk-status">Status</Label>
               <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit}>
@@ -269,7 +300,8 @@ export function BookingDrawer({
               {extra.map((x, i) => {
                 const upd = (k: 'date' | 'start' | 'end' | 'amount', v: string) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, [k]: v } : y)))
                 return (
-                  <div key={i} className="bk-extra">
+                  <div key={i} className="stack" style={{ gap: 6 }}>
+                  <div className="bk-extra">
                     <div>
                       <Label htmlFor={`bx-d-${i}`} required>
                         Date
@@ -295,6 +327,8 @@ export function BookingDrawer({
                     <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove this date" onClick={() => setExtra((l) => l.filter((_, j) => j !== i))}>
                       <Trash2 size={15} />
                     </button>
+                  </div>
+                  {clashes[i + 1] && <div className="alert alert-error small">{clashText(clashes[i + 1])}</div>}
                   </div>
                 )
               })}
