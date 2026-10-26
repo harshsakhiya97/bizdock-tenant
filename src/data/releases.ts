@@ -13,6 +13,29 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.6',
+    date: '2026-10-26',
+    title: 'Paid Podcast flow',
+    summary: 'Paid Podcast: lead → follow-ups → meeting with the guest → podcast booked; one shared studio with Studio Rental.',
+    new: [
+      'Meetings (Paid Podcast): a calendar (List, Day, Week, Month) of meetings with guests — date, time, Online with a link or In person with a location. Drag over free time to schedule one.',
+      'Reschedule a meeting by changing its date or time (with a reason); earlier times stay in its Reschedule history.',
+      'Meeting outcome: Qualified (Book podcast opens New booking for the guest) or Not qualified (the lead moves to Lost), plus No-show and Cancelled.',
+      'Paid Podcast lead page: Meetings and Podcasts tabs in place of Bookings; a podcast booking with any payment received makes the lead a customer.',
+      'Podcast Calendar: the booking calendar is called Podcast Calendar for Paid Podcast.',
+      'Shared studio: Studio Rental and Paid Podcast see each other’s bookings on their calendar (grey, view only); a slot that clashes shows who booked it and can’t be saved.',
+      'Paid Podcast dashboard: follow-ups due, inquiries, podcasts booked, collected, meetings done and clients; meetings by day with quick outcome buttons, the month’s funnel, overdue meetings, today’s tasks and upcoming recordings. Sections can be hidden.',
+      'Business dashboard (e.g. TVS): a card per sub-business with enquiries, customers, bookings, billed, collected, outstanding, trend, top source and converted / collected bars.',
+      'Access Control: Meetings (view, schedule, edit, delete).',
+    ],
+    improved: [
+      'Add / Edit lead: phone with a +91 prefix and 10 digits.',
+      'Lead page: form / sheet fields shown in the same columns as the lead details.',
+      'Workflows follow the business picked in the top bar (through their funnel).',
+      'Access Control: Booking / Podcast Calendar.',
+    ],
+  },
+  {
     version: '0.5',
     date: '2026-10-26',
     title: 'Studio rental flow completed',
