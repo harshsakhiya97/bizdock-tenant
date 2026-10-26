@@ -71,7 +71,7 @@ export function AppLayout() {
           <nav className="sidebar-nav">
             {sections.map((section) => (
               <div key={section.title}>
-                <div className="nav-section-label">{section.title}</div>
+                {!section.hideTitle && <div className="nav-section-label">{section.title}</div>}
                 {section.items.map(({ to, label, icon: I }) => (
                   <NavLink key={to} to={to} className="nav-item" title={label} onClick={() => setMobileOpen(false)}>
                     <I size={17} strokeWidth={1.9} />
