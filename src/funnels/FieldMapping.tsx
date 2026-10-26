@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, FlaskConical, Loader2, Save, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AlertTriangle, CheckCircle2, ChevronRight, FlaskConical, Loader2, Save, X } from 'lucide-react'
 import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
 import { KNOWN_NAMES, LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelWebhook } from './types'
@@ -13,7 +13,10 @@ export function FieldMapping({
   canEdit,
   onChanged,
   onError,
+  actions,
 }: {
+  /** extra buttons next to Test (e.g. Workflow) */
+  actions?: ReactNode
   hook: FunnelWebhook
   canEdit: boolean
   onChanged: (msg: string) => void
@@ -26,6 +29,8 @@ export function FieldMapping({
   )
   const [map, setMap] = useState<Record<string, string>>(page.field_map ?? {})
   const [dirty, setDirty] = useState(false)
+  // collapsed once the form has been tested
+  const [open, setOpen] = useState(!page.sample)
   const [busy, setBusy] = useState(false)
   const [now, setNow] = useState(Date.now())
   const startedAt = useRef<string | null>(page.sample_at)
@@ -70,6 +75,7 @@ export function FieldMapping({
   ].filter(Boolean)
 
   async function start() {
+    setOpen(true)
     setBusy(true)
     try {
       startedAt.current = sampleAt
@@ -111,7 +117,18 @@ export function FieldMapping({
   return (
     <div className="lp-block">
       <div className="row-between">
-        <span className="lp-label">Form fields</span>
+        <button type="button" className="fm-toggle" onClick={() => setOpen((o) => !o)} aria-expanded={open || !!until}>
+          <ChevronRight size={15} className={open || until ? 'is-open' : undefined} />
+          <span className="lp-label">Form fields</span>
+          {!open && !until && (
+            <span className="muted small">
+              {keys.length ? `${keys.length} field${keys.length === 1 ? '' : 's'}` : 'not tested yet'}
+              {sampleAt ? ` · test received ${new Date(sampleAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}
+            </span>
+          )}
+        </button>
+        <div className="row" style={{ gap: 6 }}>
+        {actions}
         {canEdit &&
           (until ? (
             <button type="button" className="btn btn-ghost btn-sm" onClick={stop}>
@@ -122,7 +139,10 @@ export function FieldMapping({
               <FlaskConical size={14} /> {sample ? 'Test again' : 'Test webhook'}
             </button>
           ))}
+        </div>
       </div>
+      {(open || until) && (
+      <>
 
       {until && (
         <div className="fm-wait">
@@ -216,6 +236,8 @@ export function FieldMapping({
             </div>
           )}
         </>
+      )}
+      </>
       )}
     </div>
   )

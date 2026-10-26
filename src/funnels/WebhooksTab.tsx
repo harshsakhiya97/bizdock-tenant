@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Code2, Copy, Pencil, Plus, Power, RefreshCw, Trash2, Webhook } from 'lucide-react'
+import { Check, Code2, Copy, Network, Pencil, Plus, Power, RefreshCw, Trash2, Webhook } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { useAuth } from '@/auth/useAuth'
+import { workflowForWebhook } from '@/workflows/api'
 import { Button } from '@/components/Button'
 import { Label, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
@@ -34,6 +37,18 @@ export function WebhooksTab({
   onError: (msg: string) => void
 }) {
   const tenant = useTenant()
+  const navigate = useNavigate()
+  const { can, membership } = useAuth()
+  const canWorkflow = can('workflows', 'view') && (can('workflows', 'add') || can('workflows', 'edit'))
+  async function openWorkflow(h: FunnelWebhook) {
+    setBusy(true)
+    try {
+      navigate(`/workflows/${await workflowForWebhook(tenant.id, membership?.id, funnelId, h)}`)
+    } catch (e) {
+      onError((e as Error).message)
+      setBusy(false)
+    }
+  }
   const [naming, setNaming] = useState<{ hook: FunnelWebhook | null } | null>(null)
   const [hookName, setHookName] = useState('')
   const [confirm, setConfirm] = useState<Confirm | null>(null)
@@ -140,7 +155,20 @@ export function WebhooksTab({
                       </button>
                     )}
                   </div>
-                  <FieldMapping key={`${h.id}-${h.sample_at ?? ''}`} hook={h} canEdit={canEdit} onChanged={onChanged} onError={onError} />
+                  <FieldMapping
+                    key={`${h.id}-${h.sample_at ?? ''}`}
+                    hook={h}
+                    canEdit={canEdit}
+                    onChanged={onChanged}
+                    onError={onError}
+                    actions={
+                      canWorkflow && (
+                        <button type="button" className="btn btn-outline btn-sm" onClick={() => void openWorkflow(h)} disabled={busy} title="Open the workflow this form starts (made for you the first time)">
+                          <Network size={14} /> Workflow
+                        </button>
+                      )
+                    }
+                  />
                   <div className="row">
                     <span className="lp-label" style={{ marginRight: 4 }}>
                       <Code2 size={13} /> How to connect

@@ -26,8 +26,12 @@ export async function getWorkflow(id: string): Promise<WorkflowRow | null> {
 }
 
 /** a new workflow: just its trigger box, settings filled in on the canvas */
-export async function createWorkflow(tenantId: string, memberId: string | undefined, name: string, trigger: TriggerEvent, funnelId?: string) {
-  const data: TriggerData = { ...TRIGGER_DEFAULTS[trigger], ...(funnelId && trigger !== 'before_event' && trigger !== 'after_event' ? { funnel_id: funnelId } : {}) }
+export async function createWorkflow(tenantId: string, memberId: string | undefined, name: string, trigger: TriggerEvent, funnelId?: string, pages?: string[]) {
+  const data: TriggerData = {
+    ...TRIGGER_DEFAULTS[trigger],
+    ...(funnelId && trigger !== 'before_event' && trigger !== 'after_event' ? { funnel_id: funnelId } : {}),
+    ...(pages?.length ? { pages } : {}),
+  }
   const id = crypto.randomUUID()
   const { error } = await db()
     .from('workflows')
@@ -124,4 +128,23 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     extraKeys: [...new Set(((leadExtras.data ?? []) as { extra: Record<string, unknown> | null }[]).flatMap((l) => Object.keys(l.extra ?? {})))],
     leadTags: [...new Set(((leadTags.data ?? []) as { tags: string[] }[]).flatMap((l) => l.tags ?? []))].sort((a, b) => a.localeCompare(b)),
   }
+}
+
+/** the "Form submitted" workflow of one webhook form: the existing one, or a new one (its trigger set to that form) */
+export async function workflowForWebhook(tenantId: string, memberId: string | undefined, funnelId: string, hook: { id: string; name: string }) {
+  const { data, error } = await db()
+    .from('workflows')
+    .select('id, nodes')
+    .eq('tenant_id', tenantId)
+    .eq('trigger_type', 'form_submitted')
+    .eq('funnel_id', funnelId)
+    .is('archived_at', null)
+    .order('created_at')
+  if (error) throw error
+  const rows = (data ?? []) as { id: string; nodes: StepNode[] }[]
+  const pagesOf = (w: { nodes: StepNode[] }) => ((w.nodes.find((n) => n.id === 'trigger')?.data ?? {}) as TriggerData).pages ?? []
+  // one made for this form first, then one that includes it
+  const mine = rows.find((w) => pagesOf(w).length === 1 && pagesOf(w)[0] === hook.id) ?? rows.find((w) => pagesOf(w).includes(hook.id))
+  if (mine) return mine.id
+  return createWorkflow(tenantId, memberId, `${hook.name} – workflow`, 'form_submitted', funnelId, [hook.id])
 }
