@@ -62,7 +62,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       },
       {
         key: 'bookings',
-        label: 'Booking Calendar',
+        label: 'Booking / Podcast Calendar',
         open: { kind: 'action', module: 'bookings', action: 'view', hint: 'Bookings of the businesses they work in' },
         actions: [
           { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, services and payment plan' },
@@ -79,7 +79,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'meetings', action: 'delete', label: 'Delete meetings' },
         ],
       },
-      { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Booking Calendar' }, actions: [] },
+      { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Booking / Podcast Calendar' }, actions: [] },
       {
         key: 'funnels',
         label: 'Funnels',
