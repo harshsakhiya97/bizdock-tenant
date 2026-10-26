@@ -108,7 +108,7 @@ export function FunnelsPage() {
       <div className="panel">
         <div className="panel-bar">
           <div className="tabs">
-            {(['all', ...FUNNEL_TYPES.map((t) => t.value)] as const).map((t) => (
+            {(['all', ...FUNNEL_TYPES.map((t) => t.value).filter((v) => (v !== 'lead_gen' && v !== 'custom') || count(v) > 0)] as const).map((t) => (
               <button key={t} type="button" className={cn('tab', type === t && 'is-active')} onClick={() => setType(t)}>
                 {t === 'all' ? 'All' : typeLabel(t)} <span className="muted small">{count(t)}</span>
               </button>
