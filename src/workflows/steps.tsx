@@ -101,7 +101,11 @@ export function conditionText(c: ConditionData, ctx: FlowContext): string {
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
 export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (c.value ? conditionText(c, ctx) : `Path ${i + 1}`)
 const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
-  d.to === 'team' ? `To ${ctx.members.find((m) => m.id === d.member_id)?.name ?? 'team'} · ` : ''
+  d.to === 'team'
+    ? `To ${ctx.members.find((m) => m.id === d.member_id)?.name ?? 'team'} · `
+    : d.to === 'custom'
+      ? `To ${d.custom_phone ? `+91 ${String(d.custom_phone)}` : 'a number'} · `
+      : ''
 
 /** one-line summary shown inside a box */
 export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowContext): string {
@@ -145,6 +149,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     }
     case 'whatsapp': {
       if (d.to === 'team' && !d.member_id) return 'Pick the team member'
+      if (d.to === 'custom' && !/^\d{10}$/.test(String(d.custom_phone ?? ''))) return 'Enter the 10-digit number'
       if (!String(d.message ?? '').trim() && !String(d.template ?? '').trim()) return 'Write the message or pick a template'
       const params = (d.params ?? {}) as Record<string, string>
       if (d.template && Object.values(params).some((v) => !String(v ?? '').trim())) return 'Fill every template variable'
