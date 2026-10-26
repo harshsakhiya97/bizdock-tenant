@@ -4,6 +4,8 @@ import { LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
+import { useBusiness } from '@/business/useBusiness'
+import { activeType, calendarName } from '@/business/activeType'
 import { Avatar } from '@/components/Avatar'
 import { DevelopedBy } from '@/components/DevelopedBy'
 import { TenantLockup } from '@/components/Logo'
@@ -25,12 +27,23 @@ function readCollapsed() {
 
 /** Theme-kit app shell: sidebar, top bar with crumbs, page area and the phone tab bar. */
 export function AppLayout() {
+  return (
+    <BusinessProvider>
+      <Shell />
+    </BusinessProvider>
+  )
+}
+
+function Shell() {
   const { pathname } = useLocation()
   const { profile, user, can, scope } = useAuth()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const meta = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
+  const { selected, sub } = useBusiness()
+  const type = activeType(selected, sub)
+  const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
+  const meta = pathname === '/bookings' ? { ...base, title: calendarName(type) } : base
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
@@ -38,9 +51,10 @@ export function AppLayout() {
   const sections = navSections
     .map((s) => ({ ...s, items: s.items.filter(
         (i) =>
+          (!i.onlyType || i.onlyType === type) &&
           (i.area ? scope(i.area) !== 'none' : true) &&
           (!i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action))),
-      ) }))
+      ).map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i)) }))
     .filter((s) => s.items.length > 0)
   const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],
@@ -58,7 +72,6 @@ export function AppLayout() {
   }
 
   return (
-    <BusinessProvider>
       <div className="shell">
         <aside className={cn('sidebar', collapsed && 'is-collapsed', mobileOpen && 'is-open')}>
           <div className="sidebar-brand">
@@ -146,6 +159,5 @@ export function AppLayout() {
 
         <LogoutDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} />
       </div>
-    </BusinessProvider>
   )
 }

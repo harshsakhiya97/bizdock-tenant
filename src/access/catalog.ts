@@ -69,6 +69,16 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'bookings', action: 'edit', label: 'Edit bookings', hint: 'Change, cancel, mark payment parts paid' },
         ],
       },
+      {
+        key: 'meetings',
+        label: 'Meetings',
+        open: { kind: 'action', module: 'meetings', action: 'view', hint: 'Guest meetings (Paid Podcast)' },
+        actions: [
+          { module: 'meetings', action: 'add', label: 'Schedule meetings' },
+          { module: 'meetings', action: 'edit', label: 'Edit meetings', hint: 'Reschedule, mark qualified / not qualified' },
+          { module: 'meetings', action: 'delete', label: 'Delete meetings' },
+        ],
+      },
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Booking Calendar' }, actions: [] },
       {
         key: 'funnels',

@@ -1,4 +1,5 @@
-import { Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, type LucideIcon } from 'lucide-react'
+import { Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
+import type { SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -11,6 +12,8 @@ export type NavItem = {
   area?: string
   /** shown with either permission */
   or?: { module: string; action: string }
+  /** shown only when this type of (sub-)business is picked in the top bar */
+  onlyType?: SubBusinessType
 }
 
 // Same groups and names as Happy OS; pages appear here as they are built.
@@ -24,6 +27,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/customers', label: 'Customers', icon: Contact, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
+      { to: '/meetings', label: 'Meetings', icon: Handshake, module: 'meetings', onlyType: 'podcast' },
       { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
@@ -60,6 +64,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
   '/bookings': { title: 'Booking Calendar', crumb: 'Slots & bookings', icon: CalendarCheck },
+  '/meetings': { title: 'Meetings', crumb: 'Guest meetings', icon: Handshake },
   '/attendance': { title: 'Attendance', crumb: 'Check in & discipline', icon: Clock3 },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
