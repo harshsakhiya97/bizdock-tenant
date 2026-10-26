@@ -904,6 +904,8 @@ a.db-card:hover { border-color: var(--brand); }
 .input-prefix { display: flex; align-items: stretch; }
 .input-prefix > span { display: grid; place-items: center; padding: 0 10px; border: 1px solid var(--border, var(--line)); border-right: 0; border-radius: 10px 0 0 10px; background: var(--surface-muted, #f8fafc); color: var(--text-muted); font-size: 14px; }
 .input-prefix > .input, .input-prefix > input { border-top-left-radius: 0; border-bottom-left-radius: 0; flex: 1; min-width: 0; }
+.input-prefix > .input-wrap { flex: 1; min-width: 0; }
+.input-prefix > .input-wrap > .input { border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .fm-toggle { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; cursor: pointer; color: var(--text-muted); font: inherit; text-align: left; }
 .fm-toggle svg { transition: transform .15s ease; flex: none; }
 .fm-toggle svg.is-open { transform: rotate(90deg); }

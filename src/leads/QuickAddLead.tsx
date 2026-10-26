@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
+import { PhoneInput, fullPhone, phoneValid } from '@/components/PhoneInput'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import type { FunnelRow } from '@/funnels/types'
@@ -48,7 +49,7 @@ export function QuickAddLead({
   async function save() {
     if (!bizId) return setError('Pick the business.')
     if (!name.trim()) return setError('Name is required.')
-    if (phone.replace(/\D/g, '').length < 10) return setError('Enter a valid phone number (10 digits).')
+    if (!phoneValid(phone)) return setError('Enter a valid 10-digit mobile number.')
     setBusy(true)
     setError(null)
     try {
@@ -58,7 +59,7 @@ export function QuickAddLead({
         stage_id: funnel?.funnel_stages[0]?.id ?? '',
         first_name: first,
         last_name: name.trim().slice(first.length).trim(),
-        phone,
+        phone: fullPhone(phone),
         whatsapp: '',
         email: '',
         city: city.trim(),
@@ -115,7 +116,7 @@ export function QuickAddLead({
             <Label htmlFor="q-phone" required>
               Phone
             </Label>
-            <TextInput id="q-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <PhoneInput id="q-phone" value={phone} onChange={setPhone} />
           </div>
           <div>
             <Label htmlFor="q-city">City</Label>
