@@ -20,8 +20,13 @@ import { LeadOrigin } from './LeadOrigin'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
+import { listMeetings } from '@/meetings/api'
+import { MeetingDrawer } from '@/meetings/MeetingDrawer'
+import { MeetingsTab } from '@/meetings/MeetingsTab'
+import type { MeetingRow } from '@/meetings/types'
+import { makesCustomer, podcastCheck } from './customers'
 
-type Tab = 'details' | 'followups' | 'bookings'
+type Tab = 'details' | 'followups' | 'meetings' | 'bookings'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -40,10 +45,12 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' ? t : 'details'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
+  const [meetings, setMeetings] = useState<MeetingRow[] | null>(null)
+  const [mt, setMt] = useState<{ meeting: MeetingRow | null } | null>(null)
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -59,7 +66,11 @@ export function LeadPage() {
     listBookings(tenant.id, { leadId: id })
       .then(setBookings)
       .catch(() => setBookings([]))
-  }, [id, tenant.id])
+    if (can('meetings', 'view'))
+      listMeetings(tenant.id, { leadId: id })
+        .then(setMeetings)
+        .catch(() => setMeetings([]))
+  }, [id, tenant.id, can])
   useEffect(load, [load])
   useEffect(() => {
     void Promise.all([listMemberOptions(tenant.id), listLostReasons(tenant.id)]).then(([m, r]) => {
@@ -100,8 +111,11 @@ export function LeadPage() {
   const nextBooking = (bookings ?? [])
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
-  // a confirmed / completed booking makes the lead a customer
-  const won = (bookings ?? []).filter((b) => b.status === 'confirmed' || b.status === 'completed')
+  // Paid Podcast lead: Meetings and Podcasts tabs instead of Bookings
+  const isPodcast = (lead.sub_business_id ? bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.type : !bizRow?.subs.length ? bizRow?.type : null) === 'podcast'
+  // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
+  const podcastBk = podcastCheck(businesses)
+  const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))
   const isCustomer = won.length > 0
   const billed = won.reduce((n, b) => n + Number(b.total_amount), 0)
   const received = won.reduce((n, b) => n + Number(b.paid_amount), 0)
@@ -145,7 +159,8 @@ export function LeadPage() {
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
-    ...(can('bookings', 'view') ? [{ id: 'bookings' as Tab, label: 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }] : []),
+    ...(isPodcast && can('meetings', 'view') ? [{ id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).filter((m) => m.status !== 'cancelled').length }] : []),
+    ...(can('bookings', 'view') ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }] : []),
   ]
 
   return (
@@ -204,7 +219,7 @@ export function LeadPage() {
 
       {isCustomer && (
         <div className="stat-grid">
-          <StatCard icon={CalendarCheck} tone="info" value={won.length} label="Bookings" hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
+          <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? "Podcasts" : "Bookings"} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
           <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" />
           <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" />
           <StatCard
@@ -253,7 +268,10 @@ export function LeadPage() {
         {tab === 'followups' && (
           <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
         )}
-        {tab === 'bookings' && <BookingsTab bookings={bookings} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
+        {tab === 'meetings' && isPodcast && (
+          <MeetingsTab meetings={meetings} canAdd={can('meetings', 'add')} onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
+        )}
+        {tab === 'bookings' && <BookingsTab bookings={bookings} podcast={isPodcast} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
       </section>
 
       {editing && (
@@ -279,6 +297,25 @@ export function LeadPage() {
           onSent={(msg) => {
             setWa(false)
             done(msg)
+          }}
+        />
+      )}
+      {mt && (
+        <MeetingDrawer
+          key={mt.meeting?.id ?? 'new'}
+          meeting={mt.meeting}
+          lead={lead}
+          leads={[lead]}
+          members={members}
+          onClose={() => setMt(null)}
+          onSaved={(msg) => {
+            setMt(null)
+            done(msg)
+          }}
+          onBook={() => {
+            setMt(null)
+            setTab('bookings')
+            setBk({ booking: null })
           }}
         />
       )}
