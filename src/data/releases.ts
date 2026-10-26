@@ -13,6 +13,26 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.5',
+    date: '2026-10-26',
+    title: 'Studio rental flow completed',
+    summary: 'The Podcast Studio Rental flow end to end: form → lead with an owner → WhatsApp workflow.',
+    new: [
+      'Funnel lead owner: in Add / Edit funnel pick Nobody, One person, or Round robin (several people take turns); new funnel leads without an owner are assigned automatically. The funnel overview shows the setting.',
+      'Funnel webhooks: a Workflow button next to Test again opens the workflow this form starts (or creates one connected to it).',
+      'Workflow WhatsApp step: Send to Custom with a 10-digit number.',
+      'Workflow WhatsApp step: the Lead field dropdown also lists Purpose and the extra fields from forms and sheets.',
+    ],
+    improved: [
+      'Funnel webhooks: Form fields fold away once tested.',
+      'Workflow builder: a Cancel button, and an Active / Inactive toggle in place of the Workflow on checkbox; the same toggle is in the workflows list Status column.',
+    ],
+    removed: [
+      'Side menu: the Workspace and Company headings (Admin stays).',
+      'Funnels: the Lead Gen and Custom tabs (they show only when such funnels exist).',
+    ],
+  },
+  {
     version: '0.4',
     date: '2026-10-23',
     title: 'Services, payment plans, Customers and Invoices',
