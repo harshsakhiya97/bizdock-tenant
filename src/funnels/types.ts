@@ -27,8 +27,13 @@ export type FunnelRow = {
   tags: string[]
   /** the calendar webinar / event this funnel leads to */
   event_id: string | null
+  /** owner of new leads: nobody, one person, or round robin over assign_members */
+  assign_mode: AssignMode
+  assign_members: string[]
   funnel_stages: StageRow[]
 }
+
+export type AssignMode = 'none' | 'single' | 'round_robin'
 
 /** Stage as edited in the form; `id` missing = not saved yet */
 export type StageDraft = {
@@ -48,6 +53,8 @@ export type FunnelInput = {
   description: string
   tags: string[]
   event_id: string
+  assign_mode: AssignMode
+  assign_members: string[]
 }
 
 /** an extra field a landing page form sends (name, email and phone are always required) */

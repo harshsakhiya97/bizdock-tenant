@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { ArrowLeft, CalendarDays, Pencil, Tag, Users, Workflow } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty } from '@/components/ui'
 import { listEvents, type EventRow } from '@/calendar/api'
@@ -191,6 +191,18 @@ export function FunnelPage() {
                     ) : (
                       <span className="muted small">None</span>
                     )}
+                  </div>
+                  <div className="fp-row">
+                    <span className="muted small">
+                      <UserCheck size={13} /> Lead owner
+                    </span>
+                    <span className="small">
+                      {funnel.assign_mode === 'single'
+                        ? (members.find((m) => m.id === funnel.assign_members[0])?.name ?? '—')
+                        : funnel.assign_mode === 'round_robin'
+                          ? `Round robin · ${funnel.assign_members.map((id) => members.find((m) => m.id === id)?.name).filter(Boolean).join(', ')}`
+                          : <span className="muted">Unassigned</span>}
+                    </span>
                   </div>
                   <div className="fp-row">
                     <span className="muted small">

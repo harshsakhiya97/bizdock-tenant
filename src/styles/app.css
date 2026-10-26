@@ -908,3 +908,4 @@ a.db-card:hover { border-color: var(--brand); }
 .fm-toggle svg { transition: transform .15s ease; flex: none; }
 .fm-toggle svg.is-open { transform: rotate(90deg); }
 .fm-toggle .lp-label { margin: 0; }
+.check-list { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
