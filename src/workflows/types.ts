@@ -63,6 +63,8 @@ export type RefData = {
   members: { id: string; name: string }[]
   /** other workflows (Go to workflow) */
   workflows: { id: string; name: string; is_active: boolean }[]
+  /** keys of extra fields saved on leads */
+  extraKeys?: string[]
   /** tags already used on leads */
   leadTags?: string[]
   /** the workflow being edited */
@@ -99,6 +101,9 @@ export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {
   before_event: { event: 'before_event', event_id: '', amount: 1, unit: 'days' },
   after_event: { event: 'after_event', event_id: '', amount: 1, unit: 'hours' },
 }
+
+/** a field name as a message variable: "Company Name" → company_name */
+export const varKey = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
 export const VARIABLES = [
   ['first_name', 'First name'],

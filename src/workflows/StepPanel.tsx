@@ -3,7 +3,7 @@ import { ArrowUp, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { WhatsAppFields } from './WhatsAppFields'
 import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem } from './steps'
-import { TRIGGER_DEFAULTS, VARIABLES, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit } from './types'
+import { TRIGGER_DEFAULTS, VARIABLES, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
 
@@ -59,6 +59,7 @@ export function StepPanel({
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
             set={set}
             onChange={onChange}
             disabled={ro}
