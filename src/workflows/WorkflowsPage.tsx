@@ -178,9 +178,12 @@ export function WorkflowsPage() {
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         {can('workflows', 'edit') ? (
-                          <label className="switch" title={w.is_active ? 'Turn off' : 'Turn on'}>
-                            <input type="checkbox" checked={w.is_active} onChange={() => void toggle(w)} aria-label={`${w.name} on`} />
-                            <span className={cn('badge', w.is_active ? 'badge-success' : 'badge-muted')}>{w.is_active ? 'On' : 'Off'}</span>
+                          <label className={cn('tgl', w.is_active && 'is-on')} title={w.is_active ? 'Turn off' : 'Turn on'}>
+                            <input type="checkbox" role="switch" checked={w.is_active} onChange={() => void toggle(w)} aria-label={`${w.name} active`} />
+                            <span className="tgl-track" aria-hidden="true">
+                              <span className="tgl-knob" />
+                            </span>
+                            {w.is_active ? 'Active' : 'Inactive'}
                           </label>
                         ) : (
                           <span className={cn('badge', w.is_active ? 'badge-success' : 'badge-muted')}>{w.is_active ? 'On' : 'Off'}</span>
