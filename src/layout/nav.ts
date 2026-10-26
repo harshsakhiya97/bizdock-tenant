@@ -14,9 +14,10 @@ export type NavItem = {
 }
 
 // Same groups and names as Happy OS; pages appear here as they are built.
-export const navSections: { title: string; items: NavItem[] }[] = [
+export const navSections: { title: string; /** no heading shown in the side menu */ hideTitle?: boolean; items: NavItem[] }[] = [
   {
     title: 'Workspace',
+    hideTitle: true,
     items: [
       { to: '/my-day', label: 'My Day', icon: Sun },
       { to: '/dashboard', label: 'Dashboards', icon: LayoutGrid, area: 'dashboards' },
@@ -31,6 +32,7 @@ export const navSections: { title: string; items: NavItem[] }[] = [
   },
   {
     title: 'Company',
+    hideTitle: true,
     items: [
       { to: '/attendance', label: 'Attendance', icon: Clock3, area: 'attendance' },
     ],
