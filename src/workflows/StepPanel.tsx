@@ -4,8 +4,7 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
-import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
-import { SHORT_BASE } from './api'
+import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem, rowMinutes, rowsOf } from './steps'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
@@ -64,15 +63,14 @@ export function StepPanel({
             ctx={ctx}
             onChange={onChange}
             disabled={ro}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
           />
         )}
-        {kind === 'short_link' && <ShortLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
             set={set}
             onChange={onChange}
             disabled={ro}
@@ -384,54 +382,6 @@ function BulkFields({
         </label>
         {!!d.stop_on && <CondEditor id="cb-bulk-stop" c={stop} ctx={ctx} disabled={disabled} onChange={(c) => onChange({ ...d, stop: c })} />}
         {!!d.stop_on && <Hint>Checked before every message; once it matches, the rest aren’t sent and the workflow ends for that lead.</Hint>}
-      </div>
-    </>
-  )
-}
-
-/** Short link: a long URL (lead fields allowed as {{field}}) → <app>/<code>, used later as {{short_link}}. */
-function ShortLinkFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
-  const ref = useRef<HTMLInputElement>(null)
-  const url = String(d.url ?? '')
-  const name = linkVarOf(d)
-  const fields = [...VARIABLES.map(([k, l]) => [k, l] as const), ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k)).map((k) => [k, k] as const)]
-  function insert(k: string) {
-    const el = ref.current
-    const tag = `{{${k}}}`
-    const a = el?.selectionStart ?? url.length
-    const b = el?.selectionEnd ?? url.length
-    set('url', url.slice(0, a) + tag + url.slice(b))
-    requestAnimationFrame(() => {
-      el?.focus()
-      el?.setSelectionRange(a + tag.length, a + tag.length)
-    })
-  }
-  return (
-    <>
-      <div>
-        <Label htmlFor="cb-sl-url" required>
-          Long URL
-        </Label>
-        <input ref={ref} id="cb-sl-url" className="input" placeholder="https://vsl.example.com/watch?name={{first_name}}&email={{email}}" value={url} onChange={(e) => set('url', e.target.value)} disabled={disabled} />
-        {!disabled && (
-          <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
-            <option value="">Insert a lead field…</option>
-            {fields.map(([k, l]) => (
-              <option key={k} value={k}>
-                {l} {`{{${k}}}`}
-              </option>
-            ))}
-          </select>
-        )}
-        <Hint>Each {'{{field}}'} is replaced with the lead’s value. A field alone (e.g. {'{{redirect_url}}'}) can be the whole URL.</Hint>
-      </div>
-      <div>
-        <Label htmlFor="cb-sl-var">Name it</Label>
-        <TextInput id="cb-sl-var" placeholder="short_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
-        <Hint>
-          Later steps use <code className="code-chip">{`{{${name}}}`}</code> for the full short link (e.g. {SHORT_BASE}/AB12CD7) or{' '}
-          <code className="code-chip">{`{{${name}_code}}`}</code> for the code only. Each lead gets their own link; clicks are counted.
-        </Hint>
       </div>
     </>
   )

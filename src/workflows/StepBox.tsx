@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn'
 import { STEP_META, caseLabel, casesOf, problem, summary, triggerLabel } from './steps'
 import type { FlowContext, StepNode, TriggerData } from './types'
 
-export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [], linkVars: [] })
+export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [] })
 
 /** One box on the canvas: icon, name, one-line summary; condition boxes have a Yes and a No exit. */
 function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
