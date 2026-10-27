@@ -994,3 +994,13 @@ a.db-card:hover { border-color: var(--brand); }
 .bulk-vars td { background: var(--surface-muted, #f8fafc); padding-top: 4px; }
 .input-prefix-sm > span { font-size: 12px; padding: 0 6px; }
 .input-prefix-sm > input { flex: 1; min-width: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+
+/* webhook: what each post does */
+.wh-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.wh-action { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.wh-action.is-on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 6%, transparent); }
+.wh-action input { margin-top: 3px; accent-color: var(--brand); }
+.wh-action span { display: flex; flex-direction: column; gap: 2px; }
+.wh-action b { font-size: 13.5px; }
+.wh-action small { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
+@media (max-width: 560px) { .wh-actions { grid-template-columns: 1fr; } }

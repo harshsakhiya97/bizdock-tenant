@@ -1,6 +1,6 @@
 import { db } from '@/lib/supabase'
 import { SHEET_FIELD_MAP, type PerisclawSetup } from './perisclaw'
-import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook } from './types'
+import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook, MatchBy, WebhookAction } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
@@ -138,13 +138,13 @@ export async function listWebhooks(funnelId: string): Promise<FunnelWebhook[]> {
 }
 
 /** another webhook URL on the funnel (e.g. a form on any page, a popup) */
-export async function addWebhook(tenantId: string, funnelId: string, name: string) {
-  const { error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, name: name.trim() || 'Form' })
+export async function addWebhook(tenantId: string, funnelId: string, w: { name: string; action: WebhookAction; match_by: MatchBy }) {
+  const { error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, name: w.name.trim() || 'Form', action: w.action, match_by: w.match_by })
   if (error) throw error
 }
 
-export async function renameWebhook(id: string, name: string) {
-  const { error } = await db().from('funnel_webhooks').update({ name: name.trim() }).eq('id', id)
+export async function updateWebhook(id: string, w: { name: string; action: WebhookAction; match_by: MatchBy }) {
+  const { error } = await db().from('funnel_webhooks').update({ name: w.name.trim(), action: w.action, match_by: w.match_by }).eq('id', id)
   if (error) throw error
 }
 
@@ -216,7 +216,7 @@ export async function deleteUtmLink(id: string) {
 export async function listFunnelSubmissions(funnelId: string): Promise<SubmissionRow[]> {
   const { data, error } = await db()
     .from('lead_submissions')
-    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
+    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, action, result, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
     .eq('funnel_id', funnelId)
     .order('created_at', { ascending: false })
     .limit(2000)
@@ -227,7 +227,7 @@ export async function listFunnelSubmissions(funnelId: string): Promise<Submissio
 export async function listLeadSubmissions(leadId: string): Promise<SubmissionRow[]> {
   const { data, error } = await db()
     .from('lead_submissions')
-    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
+    .select('id, lead_id, landing_page_id, webhook_id, sheet_id, via, is_new, action, result, utm_source, utm_medium, utm_campaign, utm_term, utm_content, data, created_at')
     .eq('lead_id', leadId)
     .order('created_at', { ascending: false })
   if (error) throw error

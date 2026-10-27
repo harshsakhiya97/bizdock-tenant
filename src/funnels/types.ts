@@ -111,7 +111,25 @@ export type FunnelWebhook = {
   sample_at: string | null
   is_active: boolean
   created_at: string
+  /** what a post does */
+  action: WebhookAction
+  /** how update / meeting / purchase find the lead */
+  match_by: MatchBy
 }
+
+export type WebhookAction = 'create_lead' | 'update_lead' | 'create_meeting' | 'purchase'
+export type MatchBy = 'phone' | 'email' | 'both'
+export const WEBHOOK_ACTIONS: { value: WebhookAction; label: string; hint: string; badge: string }[] = [
+  { value: 'create_lead', label: 'Create a new lead', hint: 'Each post adds a lead (the same phone again updates it).', badge: 'Creates leads' },
+  { value: 'update_lead', label: 'Update fields of a lead', hint: 'Finds the lead and saves the mapped fields on it.', badge: 'Updates leads' },
+  { value: 'create_meeting', label: 'Create a meeting for a lead', hint: 'Finds the lead and books a meeting at the date-time sent.', badge: 'Books meetings' },
+  { value: 'purchase', label: 'Purchase (payment received)', hint: 'Finds the lead and logs the payment on it (Razorpay or any gateway).', badge: 'Logs payments' },
+]
+export const MATCH_BY: { value: MatchBy; label: string }[] = [
+  { value: 'phone', label: 'Phone' },
+  { value: 'email', label: 'Email' },
+  { value: 'both', label: 'Phone or email (either matches)' },
+]
 
 export type LandingPageInput = {
   name: string
@@ -123,7 +141,11 @@ export type UtmInput = { label: string; utm_source: string; utm_medium: string; 
 /** one form post / import row (for counts and the lead's log) */
 export type SubmissionRow = {
   id: string
-  lead_id: string
+  /** null: no lead matched (update / meeting / purchase webhooks) */
+  lead_id: string | null
+  action?: WebhookAction
+  /** created / updated / meeting / payment / no_match */
+  result?: string | null
   landing_page_id: string | null
   webhook_id: string | null
   sheet_id: string | null

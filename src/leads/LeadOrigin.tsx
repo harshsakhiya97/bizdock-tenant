@@ -63,7 +63,23 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
                 <span className="tl-dot" />
                 <div>
                   <b>
-                    {s.via === 'sheet' ? (s.is_new ? 'Added from the Google Sheet' : 'Updated from the Google Sheet') : s.via === 'import' ? (s.is_new ? 'Imported' : 'Updated by an import') : s.is_new ? 'Submitted the form' : 'Submitted the form again'}
+                    {s.via === 'sheet'
+                      ? s.is_new
+                        ? 'Added from the Google Sheet'
+                        : 'Updated from the Google Sheet'
+                      : s.via === 'import'
+                        ? s.is_new
+                          ? 'Imported'
+                          : 'Updated by an import'
+                        : s.result === 'updated'
+                          ? 'Details updated'
+                          : s.result === 'meeting'
+                            ? 'Meeting booked'
+                            : s.result === 'payment'
+                              ? 'Payment received'
+                              : s.is_new
+                                ? 'Submitted the form'
+                                : 'Submitted the form again'}
                     {formOf(s) ? ` · ${formOf(s)}` : ''}
                   </b>
                   {(s.utm_source || s.utm_campaign) && (

@@ -14,6 +14,13 @@ export const LEAD_TARGETS = [
   { value: 'utm_campaign', label: 'utm_campaign' },
   { value: 'utm_term', label: 'utm_term' },
   { value: 'utm_content', label: 'utm_content' },
+  { value: 'meeting_start', label: 'Meeting date & time' },
+  { value: 'meeting_end', label: 'Meeting end time' },
+  { value: 'meeting_duration', label: 'Meeting length (minutes)' },
+  { value: 'meeting_link', label: 'Meeting link' },
+  { value: 'amount', label: 'Amount paid' },
+  { value: 'product', label: 'Product / service' },
+  { value: 'payment_id', label: 'Payment ID' },
   { value: 'extra', label: 'Keep as extra field' },
   { value: 'ignore', label: 'Ignore' },
 ] as const
@@ -29,6 +36,18 @@ const ALIASES: Record<string, string[]> = {
   purpose: ['purpose', 'reason', 'requirement', 'interest', 'interested_in', 'service'],
   note: ['note', 'notes', 'remark', 'remarks', 'message', 'comment', 'comments', 'query'],
 }
+
+const ACTION_ONLY: Record<string, string> = {
+  meeting_start: 'create_meeting',
+  meeting_end: 'create_meeting',
+  meeting_duration: 'create_meeting',
+  meeting_link: 'create_meeting',
+  amount: 'purchase',
+  product: 'purchase',
+  payment_id: 'purchase',
+}
+/** the targets offered for a webhook that does `action` */
+export const targetsFor = (action: string) => LEAD_TARGETS.filter((t) => !ACTION_ONLY[t.value] || ACTION_ONLY[t.value] === action)
 
 /** what a form field name is taken as when it isn't mapped by hand */
 export function guessTarget(key: string): string {
