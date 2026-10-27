@@ -54,6 +54,9 @@ const slimNodes = (nodes: StepNode[]) => nodes.map(({ id, type, position, data }
 const slimEdges = (edges: FlowEdge[]) =>
   edges.map(({ id, source, target, sourceHandle, label }) => ({ id, source, target, sourceHandle: sourceHandle ?? null, label }))
 
+/** where this app's short links open: <origin><base>/<code> */
+export const SHORT_BASE = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '')
+
 export async function saveWorkflow(
   id: string,
   memberId: string | undefined,
@@ -69,7 +72,8 @@ export async function saveWorkflow(
       trigger_type: t.event ?? 'form_submitted',
       funnel_id: !eventTrigger && t.funnel_id ? t.funnel_id : null,
       event_id: eventTrigger && t.event_id ? t.event_id : null,
-      nodes: slimNodes(w.nodes),
+      // short links open on this app's address (e.g. https://pride.viralsakhiya.com/pride/AB12CD7)
+      nodes: slimNodes(w.nodes).map((n) => (n.type === 'short_link' ? { ...n, data: { ...n.data, base_url: SHORT_BASE } } : n)),
       edges: slimEdges(w.edges),
       updated_by: memberId ?? null,
     })

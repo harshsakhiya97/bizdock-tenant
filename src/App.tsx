@@ -7,6 +7,7 @@ import { RequirePermission } from '@/auth/RequirePermission'
 import { AppLayout } from '@/layout/AppLayout'
 import { DashboardPage } from '@/pages/Dashboard'
 import { LoginPage } from '@/pages/Login'
+import { ShortLinkPage } from '@/pages/ShortLink'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
@@ -35,6 +36,8 @@ export default function App() {
         <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* short links made by workflows: <app>/<code> */}
+            <Route path="/:code" element={<ShortLinkPage />} />
             <Route element={<RequireAuth />}>
               <Route
                 path="/bookings/:id/invoice"
