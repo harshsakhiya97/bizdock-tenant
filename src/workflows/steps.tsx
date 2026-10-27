@@ -1,4 +1,5 @@
 import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import { conditionProblem, conditionText } from './conditions'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
@@ -34,14 +35,6 @@ export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsa
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 
-export const CONDITION_FIELDS: { value: ConditionData['field']; label: string }[] = [
-  { value: 'stage', label: 'Stage' },
-  { value: 'tag', label: 'Tag' },
-  { value: 'landing_page', label: 'Form (webhook)' },
-  { value: 'utm_source', label: 'UTM source' },
-  { value: 'field_filled', label: 'Form field is filled' },
-  { value: 'attendance', label: 'Webinar / event attendance' },
-]
 export const ATTENDANCE = ['Registered', 'Attended', 'Partially attended', 'Not attended']
 
 /** funnel / event / stages / pages this workflow is about, from its trigger */
@@ -93,19 +86,7 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
   }
 }
 
-/** "Stage is Hot", "email is filled" … */
-export function conditionText(c: ConditionData, ctx: FlowContext): string {
-  const field = CONDITION_FIELDS.find((f) => f.value === c.field)?.label ?? 'Field'
-  const value =
-    c.field === 'stage'
-      ? ctx.funnels.flatMap((f) => f.stages).find((s) => s.id === c.value)?.name
-      : c.field === 'landing_page'
-        ? ctx.pages.find((p) => p.id === c.value)?.name
-        : c.value
-  if (c.field === 'field_filled') return value ? `${value} ${c.op === 'is' ? 'is filled' : 'is empty'}` : 'Pick a field'
-  if (c.field === 'tag') return value ? `${c.op === 'is' ? 'Has' : 'Doesn’t have'} tag ${value}` : 'Pick a tag'
-  return value ? `${field} ${c.op === 'is' ? 'is' : 'is not'} ${value}` : `Pick a ${field.toLowerCase()}`
-}
+export { conditionText }
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
 /** the variable a Generate link step fills ("generated_link" unless named) */
 export const linkVarOf = (d: Record<string, unknown>) =>
@@ -118,7 +99,7 @@ export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow
 const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
 /** minutes after the trigger */
 export const rowMinutes = (r: Pick<BulkRow, 'amount' | 'unit'>) => (Number(r.amount) || 0) * (UNIT_MIN[r.unit] ?? 1)
-export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (c.value ? conditionText(c, ctx) : `Path ${i + 1}`)
+export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (conditionProblem(c) ? `Path ${i + 1}` : conditionText(c, ctx))
 const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
   d.to === 'team'
     ? `To ${ctx.members.find((m) => m.id === d.member_id)?.name ?? 'team'} · `
@@ -193,7 +174,8 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
         if (Object.values(r.params ?? {}).some((v) => !String(v ?? '').trim())) return `Message ${i + 1}: fill every template variable`
         if (!(Number(r.amount) >= 0)) return `Message ${i + 1}: set when it goes`
       }
-      if (d.stop_on && !String((d.stop as ConditionData | undefined)?.value ?? '').trim()) return 'Finish the stop condition'
+      const stopIssue = d.stop_on ? conditionProblem(d.stop as ConditionData | undefined) : null
+      if (stopIssue) return `Stop condition: ${stopIssue.toLowerCase()}`
       return null
     }
     case 'generate_link': {
@@ -211,10 +193,10 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (kind === 'wait_event' && !ctx.event) return 'This workflow has no webinar / event (trigger or funnel)'
       return !(Number(d.amount) > 0) ? 'Set how long to wait' : null
     case 'condition':
-      return !String(d.value ?? '').trim() ? 'Finish the condition' : null
+      return conditionProblem(d as unknown as ConditionData) ? 'Finish the condition' : null
     case 'switch':
       if (!casesOf(d).length) return 'Add at least one path'
-      return casesOf(d).some((c) => !String(c.value ?? '').trim()) ? 'Finish every path’s condition' : null
+      return casesOf(d).some((c) => conditionProblem(c)) ? 'Finish every path’s condition' : null
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
       return d.workflow_id === ctx.selfId ? 'Pick another workflow' : null
