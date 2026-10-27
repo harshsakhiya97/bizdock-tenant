@@ -60,7 +60,7 @@ export const newBulkRow = (amount = 0, unit: Unit = 'minutes'): BulkRow => ({
 export type Recipient = 'lead' | 'team' | 'custom'
 
 /** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
-export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
+export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -106,11 +106,14 @@ export type FlowContext = RefData & {
   stages: { id: string; name: string }[]
   tags: string[]
   fieldKeys: string[]
+  /** variables made by Generate link steps ({{generated_link}}, {{generated_link_code}}) */
+  linkVars: string[]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
   whatsapp: { to: 'lead', member_id: '', template: '', message: 'Hi {{first_name}}, thanks for registering!' },
   bulk_whatsapp: { rows: [], stop_on: false, stop: { field: 'tag', op: 'is', value: '' } },
+  generate_link: { url: '', var: 'generated_link' },
   email: { to: 'lead', member_id: '', subject: '', body: '' },
   call: { script: '' },
   wait: { amount: 1, unit: 'days' },
