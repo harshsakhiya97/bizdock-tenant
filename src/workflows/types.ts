@@ -24,8 +24,8 @@ export type TriggerData = {
   unit?: Unit
 }
 
-export type ConditionField = 'stage' | 'tag' | 'landing_page' | 'utm_source' | 'field_filled' | 'attendance'
-export type ConditionData = { field: ConditionField; op: 'is' | 'is_not'; value: string }
+/** a lead field ("stage", "email", "x:<extra field>", "meeting", "payment"…), how it's compared, and the value (see conditions.ts) */
+export type ConditionData = { field: string; op: string; value: string }
 
 /** one path of a Switch box: leads matching it go down its line (checked top to bottom, else "Otherwise") */
 export type SwitchCase = ConditionData & { id: string; label: string }
@@ -85,6 +85,8 @@ export type RefData = {
   funnels: { id: string; name: string; business_id: string; sub_business_id: string | null; event_id: string | null; tags: string[]; stages: { id: string; name: string }[] }[]
   pages: { id: string; name: string; funnel_id: string; fields: string[] }[]
   events: { id: string; title: string; date: string; time: string | null; endTime: string | null }[]
+  /** lead sources (conditions) */
+  sources?: { id: string; name: string }[]
   /** team members (WhatsApp / email to the team) */
   members: { id: string; name: string }[]
   /** other workflows (Go to workflow) */

@@ -4,8 +4,9 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
-import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
+import { ALL_TRIGGERS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
+import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
@@ -528,61 +529,94 @@ function ConditionFields({
   )
 }
 
-/** "If the lead's [field] [is / is not] [value]" */
-function CondEditor({ id, c, ctx, disabled, onChange }: { id: string; c: ConditionData; ctx: FlowContext; disabled: boolean; onChange: (c: ConditionData) => void }) {
-  const field = c.field
-  const options: { value: string; label: string }[] | null =
-    field === 'stage'
-      ? ctx.stages.map((s) => ({ value: s.id, label: s.name }))
-      : field === 'landing_page'
-        ? ctx.pages.map((p) => ({ value: p.id, label: p.name }))
-        : field === 'tag'
-          ? ctx.tags.map((t) => ({ value: t, label: t }))
-          : field === 'field_filled'
-            ? ['email', 'city', ...ctx.fieldKeys].map((k) => ({ value: k, label: k }))
-            : field === 'attendance'
-              ? ATTENDANCE.map((a) => ({ value: a, label: a }))
-              : null
+/** "If the lead's [field] [equals / is empty / > …] [value]" */
+function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: ConditionData; ctx: FlowContext; disabled: boolean; onChange: (c: ConditionData) => void }) {
+  const c = normalize(raw)
+  const def = fieldDef(c.field)
+  const ops = opsFor(def.kind)
+  const choices = choicesFor(c.field, ctx)
+  const extras = [...new Set([...ctx.fieldKeys, ...(ctx.extraKeys ?? [])])].filter((k) => k && !LEAD_FIELDS.some((f) => f.value === k)).sort((a, b) => a.localeCompare(b))
+  const isExtra = c.field.startsWith('x:')
+  const put = (n: Partial<{ field: string; op: string; value: string }>) => onChange({ ...raw, field: c.field, op: c.op, value: c.value, ...n })
+  function pickField(f: string) {
+    const k = fieldDef(f).kind
+    put({ field: f, op: opsFor(k)[0], value: '' })
+  }
   return (
     <>
       <div>
         <Label htmlFor={`${id}-f`}>If the lead’s</Label>
-        <Select id={`${id}-f`} value={field} disabled={disabled} onChange={(e) => onChange({ ...c, field: e.target.value as ConditionData['field'], value: '' })}>
-          {CONDITION_FIELDS.map((f) => (
-            <option key={f.value} value={f.value}>
-              {f.label}
+        <Select id={`${id}-f`} value={isExtra && !extras.includes(c.field.slice(2)) ? 'x:' : c.field} disabled={disabled} onChange={(e) => pickField(e.target.value)}>
+          <optgroup label="Lead">
+            {LEAD_FIELDS.filter((f) => f.group === 'Lead').map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Activity">
+            {LEAD_FIELDS.filter((f) => f.group === 'Activity').map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+            {c.field === 'attendance' && <option value="attendance">Webinar / event attendance</option>}
+          </optgroup>
+          <optgroup label="Extra fields (form / sheet)">
+            {extras.map((k) => (
+              <option key={k} value={`x:${k}`}>
+                {k.replace(/_/g, ' ')}
+              </option>
+            ))}
+            <option value="x:">Other field (type its name)…</option>
+          </optgroup>
+        </Select>
+        {isExtra && !extras.includes(c.field.slice(2)) && (
+          <TextInput aria-label="Field name" placeholder="e.g. annual_revenue" value={c.field.slice(2)} onChange={(e) => put({ field: `x:${e.target.value.trim()}` })} disabled={disabled} style={{ marginTop: 6 }} />
+        )}
+      </div>
+      <div className="form-grid" style={{ gridTemplateColumns: needsValue(c.op) ? '170px 1fr' : '1fr' }}>
+        <Select aria-label="How to compare" value={c.op} onChange={(e) => put({ op: e.target.value })} disabled={disabled}>
+          {ops.map((o) => (
+            <option key={o} value={o}>
+              {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : 'hasn’t paid') : OP_LABEL[o]}
             </option>
           ))}
         </Select>
-      </div>
-      <div className="form-grid" style={{ gridTemplateColumns: '120px 1fr' }}>
-        <Select aria-label="is / is not" value={String(c.op)} onChange={(e) => onChange({ ...c, op: e.target.value as ConditionData['op'] })} disabled={disabled}>
-          <option value="is">{field === 'field_filled' ? 'is filled' : field === 'tag' ? 'has' : 'is'}</option>
-          <option value="is_not">{field === 'field_filled' ? 'is empty' : field === 'tag' ? 'doesn’t have' : 'is not'}</option>
-        </Select>
-        {field === 'tag' ? (
-          <>
-            <TextInput aria-label="Tag" list={`${id}-tags`} placeholder="Pick or type a tag" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled} />
-            <datalist id={`${id}-tags`}>
-              {ctx.tags.map((t) => (
-                <option key={t} value={t} />
+        {needsValue(c.op) &&
+          (def.kind === 'tag' ? (
+            <>
+              <TextInput aria-label="Tag" list={`${id}-tags`} placeholder="Pick or type a tag" value={c.value} onChange={(e) => put({ value: e.target.value })} disabled={disabled} />
+              <datalist id={`${id}-tags`}>
+                {ctx.tags.map((t) => (
+                  <option key={t} value={t} />
+                ))}
+              </datalist>
+            </>
+          ) : choices ? (
+            <Select aria-label="Value" value={c.value} onChange={(e) => put({ value: e.target.value })} disabled={disabled}>
+              <option value="">— select —</option>
+              {choices.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
               ))}
-            </datalist>
-          </>
-        ) : options ? (
-          <Select aria-label="Value" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled}>
-            <option value="">— select —</option>
-            {options.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </Select>
-        ) : (
-          <TextInput aria-label="Value" placeholder="e.g. facebook" value={String(c.value ?? '')} onChange={(e) => onChange({ ...c, value: e.target.value })} disabled={disabled} />
-        )}
+            </Select>
+          ) : (
+            <TextInput
+              aria-label="Value"
+              type={def.kind === 'date' ? 'date' : 'text'}
+              inputMode={def.kind === 'number' && !isExtra ? 'decimal' : undefined}
+              placeholder={def.kind === 'number' ? 'e.g. 50000' : 'e.g. Mumbai'}
+              value={c.value}
+              onChange={(e) => put({ value: e.target.value })}
+              disabled={disabled}
+            />
+          ))}
       </div>
-      {field === 'attendance' && <Hint>Attendance is filled in once webinar tracking is connected.</Hint>}
+      {c.field === 'meeting' && <Hint>Any meeting of the lead that isn’t cancelled (Meetings, Paid Podcast).</Hint>}
+      {c.field === 'payment' && <Hint>A payment received on any of the lead’s bookings, or a purchase logged by a webhook.</Hint>}
+      {isExtra && <Hint>Text is compared without case; with &gt; / &lt; the value must be a number.</Hint>}
     </>
   )
 }
