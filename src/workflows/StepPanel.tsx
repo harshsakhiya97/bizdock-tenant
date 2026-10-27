@@ -4,7 +4,8 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
-import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, problem, rowMinutes, rowsOf } from './steps'
+import { ALL_TRIGGERS, ATTENDANCE, CONDITION_FIELDS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
+import { SHORT_BASE } from './api'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
@@ -63,14 +64,15 @@ export function StepPanel({
             ctx={ctx}
             onChange={onChange}
             disabled={ro}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
           />
         )}
+        {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
             set={set}
             onChange={onChange}
             disabled={ro}
@@ -382,6 +384,73 @@ function BulkFields({
         </label>
         {!!d.stop_on && <CondEditor id="cb-bulk-stop" c={stop} ctx={ctx} disabled={disabled} onChange={(c) => onChange({ ...d, stop: c })} />}
         {!!d.stop_on && <Hint>Checked before every message; once it matches, the rest aren’t sent and the workflow ends for that lead.</Hint>}
+      </div>
+    </>
+  )
+}
+
+/** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
+function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  const url = String(d.url ?? '')
+  const name = linkVarOf(d)
+  const fields = [
+    ['full_name', 'Full name'] as const,
+    ...VARIABLES.filter(([k]) => k !== 'name').map(([k, l]) => [k, l] as const),
+    ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k)).map((k) => [k, k] as const),
+  ]
+  function insert(k: string) {
+    const el = ref.current
+    const tag = `{${k}}`
+    const a = el?.selectionStart ?? url.length
+    const b = el?.selectionEnd ?? url.length
+    set('url', url.slice(0, a) + tag + url.slice(b))
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(a + tag.length, a + tag.length)
+    })
+  }
+  // what a lead would get (a sample code: every lead gets a new one)
+  const sample = `${SHORT_BASE}/T7P46LXK`
+  return (
+    <>
+      <div>
+        <Label htmlFor="cb-gl-url" required>
+          Your URL
+        </Label>
+        <textarea
+          ref={ref}
+          id="cb-gl-url"
+          className="input"
+          rows={3}
+          placeholder="https://vsl.viralsakhiya.com/fdf-vsl?fname={full_name}&phone={phone}&email={email}"
+          value={url}
+          onChange={(e) => set('url', e.target.value)}
+          disabled={disabled}
+        />
+        {!disabled && (
+          <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
+            <option value="">Insert a lead field…</option>
+            {fields.map(([k, l]) => (
+              <option key={k} value={k}>
+                {l} {`{${k}}`}
+              </option>
+            ))}
+          </select>
+        )}
+        <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
+      </div>
+      <div className="gl-preview">
+        <span className="field-label">Each lead gets a link like</span>
+        <code>{sample}</code>
+        <small className="muted">A new code for every lead; it opens your URL with their details filled in. Clicks are counted.</small>
+      </div>
+      <div>
+        <Label htmlFor="cb-gl-var">Use it in later steps as</Label>
+        <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
+        <Hint>
+          <code className="code-chip">{`{{${name}}}`}</code> is the whole link; <code className="code-chip">{`{{${name}_code}}`}</code> is the code only (for a template whose button already has your domain).
+        </Hint>
       </div>
     </>
   )

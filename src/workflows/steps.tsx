@@ -1,10 +1,11 @@
-import { Clock, GitFork, Hourglass, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
   trigger: { label: 'Trigger', hint: 'What starts this workflow', icon: Zap, color: '#16a34a' },
   whatsapp: { label: 'WhatsApp', hint: 'Send a WhatsApp message', icon: MessageCircle, color: '#22a35a' },
   bulk_whatsapp: { label: 'Bulk WhatsApp', hint: 'Several templates, each a set time after the trigger', icon: MessagesSquare, color: '#15803d' },
+  generate_link: { label: 'Generate link', hint: 'A short link for the lead (their fields filled into your URL) for later messages', icon: Link2, color: '#0369a1' },
   email: { label: 'Email', hint: 'Send an email', icon: Mail, color: '#2563eb' },
   call: { label: 'Call', hint: 'One-way voice call (recorded message)', icon: PhoneCall, color: '#7c3aed' },
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
@@ -28,7 +29,7 @@ export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' &
 export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -56,7 +57,13 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
   const stages = funnel ? funnel.stages : []
   const tags = [...new Set([...(funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags), ...(ref.leadTags ?? [])])].sort((a, b) => a.localeCompare(b))
   const fieldKeys = [...new Set(pages.flatMap((p) => p.fields))].filter((k) => k !== 'city')
-  return { ...ref, funnel, event, pages, stages, tags, fieldKeys }
+  const linkVars = nodes
+    .filter((n) => n.type === 'generate_link')
+    .flatMap((n) => {
+      const k = linkVarOf(n.data)
+      return [k, `${k}_code`]
+    })
+  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars }
 }
 
 export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
@@ -100,6 +107,13 @@ export function conditionText(c: ConditionData, ctx: FlowContext): string {
   return value ? `${field} ${c.op === 'is' ? 'is' : 'is not'} ${value}` : `Pick a ${field.toLowerCase()}`
 }
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
+/** the variable a Generate link step fills ("generated_link" unless named) */
+export const linkVarOf = (d: Record<string, unknown>) =>
+  String(d.var ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'generated_link'
 export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow[])
 const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
 /** minutes after the trigger */
@@ -126,6 +140,8 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       const stop = d.stop_on ? ` · stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}` : ''
       return `${rows.length} message${rows.length === 1 ? '' : 's'} · last ${unitText(Number(last.amount) || 0, last.unit)} after the start${stop}`
     }
+    case 'generate_link':
+      return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
     case 'email':
       return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
     case 'call':
@@ -179,6 +195,11 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       }
       if (d.stop_on && !String((d.stop as ConditionData | undefined)?.value ?? '').trim()) return 'Finish the stop condition'
       return null
+    }
+    case 'generate_link': {
+      const u = String(d.url ?? '').trim()
+      if (!u) return 'Enter the URL'
+      return /^(https?:\/\/|\{)/i.test(u) ? null : 'The URL must start with https://'
     }
     case 'email':
       if (d.to === 'team' && !d.member_id) return 'Pick the team member'
