@@ -204,23 +204,39 @@ export function FieldMapping({
                     </td>
                     <td>
                       {canEdit ? (
-                        <select
-                          className="input input-sm"
-                          aria-label={`${k} saved as`}
-                          value={target(k)}
-                          onChange={(e) => {
-                            setMap((m) => ({ ...m, [k]: e.target.value }))
-                            setDirty(true)
-                          }}
-                        >
-                          {targets.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.value === 'extra' ? `Extra field (${k})` : t.label}
-                            </option>
-                          ))}
-                        </select>
+                        <div className={target(k).startsWith('extra') ? 'fm-extra' : undefined}>
+                          <select
+                            className="input input-sm"
+                            aria-label={`${k} saved as`}
+                            value={target(k).startsWith('extra') ? 'extra' : target(k)}
+                            onChange={(e) => {
+                              setMap((m) => ({ ...m, [k]: e.target.value }))
+                              setDirty(true)
+                            }}
+                          >
+                            {targets.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.value === 'extra' ? 'Extra field, named…' : t.label}
+                              </option>
+                            ))}
+                          </select>
+                          {target(k).startsWith('extra') && (
+                            <input
+                              className="input input-sm"
+                              aria-label={`Extra field name for ${k}`}
+                              placeholder={k}
+                              value={target(k).startsWith('extra:') ? target(k).slice(6) : k}
+                              onChange={(e) => {
+                                const name = e.target.value
+                                // an empty name falls back to the form's field name
+                                setMap((m) => ({ ...m, [k]: `extra:${name}` }))
+                                setDirty(true)
+                              }}
+                            />
+                          )}
+                        </div>
                       ) : (
-                        targetLabel(target(k))
+                        target(k).startsWith('extra:') ? `Extra field: ${target(k).slice(6).trim() || k}` : targetLabel(target(k))
                       )}
                     </td>
                   </tr>

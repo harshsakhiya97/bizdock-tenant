@@ -1004,3 +1004,4 @@ a.db-card:hover { border-color: var(--brand); }
 .wh-action b { font-size: 13.5px; }
 .wh-action small { font-size: 12px; color: var(--text-muted); line-height: 1.35; }
 @media (max-width: 560px) { .wh-actions { grid-template-columns: 1fr; } }
+.fm-extra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
