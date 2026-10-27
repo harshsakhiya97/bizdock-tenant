@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
 import { workflowForWebhook } from '@/workflows/api'
 import { Button } from '@/components/Button'
-import { Label, TextInput } from '@/components/Field'
+import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { addWebhook, deleteWebhook, regenerateWebhookKey, renameWebhook, setWebhookActive, webhookUrl } from './api'
+import { addWebhook, deleteWebhook, regenerateWebhookKey, setWebhookActive, updateWebhook, webhookUrl } from './api'
 import { FieldMapping } from './FieldMapping'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
-import type { FunnelWebhook, SubmissionRow } from './types'
+import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type SubmissionRow, type WebhookAction } from './types'
 import { useCopy } from './useCopy'
 
 type Kind = 'html' | 'js' | 'curl'
@@ -51,20 +51,28 @@ export function WebhooksTab({
   }
   const [naming, setNaming] = useState<{ hook: FunnelWebhook | null } | null>(null)
   const [hookName, setHookName] = useState('')
+  const [hookAction, setHookAction] = useState<WebhookAction>('create_lead')
+  const [hookMatch, setHookMatch] = useState<MatchBy>('phone')
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [snippet, setSnippet] = useState<Record<string, Kind | undefined>>({})
   const [busy, setBusy] = useState(false)
   const { copied, copy } = useCopy()
-  useEffect(() => setHookName(naming?.hook?.name ?? ''), [naming])
+  useEffect(() => {
+    setHookName(naming?.hook?.name ?? '')
+    setHookAction(naming?.hook?.action ?? 'create_lead')
+    setHookMatch(naming?.hook?.match_by ?? 'phone')
+  }, [naming])
 
   // new leads / form posts per webhook
   const stats = useMemo(() => {
-    const m = new Map<string, { leads: number; posts: number }>()
+    const m = new Map<string, { leads: number; posts: number; matched: number; missed: number }>()
     for (const s of submissions) {
       if (!s.webhook_id) continue
-      const c = m.get(s.webhook_id) ?? { leads: 0, posts: 0 }
+      const c = m.get(s.webhook_id) ?? { leads: 0, posts: 0, matched: 0, missed: 0 }
       c.posts++
       if (s.is_new) c.leads++
+      if (s.result === 'no_match') c.missed++
+      else if (s.result) c.matched++
       m.set(s.webhook_id, c)
     }
     return m
@@ -89,7 +97,7 @@ export function WebhooksTab({
     <>
       <div className="row-between" style={{ marginBottom: 14 }}>
         <p className="muted small" style={{ margin: 0 }}>
-          One webhook URL per form (on any page, a popup, an ad form tool…). Send one test from the form to match its fields to lead fields; after that every post adds a lead to the funnel’s first stage with the funnel’s tags and the UTMs. The same phone again updates that lead.
+          One webhook URL per form or tool. Each one does one thing: create a new lead, update a lead’s fields, book a meeting for a lead, or log a purchase. Send one test to match its fields; after that every post does that thing.
         </p>
         {canEdit && (
           <button type="button" className="btn btn-primary" onClick={() => setNaming({ hook: null })}>
@@ -104,7 +112,8 @@ export function WebhooksTab({
         <div className="stack">
           {hooks.map((h) => {
             const url = webhookUrl(h.webhook_key)
-            const st = stats.get(h.id) ?? { leads: 0, posts: 0 }
+            const st = stats.get(h.id) ?? { leads: 0, posts: 0, matched: 0, missed: 0 }
+            const act = WEBHOOK_ACTIONS.find((a) => a.value === h.action) ?? WEBHOOK_ACTIONS[0]
             return (
               <section key={h.id} className={cn('card lp-card', !h.is_active && 'is-off')}>
                 <div className="lp-head">
@@ -112,18 +121,34 @@ export function WebhooksTab({
                     <Webhook size={16} />
                     <b>{h.name}</b>
                     <span className={cn('badge', h.is_active ? 'badge-success' : 'badge-muted')}>{h.is_active ? 'Active' : 'Off'}</span>
+                    <span className="badge badge-info" title={act.hint}>
+                      {act.badge}
+                    </span>
                   </div>
                   <div className="lp-counts">
-                    <span>
-                      <b>{st.leads}</b> new lead{st.leads === 1 ? '' : 's'}
-                    </span>
+                    {h.action === 'create_lead' ? (
+                      <span>
+                        <b>{st.leads}</b> new lead{st.leads === 1 ? '' : 's'}
+                      </span>
+                    ) : (
+                      <>
+                        <span>
+                          <b>{st.matched}</b> matched
+                        </span>
+                        {st.missed > 0 && (
+                          <span className="tone-warning" title="Posts where no lead had this phone / email (logged only)">
+                            <b>{st.missed}</b> no match
+                          </span>
+                        )}
+                      </>
+                    )}
                     <span>
                       <b>{st.posts}</b> form post{st.posts === 1 ? '' : 's'}
                     </span>
                   </div>
                   {canEdit && (
                     <div className="row-actions">
-                      <button type="button" className="btn btn-ghost btn-icon" title="Rename" aria-label={`Rename ${h.name}`} onClick={() => setNaming({ hook: h })}>
+                      <button type="button" className="btn btn-ghost btn-icon" title="Edit" aria-label={`Edit ${h.name}`} onClick={() => setNaming({ hook: h })}>
                         <Pencil size={15} />
                       </button>
                       <button
@@ -200,8 +225,8 @@ export function WebhooksTab({
         <Modal
           open
           onClose={() => setNaming(null)}
-          width={460}
-          title={naming.hook ? 'Rename webhook' : 'New webhook'}
+          width={560}
+          title={naming.hook ? 'Edit webhook' : 'New webhook'}
           footer={
             <>
               <Button variant="outline" onClick={() => setNaming(null)}>
@@ -213,9 +238,10 @@ export function WebhooksTab({
                   onClick={() => {
                     const n = naming
                     setNaming(null)
+                    const w = { name: hookName, action: hookAction, match_by: hookMatch }
                     void run(
-                      () => (n.hook ? renameWebhook(n.hook.id, hookName) : addWebhook(tenant.id, funnelId, hookName)),
-                      n.hook ? 'Webhook renamed.' : `Webhook ${hookName.trim()} added. Copy its URL into that form.`,
+                      () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w)),
+                      n.hook ? 'Webhook saved.' : `Webhook ${hookName.trim()} added. Copy its URL into that form.`,
                     )
                   }}
                 >
@@ -228,7 +254,43 @@ export function WebhooksTab({
           <Label htmlFor="hook-name" required>
             Name
           </Label>
-          <TextInput id="hook-name" autoFocus placeholder="e.g. Hero form, Popup form, Meta lead form" value={hookName} onChange={(e) => setHookName(e.target.value)} />
+          <TextInput id="hook-name" autoFocus placeholder="e.g. Hero form, Booking tool, Razorpay" value={hookName} onChange={(e) => setHookName(e.target.value)} />
+
+          <span className="field-label" style={{ marginTop: 16, display: 'block' }}>
+            What does each post do?
+          </span>
+          <div className="wh-actions">
+            {WEBHOOK_ACTIONS.map((a) => (
+              <label key={a.value} className={cn('wh-action', hookAction === a.value && 'is-on')}>
+                <input type="radio" name="wh-action" checked={hookAction === a.value} onChange={() => setHookAction(a.value)} />
+                <span>
+                  <b>{a.label}</b>
+                  <small>{a.hint}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {hookAction !== 'create_lead' && (
+            <div style={{ marginTop: 14 }}>
+              <Label htmlFor="hook-match" required>
+                Find the lead by
+              </Label>
+              <Select id="hook-match" value={hookMatch} onChange={(e) => setHookMatch(e.target.value as MatchBy)}>
+                {MATCH_BY.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </Select>
+              <Hint>Looked up among this business’s leads. If no lead matches, the post is only logged (shown as “no match”).</Hint>
+            </div>
+          )}
+          {naming.hook && naming.hook.action !== hookAction && (
+            <div className="alert alert-warning small" style={{ marginTop: 12 }}>
+              Changing what the webhook does: check its field mapping after saving.
+            </div>
+          )}
         </Modal>
       )}
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, ChevronRight, FlaskConical, Loader2, Save, X } from 'lucide-react'
 import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
-import { KNOWN_NAMES, LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
+import { KNOWN_NAMES, guessTarget, targetLabel, targetsFor } from './fieldMap'
 import type { FunnelWebhook } from './types'
 
 /**
@@ -68,11 +68,18 @@ export function FieldMapping({
   const keys = useMemo(() => [...new Set([...Object.keys(sample ?? {}), ...Object.keys(map)])], [sample, map])
   const target = (k: string) => map[k] ?? guessTarget(k)
   const chosen = new Set(keys.map(target))
-  const missing = [
-    !chosen.has('name') && !chosen.has('first_name') ? 'Name' : null,
-    !chosen.has('phone') ? 'Phone' : null,
-    !chosen.has('email') ? 'Email' : null,
-  ].filter(Boolean)
+  // what a post must carry for this webhook's action
+  const missing = (
+    page.action === 'create_lead' || !page.action
+      ? [!chosen.has('name') && !chosen.has('first_name') ? 'Name' : null, !chosen.has('phone') ? 'Phone' : null, !chosen.has('email') ? 'Email' : null]
+      : [
+          page.match_by === 'phone' && !chosen.has('phone') ? 'Phone' : null,
+          page.match_by === 'email' && !chosen.has('email') ? 'Email' : null,
+          page.match_by === 'both' && !chosen.has('phone') && !chosen.has('email') ? 'Phone or Email' : null,
+          page.action === 'create_meeting' && !chosen.has('meeting_start') ? 'Meeting date & time' : null,
+        ]
+  ).filter(Boolean)
+  const targets = targetsFor(page.action ?? 'create_lead')
 
   async function start() {
     setOpen(true)
@@ -181,7 +188,7 @@ export function FieldMapping({
                 <tr>
                   <th>Field sent by the form</th>
                   <th>Test value</th>
-                  <th>Saved on the lead as</th>
+                  <th>{page.action === 'create_meeting' ? 'Used as' : page.action === 'purchase' ? 'Used as' : 'Saved on the lead as'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -206,7 +213,7 @@ export function FieldMapping({
                             setDirty(true)
                           }}
                         >
-                          {LEAD_TARGETS.map((t) => (
+                          {targets.map((t) => (
                             <option key={t.value} value={t.value}>
                               {t.value === 'extra' ? `Extra field (${k})` : t.label}
                             </option>
@@ -221,6 +228,13 @@ export function FieldMapping({
               </tbody>
             </table>
           </div>
+          {page.action === 'create_meeting' && (
+            <div className="muted small">
+              The meeting starts at <b>Meeting date &amp; time</b> (a time without a time zone is taken as India time). It ends at <b>Meeting end time</b>, or after{' '}
+              <b>Meeting length</b> minutes, or after 30 minutes if neither is sent.
+            </div>
+          )}
+          {page.action === 'purchase' && <div className="muted small">For now a payment is logged on the lead’s activity (amount, product, payment ID); bookings aren’t changed.</div>}
           {missing.length > 0 && (
             <div className="alert alert-warning small">
               <AlertTriangle size={14} /> Nothing is matched to {missing.join(', ')}. Form posts without {missing.length > 1 ? 'them' : 'it'} are
