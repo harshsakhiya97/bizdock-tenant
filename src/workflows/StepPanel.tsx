@@ -399,12 +399,15 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
     ...VARIABLES.filter(([k]) => k !== 'name').map(([k, l]) => [k, l] as const),
     ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k)).map((k) => [k, k] as const),
   ]
+  // adds "&field={field}" ("?" for the first one) at the cursor, or at the end
   function insert(k: string) {
     const el = ref.current
-    const tag = `{${k}}`
     const a = el?.selectionStart ?? url.length
     const b = el?.selectionEnd ?? url.length
-    set('url', url.slice(0, a) + tag + url.slice(b))
+    const before = url.slice(0, a)
+    const sep = before.includes('?') ? (/[?&]$/.test(before) ? '' : '&') : '?'
+    const tag = `${sep}${k}={${k}}`
+    set('url', before + tag + url.slice(b))
     requestAnimationFrame(() => {
       el?.focus()
       el?.setSelectionRange(a + tag.length, a + tag.length)

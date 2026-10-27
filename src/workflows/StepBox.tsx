@@ -69,14 +69,5 @@ function StepBoxInner({ type, data, selected }: NodeProps<StepNode>) {
 }
 
 export const StepBox = memo(StepBoxInner)
-export const NODE_TYPES = {
-  trigger: StepBox,
-  whatsapp: StepBox,
-  email: StepBox,
-  call: StepBox,
-  wait: StepBox,
-  wait_event: StepBox,
-  condition: StepBox,
-  switch: StepBox,
-  goto: StepBox,
-}
+/** every kind of step is drawn as a StepBox */
+export const NODE_TYPES = Object.fromEntries(Object.keys(STEP_META).map((k) => [k, StepBox]))
