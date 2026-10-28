@@ -333,6 +333,16 @@ function ConnectDrawer({
             <div className="muted small">{provider.description}</div>
           </div>
         </div>
+        {provider.guide && (
+          <div className="int-guide">
+            <b>How to get these keys</b>
+            <ol>
+              {provider.guide.map((g, i) => (
+                <li key={i}>{g}</li>
+              ))}
+            </ol>
+          </div>
+        )}
         {provider.multiple && (
           <div>
             <Label htmlFor="int-label" required>

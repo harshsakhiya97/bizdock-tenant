@@ -23,6 +23,8 @@ export type Provider = {
   multiple?: boolean
   /** placeholder for the account name */
   accountHint?: string
+  /** steps to get the keys, shown in the connect drawer */
+  guide?: string[]
 }
 
 export const PROVIDERS: Provider[] = [
@@ -72,10 +74,18 @@ export const PROVIDERS: Provider[] = [
     usedFor: 'Meetings, webinars, attendance and comments',
     multiple: true,
     accountHint: 'e.g. Pride main, TVS webinars',
+    guide: [
+      'Sign in at marketplace.zoom.us with the Zoom account’s owner or admin.',
+      'Top right: Develop → Build App → pick “Server-to-Server OAuth App” → Create, and name it (e.g. BizDock).',
+      'The App credentials page shows the Account ID, Client ID and Client secret — copy them into the boxes below.',
+      'Information: fill the company name and the developer’s name and email.',
+      'Scopes → Add scopes: Meeting (read & write), Webinar (read & write), Report (read), Recording (read), User (read).',
+      'Activation → Activate your app. Then save here and press Test.',
+    ],
     fields: [
-      { key: 'account_id', label: 'Account ID', required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
-      { key: 'client_id', label: 'Client ID', required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
-      { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
+      { key: 'account_id', label: 'Account ID', required: true, hint: 'The first value on your app’s App credentials page (step 3 above).' },
+      { key: 'client_id', label: 'Client ID', required: true, hint: 'Just below the Account ID on the App credentials page.' },
+      { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Below the Client ID — click the copy icon next to it (or the eye to show it).' },
       { key: 'host_email', label: 'Host (Zoom user email)', placeholder: 'host@yourcompany.com', hint: 'Meetings are created under this Zoom user. Empty = the app’s owner.' },
       { key: 'cloud_record', label: 'Cloud-record meetings', options: ['Yes', 'No'], hint: 'Needed to fetch the in-meeting chat afterwards.' },
       { key: 'is_default', label: 'Default account', options: ['No', 'Yes'], hint: 'Picked first for new meetings and workflow steps.' },

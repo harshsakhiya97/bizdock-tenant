@@ -1027,3 +1027,5 @@ a.db-card:hover { border-color: var(--brand); }
 .zp-who { font-size: 13px; }
 .zp-body { font-size: 13px; white-space: pre-wrap; margin-top: 2px; }
 .zp-answer { font-size: 12px; color: var(--text-muted); margin-top: 4px; white-space: pre-wrap; }
+.int-guide { padding: 12px 14px; border-radius: var(--radius); background: var(--surface-muted); font-size: 13px; }
+.int-guide ol { margin: 6px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; color: var(--text-muted); }
