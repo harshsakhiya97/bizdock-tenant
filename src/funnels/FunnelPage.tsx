@@ -247,6 +247,7 @@ export function FunnelPage() {
               funnelId={funnel.id}
               hooks={hooks}
               submissions={subs}
+              members={members}
               canEdit={can('funnels', 'edit')}
               onChanged={(msg) => {
                 setNotice({ ok: msg })
