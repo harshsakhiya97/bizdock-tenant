@@ -136,6 +136,7 @@ export function LeadPage() {
   // same fields as Add / Edit lead
   const info: [string, React.ReactNode][] = [
     ['Phone', lead.phone],
+    ['Email', lead.email || '—'],
     ['City', lead.city || '—'],
     ['Source', sourceName ?? '—'],
     ['Purpose', lead.purpose || '—'],
