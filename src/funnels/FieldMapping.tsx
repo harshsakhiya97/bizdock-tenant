@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AlertTriangle, CheckCircle2, ChevronRight, FlaskConical, Loader2, Save, X } from 'lucide-react'
 import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './api'
 import { KNOWN_NAMES, guessTarget, targetLabel, targetsFor } from './fieldMap'
+import { PickPerField, pickTargets } from './PickPerField'
 import type { FunnelWebhook } from './types'
 
 /**
@@ -53,7 +54,7 @@ export function FieldMapping({
           // suggest a target for every new field, keep the ones already chosen
           setMap((m) => {
             const next = { ...m }
-            for (const k of Object.keys(p.sample ?? {})) if (!next[k]) next[k] = guessTarget(k)
+            for (const k of Object.keys(p.sample ?? {})) if (!next[k] && !k.includes('.')) next[k] = guessTarget(k)
             return next
           })
           setDirty(true)
@@ -66,7 +67,9 @@ export function FieldMapping({
   }, [until, page.id])
 
   const keys = useMemo(() => [...new Set([...Object.keys(sample ?? {}), ...Object.keys(map)])], [sample, map])
-  const target = (k: string) => map[k] ?? guessTarget(k)
+  // fields inside an object (a.b.c) are used only when picked
+  const target = (k: string) => map[k] ?? (k.includes('.') ? 'ignore' : guessTarget(k))
+  const nested = keys.some((k) => k.includes('.'))
   const chosen = new Set(keys.map(target))
   // what a post must carry for this webhook's action
   const missing = (
@@ -107,7 +110,12 @@ export function FieldMapping({
     try {
       // only keep what differs from the automatic guess, plus every field of the sample
       const out: Record<string, string> = {}
-      for (const k of keys) out[k] = target(k)
+      for (const k of keys) {
+        const t = target(k)
+        // a request with objects inside: keep only what's picked
+        if (k.includes('.') && t === 'ignore') continue
+        out[k] = t
+      }
       await saveFieldMap(page.id, out)
       setMap(out)
       setDirty(false)
@@ -182,6 +190,19 @@ export function FieldMapping({
               {new Date(sampleAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}
             </div>
           )}
+          {nested ? (
+            <PickPerField
+              keys={keys}
+              sample={sample}
+              map={Object.fromEntries(keys.map((k) => [k, target(k)]).filter(([, t]) => t !== 'ignore'))}
+              targets={pickTargets(targets)}
+              canEdit={canEdit}
+              onChange={(next) => {
+                setMap(Object.fromEntries(keys.map((k) => [k, next[k] ?? 'ignore'])))
+                setDirty(true)
+              }}
+            />
+          ) : (
           <div className="table-wrap">
             <table className="table table-compact">
               <thead>
@@ -244,6 +265,7 @@ export function FieldMapping({
               </tbody>
             </table>
           </div>
+          )}
           {page.action === 'create_meeting' && (
             <div className="muted small">
               The meeting starts at <b>Meeting date &amp; time</b> (a time without a time zone is taken as India time). It ends at <b>Meeting end time</b>, or after{' '}

@@ -1007,3 +1007,10 @@ a.db-card:hover { border-color: var(--brand); }
 .fm-extra { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .gl-preview { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--surface-muted, #f8fafc); border: 1px dashed var(--line); }
 .gl-preview code { font-size: 13px; color: var(--brand); word-break: break-all; }
+
+/* webhook mapping: pick per lead field (requests with objects inside) */
+.ppf-table td { vertical-align: middle; }
+.ppf-table td:first-child { width: 190px; font-weight: 500; }
+.ppf-table td:nth-child(2) { width: 30%; }
+.ppf-table td:nth-child(3) { width: 30%; }
+.ppf-table select, .ppf-table input { width: 100%; min-width: 0; }
