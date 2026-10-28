@@ -1,4 +1,4 @@
-import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
@@ -7,6 +7,7 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   whatsapp: { label: 'WhatsApp', hint: 'Send a WhatsApp message', icon: MessageCircle, color: '#22a35a' },
   bulk_whatsapp: { label: 'Bulk WhatsApp', hint: 'Several templates, each a set time after the trigger', icon: MessagesSquare, color: '#15803d' },
   generate_link: { label: 'Generate link', hint: 'A short link for the lead (their fields filled into your URL) for later messages', icon: Link2, color: '#0369a1' },
+  zoom_meeting: { label: 'Create Zoom meeting', hint: 'A Zoom meeting for the lead; its link goes in later messages as {{zoom_link}}', icon: Video, color: '#0b5cff' },
   email: { label: 'Email', hint: 'Send an email', icon: Mail, color: '#2563eb' },
   call: { label: 'Call', hint: 'One-way voice call (recorded message)', icon: PhoneCall, color: '#7c3aed' },
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
@@ -30,7 +31,7 @@ export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' &
 export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -50,12 +51,15 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
   const stages = funnel ? funnel.stages : []
   const tags = [...new Set([...(funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags), ...(ref.leadTags ?? [])])].sort((a, b) => a.localeCompare(b))
   const fieldKeys = [...new Set(pages.flatMap((p) => p.fields))].filter((k) => k !== 'city')
-  const linkVars = nodes
-    .filter((n) => n.type === 'generate_link')
-    .flatMap((n) => {
-      const k = linkVarOf(n.data)
-      return [k, `${k}_code`]
-    })
+  const linkVars = [
+    ...nodes
+      .filter((n) => n.type === 'generate_link')
+      .flatMap((n) => {
+        const k = linkVarOf(n.data)
+        return [k, `${k}_code`]
+      }),
+    ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
+  ]
   return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars }
 }
 
@@ -95,6 +99,14 @@ export const linkVarOf = (d: Record<string, unknown>) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'generated_link'
+/** what a Create Zoom meeting step gives later steps */
+export const ZOOM_VARS = ['zoom_link', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
+export function zoomWhen(d: Record<string, unknown>) {
+  const t = String(d.time || '11:00')
+  if (d.when === 'fixed') return d.date ? `${day(String(d.date))}, ${t}` : 'Pick the date'
+  const n = Number(d.days) || 0
+  return n === 0 ? `Same day, ${t}` : `${n} day${n === 1 ? '' : 's'} later, ${t}`
+}
 export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow[])
 const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
 /** minutes after the trigger */
@@ -123,6 +135,10 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     }
     case 'generate_link':
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
+    case 'zoom_meeting': {
+      const acc = ctx.zoomAccounts?.find((z) => z.id === d.account)?.name ?? 'default Zoom'
+      return `${zoomWhen(d)} · ${Number(d.duration) || 60} min · ${acc}`
+    }
     case 'email':
       return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
     case 'call':
@@ -183,6 +199,11 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (!u) return 'Enter the URL'
       return /^(https?:\/\/|\{)/i.test(u) ? null : 'The URL must start with https://'
     }
+    case 'zoom_meeting':
+      if (!ctx.zoomAccounts?.length) return 'Connect a Zoom account (System Connections)'
+      if (d.when === 'fixed' && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''))) return 'Pick the date'
+      if (!/^\d{2}:\d{2}$/.test(String(d.time ?? ''))) return 'Set the time'
+      return null
     case 'email':
       if (d.to === 'team' && !d.member_id) return 'Pick the team member'
       return !String(d.subject ?? '').trim() || !String(d.body ?? '').trim() ? 'Add the subject and the message' : null

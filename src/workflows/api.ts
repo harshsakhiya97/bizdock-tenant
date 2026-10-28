@@ -1,3 +1,4 @@
+import { listZoomOptions } from '@/zoom/api'
 import { db } from '@/lib/supabase'
 import { listEvents, listEventTypes } from '@/calendar/api'
 import { listFunnels } from '@/funnels/api'
@@ -94,7 +95,7 @@ export async function archiveWorkflow(id: string) {
 
 /** funnels, webhook forms and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
-  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources] = await Promise.all([
+  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts] = await Promise.all([
     listFunnels(tenantId),
     db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
@@ -106,6 +107,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     // extra fields saved on leads (form / sheet columns kept as "extra")
     db().from('leads').select('extra').eq('tenant_id', tenantId).not('extra', 'is', null).limit(5000),
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
+    listZoomOptions(tenantId).catch(() => []),
   ])
   const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
   return {
@@ -131,6 +133,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
       .map((e) => ({ id: e.id, title: e.title, date: e.event_date, time: e.start_time, endTime: e.end_time })),
     members: members.map((m) => ({ id: m.id, name: m.name })),
     sources: (sources.data ?? []) as { id: string; name: string }[],
+    zoomAccounts: zoomAccounts.map((z) => ({ id: z.id, name: z.name, is_default: z.is_default })),
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
     extraKeys: [...new Set(((leadExtras.data ?? []) as { extra: Record<string, unknown> | null }[]).flatMap((l) => Object.keys(l.extra ?? {})))],
     leadTags: [...new Set(((leadTags.data ?? []) as { tags: string[] }[]).flatMap((l) => l.tags ?? []))].sort((a, b) => a.localeCompare(b)),

@@ -21,6 +21,8 @@ export type Provider = {
   fields: ProviderField[]
   /** several accounts can be connected (each with its own name) */
   multiple?: boolean
+  /** placeholder for the account name */
+  accountHint?: string
 }
 
 export const PROVIDERS: Provider[] = [
@@ -66,12 +68,17 @@ export const PROVIDERS: Provider[] = [
     name: 'Zoom',
     icon: Video,
     color: '#0b5cff',
-    description: 'Create Zoom webinars and meetings from the calendar and pull attendance.',
-    usedFor: 'Webinars, meetings, attendance for webinar funnels',
+    description: 'Create Zoom meetings and webinars from meetings, the calendar and workflows, and pull attendance, Q&A and chat.',
+    usedFor: 'Meetings, webinars, attendance and comments',
+    multiple: true,
+    accountHint: 'e.g. Pride main, TVS webinars',
     fields: [
       { key: 'account_id', label: 'Account ID', required: true },
       { key: 'client_id', label: 'Client ID', required: true },
-      { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Zoom Marketplace → Server-to-Server OAuth app' },
+      { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
+      { key: 'host_email', label: 'Host (Zoom user email)', placeholder: 'host@yourcompany.com', hint: 'Meetings are created under this Zoom user. Empty = the app’s owner.' },
+      { key: 'cloud_record', label: 'Cloud-record meetings', options: ['Yes', 'No'], hint: 'Needed to fetch the in-meeting chat afterwards.' },
+      { key: 'is_default', label: 'Default account', options: ['No', 'Yes'], hint: 'Picked first for new meetings and workflow steps.' },
     ],
   },
   {

@@ -10,6 +10,7 @@ import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { addWebhook, deleteWebhook, regenerateWebhookKey, setWebhookActive, updateWebhook, webhookUrl } from './api'
+import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { FieldMapping } from './FieldMapping'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
 import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type MeetMode, type SubmissionRow, type WebhookAction, type WebhookInput } from './types'
@@ -59,6 +60,11 @@ export function WebhooksTab({
   const [meetMode, setMeetMode] = useState<MeetMode>('owner')
   const [meetMembers, setMeetMembers] = useState<string[]>([])
   const [formError, setFormError] = useState<string | null>(null)
+  const [hookZoom, setHookZoom] = useState('')
+  const [zooms, setZooms] = useState<ZoomOption[]>([])
+  useEffect(() => {
+    void listZoomOptions(tenant.id).then(setZooms, () => setZooms([]))
+  }, [tenant.id])
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [snippet, setSnippet] = useState<Record<string, Kind | undefined>>({})
   const [busy, setBusy] = useState(false)
@@ -69,6 +75,7 @@ export function WebhooksTab({
     setHookMatch(naming?.hook?.match_by ?? 'phone')
     setMeetMode(naming?.hook?.meet_mode ?? 'owner')
     setMeetMembers(naming?.hook?.meet_members ?? [])
+    setHookZoom(naming?.hook?.zoom_account_id ?? '')
     setFormError(null)
   }, [naming])
   const toggleMeet = (id: string, on: boolean) => setMeetMembers((p) => (on ? [...p, id] : p.filter((x) => x !== id)))
@@ -256,6 +263,7 @@ export function WebhooksTab({
                       match_by: hookMatch,
                       meet_mode: meetMode,
                       meet_members: meetMode === 'owner' ? [] : meetMode === 'single' ? meetMembers.slice(0, 1) : meetMembers,
+                      zoom_account_id: hookAction === 'create_meeting' ? hookZoom || null : null,
                     }
                     void run(
                       () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w)),
@@ -342,6 +350,20 @@ export function WebhooksTab({
                   <Hint>Each new meeting goes to the next ticked person, in this order. Inactive people are skipped.</Hint>
                 </div>
               )}
+            </div>
+          )}
+          {hookAction === 'create_meeting' && zooms.length > 0 && (
+            <div style={{ marginTop: 14 }}>
+              <Label htmlFor="hook-zoom">Zoom</Label>
+              <Select id="hook-zoom" value={hookZoom} onChange={(e) => setHookZoom(e.target.value)}>
+                <option value="">No Zoom (use the link the form sends, if any)</option>
+                {zooms.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    Create a Zoom meeting on {z.name}
+                  </option>
+                ))}
+              </Select>
+              <Hint>With a Zoom account, each booked meeting gets its own Zoom meeting; attendance and chat come in after it ends.</Hint>
             </div>
           )}
           {formError && (

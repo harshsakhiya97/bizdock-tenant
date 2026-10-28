@@ -69,6 +69,15 @@ export function StepPanel({
           />
         )}
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
+        {kind === 'zoom_meeting' && (
+          <>
+            <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
+            <MessageField id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
+            <Hint>
+              Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The link is also noted on the lead.
+            </Hint>
+          </>
+        )}
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
         {kind === 'whatsapp' && (
           <WhatsAppFields
@@ -391,6 +400,47 @@ function BulkFields({
 }
 
 /** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
+function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const zooms = ctx.zoomAccounts ?? []
+  return (
+    <>
+      <div>
+        <Label htmlFor="cb-zm-acc">Zoom account</Label>
+        <Select id="cb-zm-acc" value={String(d.account ?? '')} onChange={(e) => set('account', e.target.value)} disabled={disabled}>
+          <option value="">Default account{zooms.find((z) => z.is_default) ? ` (${zooms.find((z) => z.is_default)!.name})` : ''}</option>
+          {zooms.map((z) => (
+            <option key={z.id} value={z.id}>
+              {z.name}
+            </option>
+          ))}
+        </Select>
+        {!zooms.length && <Hint>No Zoom account yet: add one in System Connections.</Hint>}
+      </div>
+      <div>
+        <span className="field-label">When</span>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          <Select aria-label="When" value={String(d.when ?? 'in')} onChange={(e) => set('when', e.target.value)} disabled={disabled} style={{ width: 'auto' }}>
+            <option value="in">Days after this step</option>
+            <option value="fixed">On a date</option>
+          </Select>
+          {d.when === 'fixed' ? (
+            <TextInput aria-label="Date" type="date" value={String(d.date ?? '')} onChange={(e) => set('date', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+          ) : (
+            <TextInput aria-label="Days" type="number" min={0} value={String(d.days ?? 1)} onChange={(e) => set('days', Math.max(0, Number(e.target.value) || 0))} disabled={disabled} style={{ width: 80 }} />
+          )}
+          <span className="muted small">at</span>
+          <TextInput aria-label="Time" type="time" step={900} value={String(d.time ?? '11:00')} onChange={(e) => set('time', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+        </div>
+        <Hint>India time. “0 days” = the same day.</Hint>
+      </div>
+      <div>
+        <Label htmlFor="cb-zm-dur">Length (minutes)</Label>
+        <TextInput id="cb-zm-dur" type="number" min={15} step={15} value={String(d.duration ?? 60)} onChange={(e) => set('duration', Math.max(15, Number(e.target.value) || 60))} disabled={disabled} />
+      </div>
+    </>
+  )
+}
+
 function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const url = String(d.url ?? '')

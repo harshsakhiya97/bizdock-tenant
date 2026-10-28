@@ -19,6 +19,13 @@ export type EventRow = {
   location: string | null
   meeting_link: string | null
   zoom_webinar_id: string | null
+  /** Zoom: the account it is created on (meeting or webinar), and what Zoom gave back */
+  zoom_account_id: string | null
+  zoom_kind: 'meeting' | 'webinar'
+  zoom_start_url: string | null
+  zoom_password: string | null
+  zoom_error: string | null
+  zoom_pulled_at: string | null
   description: string | null
   series_id: string | null
   is_cancelled: boolean
@@ -38,6 +45,9 @@ export type EventInput = {
   location: string
   meeting_link: string
   zoom_webinar_id: string
+  /** '' = no Zoom (type the link / ID) */
+  zoom_account_id: string
+  zoom_kind: 'meeting' | 'webinar'
   description: string
   members: string[]
   recurring: boolean
@@ -104,8 +114,10 @@ function toRow(tenantId: string, input: EventInput) {
     end_time: input.end_time || null,
     webinar_type_id: input.webinar_type_id || null,
     location: clean(input.location),
-    meeting_link: clean(input.meeting_link),
-    zoom_webinar_id: clean(input.zoom_webinar_id),
+    // on Zoom: the link and the ID come from Zoom (each event of a series has its own)
+    ...(input.zoom_account_id && input.start_time
+      ? { zoom_account_id: input.zoom_account_id, zoom_kind: input.zoom_kind }
+      : { zoom_account_id: null, meeting_link: clean(input.meeting_link), zoom_webinar_id: clean(input.zoom_webinar_id) }),
     description: clean(input.description),
   }
 }
