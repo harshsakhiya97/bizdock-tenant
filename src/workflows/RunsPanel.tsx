@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { Check, Circle, Clock, Minus, RefreshCw, X } from 'lucide-react'
+import { Check, Circle, Clock, Minus, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { STEP_META, unitText } from './steps'
@@ -88,6 +89,10 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
   const [runs, setRuns] = useState<Run[] | null>(null)
   const [open, setOpen] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [rerunning, setRerunning] = useState<string | null>(null)
+  const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
+  const { can } = useAuth()
+  const canRun = can('workflows', 'edit')
   const path = stepPath(workflow)
 
   const load = useCallback(() => {
@@ -112,6 +117,18 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     return () => clearTimeout(t)
   }, [busy, runs, load])
 
+  // run the workflow again from its first step, for the same lead (or the same test details)
+  async function rerun(r: Run) {
+    setRerunning(r.id)
+    setMsg({})
+    const { error } = await db().rpc('workflow_rerun', { p_run: r.id })
+    setRerunning(null)
+    if (error) return setMsg({ error: error.message })
+    const who = r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : (r.test_data?.name ?? 'the test')
+    setMsg({ ok: `Started again for ${who}.${workflow.is_active || r.is_test ? '' : ' The workflow is off, so it stops at once — turn it on first.'}` })
+    load()
+  }
+
   const counts = (runs ?? []).reduce<Record<string, number>>((m, r) => ({ ...m, [r.status]: (m[r.status] ?? 0) + 1 }), {})
 
   return (
@@ -125,6 +142,8 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
           <RefreshCw size={14} className={loading ? 'spin' : undefined} /> Refresh
         </button>
       </div>
+      {msg.error && <div className="alert alert-error small">{msg.error}</div>}
+      {msg.ok && <div className="alert alert-success small">{msg.ok}</div>}
       <div className="run-legend small muted">
         {(['done', 'current', 'pending', 'failed', 'skipped'] as StepState[]).map((s) => {
           const Icon = STATE_ICON[s]
@@ -146,6 +165,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                 <th>Lead</th>
                 <th>Status</th>
                 <th>Steps</th>
+                {canRun && <th />}
               </tr>
             </thead>
             <tbody>
@@ -199,10 +219,23 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                         </div>
                         {r.error && <div className="small text-danger" style={{ marginTop: 4 }}>{r.error}</div>}
                       </td>
+                      {canRun && (
+                        <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            title="Run the workflow again from the start for this lead"
+                            disabled={rerunning === r.id || (!r.lead_id && !r.is_test)}
+                            onClick={() => void rerun(r)}
+                          >
+                            <RotateCcw size={13} className={rerunning === r.id ? 'spin' : undefined} /> Re-run
+                          </button>
+                        </td>
+                      )}
                     </tr>
                     {open === r.id && (
                       <tr className="run-detail">
-                        <td colSpan={4}>
+                        <td colSpan={canRun ? 5 : 4}>
                           {r.log.length ? (
                             <ol className="run-log">
                               {r.log.map((l, i) => (
