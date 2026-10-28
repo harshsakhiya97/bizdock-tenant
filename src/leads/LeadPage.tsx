@@ -270,7 +270,7 @@ export function LeadPage() {
           <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
         )}
         {tab === 'meetings' && isPodcast && (
-          <MeetingsTab meetings={meetings} canAdd={can('meetings', 'add')} onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
+          <MeetingsTab meetings={meetings} members={members} canAdd={can('meetings', 'add')} onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'bookings' && <BookingsTab bookings={bookings} podcast={isPodcast} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
       </section>

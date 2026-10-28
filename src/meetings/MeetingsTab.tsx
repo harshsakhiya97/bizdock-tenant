@@ -3,7 +3,19 @@ import { clock, fmtDay } from '@/components/SlotCalendar'
 import { MEETING_STATUS, MODE_LABEL, type MeetingRow } from './types'
 
 /** Meetings of one lead (Paid Podcast guest). */
-export function MeetingsTab({ meetings, canAdd, onAdd, onOpen }: { meetings: MeetingRow[] | null; canAdd: boolean; onAdd: () => void; onOpen: (m: MeetingRow) => void }) {
+export function MeetingsTab({
+  meetings,
+  members = [],
+  canAdd,
+  onAdd,
+  onOpen,
+}: {
+  meetings: MeetingRow[] | null
+  members?: { id: string; name: string }[]
+  canAdd: boolean
+  onAdd: () => void
+  onOpen: (m: MeetingRow) => void
+}) {
   const sorted = [...(meetings ?? [])].sort((a, b) => (b.meeting_date + b.start_time).localeCompare(a.meeting_date + a.start_time))
   const live = sorted.filter((m) => m.status !== 'cancelled')
   return (
@@ -42,6 +54,7 @@ export function MeetingsTab({ meetings, canAdd, onAdd, onOpen }: { meetings: Mee
                   <tr key={m.id} className="is-clickable" onClick={() => onOpen(m)}>
                     <td className="nowrap">
                       {fmtDay(m.meeting_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {clock(m.start_time)} – {clock(m.end_time)}
+                      {m.assigned_to && <div className="muted small">With {members.find((x) => x.id === m.assigned_to)?.name ?? 'a team member'}</div>}
                       {moved > 0 && <div className="muted small">Rescheduled {moved}×</div>}
                     </td>
                     <td>

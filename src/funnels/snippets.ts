@@ -17,7 +17,7 @@ function fieldsOf(h: Hook): [string, string][] {
     case 'update_lead':
       return [...who, ['company_name', 'Test Co'], ['note', 'Updated from the form']]
     case 'create_meeting':
-      return [...who, ['meeting_start', '2026-11-02 16:00'], ['meeting_duration', '30'], ['meeting_link', 'https://meet.google.com/abc-defg-hij']]
+      return [...who, ['meeting_start', '2026-11-02 16:00'], ['meeting_end', '2026-11-02 16:30'], ['meeting_team_member', 'Zubair Khan']]
     case 'purchase':
       return [...who, ['amount', '25000'], ['product', 'Podcast package'], ['payment_id', 'pay_TEST123']]
     default:
@@ -26,7 +26,7 @@ function fieldsOf(h: Hook): [string, string][] {
 }
 
 /** what the field is used as (its mapping, or the usual name) */
-const targetOf = (h: Hook, k: string) => (h.field_map ?? {})[k] ?? guessTarget(k)
+const targetOf = (h: Hook, k: string) => (h.field_map ?? {})[k] ?? guessTarget(k, h.action)
 
 /** the reply the webhook sends back */
 function replyOf(h: Hook) {

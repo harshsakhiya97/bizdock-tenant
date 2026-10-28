@@ -57,6 +57,7 @@ export function MeetingDrawer({
     location: meeting?.location ?? '',
     status: meeting?.status ?? 'scheduled',
     outcome_note: meeting?.outcome_note ?? '',
+    assigned_to: meeting?.assigned_to ?? '',
   }))
   const set = <K extends keyof MeetingInput>(k: K, v: MeetingInput[K]) => setF((p) => ({ ...p, [k]: v }))
   const [reason, setReason] = useState('')
@@ -185,6 +186,17 @@ export function MeetingDrawer({
                 End time
               </Label>
               <TextInput id="mt-end" type="time" step={900} value={f.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit} />
+            </div>
+            <div className="span-2">
+              <Label htmlFor="mt-host">Team member</Label>
+              <Select id="mt-host" value={f.assigned_to} onChange={(e) => set('assigned_to', e.target.value)} disabled={!canEdit}>
+                <option value="">—</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </Select>
             </div>
             {moved && (
               <div className="span-2">

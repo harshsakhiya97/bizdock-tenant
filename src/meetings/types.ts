@@ -19,6 +19,8 @@ export type MeetingRow = {
   status: MeetingStatus
   outcome_note: string | null
   reschedules: Reschedule[]
+  /** the team member who takes it */
+  assigned_to: string | null
   created_by: string | null
   created_at: string
   updated_at: string
