@@ -16,7 +16,15 @@ import { deleteMeeting, saveMeeting, type MeetingInput } from './api'
 import { MEETING_STATUS, MODE_LABEL, type MeetingMode, type MeetingRow, type MeetingStatus } from './types'
 
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : '')
-const today = () => new Date().toISOString().slice(0, 10)
+/** today / now on this device (local time) */
+const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const nowHm = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
 
 /** Schedule / edit a meeting with a guest. Changing the date or time reschedules it (the old slot stays in its history). */
 export function MeetingDrawer({
@@ -93,6 +101,9 @@ export function MeetingDrawer({
     if (!f.lead_id || !f.business_id) return setError('Pick the guest (lead).')
     if (!f.meeting_date) return setError('Pick the date.')
     if (!f.start_time || !f.end_time || minutesOf(f.end_time) <= minutesOf(f.start_time)) return setError('End time must be after the start time.')
+    // a new meeting, or a new date / time, can't be in the past
+    if ((!meeting || moved) && (f.meeting_date < today() || (f.meeting_date === today() && f.start_time < nowHm())))
+      return setError('Pick a date and time that hasn’t passed yet.')
     setBusy(true)
     setError(null)
     try {
@@ -185,13 +196,13 @@ export function MeetingDrawer({
               <Label htmlFor="mt-date" required>
                 Date
               </Label>
-              <TextInput id="mt-date" type="date" value={f.meeting_date} onChange={(e) => set('meeting_date', e.target.value)} disabled={!canEdit} />
+              <TextInput id="mt-date" type="date" min={today()} value={f.meeting_date} onChange={(e) => set('meeting_date', e.target.value)} disabled={!canEdit} />
             </div>
             <div>
               <Label htmlFor="mt-start" required>
                 Start time
               </Label>
-              <TextInput id="mt-start" type="time" step={900} value={f.start_time} onChange={(e) => set('start_time', e.target.value)} disabled={!canEdit} />
+              <TextInput id="mt-start" type="time" step={900} min={f.meeting_date === today() ? nowHm() : undefined} value={f.start_time} onChange={(e) => set('start_time', e.target.value)} disabled={!canEdit} />
             </div>
             <div>
               <Label htmlFor="mt-end" required>
