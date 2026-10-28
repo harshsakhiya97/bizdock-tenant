@@ -48,44 +48,54 @@ export function PickPerField({
     const leaves = keys.filter((k) => parentOf(k) === parent)
     return (
       <tr key={id}>
-        <td className="nowrap">{label}</td>
         <td>
-          <select
-            className="input input-sm"
-            aria-label={`Object for ${t}`}
-            value={parent}
-            disabled={!canEdit}
-            onChange={(e) => {
-              setPickedParent((p) => ({ ...p, [id]: e.target.value }))
-              if (src) assign(t, null)
-            }}
-          >
-            {parents.map((p) => (
-              <option key={p} value={p}>
-                {pathLabel(p)}
-              </option>
-            ))}
-          </select>
-        </td>
-        <td>
-          <select className="input input-sm" aria-label={`Field for ${t}`} value={src ?? ''} disabled={!canEdit} onChange={(e) => {
-              assign(t, e.target.value || null)
-              if (e.target.value) onPicked?.()
-            }}>
-            <option value="">— not used —</option>
-            {leaves.map((k) => (
-              <option key={k} value={k}>
-                {leafOf(k)} · {clip(sample?.[k])}
-              </option>
-            ))}
-          </select>
+          <div className="ppf-pick">
+            <select
+              className="input input-sm"
+              aria-label={`Object for ${t}`}
+              value={parent}
+              disabled={!canEdit}
+              onChange={(e) => {
+                setPickedParent((p) => ({ ...p, [id]: e.target.value }))
+                if (src) assign(t, null)
+              }}
+            >
+              {parents.map((p) => (
+                <option key={p} value={p}>
+                  {pathLabel(p)}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input input-sm"
+              aria-label={`Field for ${t}`}
+              value={src ?? ''}
+              disabled={!canEdit}
+              onChange={(e) => {
+                assign(t, e.target.value || null)
+                if (e.target.value) onPicked?.()
+              }}
+            >
+              <option value="">— not used —</option>
+              {leaves.map((k) => (
+                <option key={k} value={k}>
+                  {leafOf(k)} · {clip(sample?.[k])}
+                </option>
+              ))}
+            </select>
+          </div>
         </td>
         <td className="muted small">
-          <span className="cell-clip" style={{ maxWidth: 200 }}>
+          <span className="cell-clip" style={{ maxWidth: 240 }}>
             {src ? clip(sample?.[src]) : '—'}
           </span>
         </td>
-        {extra && <td className="nowrap">{extra}</td>}
+        <td>
+          <div className="ppf-target">
+            {label}
+            {extra}
+          </div>
+        </td>
       </tr>
     )
   }
@@ -100,10 +110,9 @@ export function PickPerField({
         <table className="table table-compact ppf-table">
           <thead>
             <tr>
-              <th>Lead field</th>
-              <th>Object</th>
-              <th>Field inside it</th>
+              <th>Field sent by the form</th>
               <th>Test value</th>
+              <th>Saved on the lead as</th>
             </tr>
           </thead>
           <tbody>
@@ -113,7 +122,7 @@ export function PickPerField({
       </div>
 
       <div>
-        <span className="field-label">Extra fields</span>
+        <span className="field-label">Extra fields (saved on the lead under your name)</span>
         <div className="table-wrap">
           <table className="table table-compact ppf-table">
             <tbody>
