@@ -13,6 +13,23 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.7',
+    date: '2026-10-28',
+    title: 'Smarter webhooks and workflows',
+    summary: 'Webhooks that update leads, book meetings and log payments; Generate link and richer conditions in workflows.',
+    new: [
+      'Webhooks: each one does one thing — create a lead, update a lead’s fields, create a meeting for a lead (from a date-time it sends), or log a purchase (Razorpay or any gateway). The lead is found by phone, email or either; a post with no matching lead is logged as “no match”.',
+      'Webhook field mapping: an extra field can be saved under its own name; a list of values (checkboxes) stays one field and can be mapped to Tags (each value a tag). Nested JSON from booking tools and payment gateways can be mapped too.',
+      'Workflows: Generate link step — your URL with the lead’s {fields} becomes a short link on your CRM address (a new code for each lead), used in later messages as {{generated_link}}; clicks are counted.',
+      'Workflow conditions (Switch, Yes / No, Bulk WhatsApp stop): any lead field or extra field with equals, not equals, is empty, is not empty, and > >= < <= for numbers and dates; tags; whether the lead has a meeting; whether they have paid / purchased.',
+      'Workflow runs: a Re-run button starts a run again from the first step for the same lead.',
+    ],
+    improved: [
+      'Webhook How to connect (HTML form, JavaScript, cURL) uses the webhook’s own form fields.',
+      'Lead page: Email in the details.',
+    ],
+  },
+  {
     version: '0.6',
     date: '2026-10-26',
     title: 'Paid Podcast flow',
