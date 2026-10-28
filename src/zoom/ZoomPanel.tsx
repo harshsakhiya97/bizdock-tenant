@@ -9,7 +9,7 @@ const when = (s: string | null) => (s ? new Date(s).toLocaleString('en-IN', { da
 
 /**
  * The Zoom side of a meeting / calendar event: its Zoom meeting (join / start links, or the error with a retry),
- * then — once it has ended — who attended, the Q&A and the chat. Pulled in automatically 30 minutes after
+ * then — once it has ended — who attended, the Q&A and the chat. Pulled in automatically 5 minutes after
  * the end (and again after 4 hours for the recording's chat); "Fetch now" pulls straight away.
  */
 export function ZoomPanel({
@@ -125,7 +125,7 @@ export function ZoomPanel({
       {zoomId && (
         <>
           <div className="muted small">
-            {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance, Q&A and chat come in 30 minutes after it ends (chat again after 4 hours).'}
+            {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance and Q&A come in 5 minutes after it ends (tried again every 5 minutes if Zoom isn’t ready); chat after 4 hours.'}
           </div>
           <Tabs
             tabs={['Attendance', 'Q&A', 'Chat']}
