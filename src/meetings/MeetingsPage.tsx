@@ -72,6 +72,7 @@ export function MeetingsPage() {
             const l = leadById.get(m.lead_id)
             const where = m.mode === 'online' ? MODE_LABEL.online : m.location ? `In person · ${m.location}` : MODE_LABEL.in_person
             const moved = (m.reschedules ?? []).length
+            const host = m.assigned_to ? members.find((x) => x.id === m.assigned_to)?.name : null
             return {
               id: m.id,
               date: m.meeting_date,
@@ -79,7 +80,7 @@ export function MeetingsPage() {
               end: m.end_time,
               title: name(m),
               detail: where,
-              meta: `${clock(m.start_time)} – ${clock(m.end_time)} · ${where} · ${MEETING_STATUS[m.status].label}${moved ? ` · rescheduled ${moved}×` : ''}`,
+              meta: `${clock(m.start_time)} – ${clock(m.end_time)} · ${where} · ${MEETING_STATUS[m.status].label}${host ? ` · with ${host}` : ''}${moved ? ` · rescheduled ${moved}×` : ''}`,
               color: MEETING_STATUS[m.status].color,
               side: l?.phone,
               actions: (
@@ -100,7 +101,7 @@ export function MeetingsPage() {
             }
           })
         : null,
-    [meetings, visible, leadById, name],
+    [meetings, visible, leadById, name, members],
   )
 
   return (

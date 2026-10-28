@@ -21,6 +21,7 @@ export type MeetingInput = {
   location: string
   status: MeetingStatus
   outcome_note: string
+  assigned_to: string
 }
 
 const clean = (v: string) => v.trim() || null
@@ -39,6 +40,7 @@ export async function saveMeeting(tenantId: string, memberId: string | undefined
     location: input.mode === 'in_person' ? clean(input.location) : null,
     status: input.status,
     outcome_note: clean(input.outcome_note),
+    assigned_to: input.assigned_to || null,
   }
   if (!existing) {
     const { error } = await db().from('meetings').insert({ ...row, tenant_id: tenantId, created_by: memberId ?? null })

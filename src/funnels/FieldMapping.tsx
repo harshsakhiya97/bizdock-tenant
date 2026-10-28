@@ -54,7 +54,7 @@ export function FieldMapping({
           // suggest a target for every new field, keep the ones already chosen
           setMap((m) => {
             const next = { ...m }
-            for (const k of Object.keys(p.sample ?? {})) if (!next[k] && !k.includes('.')) next[k] = guessTarget(k)
+            for (const k of Object.keys(p.sample ?? {})) if (!next[k] && !k.includes('.')) next[k] = guessTarget(k, p.action)
             return next
           })
           setDirty(true)
@@ -68,7 +68,7 @@ export function FieldMapping({
 
   const keys = useMemo(() => [...new Set([...Object.keys(sample ?? {}), ...Object.keys(map)])], [sample, map])
   // fields inside an object (a.b.c) are used only when picked
-  const target = (k: string) => map[k] ?? (k.includes('.') ? 'ignore' : guessTarget(k))
+  const target = (k: string) => map[k] ?? (k.includes('.') ? 'ignore' : guessTarget(k, page.action))
   const nested = keys.some((k) => k.includes('.'))
   const chosen = new Set(keys.map(target))
   // what a post must carry for this webhook's action
@@ -268,8 +268,8 @@ export function FieldMapping({
           )}
           {page.action === 'create_meeting' && (
             <div className="muted small">
-              The meeting starts at <b>Meeting date &amp; time</b> (a time without a time zone is taken as India time). It ends at <b>Meeting end time</b>, or after{' '}
-              <b>Meeting length</b> minutes, or after 30 minutes if neither is sent.
+              The lead is found by its phone / email; the meeting runs from <b>Meeting date &amp; time</b> to <b>Meeting end time</b> (30 minutes if no end is sent;
+              a time without a time zone is taken as India time). <b>Team member</b> is matched by name to someone in Team and shown on the meeting.
             </div>
           )}
           {page.action === 'purchase' && <div className="muted small">For now a payment is logged on the lead’s activity (amount, product, payment ID); bookings aren’t changed.</div>}
