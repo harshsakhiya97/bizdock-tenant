@@ -80,7 +80,7 @@ export const PROVIDERS: Provider[] = [
       'Top left, next to “Developer”, click the blue + → Build an app → pick “Server-to-Server OAuth app” → Create, and name it (e.g. BizDock).',
       'App credentials (the first page) shows the Account ID, Client ID and Client secret — copy them into the boxes below.',
       'Information: fill a short description, company name, and the developer’s name and email (needed to activate).',
-      'Scopes → Add Scopes: search and add meeting, webinar, report, recording and user scopes (view + create / update / delete).',
+      'Scopes → Add Scopes: paste each name below into “Search scope”, tick it, then Done — Meetings: meeting:write:meeting:admin, meeting:update:meeting:admin, meeting:read:meeting:admin, meeting:delete:meeting:admin · Webinars (only with the Webinars add-on): webinar:write:webinar:admin, webinar:update:webinar:admin, webinar:read:webinar:admin, webinar:delete:webinar:admin, webinar:read:past_qa:admin · Reports: report:read:list_meeting_participants:admin, report:read:list_webinar_participants:admin · Recording: cloud_recording:read:list_recording_files:admin · User: user:read:user:admin',
       'Activation → Activate your app. Then save here and press Test.',
     ],
     fields: [
