@@ -339,9 +339,29 @@ function ConnectDrawer({
           <div className="int-guide">
             <b>How to get these keys</b>
             <ol>
-              {provider.guide.map((g, i) => (
-                <li key={i}>{g}</li>
-              ))}
+              {provider.guide.map((g, i) =>
+                typeof g === 'string' ? (
+                  <li key={i}>{g}</li>
+                ) : (
+                  <li key={i}>
+                    {g.text}
+                    <ul className="int-guide-groups">
+                      {g.groups.map((grp) => (
+                        <li key={grp.label}>
+                          <b>{grp.label}</b>
+                          <ul>
+                            {grp.items.map((it) => (
+                              <li key={it}>
+                                <code>{it}</code>
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ),
+              )}
             </ol>
           </div>
         )}

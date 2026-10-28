@@ -23,8 +23,8 @@ export type Provider = {
   multiple?: boolean
   /** placeholder for the account name */
   accountHint?: string
-  /** steps to get the keys, shown in the connect drawer */
-  guide?: string[]
+  /** steps to get the keys, shown in the connect drawer (a step can carry grouped lists, e.g. scopes) */
+  guide?: (string | { text: string; groups: { label: string; items: string[] }[] })[]
 }
 
 export const PROVIDERS: Provider[] = [
@@ -80,7 +80,19 @@ export const PROVIDERS: Provider[] = [
       'Top left, next to “Developer”, click the blue + → Build an app → pick “Server-to-Server OAuth app” → Create, and name it (e.g. BizDock).',
       'App credentials (the first page) shows the Account ID, Client ID and Client secret — copy them into the boxes below.',
       'Information: fill a short description, company name, and the developer’s name and email (needed to activate).',
-      'Scopes → Add Scopes: paste each name below into “Search scope”, tick it, then Done — Meetings: meeting:write:meeting:admin, meeting:update:meeting:admin, meeting:read:meeting:admin, meeting:delete:meeting:admin · Webinars (only with the Webinars add-on): webinar:write:webinar:admin, webinar:update:webinar:admin, webinar:read:webinar:admin, webinar:delete:webinar:admin, webinar:read:past_qa:admin · Reports: report:read:list_meeting_participants:admin, report:read:list_webinar_participants:admin · Recording: cloud_recording:read:list_recording_files:admin · User: user:read:user:admin',
+      {
+        text: 'Scopes → Add Scopes: paste each name into “Search scope”, tick it, and press Done at the end.',
+        groups: [
+          { label: 'Meetings', items: ['meeting:write:meeting:admin', 'meeting:update:meeting:admin', 'meeting:read:meeting:admin', 'meeting:delete:meeting:admin'] },
+          {
+            label: 'Webinars (only with the Zoom Webinars add-on)',
+            items: ['webinar:write:webinar:admin', 'webinar:update:webinar:admin', 'webinar:read:webinar:admin', 'webinar:delete:webinar:admin', 'webinar:read:past_qa:admin'],
+          },
+          { label: 'Attendance', items: ['report:read:list_meeting_participants:admin', 'report:read:list_webinar_participants:admin'] },
+          { label: 'Chat (cloud recording)', items: ['cloud_recording:read:list_recording_files:admin'] },
+          { label: 'Test button', items: ['user:read:user:admin'] },
+        ],
+      },
       'Activation → Activate your app. Then save here and press Test.',
     ],
     fields: [
