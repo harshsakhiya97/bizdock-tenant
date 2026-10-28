@@ -23,8 +23,12 @@ export const releases: Release[] = [
       'Workflows: Generate link step — your URL with the lead’s {fields} becomes a short link on your CRM address (a new code for each lead), used in later messages as {{generated_link}}; clicks are counted.',
       'Workflow conditions (Switch, Yes / No, Bulk WhatsApp stop): any lead field or extra field with equals, not equals, is empty, is not empty, and > >= < <= for numbers and dates; tags; whether the lead has a meeting; whether they have paid / purchased.',
       'Workflow runs: a Re-run button starts a run again from the first step for the same lead.',
+      'Meeting webhooks: Meet with — the lead’s owner (default), one person, or round robin over ticked team members. A Team member name sent by the booking tool (if found in Team) takes the meeting instead.',
+      'Meetings: a Team member on each meeting — picked in the meeting form, shown on the Meetings calendar and the lead’s Meetings tab.',
     ],
     improved: [
+      'Webhook field mapping for nested JSON: pick the object, then the field inside it, for each lead field (Field sent by the form · Test value · Saved on the lead as).',
+      'Meeting webhooks map only what they need: phone / email, meeting start, meeting end and team member.',
       'Webhook How to connect (HTML form, JavaScript, cURL) uses the webhook’s own form fields.',
       'Lead page: Email in the details.',
     ],
