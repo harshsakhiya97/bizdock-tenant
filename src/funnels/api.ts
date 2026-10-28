@@ -1,6 +1,6 @@
 import { db } from '@/lib/supabase'
 import { SHEET_FIELD_MAP, type PerisclawSetup } from './perisclaw'
-import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook, MatchBy, WebhookAction } from './types'
+import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook, WebhookInput } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
@@ -138,13 +138,13 @@ export async function listWebhooks(funnelId: string): Promise<FunnelWebhook[]> {
 }
 
 /** another webhook URL on the funnel (e.g. a form on any page, a popup) */
-export async function addWebhook(tenantId: string, funnelId: string, w: { name: string; action: WebhookAction; match_by: MatchBy }) {
-  const { error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, name: w.name.trim() || 'Form', action: w.action, match_by: w.match_by })
+export async function addWebhook(tenantId: string, funnelId: string, w: WebhookInput) {
+  const { error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, ...w, name: w.name.trim() || 'Form' })
   if (error) throw error
 }
 
-export async function updateWebhook(id: string, w: { name: string; action: WebhookAction; match_by: MatchBy }) {
-  const { error } = await db().from('funnel_webhooks').update({ name: w.name.trim(), action: w.action, match_by: w.match_by }).eq('id', id)
+export async function updateWebhook(id: string, w: WebhookInput) {
+  const { error } = await db().from('funnel_webhooks').update({ ...w, name: w.name.trim() }).eq('id', id)
   if (error) throw error
 }
 
