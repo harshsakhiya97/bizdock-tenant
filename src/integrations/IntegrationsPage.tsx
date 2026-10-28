@@ -15,6 +15,7 @@ import { disconnectIntegration, listIntegrations, saveIntegration, setIntegratio
 import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
+import { testZoom } from '@/zoom/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -53,6 +54,19 @@ export function IntegrationsPage() {
   const byProvider = new Map((rows ?? []).map((r) => [r.provider, r]))
   const allOf = (id: string) => (rows ?? []).filter((r) => r.provider === id)
   const connected = new Set((rows ?? []).filter((r) => r.is_enabled && r.status === 'connected').map((r) => r.provider)).size
+
+  const [testing, setTesting] = useState<string | null>(null)
+  async function test(r: IntegrationRow) {
+    setTesting(r.id)
+    try {
+      const u = await testZoom(r.id)
+      setNotice({ ok: `${r.label}: connected to Zoom as ${u.name || u.email}${u.email ? ` (${u.email})` : ''}.` })
+    } catch (e) {
+      setNotice({ error: `${r.label}: ${(e as Error).message}` })
+    }
+    setTesting(null)
+    load()
+  }
 
   async function toggle(r: IntegrationRow) {
     try {
@@ -133,12 +147,20 @@ export function IntegrationsPage() {
                         <input type="checkbox" checked={a.is_enabled} disabled={off} onChange={() => void toggle(a)} />
                       </label>
                       <div className="int-account-main">
-                        <b>{a.label || a.config.ad_account_id}</b>
+                        <b>
+                          {a.label || a.config.ad_account_id}
+                          {p.id === 'zoom' && a.config.is_default === 'Yes' && <span className="badge badge-muted" style={{ marginLeft: 6 }}>Default</span>}
+                        </b>
                         <span className="muted small">
-                          {a.config.ad_account_id}
+                          {p.id === 'zoom' ? a.config.host_email || 'App owner' : a.config.ad_account_id}
                           {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                         </span>
                       </div>
+                      {!off && p.id === 'zoom' && (
+                        <button type="button" className="btn btn-ghost btn-sm" disabled={testing === a.id} onClick={() => void test(a)}>
+                          {testing === a.id ? 'Testing…' : 'Test'}
+                        </button>
+                      )}
                       {!off && (
                         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p, row: a })}>
                           Settings
@@ -160,7 +182,7 @@ export function IntegrationsPage() {
               )}
               <div className="int-foot">
                 <span className="muted small">
-                  {off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? 'Add as many ad accounts as you run' : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                  {off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
@@ -316,8 +338,8 @@ function ConnectDrawer({
             <Label htmlFor="int-label" required>
               Account name
             </Label>
-            <TextInput id="int-label" placeholder="e.g. Studio ads, Webinar ads" value={label} onChange={(e) => setLabel(e.target.value)} />
-            <Hint>Your own name for this ad account, to tell several apart.</Hint>
+            <TextInput id="int-label" placeholder={provider.accountHint ?? 'e.g. Studio ads, Webinar ads'} value={label} onChange={(e) => setLabel(e.target.value)} />
+            <Hint>Your own name for this account, to tell several apart.</Hint>
           </div>
         )}
         {provider.fields.map((f) => (

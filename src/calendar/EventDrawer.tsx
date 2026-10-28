@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { CalendarX, ExternalLink } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
@@ -8,6 +8,8 @@ import { Modal } from '@/components/Modal'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { listZoomOptions, type ZoomOption } from '@/zoom/api'
+import { ZoomPanel } from '@/zoom/ZoomPanel'
 import { cancelEvent, createEvent, seriesDates, updateEvent, type EventInput, type EventRow, type EventType, type Option } from './api'
 
 /** Add / edit an event: type, date (and end date), time, webinar details, team members, repeat. */
@@ -53,12 +55,18 @@ export function EventDrawer({
     location: event?.location ?? '',
     meeting_link: event?.meeting_link ?? '',
     zoom_webinar_id: event?.zoom_webinar_id ?? '',
+    zoom_account_id: event?.zoom_account_id ?? '',
+    zoom_kind: event?.zoom_kind ?? 'meeting',
     description: event?.description ?? '',
     members: event?.event_members.map((m) => m.member_id) ?? [],
     recurring: false,
     repeat: 'weekly',
     until: '',
   }))
+  const [zooms, setZooms] = useState<ZoomOption[]>([])
+  useEffect(() => {
+    void listZoomOptions(tenant.id).then(setZooms, () => setZooms([]))
+  }, [tenant.id])
   const [scope, setScope] = useState<'one' | 'series'>('one')
   const [cancelling, setCancelling] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +79,12 @@ export function EventDrawer({
   const toggleMember = (id: string) =>
     set('members', f.members.includes(id) ? f.members.filter((m) => m !== id) : [...f.members, id])
   const count = f.recurring && f.until ? seriesDates(f.event_date, f.repeat, f.until).length : 1
+  const onZoom = !!f.zoom_account_id && !!f.start_time
+  // a new webinar starts on the default Zoom account
+  useEffect(() => {
+    if (event || kind !== 'webinar' || !zooms.length) return
+    setF((d) => (d.zoom_account_id ? d : { ...d, zoom_account_id: (zooms.find((z) => z.is_default) ?? zooms[0]).id }))
+  }, [event, kind, zooms])
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -89,7 +103,10 @@ export function EventDrawer({
         onSaved(n > 1 ? `${n} events in the series saved.` : `${f.title.trim()} saved.`)
       } else {
         const n = await createEvent(tenant.id, membership?.id, f)
-        onSaved(n > 1 ? `${n} events added (${f.repeat}).` : `${f.title.trim()} added.`)
+        onSaved(
+          (n > 1 ? `${n} events added (${f.repeat}).` : `${f.title.trim()} added.`) +
+            (onZoom ? ` ${n > 1 ? 'Their Zoom meetings are' : 'Its Zoom meeting is'} being created.` : ''),
+        )
       }
     } catch (err) {
       setError((err as Error).message)
@@ -264,10 +281,12 @@ export function EventDrawer({
                     ))}
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="ev-zoom">Zoom webinar ID</Label>
-                <TextInput id="ev-zoom" placeholder="For attendance later" value={f.zoom_webinar_id} disabled={ro} onChange={(e) => set('zoom_webinar_id', e.target.value)} />
-              </div>
+              {!onZoom && (
+                <div>
+                  <Label htmlFor="ev-zoom">Zoom webinar ID</Label>
+                  <TextInput id="ev-zoom" placeholder="For attendance later" value={f.zoom_webinar_id} disabled={ro} onChange={(e) => set('zoom_webinar_id', e.target.value)} />
+                </div>
+              )}
             </div>
           </FormSection>
         )}
@@ -275,20 +294,75 @@ export function EventDrawer({
         {kind !== 'holiday' && kind !== 'leave' && (
           <FormSection title="Where">
             <div className="form-grid">
+              {zooms.length > 0 && (
+                <>
+                  <div>
+                    <Label htmlFor="ev-zoom-acc">Zoom</Label>
+                    <Select
+                      id="ev-zoom-acc"
+                      value={f.zoom_account_id}
+                      disabled={ro}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setF((d) => ({ ...d, zoom_account_id: v, ...(v ? {} : event?.zoom_account_id ? { meeting_link: '', zoom_webinar_id: '' } : {}) }))
+                      }}
+                    >
+                      <option value="">No Zoom — type the link</option>
+                      {zooms.map((z) => (
+                        <option key={z.id} value={z.id}>
+                          Create on {z.name}
+                          {z.is_default ? ' (default)' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                    {f.zoom_account_id && !f.start_time && <Hint>Set a start time to create it on Zoom.</Hint>}
+                  </div>
+                  {f.zoom_account_id && (
+                    <div>
+                      <Label htmlFor="ev-zoom-kind">Create as</Label>
+                      <Select id="ev-zoom-kind" value={f.zoom_kind} disabled={ro} onChange={(e) => set('zoom_kind', e.target.value as EventInput['zoom_kind'])}>
+                        <option value="meeting">Zoom meeting</option>
+                        <option value="webinar">Zoom webinar (needs the Webinars add-on)</option>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              )}
               <div>
                 <Label htmlFor="ev-loc">Location</Label>
                 <TextInput id="ev-loc" value={f.location} disabled={ro} onChange={(e) => set('location', e.target.value)} />
               </div>
-              <div>
-                <Label htmlFor="ev-link">Meeting link</Label>
-                <TextInput id="ev-link" placeholder="https://zoom.us/…" value={f.meeting_link} disabled={ro} onChange={(e) => set('meeting_link', e.target.value)} />
-                {f.meeting_link.startsWith('http') && (
-                  <a className="link small" href={f.meeting_link} target="_blank" rel="noreferrer">
-                    Open link <ExternalLink size={12} />
-                  </a>
-                )}
-              </div>
+              {onZoom ? (
+                <div>
+                  <Hint>The Zoom {f.zoom_kind} is created on save and moves with the event; its link is saved on it.</Hint>
+                </div>
+              ) : (
+                <div>
+                  <Label htmlFor="ev-link">Meeting link</Label>
+                  <TextInput id="ev-link" placeholder="https://zoom.us/…" value={f.meeting_link} disabled={ro} onChange={(e) => set('meeting_link', e.target.value)} />
+                  {f.meeting_link.startsWith('http') && (
+                    <a className="link small" href={f.meeting_link} target="_blank" rel="noreferrer">
+                      Open link <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
+          </FormSection>
+        )}
+
+        {event && event.zoom_account_id && (
+          <FormSection title="Zoom" description="Attendance, Q&A and chat from Zoom.">
+            <ZoomPanel
+              target={{ kind: 'event', id: event.id }}
+              zoomId={event.zoom_webinar_id}
+              joinUrl={event.meeting_link}
+              startUrl={event.zoom_start_url}
+              password={event.zoom_password}
+              error={event.zoom_error}
+              pulledAt={event.zoom_pulled_at}
+              accountName={zooms.find((z) => z.id === event.zoom_account_id)?.name}
+            />
           </FormSection>
         )}
 

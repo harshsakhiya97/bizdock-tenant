@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CalendarCheck, History, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -10,6 +10,8 @@ import { clock, fmtDay, minutesOf } from '@/components/SlotCalendar'
 import { fullName } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
+import { listZoomOptions, type ZoomOption } from '@/zoom/api'
+import { ZoomPanel } from '@/zoom/ZoomPanel'
 import { deleteMeeting, saveMeeting, type MeetingInput } from './api'
 import { MEETING_STATUS, MODE_LABEL, type MeetingMode, type MeetingRow, type MeetingStatus } from './types'
 
@@ -58,7 +60,17 @@ export function MeetingDrawer({
     status: meeting?.status ?? 'scheduled',
     outcome_note: meeting?.outcome_note ?? '',
     assigned_to: meeting?.assigned_to ?? '',
+    zoom_account_id: meeting ? (meeting.zoom_account_id ?? '') : '',
   }))
+  // Zoom accounts; a new meeting starts on the default one
+  const [zooms, setZooms] = useState<ZoomOption[]>([])
+  useEffect(() => {
+    void listZoomOptions(tenant.id).then((z) => {
+      setZooms(z)
+      if (!meeting && z.length) setF((p) => (p.zoom_account_id ? p : { ...p, zoom_account_id: (z.find((x) => x.is_default) ?? z[0]).id }))
+    }, () => setZooms([]))
+  }, [tenant.id, meeting])
+  const onZoom = f.mode === 'online' && !!f.zoom_account_id
   const set = <K extends keyof MeetingInput>(k: K, v: MeetingInput[K]) => setF((p) => ({ ...p, [k]: v }))
   const [reason, setReason] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -89,7 +101,7 @@ export function MeetingDrawer({
       const when = `${fmtDay(f.meeting_date, { day: 'numeric', month: 'short' })}, ${clock(f.start_time)}`
       onSaved(
         !meeting
-          ? `Meeting with ${name} on ${when}.`
+          ? `Meeting with ${name} on ${when}.${onZoom ? ' Its Zoom meeting is being created.' : ''}`
           : moved
             ? `Meeting rescheduled to ${when}.`
             : f.status === 'not_qualified' && meeting.status !== 'not_qualified'
@@ -218,7 +230,32 @@ export function MeetingDrawer({
               </Select>
             </div>
             <div>
-              {f.mode === 'online' ? (
+              {f.mode === 'online' && zooms.length > 0 && (
+                <>
+                  <Label htmlFor="mt-zoom">Zoom</Label>
+                  <Select
+                    id="mt-zoom"
+                    value={f.zoom_account_id}
+                    disabled={!canEdit}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      // leaving Zoom: its link goes too
+                      setF((p) => ({ ...p, zoom_account_id: v, link: !v && meeting?.zoom_meeting_id && p.link === meeting.link ? '' : p.link }))
+                    }}
+                  >
+                    <option value="">No Zoom — paste a link</option>
+                    {zooms.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        Create on {z.name}
+                        {z.is_default ? ' (default)' : ''}
+                      </option>
+                    ))}
+                  </Select>
+                </>
+              )}
+              {f.mode === 'online' && onZoom ? (
+                <Hint>The Zoom meeting is created on save and moves when you reschedule; its link is saved here.</Hint>
+              ) : f.mode === 'online' ? (
                 <>
                   <Label htmlFor="mt-link">Meeting link</Label>
                   <TextInput id="mt-link" placeholder="https://meet.google.com/…" value={f.link} onChange={(e) => set('link', e.target.value)} disabled={!canEdit} />
@@ -256,6 +293,21 @@ export function MeetingDrawer({
                 <TextArea id="mt-note" placeholder="What was discussed, why they qualify or not" value={f.outcome_note} onChange={(e) => set('outcome_note', e.target.value)} disabled={!canEdit} />
               </div>
             </div>
+          </FormSection>
+        )}
+
+        {meeting && meeting.zoom_account_id && meeting.mode === 'online' && (
+          <FormSection title="Zoom" description="Attendance, Q&A and chat from Zoom.">
+            <ZoomPanel
+              target={{ kind: 'meeting', id: meeting.id }}
+              zoomId={meeting.zoom_meeting_id}
+              joinUrl={meeting.link}
+              startUrl={meeting.zoom_start_url}
+              password={meeting.zoom_password}
+              error={meeting.zoom_error}
+              pulledAt={meeting.zoom_pulled_at}
+              accountName={zooms.find((z) => z.id === meeting.zoom_account_id)?.name}
+            />
           </FormSection>
         )}
 

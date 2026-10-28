@@ -34,7 +34,7 @@ export async function saveIntegration(
   const { error } = existing
     ? await db().from('integrations').update(row).eq('id', existing.id)
     : await db().from('integrations').insert({ ...row, tenant_id: tenantId, provider, connected_by: memberId ?? null })
-  if (error) throw new Error(error.message.includes('integrations_fb_account') ? 'This ad account is already connected.' : error.message)
+  if (error) throw new Error(error.message.includes('integrations_fb_account') ? 'This ad account is already connected.' : error.message.includes('integrations_zoom_name') ? 'A Zoom account with this name already exists.' : error.message)
 }
 
 export async function setIntegrationEnabled(id: string, on: boolean) {

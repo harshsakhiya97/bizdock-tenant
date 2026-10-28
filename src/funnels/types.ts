@@ -118,13 +118,15 @@ export type FunnelWebhook = {
   /** meeting webhooks: who the meeting is with — the lead's owner, one person, or round robin over meet_members */
   meet_mode: MeetMode
   meet_members: string[]
+  /** meeting webhooks: create the Zoom meeting on this account (null = no Zoom) */
+  zoom_account_id: string | null
 }
 
 export type WebhookAction = 'create_lead' | 'update_lead' | 'create_meeting' | 'purchase'
 export type MatchBy = 'phone' | 'email' | 'both'
 export type MeetMode = 'owner' | 'single' | 'round_robin'
 /** what the add / edit webhook modal saves */
-export type WebhookInput = { name: string; action: WebhookAction; match_by: MatchBy; meet_mode: MeetMode; meet_members: string[] }
+export type WebhookInput = { name: string; action: WebhookAction; match_by: MatchBy; meet_mode: MeetMode; meet_members: string[]; zoom_account_id: string | null }
 export const WEBHOOK_ACTIONS: { value: WebhookAction; label: string; hint: string; badge: string }[] = [
   { value: 'create_lead', label: 'Create a new lead', hint: 'Each post adds a lead (the same phone again updates it).', badge: 'Creates leads' },
   { value: 'update_lead', label: 'Update fields of a lead', hint: 'Finds the lead and saves the mapped fields on it.', badge: 'Updates leads' },

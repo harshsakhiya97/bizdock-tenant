@@ -21,6 +21,13 @@ export type MeetingRow = {
   reschedules: Reschedule[]
   /** the team member who takes it */
   assigned_to: string | null
+  /** Zoom: the account it is created on, and what Zoom gave back */
+  zoom_account_id: string | null
+  zoom_meeting_id: string | null
+  zoom_start_url: string | null
+  zoom_password: string | null
+  zoom_error: string | null
+  zoom_pulled_at: string | null
   created_by: string | null
   created_at: string
   updated_at: string
