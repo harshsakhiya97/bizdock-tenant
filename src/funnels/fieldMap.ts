@@ -9,6 +9,7 @@ export const LEAD_TARGETS = [
   { value: 'company_name', label: 'Company name' },
   { value: 'purpose', label: 'Purpose' },
   { value: 'note', label: 'Note' },
+  { value: 'tags', label: 'Tags (each value a tag)' },
   { value: 'utm_source', label: 'utm_source' },
   { value: 'utm_medium', label: 'utm_medium' },
   { value: 'utm_campaign', label: 'utm_campaign' },
@@ -35,6 +36,7 @@ const ALIASES: Record<string, string[]> = {
   company_name: ['company', 'company_name', 'business', 'business_name', 'organization', 'organisation', 'firm'],
   purpose: ['purpose', 'reason', 'requirement', 'interest', 'interested_in', 'service'],
   note: ['note', 'notes', 'remark', 'remarks', 'message', 'comment', 'comments', 'query'],
+  tags: ['tags', 'tag', 'labels'],
 }
 
 const ACTION_ONLY: Record<string, string> = {
