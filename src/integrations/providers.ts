@@ -73,8 +73,8 @@ export const PROVIDERS: Provider[] = [
     multiple: true,
     accountHint: 'e.g. Pride main, TVS webinars',
     fields: [
-      { key: 'account_id', label: 'Account ID', required: true },
-      { key: 'client_id', label: 'Client ID', required: true },
+      { key: 'account_id', label: 'Account ID', required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
+      { key: 'client_id', label: 'Client ID', required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
       { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Zoom Marketplace → Develop → Server-to-Server OAuth app → App credentials' },
       { key: 'host_email', label: 'Host (Zoom user email)', placeholder: 'host@yourcompany.com', hint: 'Meetings are created under this Zoom user. Empty = the app’s owner.' },
       { key: 'cloud_record', label: 'Cloud-record meetings', options: ['Yes', 'No'], hint: 'Needed to fetch the in-meeting chat afterwards.' },
