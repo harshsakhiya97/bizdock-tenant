@@ -156,6 +156,7 @@ export function IntegrationsPage() {
                           {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                         </span>
                       </div>
+                      <div className="int-account-actions">
                       {!off && p.id === 'zoom' && (
                         <button type="button" className="btn btn-ghost btn-sm" disabled={testing === a.id} onClick={() => void test(a)}>
                           {testing === a.id ? 'Testing…' : 'Test'}
@@ -169,6 +170,7 @@ export function IntegrationsPage() {
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(a)}>
                         Remove
                       </button>
+                      </div>
                     </div>
                   ))}
                 </div>

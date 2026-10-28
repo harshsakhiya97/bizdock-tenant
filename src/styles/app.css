@@ -689,10 +689,13 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .tpl-btn-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .tpl-btn-kind { font-size: 13px; font-weight: 600; }
 .int-accounts { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); }
-.int-account { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+.int-account { display: flex; align-items: center; gap: 4px 10px; padding: 8px 10px; flex-wrap: wrap; }
+.int-account-actions { display: flex; gap: 2px; margin-left: auto; flex-shrink: 0; }
 .int-account + .int-account { border-top: 1px solid var(--line); }
 .int-account-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.int-account-main { flex-basis: 160px; }
 .int-account-main b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.int-account-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cb-params { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--surface-muted); }
 .cb-param { display: grid; grid-template-columns: minmax(0, 1fr) 118px; gap: 4px 6px; }
 .cb-param .wa-var { grid-column: 1 / -1; }
