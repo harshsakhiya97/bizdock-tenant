@@ -1008,9 +1008,11 @@ a.db-card:hover { border-color: var(--brand); }
 .gl-preview { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--surface-muted, #f8fafc); border: 1px dashed var(--line); }
 .gl-preview code { font-size: 13px; color: var(--brand); word-break: break-all; }
 
-/* webhook mapping: pick per lead field (requests with objects inside) */
+/* webhook mapping: pick per lead field (requests with objects inside) — same columns as the plain table */
 .ppf-table td { vertical-align: middle; }
-.ppf-table td:first-child { width: 190px; font-weight: 500; }
-.ppf-table td:nth-child(2) { width: 30%; }
-.ppf-table td:nth-child(3) { width: 30%; }
-.ppf-table select, .ppf-table input { width: 100%; min-width: 0; }
+.ppf-table td:first-child { width: 42%; }
+.ppf-table td:nth-child(2) { width: 24%; }
+.ppf-pick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.ppf-target { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.ppf-target input { flex: 1; min-width: 0; }
+.ppf-table select { width: 100%; min-width: 0; }
