@@ -76,10 +76,11 @@ export const PROVIDERS: Provider[] = [
     accountHint: 'e.g. Pride main, TVS webinars',
     guide: [
       'Sign in at marketplace.zoom.us with the Zoom account’s owner or admin.',
-      'Top right: Develop → Build App → pick “Server-to-Server OAuth App” → Create, and name it (e.g. BizDock).',
-      'The App credentials page shows the Account ID, Client ID and Client secret — copy them into the boxes below.',
-      'Information: fill the company name and the developer’s name and email.',
-      'Scopes → Add scopes: Meeting (read & write), Webinar (read & write), Report (read), Recording (read), User (read).',
+      'Bottom left, click “Developers — Build on Zoom’s platform”. It opens the Created apps page. (Not there? Your Zoom role needs the “Server-to-Server OAuth app” permission: zoom.us → Admin → User Management → Roles → Advanced features.)',
+      'Top left, next to “Developer”, click the blue + → Build an app → pick “Server-to-Server OAuth app” → Create, and name it (e.g. BizDock).',
+      'App credentials (the first page) shows the Account ID, Client ID and Client secret — copy them into the boxes below.',
+      'Information: fill a short description, company name, and the developer’s name and email (needed to activate).',
+      'Scopes → Add Scopes: search and add meeting, webinar, report, recording and user scopes (view + create / update / delete).',
       'Activation → Activate your app. Then save here and press Test.',
     ],
     fields: [
