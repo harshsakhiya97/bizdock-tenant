@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react'
 import { VARIABLES } from './types'
 
 /** variables made by earlier steps, by name */
@@ -33,6 +34,20 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
   return [
     { label: 'Lead', items: lead.map(([k, l]) => [k, l] as [string, string]) },
     { label: 'Extra fields', items: fields.map((k) => [k, pretty(k)] as [string, string]) },
+    { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
+  ].filter((g) => g.items.length)
+}
+
+/** "On webhook call" workflows: the webhook's fields (the only fields there are; no lead) */
+export const HookVarsContext = createContext<string[] | null>(null)
+
+/** varGroups, but for a webhook-call workflow: its webhook's fields, then the earlier steps' variables */
+export function useVarGroups(extra: string[], lead: readonly (readonly [string, string])[] = VARIABLES): VarGroup[] {
+  const hook = useContext(HookVarsContext)
+  if (!hook) return varGroups(extra, lead)
+  const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
+  return [
+    { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
     { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
   ].filter((g) => g.items.length)
 }

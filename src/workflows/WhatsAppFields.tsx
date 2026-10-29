@@ -1,4 +1,4 @@
-import { VarOptions, varGroups } from './varGroups'
+import { VarOptions, useVarGroups } from './varGroups'
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
@@ -61,6 +61,7 @@ export function TemplateParams({
   disabled: boolean
   extraFields?: string[]
 }) {
+  const groups = useVarGroups(extraFields)
   return (
     <div className="cb-params">
       <span className="field-label">Fill the template’s variables</span>
@@ -70,7 +71,7 @@ export function TemplateParams({
           <TextInput value={params[v] ?? ''} placeholder="Text or a lead field" onChange={(e) => onChange({ ...params, [v]: e.target.value })} disabled={disabled} />
           <select className="input input-sm" aria-label="Lead field" value="" onChange={(e) => e.target.value && onChange({ ...params, [v]: `{{${e.target.value}}}` })} disabled={disabled}>
             <option value="">Variable…</option>
-            <VarOptions groups={varGroups(extraFields)} />
+            <VarOptions groups={groups} />
           </select>
         </div>
       ))}

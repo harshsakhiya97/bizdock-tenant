@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
-import { STEP_VAR_LABEL, VarOptions, varGroups } from './varGroups'
+import { HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, bulkBefore, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
@@ -31,7 +31,12 @@ export function StepPanel({
 }) {
   const kind = node.type as StepKind
   // extra fields + earlier steps' variables (grouped in every variable picker)
-  const extras = [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))
+  // a webhook-call workflow has only its webhook's fields (no lead, so no lead / extra fields)
+  const hookOnly = ctx.triggerEvent === 'webhook_call'
+  const hookKeys = hookOnly ? ctx.fieldKeys : null
+  const extras = hookOnly
+    ? [...new Set([...ctx.fieldKeys, ...ctx.linkVars])]
+    : [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))
   const d = node.data
   const meta = STEP_META[kind]
   const Icon = meta.icon
@@ -40,6 +45,7 @@ export function StepPanel({
   const ro = !canEdit
 
   return (
+    <HookVarsContext.Provider value={hookKeys}>
     <aside className={kind === 'bulk_whatsapp' ? 'cb-panel is-wide' : 'cb-panel'}>
       <div className="cb-panel-head">
         <span className="cb-icon" style={{ ['--c' as string]: meta.color }}>
@@ -177,6 +183,7 @@ export function StepPanel({
         </div>
       )}
     </aside>
+    </HookVarsContext.Provider>
   )
 }
 
@@ -254,8 +261,12 @@ function BulkFields({
   const before = bulkBefore(d)
   // a later row goes later: with "before", a later row has the smaller time
   const outOfOrder = rows.some((r, i) => i > 0 && (before ? rowMinutes(r) > rowMinutes(rows[i - 1]) : rowMinutes(r) < rowMinutes(rows[i - 1])))
-  // fields a time can come from: the webhook / form fields and earlier steps (e.g. the Zoom meeting's start)
-  const dateGroups = varGroups(extraFields).filter((g) => g.label !== 'Lead')
+  // fields a time can come from: only the trigger's webhook / form fields and earlier steps' values (e.g. the Zoom meeting's start)
+  const fromSteps = [...new Set(ctx.linkVars)]
+  const dateGroups = [
+    { label: ctx.triggerEvent === 'webhook_call' ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(ctx.fieldKeys.map(varKey))].filter((k) => k && !fromSteps.includes(k)).map((k) => [k, k] as [string, string]) },
+    { label: 'From earlier steps', items: fromSteps.map((k) => [k, STEP_VAR_LABEL[k] ?? k] as [string, string]) },
+  ].filter((g) => g.items.length)
   const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
   const anchorName = anchorText(d, ctx, label)
 
@@ -461,7 +472,7 @@ const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (
 type PassField = { id: string; name: string; value: string }
 /** Go to workflow: fields passed to the next workflow (its steps use them as {{name}}) */
 function GotoFields({ d, set, disabled, extras }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; extras: string[] }) {
-  const groups = varGroups(extras)
+  const groups = useVarGroups(extras)
   const rows = (d.fields ?? []) as PassField[]
   const put = (next: PassField[]) => set('fields', next)
   return (
@@ -689,7 +700,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
   const fields = [
     ['full_name', 'Full name'] as const,
     ...VARIABLES.filter(([k]) => k !== 'name').map(([k, l]) => [k, l] as const),
-    ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k)).map((k) => [k, k] as const),
+    ...(ctx.triggerEvent === 'webhook_call' ? [] : [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey))].filter((k) => k && !VARIABLES.some(([v]) => v === k)).map((k) => [k, k] as const)),
   ]
   // adds "&field={field}" ("?" for the first one) at the cursor, or at the end
   function insert(k: string) {
@@ -705,6 +716,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
       el?.setSelectionRange(a + tag.length, a + tag.length)
     })
   }
+  const linkGroups = useVarGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))
   // what a lead would get (a sample code: every lead gets a new one)
   const sample = `${SHORT_BASE}/T7P46LXK`
   return (
@@ -726,7 +738,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
         {!disabled && (
           <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
             <option value="">Insert a field…</option>
-            <VarOptions groups={varGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))} show={(k, l) => `${l} {${k}}`} />
+            <VarOptions groups={linkGroups} show={(k, l) => `${l} {${k}}`} />
           </select>
         )}
         <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
@@ -768,6 +780,7 @@ function MessageField({
   extras?: string[]
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
+  const groups = useVarGroups(extras)
   function insert(v: string) {
     const el = ref.current
     const tag = `{{${v}}}`
@@ -789,7 +802,7 @@ function MessageField({
       {!disabled && (
         <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
           <option value="">Insert a field…</option>
-          <VarOptions groups={varGroups(extras)} show={(k, l) => `${l} {{${k}}}`} />
+          <VarOptions groups={groups} show={(k, l) => `${l} {{${k}}}`} />
         </select>
       )}
       {hint && <Hint>{hint}</Hint>}
