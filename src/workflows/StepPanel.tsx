@@ -73,6 +73,7 @@ export function StepPanel({
           <>
             <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
             <MessageField id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
+            <ZoomShortLink d={d} set={set} disabled={ro} />
             <Hint>
               Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
             </Hint>
@@ -400,6 +401,38 @@ function BulkFields({
 }
 
 /** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
+const SHORT_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+/** a sample code like the real ones (8 characters, no look-alikes) */
+const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => SHORT_ABC[b % SHORT_ABC.length]).join('')
+
+/** Create Zoom meeting: also make a short link of the Zoom link ({{generated_link}}, {{generated_link_code}}) */
+function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const [code] = useState(sampleCode)
+  return (
+    <>
+      <Checkbox
+        id="cb-zm-short"
+        checked={!!d.short_link}
+        onChange={(v) => !disabled && set('short_link', v)}
+        label="Convert the Zoom link to a short link"
+        description="A new code for each lead on your CRM address; it opens the Zoom meeting. Clicks are counted."
+      />
+      {!!d.short_link && (
+        <div className="gl-preview">
+          <span className="field-label">Each lead gets a link like</span>
+          <code>
+            {SHORT_BASE}/{code}
+          </code>
+          <small className="muted">
+            Use <code className="code-chip">{'{{generated_link}}'}</code> for the whole link, or <code className="code-chip">{'{{generated_link_code}}'}</code> for the code only (a template
+            button that already has your domain).
+          </small>
+        </div>
+      )}
+    </>
+  )
+}
+
 function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const zooms = ctx.zoomAccounts ?? []
   const members = ((d.meet_members ?? []) as string[]).filter(Boolean)
