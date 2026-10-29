@@ -986,7 +986,9 @@ a.db-card:hover { border-color: var(--brand); }
 
 /* Bulk WhatsApp step */
 .cb-panel.is-wide { width: 680px; }
-.bulk-wrap { border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; }
+.bulk-wrap { border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; overflow: visible; }
+.bulk-table .ss-trigger { height: 36px; min-width: 200px; font-size: 13px; }
+.bulk-table .ss-menu { min-width: 320px; }
 .bulk-table { font-size: 13px; }
 .bulk-table th, .bulk-table td { padding: 8px 8px; vertical-align: top; }
 .bulk-table td > .input, .bulk-table td > select, .bulk-table td > .input-prefix { width: 100%; min-width: 0; }
