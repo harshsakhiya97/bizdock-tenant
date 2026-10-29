@@ -123,7 +123,19 @@ export const linkVarOf = (d: Record<string, unknown>) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'generated_link'
 /** what a Create Zoom meeting step gives later steps */
-export const ZOOM_VARS = ['zoom_link', 'zoom_date_time', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
+export const ZOOM_VARS = ['zoom_link', 'zoom_date_time', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time', 'zoom_start']
+/** Bulk WhatsApp: what the times count from, and before or after it */
+export type BulkAnchor = 'start' | 'event' | 'meeting' | 'var'
+export const bulkAnchor = (d: Record<string, unknown>): BulkAnchor => (['event', 'meeting', 'var'].includes(String(d.anchor)) ? (d.anchor as BulkAnchor) : 'start')
+export const bulkBefore = (d: Record<string, unknown>) => bulkAnchor(d) !== 'start' && d.direction === 'before'
+/** "the start" / "the event" / "the meeting" / "Zoom meeting start" */
+export function anchorText(d: Record<string, unknown>, ctx: FlowContext, label?: (k: string) => string) {
+  const a = bulkAnchor(d)
+  if (a === 'event') return ctx.event ? ctx.event.title : 'the event'
+  if (a === 'meeting') return 'the meeting'
+  if (a === 'var') return d.anchor_var ? (label ? label(String(d.anchor_var)) : `{{${String(d.anchor_var)}}}`) : 'a field'
+  return 'the start'
+}
 /** the meeting webhooks the trigger listens to (a funnel form trigger: its picked webhooks, or all of the funnel's) */
 export function meetingHooks(ctx: FlowContext) {
   if (ctx.triggerEvent === 'webhook_call') return []
@@ -162,7 +174,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (!rows.length) return 'No messages yet'
       const last = rows[rows.length - 1]
       const stop = d.stop_on ? ` · stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}` : ''
-      return `${rows.length} message${rows.length === 1 ? '' : 's'} · last ${unitText(Number(last.amount) || 0, last.unit)} after the start${stop}`
+      return `${rows.length} message${rows.length === 1 ? '' : 's'} · last ${unitText(Number(last.amount) || 0, last.unit)} ${bulkBefore(d) ? 'before' : 'after'} ${anchorText(d, ctx)}${stop}`
     }
     case 'generate_link':
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
@@ -225,6 +237,8 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'bulk_whatsapp': {
       const rows = rowsOf(d)
       if (!rows.length) return 'Add at least one message'
+      if (bulkAnchor(d) === 'var' && !d.anchor_var) return 'Pick the field the times count from'
+      if (bulkAnchor(d) === 'event' && !ctx.event) return 'This workflow has no webinar / event to count from'
       for (const [i, r] of rows.entries()) {
         if (r.to === 'team' && !r.member_id) return `Message ${i + 1}: pick the team member`
         if (r.to === 'custom' && !/^\d{10}$/.test(r.custom_phone ?? '')) return `Message ${i + 1}: enter the 10-digit number`
