@@ -112,13 +112,28 @@ export type FlowContext = RefData & {
   fieldKeys: string[]
   /** variables made by Generate link steps ({{generated_link}}, {{generated_link_code}}) */
   linkVars: string[]
+  /** what starts the workflow */
+  triggerEvent?: TriggerEvent
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
   whatsapp: { to: 'lead', member_id: '', template: '', message: 'Hi {{first_name}}, thanks for registering!' },
   bulk_whatsapp: { rows: [], stop_on: false, stop: { field: 'tag', op: 'is', value: '' } },
   generate_link: { url: '', var: 'generated_link' },
-  zoom_meeting: { account: '', topic: 'Meeting with {{name}}', when: 'in', days: 1, date: '', time: '11:00', duration: 60 },
+  zoom_meeting: {
+    account: '',
+    topic: 'Meeting with {{name}}',
+    use_webhook: false,
+    start_var: 'meeting_start',
+    end_var: 'meeting_end',
+    when: 'in',
+    days: 1,
+    date: '',
+    time: '11:00',
+    duration: 60,
+    meet_mode: 'owner',
+    meet_members: [],
+  },
   email: { to: 'lead', member_id: '', subject: '', body: '' },
   call: { script: '' },
   wait: { amount: 1, unit: 'days' },

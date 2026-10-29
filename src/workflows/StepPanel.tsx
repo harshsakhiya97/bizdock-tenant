@@ -2,7 +2,7 @@ import { Fragment, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
-import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
@@ -71,10 +71,10 @@ export function StepPanel({
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'zoom_meeting' && (
           <>
-            <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
+            <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} fromForm={ctx.triggerEvent === 'form_submitted'} />
             <MessageField id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
             <Hint>
-              Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The link is also noted on the lead.
+              Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
             </Hint>
           </>
         )}
@@ -400,8 +400,15 @@ function BulkFields({
 }
 
 /** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
-function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; fromForm: boolean }) {
   const zooms = ctx.zoomAccounts ?? []
+  const members = ((d.meet_members ?? []) as string[]).filter(Boolean)
+  // the form post's fields: the meeting ones first, then the webhook's other fields
+  const fieldOpts: [string, string][] = [
+    ['meeting_start', 'Meeting date & time (start)'],
+    ['meeting_end', 'Meeting end time'],
+    ...[...new Set(ctx.fieldKeys)].filter((k) => !['meeting_start', 'meeting_end', 'company_name', 'purpose', 'note'].includes(k)).map((k) => [k, k] as [string, string]),
+  ]
   return (
     <>
       <div>
@@ -416,23 +423,101 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
         </Select>
         {!zooms.length && <Hint>No Zoom account yet: add one in System Connections.</Hint>}
       </div>
-      <div>
-        <span className="field-label">When</span>
-        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-          <Select aria-label="When" value={String(d.when ?? 'in')} onChange={(e) => set('when', e.target.value)} disabled={disabled} style={{ width: 'auto' }}>
-            <option value="in">Days after this step</option>
-            <option value="fixed">On a date</option>
-          </Select>
-          {d.when === 'fixed' ? (
-            <TextInput aria-label="Date" type="date" value={String(d.date ?? '')} onChange={(e) => set('date', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
-          ) : (
-            <TextInput aria-label="Days" type="number" min={0} value={String(d.days ?? 1)} onChange={(e) => set('days', Math.max(0, Number(e.target.value) || 0))} disabled={disabled} style={{ width: 80 }} />
-          )}
-          <span className="muted small">at</span>
-          <TextInput aria-label="Time" type="time" step={900} value={String(d.time ?? '11:00')} onChange={(e) => set('time', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+      {fromForm && (
+        <Checkbox
+          id="cb-zm-hook"
+          checked={!!d.use_webhook}
+          onChange={(v) => set('use_webhook', v)}
+          label="Use the date & time the webhook sent"
+          description="The booking tool’s start (and end) date-time from the form post."
+        />
+      )}
+      {fromForm && d.use_webhook ? (
+        <div className="form-grid">
+          <div>
+            <Label htmlFor="cb-zm-sv">Start date &amp; time</Label>
+            <Select id="cb-zm-sv" value={String(d.start_var || 'meeting_start')} onChange={(e) => set('start_var', e.target.value)} disabled={disabled}>
+              {fieldOpts.map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="cb-zm-ev">End date &amp; time</Label>
+            <Select id="cb-zm-ev" value={String(d.end_var ?? 'meeting_end')} onChange={(e) => set('end_var', e.target.value)} disabled={disabled}>
+              <option value="">— none (use the length below) —</option>
+              {fieldOpts.map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
-        <Hint>India time. “0 days” = the same day.</Hint>
+      ) : (
+        <div>
+          <span className="field-label">When</span>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            <Select aria-label="When" value={String(d.when ?? 'in')} onChange={(e) => set('when', e.target.value)} disabled={disabled} style={{ width: 'auto' }}>
+              <option value="in">Days after this step</option>
+              <option value="fixed">On a date</option>
+            </Select>
+            {d.when === 'fixed' ? (
+              <TextInput aria-label="Date" type="date" value={String(d.date ?? '')} onChange={(e) => set('date', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+            ) : (
+              <TextInput aria-label="Days" type="number" min={0} value={String(d.days ?? 1)} onChange={(e) => set('days', Math.max(0, Number(e.target.value) || 0))} disabled={disabled} style={{ width: 80 }} />
+            )}
+            <span className="muted small">at</span>
+            <TextInput aria-label="Time" type="time" step={900} value={String(d.time ?? '11:00')} onChange={(e) => set('time', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+          </div>
+          <Hint>India time. “0 days” = the same day.</Hint>
+        </div>
+      )}
+      <div>
+        <Label htmlFor="cb-zm-meet">Meet with</Label>
+        <Select id="cb-zm-meet" value={String(d.meet_mode ?? 'owner')} onChange={(e) => set('meet_mode', e.target.value)} disabled={disabled}>
+          <option value="owner">Owner of the lead</option>
+          <option value="single">One person</option>
+          <option value="round_robin">Round robin (take turns)</option>
+        </Select>
+        {(d.meet_mode ?? 'owner') === 'owner' && <Hint>The meeting goes to whoever owns the lead (none if the lead is unassigned).</Hint>}
       </div>
+      {d.meet_mode === 'single' && (
+        <div>
+          <Label htmlFor="cb-zm-one" required>
+            Team member
+          </Label>
+          <Select id="cb-zm-one" value={members[0] ?? ''} onChange={(e) => set('meet_members', e.target.value ? [e.target.value] : [])} disabled={disabled}>
+            <option value="">— select —</option>
+            {ctx.members.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
+      {d.meet_mode === 'round_robin' && (
+        <div>
+          <span className="field-label">Team members (in turn)</span>
+          <div className="check-list">
+            {ctx.members.map((m) => (
+              <label key={m.id} className="check">
+                <input
+                  type="checkbox"
+                  disabled={disabled}
+                  checked={members.includes(m.id)}
+                  onChange={(e) => set('meet_members', e.target.checked ? [...members, m.id] : members.filter((x) => x !== m.id))}
+                />
+                {m.name}
+              </label>
+            ))}
+          </div>
+          <Hint>Each new meeting goes to the next ticked person, in this order. Inactive people are skipped.</Hint>
+        </div>
+      )}
       <div>
         <Label htmlFor="cb-zm-dur">Length (minutes)</Label>
         <TextInput id="cb-zm-dur" type="number" min={15} step={15} value={String(d.duration ?? 60)} onChange={(e) => set('duration', Math.max(15, Number(e.target.value) || 60))} disabled={disabled} />

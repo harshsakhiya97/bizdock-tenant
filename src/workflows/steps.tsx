@@ -7,7 +7,7 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   whatsapp: { label: 'WhatsApp', hint: 'Send a WhatsApp message', icon: MessageCircle, color: '#22a35a' },
   bulk_whatsapp: { label: 'Bulk WhatsApp', hint: 'Several templates, each a set time after the trigger', icon: MessagesSquare, color: '#15803d' },
   generate_link: { label: 'Generate link', hint: 'A short link for the lead (their fields filled into your URL) for later messages', icon: Link2, color: '#0369a1' },
-  zoom_meeting: { label: 'Create Zoom meeting', hint: 'A Zoom meeting for the lead; its link goes in later messages as {{zoom_link}}', icon: Video, color: '#0b5cff' },
+  zoom_meeting: { label: 'Create Zoom meeting', hint: 'Books the meeting for the lead with a Zoom link; later messages use {{zoom_link}}', icon: Video, color: '#0b5cff' },
   email: { label: 'Email', hint: 'Send an email', icon: Mail, color: '#2563eb' },
   call: { label: 'Call', hint: 'One-way voice call (recorded message)', icon: PhoneCall, color: '#7c3aed' },
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
@@ -60,7 +60,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
       }),
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
   ]
-  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars }
+  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars, triggerEvent: t.event }
 }
 
 export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
@@ -137,7 +137,15 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
     case 'zoom_meeting': {
       const acc = ctx.zoomAccounts?.find((z) => z.id === d.account)?.name ?? 'default Zoom'
-      return `${zoomWhen(d)} · ${Number(d.duration) || 60} min · ${acc}`
+      const when = d.use_webhook && ctx.triggerEvent === 'form_submitted' ? 'Time from the webhook' : `${zoomWhen(d)} · ${Number(d.duration) || 60} min`
+      const mm = (d.meet_members ?? []) as string[]
+      const who =
+        d.meet_mode === 'single'
+          ? (ctx.members.find((m) => m.id === mm[0])?.name ?? 'pick who')
+          : d.meet_mode === 'round_robin'
+            ? `round robin (${mm.length})`
+            : 'lead owner'
+      return `${when} · with ${who} · ${acc}`
     }
     case 'email':
       return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
@@ -201,6 +209,9 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     }
     case 'zoom_meeting':
       if (!ctx.zoomAccounts?.length) return 'Connect a Zoom account (System Connections)'
+      if (d.meet_mode === 'single' && !((d.meet_members ?? []) as string[]).length) return 'Pick who the meeting is with'
+      if (d.meet_mode === 'round_robin' && ((d.meet_members ?? []) as string[]).length < 2) return 'Tick at least two people for round robin'
+      if (d.use_webhook && ctx.triggerEvent === 'form_submitted') return null
       if (d.when === 'fixed' && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''))) return 'Pick the date'
       if (!/^\d{2}:\d{2}$/.test(String(d.time ?? ''))) return 'Set the time'
       return null
