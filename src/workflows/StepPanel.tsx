@@ -306,9 +306,7 @@ function BulkFields({
             disabled={disabled}
           >
             <option value="start">the start (trigger)</option>
-            <option value="event">the webinar / event{ctx.event ? ` · ${ctx.event.title}` : ''}</option>
-            <option value="meeting">the lead’s meeting</option>
-            <option value="var">a field (webhook / earlier step)</option>
+            <option value="var">a field from an earlier step</option>
           </select>
           {anchor === 'var' && (
             <select className="input input-sm" aria-label="Field" value={String(d.anchor_var ?? '')} onChange={(e) => onChange({ ...d, anchor_var: e.target.value })} disabled={disabled}>
@@ -442,11 +440,7 @@ function BulkFields({
         <Hint>
           {anchor === 'start'
             ? 'Each message goes this long after the workflow started for the lead (0 = right away).'
-            : anchor === 'event'
-              ? `Each message goes this long ${before ? 'before' : 'after'} the webinar / event starts.`
-              : anchor === 'meeting'
-                ? `Each message goes this long ${before ? 'before' : 'after'} the start of the lead’s latest meeting (e.g. the one a Create Zoom meeting step booked); a rescheduled meeting moves them too.`
-                : `Each message goes this long ${before ? 'before' : 'after'} the date-time in the picked field (e.g. 2026-11-02 16:00, India time).`}{' '}
+            : `Each message goes this long ${before ? 'before' : 'after'} the date-time in the picked field (e.g. 2026-11-02 16:00, India time).`}{' '}
           If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
         </Hint>
         {outOfOrder && <div className="alert alert-warning small">Messages go in time order, not row order: a row is earlier than the one above it.</div>}
