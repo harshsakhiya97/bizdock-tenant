@@ -1080,3 +1080,13 @@ a.db-card:hover { border-color: var(--brand); }
 
 /* Bulk WhatsApp card: one line per message */
 .cb-sub { white-space: pre-line; }
+
+/* n8n-style "+" under a box's free exit */
+.cb-plus { position: absolute; top: 100%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.cb-plus-stem { width: 1.5px; height: 18px; background: var(--line-strong, #cbd5e1); }
+.cb-plus button { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 7px; border: 1.5px solid var(--line-strong, #cbd5e1); background: var(--surface); color: var(--text-muted); cursor: pointer; padding: 0; }
+.cb-plus button:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+.cb-plus.is-path button { border-style: dashed; }
+.cb-plus.is-path .cb-plus-stem { background: transparent; border-left: 1.5px dashed var(--line-strong, #cbd5e1); }
+.cb-box { position: relative; }
+.cb-paths span.is-new { color: var(--text-faint, #94a3b8); font-weight: 600; }

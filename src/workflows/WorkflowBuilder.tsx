@@ -21,7 +21,7 @@ import { HOOK_EVENT } from './HookTrigger'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { saveWorkflow } from './api'
-import { FlowCtx, NODE_TYPES } from './StepBox'
+import { AddCtx, FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
@@ -137,6 +137,9 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   // the + panel: pick the next step
   const [adding, setAdding] = useState(false)
   const [find, setFind] = useState('')
+  // a "+" under a box's exit: the next step goes there
+  const [from, setFrom] = useState<{ source: string; handle: string | null } | null>(null)
+  const used = useMemo(() => new Set(edges.map((e) => `${e.source}|${e.sourceHandle ?? ''}`)), [edges])
 
   const onConnect = useCallback(
     (c: Connection) => {
@@ -156,15 +159,29 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
 
   function addStep(kind: StepKind, position?: { x: number; y: number }) {
     const id = newId(kind)
-    // without a drop position: under the selected box (or the last one), joined to it
-    const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
-    const pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
-    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
-    if (!position && anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto' && !edges.some((e) => e.source === anchor.id)) {
-      setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
+    const target = from && nodes.find((n) => n.id === from.source)
+    let pos: { x: number; y: number }
+    if (!position && target) {
+      // under the "+" that was clicked (a Switch / Yes-No exit: under that exit), joined to it
+      const w = target.measured?.width ?? 260
+      const h = target.measured?.height ?? 90
+      const exits: (string | null)[] = target.type === 'switch' ? [...casesOf(target.data).map((c) => c.id), 'else'] : target.type === 'condition' ? ['yes', 'no'] : [null]
+      const i = Math.max(0, exits.indexOf(from.handle))
+      const shift = exits.length > 1 ? (i - (exits.length - 1) / 2) * (w + 40) : 0
+      pos = { x: target.position.x + shift, y: target.position.y + h + 90 }
+      setEdges((eds) => [...eds, withLook({ id: newId('e'), source: target.id, sourceHandle: from.handle ?? undefined, target: id } as FlowEdge)])
+    } else {
+      // without a drop position: under the selected box (or the last one), joined to it
+      const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
+      pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
+      if (!position && anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto' && !edges.some((e) => e.source === anchor.id)) {
+        setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
+      }
     }
+    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
     setSelectedId(id)
     setAdding(false)
+    setFrom(null)
     touch()
     // bring the new box into view
     if (!position) void flow.setCenter(pos.x + 170, pos.y + 40, { zoom: flow.getZoom(), duration: 300 })
@@ -179,6 +196,32 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   }
 
   const selected = nodes.find((n) => n.id === selectedId) ?? null
+  // "+" under an exit: pick the next step for it
+  const addCtx = useMemo(
+    () => ({
+      canEdit,
+      used,
+      onAdd: (source: string, handle: string | null) => {
+        setFrom({ source, handle })
+        setSelectedId(null)
+        setFind('')
+        setAdding(true)
+      },
+      // the Switch's extra "+": a new path, then its settings open (same as editing it)
+      onAddPath: (nodeId: string) => {
+        setNodes((ns) =>
+          ns.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, cases: [...casesOf(n.data), { id: `c${Date.now().toString(36)}`, label: '', field: 'stage', op: 'is', value: '' }] } } : n,
+          ),
+        )
+        setAdding(false)
+        setFrom(null)
+        setSelectedId(nodeId)
+        setDirty(true)
+      },
+    }),
+    [canEdit, used, setNodes],
+  )
   function updateData(data: Record<string, unknown>) {
     setNodes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, data } : n)))
     // a removed Switch path takes its line with it
@@ -218,6 +261,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
 
   return (
     <FlowCtx.Provider value={ctx}>
+    <AddCtx.Provider value={addCtx}>
       <div className="cb-bar">
         <input
           className="cb-name"
@@ -293,7 +337,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             <Controls showInteractive={false} />
           </ReactFlow>
           {canEdit && !adding && (
-            <button type="button" className="cb-add-fab" onClick={() => (setAdding(true), setFind(''))} title="Add a step" aria-label="Add a step">
+            <button type="button" className="cb-add-fab" onClick={() => (setFrom(null), setAdding(true), setFind(''))} title="Add a step" aria-label="Add a step">
               <Plus size={20} />
             </button>
           )}
@@ -305,6 +349,15 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                   <div className="muted small">
                     Added under{' '}
                     <b>{(() => {
+                      const f = from && nodes.find((n) => n.id === from.source)
+                      if (f) {
+                        const base = String((f.data as Record<string, unknown>).name || STEP_META[f.type as StepKind]?.label || 'the step')
+                        if (!from.handle) return base
+                        if (from.handle === 'yes' || from.handle === 'no') return `${base} → ${from.handle === 'yes' ? 'Yes' : 'No'}`
+                        if (from.handle === 'else') return `${base} → Otherwise`
+                        const i = casesOf(f.data).findIndex((c) => c.id === from.handle)
+                        return i < 0 ? base : `${base} → ${caseLabel(casesOf(f.data)[i], i, ctx)}`
+                      }
                       const a = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
                       if (!a) return 'the trigger'
                       return String((a.data as Record<string, unknown>).name || STEP_META[a.type as StepKind]?.label || 'the last step')
@@ -312,7 +365,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                     . You can also drag a step onto the canvas.
                   </div>
                 </div>
-                <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={() => setAdding(false)}>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={() => (setAdding(false), setFrom(null))}>
                   <X size={16} />
                 </button>
               </div>
@@ -376,6 +429,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         </div>
 
       </div>
+    </AddCtx.Provider>
     </FlowCtx.Provider>
   )
 }
