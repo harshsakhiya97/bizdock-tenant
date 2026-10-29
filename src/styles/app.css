@@ -1048,3 +1048,7 @@ a.db-card:hover { border-color: var(--brand); }
 .hook-field-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .goto-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
 .goto-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; }
+.cb-var-groups { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.cb-var-group { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
+.cb-var-groups .cb-vars { margin-top: 3px; }
+.cb-var-groups .cb-vars button { font-family: inherit; font-size: 11.5px; }

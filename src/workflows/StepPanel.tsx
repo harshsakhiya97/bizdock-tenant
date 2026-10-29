@@ -4,6 +4,7 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
+import { VarOptions, varGroups } from './varGroups'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
@@ -29,6 +30,8 @@ export function StepPanel({
   onClose: () => void
 }) {
   const kind = node.type as StepKind
+  // extra fields + earlier steps' variables (grouped in every variable picker)
+  const extras = [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))
   const d = node.data
   const meta = STEP_META[kind]
   const Icon = meta.icon
@@ -66,14 +69,14 @@ export function StepPanel({
             ctx={ctx}
             onChange={onChange}
             disabled={ro}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={extras}
           />
         )}
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'zoom_meeting' && (
           <>
             <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
-            <MessageField id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
+            <MessageField extras={extras} id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
             <ZoomShortLink d={d} set={set} disabled={ro} />
             <Hint>
               Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
@@ -84,11 +87,11 @@ export function StepPanel({
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
-            extraFields={[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))}
+            extraFields={extras}
             set={set}
             onChange={onChange}
             disabled={ro}
-            messageField={<MessageField id="cb-wa-m" label="Message" value={String(d.message ?? '')} onChange={(v) => set('message', v)} disabled={ro} rows={6} hint="A free message only reaches leads who messaged you in the last 24 hours." />}
+            messageField={<MessageField extras={extras} id="cb-wa-m" label="Message" value={String(d.message ?? '')} onChange={(v) => set('message', v)} disabled={ro} rows={6} hint="A free message only reaches leads who messaged you in the last 24 hours." />}
           />
         )}
 
@@ -100,12 +103,12 @@ export function StepPanel({
               </Label>
               <TextInput id="cb-em-s" value={String(d.subject ?? '')} onChange={(e) => set('subject', e.target.value)} disabled={ro} />
             </div>
-            <MessageField id="cb-em-b" label="Message" value={String(d.body ?? '')} onChange={(v) => set('body', v)} disabled={ro} rows={8} />
+            <MessageField extras={extras} id="cb-em-b" label="Message" value={String(d.body ?? '')} onChange={(v) => set('body', v)} disabled={ro} rows={8} />
           </>
         )}
 
         {kind === 'call' && (
-          <MessageField id="cb-call" label="What the call says" value={String(d.script ?? '')} onChange={(v) => set('script', v)} disabled={ro} rows={5} hint="A one-way call plays this message (text-to-speech or a recording) once a calling provider is connected." />
+          <MessageField extras={extras} id="cb-call" label="What the call says" value={String(d.script ?? '')} onChange={(v) => set('script', v)} disabled={ro} rows={5} hint="A one-way call plays this message (text-to-speech or a recording) once a calling provider is connected." />
         )}
 
         {(kind === 'wait' || kind === 'wait_event') && (
@@ -160,17 +163,7 @@ export function StepPanel({
           </div>
         )}
         {kind === 'goto' && (
-          <GotoFields
-            d={d}
-            set={set}
-            disabled={ro}
-            vars={[
-              ...VARIABLES.map(([k, l]) => [k, l] as [string, string]),
-              ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars]
-                .filter((k) => k && !VARIABLES.some(([v]) => v === k))
-                .map((k) => [k, k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())] as [string, string]),
-            ]}
-          />
+          <GotoFields d={d} set={set} disabled={ro} extras={extras} />
         )}
 
         {issue && <div className="alert alert-warning small">{issue}</div>}
@@ -422,7 +415,8 @@ const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (
 /** Create Zoom meeting: also make a short link of the Zoom link ({{zoom_short_link}}, {{zoom_short_link_code}}) */
 type PassField = { id: string; name: string; value: string }
 /** Go to workflow: fields passed to the next workflow (its steps use them as {{name}}) */
-function GotoFields({ d, set, disabled, vars }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; vars: [string, string][] }) {
+function GotoFields({ d, set, disabled, extras }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; extras: string[] }) {
+  const groups = varGroups(extras)
   const rows = (d.fields ?? []) as PassField[]
   const put = (next: PassField[]) => set('fields', next)
   return (
@@ -450,11 +444,7 @@ function GotoFields({ d, set, disabled, vars }: { d: Record<string, unknown>; se
               }}
             >
               <option value="">— variable —</option>
-              {vars.map(([k, l]) => (
-                <option key={k} value={k}>
-                  {l}
-                </option>
-              ))}
+              <VarOptions groups={groups} />
             </select>
             {!disabled && (
               <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => put(rows.filter((_, j) => j !== i))}>
@@ -690,12 +680,8 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
         />
         {!disabled && (
           <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
-            <option value="">Insert a lead field…</option>
-            {fields.map(([k, l]) => (
-              <option key={k} value={k}>
-                {l} {`{${k}}`}
-              </option>
-            ))}
+            <option value="">Insert a field…</option>
+            <VarOptions groups={varGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))} show={(k, l) => `${l} {${k}}`} />
           </select>
         )}
         <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
@@ -724,6 +710,7 @@ function MessageField({
   disabled,
   rows,
   hint,
+  extras = [],
 }: {
   id: string
   label: string
@@ -732,6 +719,8 @@ function MessageField({
   disabled: boolean
   rows: number
   hint?: string
+  /** extra fields and earlier steps' variables */
+  extras?: string[]
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   function insert(v: string) {
@@ -753,11 +742,18 @@ function MessageField({
       </Label>
       <textarea ref={ref} id={id} className="input" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
       {!disabled && (
-        <div className="cb-vars">
-          {VARIABLES.map(([k, l]) => (
-            <button key={k} type="button" onClick={() => insert(k)} title={`Insert ${l}`}>
-              {`{{${k}}}`}
-            </button>
+        <div className="cb-var-groups">
+          {varGroups(extras).map((g) => (
+            <div key={g.label}>
+              <span className="cb-var-group">{g.label}</span>
+              <div className="cb-vars">
+                {g.items.map(([k, l]) => (
+                  <button key={k} type="button" onClick={() => insert(k)} title={`Insert {{${k}}}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
