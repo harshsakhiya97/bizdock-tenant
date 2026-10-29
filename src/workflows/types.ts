@@ -42,6 +42,8 @@ export type BulkRow = {
   params: Record<string, string>
   amount: number
   unit: Unit
+  /** before / after the moment the times count from (only "after" for the start) */
+  dir?: 'before' | 'after'
 }
 export const newBulkRow = (amount = 0, unit: Unit = 'minutes'): BulkRow => ({
   id: `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,

@@ -128,6 +128,11 @@ export const ZOOM_VARS = ['zoom_link', 'zoom_date_time', 'zoom_meeting_id', 'zoo
 export type BulkAnchor = 'start' | 'var'
 export const bulkAnchor = (d: Record<string, unknown>): BulkAnchor => (d.anchor === 'var' ? 'var' : 'start')
 export const bulkBefore = (d: Record<string, unknown>) => bulkAnchor(d) !== 'start' && d.direction === 'before'
+/** a message's own before / after (older steps: the step's one setting) */
+export const rowDir = (r: Pick<BulkRow, 'dir'>, d: Record<string, unknown>): 'before' | 'after' =>
+  bulkAnchor(d) === 'start' ? 'after' : (r.dir ?? (bulkBefore(d) ? 'before' : 'after'))
+/** minutes from the moment the times count from: negative = before it */
+export const rowOffset = (r: BulkRow, d: Record<string, unknown>) => (rowDir(r, d) === 'before' ? -1 : 1) * rowMinutes(r)
 /** "the start" / the picked field ("Zoom meeting start") */
 export function anchorText(d: Record<string, unknown>, _ctx: FlowContext, label?: (k: string) => string) {
   const a = bulkAnchor(d)
@@ -171,8 +176,8 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       const rows = rowsOf(d)
       if (!rows.length) return 'No messages yet'
       // one line per message: template · 10 minutes before / after
-      const dir = bulkBefore(d) ? 'before' : 'after'
-      const lines = rows.map((r) => `${r.template || 'No template'} · ${unitText(Number(r.amount) || 0, r.unit)} ${dir}`)
+      const from = anchorText(d, ctx)
+      const lines = rows.map((r) => `${r.template || 'No template'} · ${unitText(Number(r.amount) || 0, r.unit)} ${rowDir(r, d)} ${from}`)
       const stop = d.stop_on ? [`Stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}`] : []
       return [...lines, ...stop].join('\n')
     }

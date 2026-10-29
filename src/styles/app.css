@@ -1002,7 +1002,7 @@ a.db-card:hover { border-color: var(--brand); }
 .bulk-table th, .bulk-table td { border: 0; }
 .bulk-when-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
 .bulk-table td:nth-child(4) > * + * { margin-top: 0; }
-.bulk-table .bulk-when { width: 170px; grid-template-columns: 64px 1fr; }
+.bulk-table .bulk-when { width: 290px; grid-template-columns: 64px 1fr 100px; }
 .bulk-table .ss { width: 100%; min-width: 0; }
 .bulk-table .ss-trigger { width: 100%; min-width: 0; height: 36px; font-size: 13px; }
 .bulk-table .ss-value { min-width: 0; }
