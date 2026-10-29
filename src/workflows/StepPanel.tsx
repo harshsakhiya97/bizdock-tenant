@@ -79,7 +79,7 @@ export function StepPanel({
             <MessageField extras={extras} id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
             <ZoomShortLink d={d} set={set} disabled={ro} />
             <Hint>
-              Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
+              Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_date_time}}'}</code> (e.g. “29 Oct 2026 5pm-8pm”), <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
             </Hint>
           </>
         )}
