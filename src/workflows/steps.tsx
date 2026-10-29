@@ -25,6 +25,7 @@ export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[
   { value: 'tag_added', label: 'Tag added', hint: 'A tag is added to a lead' },
   { value: 'before_event', label: 'Before a webinar / event starts', hint: 'Some time before it starts, for its funnel’s leads' },
   { value: 'after_event', label: 'After a webinar / event ends', hint: 'Some time after it ends, for its funnel’s leads' },
+  { value: 'webhook_call', label: 'On webhook call', hint: 'A post to this workflow’s own webhook URL; not tied to a funnel, nothing is saved on leads' },
 ]
 /** triggers offered for new workflows */
 export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' && t.value !== 'tag_added')
@@ -61,7 +62,26 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     ...(nodes.some((n) => n.type === 'zoom_meeting' && n.data.short_link) ? ['zoom_short_link', 'zoom_short_link_code'] : []),
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
   ]
-  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars, triggerEvent: t.event, triggerPages: t.pages ?? [] }
+  // "On webhook call": the picked fields under their names (none picked: every field of the test post)
+  const hook = t.event === 'webhook_call' ? (ref.hooks ?? []).find((h) => h.workflow_id === ref.selfId) : undefined
+  const hookVars: [string, string][] = hook
+    ? Object.keys(hook.field_map ?? {}).length
+      ? Object.values(hook.field_map).filter(Boolean).map((v) => [v, v] as [string, string])
+      : Object.keys(hook.sample ?? {}).map((k) => [k, k] as [string, string])
+    : []
+  return {
+    ...ref,
+    funnel: hook ? null : funnel,
+    event,
+    pages: hook || t.event === 'webhook_call' ? [] : pages,
+    stages,
+    tags,
+    fieldKeys: t.event === 'webhook_call' ? hookVars.map(([k]) => k) : fieldKeys,
+    linkVars,
+    triggerEvent: t.event,
+    triggerPages: t.pages ?? [],
+    hookVars,
+  }
 }
 
 export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
@@ -81,6 +101,8 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
     }
     case 'tag_added':
       return t.tag ? `Tag “${t.tag}”` : 'Pick the tag'
+    case 'webhook_call':
+      return 'Own webhook URL · not tied to a funnel'
     case 'before_event':
     case 'after_event':
       return ev
@@ -104,12 +126,13 @@ export const linkVarOf = (d: Record<string, unknown>) =>
 export const ZOOM_VARS = ['zoom_link', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
 /** the meeting webhooks the trigger listens to (a funnel form trigger: its picked webhooks, or all of the funnel's) */
 export function meetingHooks(ctx: FlowContext) {
+  if (ctx.triggerEvent === 'webhook_call') return []
   if (ctx.triggerEvent !== 'form_submitted' || !ctx.funnel) return []
   const hooks = ctx.triggerPages?.length ? ctx.pages.filter((p) => ctx.triggerPages!.includes(p.id)) : ctx.pages
   return hooks.filter((p) => p.action === 'create_meeting')
 }
 /** the step takes its time from the webhook (only when the trigger is a meeting webhook) */
-export const zoomFromHook = (d: Record<string, unknown>, ctx: FlowContext) => !!d.use_webhook && meetingHooks(ctx).length > 0
+export const zoomFromHook = (d: Record<string, unknown>, ctx: FlowContext) => !!d.use_webhook && (meetingHooks(ctx).length > 0 || (ctx.hookVars ?? []).length > 0)
 
 export function zoomWhen(d: Record<string, unknown>) {
   if (!d.date) return 'Pick the date'

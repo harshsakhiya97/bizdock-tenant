@@ -17,13 +17,14 @@ import '@xyflow/react/dist/style.css'
 import { AlertTriangle, Info, Plus, Save, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useBackTo } from './backTo'
+import { HOOK_EVENT } from './HookTrigger'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { saveWorkflow } from './api'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
-import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowRow } from './types'
+import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 
 const EDGE_DEFAULTS = { type: 'smoothstep', markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18 } } as const
@@ -92,7 +93,17 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   }, [workflow, setNodes, setEdges, flow])
 
   // funnel / event / stages this workflow is about (from its trigger)
-  const ctx = useMemo(() => flowContext({ ...refData, selfId: workflow.id }, nodes), [refData, nodes, workflow.id])
+  // the workflow's own webhook ("On webhook call") as it changes in the trigger panel
+  const [hooks, setHooks] = useState(refData.hooks ?? [])
+  useEffect(() => {
+    const on = (e: Event) => {
+      const h = (e as CustomEvent<WorkflowHook>).detail
+      setHooks((list) => [...list.filter((x) => x.workflow_id !== h.workflow_id), h])
+    }
+    window.addEventListener(HOOK_EVENT, on)
+    return () => window.removeEventListener(HOOK_EVENT, on)
+  }, [])
+  const ctx = useMemo(() => flowContext({ ...refData, hooks, selfId: workflow.id }, nodes), [refData, hooks, nodes, workflow.id])
   // lines out of a Switch show their path's name
   const shownEdges = useMemo(() => {
     const sw = new Map(nodes.filter((n) => n.type === 'switch').map((n) => [n.id, n]))

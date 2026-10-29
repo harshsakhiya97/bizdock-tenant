@@ -347,7 +347,11 @@ function NewWorkflowModal({
             </Select>
           </div>
         )}
-        <Hint>The rest (forms, webinar, timing) is set on the trigger box in the builder.</Hint>
+        <Hint>
+          {trigger === 'webhook_call'
+            ? 'The workflow gets its own webhook URL; send a test post and pick its fields on the trigger box in the builder.'
+            : 'The rest (forms, webinar, timing) is set on the trigger box in the builder.'}
+        </Hint>
       </div>
     </Modal>
   )

@@ -4,7 +4,7 @@ import { listEvents, listEventTypes } from '@/calendar/api'
 import { listFunnels } from '@/funnels/api'
 import { guessTarget, targetLabel } from '@/funnels/fieldMap'
 import { listMemberOptions } from '@/leads/api'
-import type { FlowEdge, RefData, StepNode, TriggerData, TriggerEvent, WorkflowRow } from './types'
+import type { FlowEdge, RefData, StepNode, TriggerData, TriggerEvent, WorkflowHook, WorkflowRow } from './types'
 import { TRIGGER_DEFAULTS } from './types'
 
 const COLS = 'id, tenant_id, name, is_active, trigger_type, funnel_id, event_id, nodes, edges, updated_at, created_at'
@@ -47,7 +47,35 @@ export async function createWorkflow(tenantId: string, memberId: string | undefi
       updated_by: memberId ?? null,
     })
   if (error) throw error
+  // "On webhook call": its own webhook URL straight away
+  if (trigger === 'webhook_call') await ensureWorkflowHook(id)
   return id
+}
+
+// ---- the own webhook of an "On webhook call" workflow ----
+export async function ensureWorkflowHook(workflowId: string): Promise<WorkflowHook> {
+  const { data, error } = await db().rpc('workflow_hook_ensure', { p_workflow: workflowId })
+  if (error) throw new Error(error.message)
+  return data as WorkflowHook
+}
+export async function getWorkflowHook(workflowId: string): Promise<WorkflowHook | null> {
+  const { data, error } = await db().from('workflow_hooks').select('*').eq('workflow_id', workflowId).maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as WorkflowHook | null) ?? null
+}
+/** the next post (within 10 minutes) is kept as the test sample instead of starting the workflow */
+export async function listenWorkflowHook(id: string) {
+  const { error } = await db().from('workflow_hooks').update({ test_mode_until: new Date(Date.now() + 10 * 60_000).toISOString() }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+export async function saveWorkflowHookFields(id: string, fieldMap: Record<string, string>) {
+  const { error } = await db().from('workflow_hooks').update({ field_map: fieldMap }).eq('id', id)
+  if (error) throw new Error(error.message)
+}
+export async function regenerateWorkflowHook(workflowId: string): Promise<string> {
+  const { data, error } = await db().rpc('workflow_hook_regenerate', { p_workflow: workflowId })
+  if (error) throw new Error(error.message)
+  return String(data)
 }
 
 /** keep only what the canvas needs to come back the same */
@@ -95,7 +123,7 @@ export async function archiveWorkflow(id: string) {
 
 /** funnels, webhook forms and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
-  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts] = await Promise.all([
+  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts, hooks] = await Promise.all([
     listFunnels(tenantId),
     db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample, action').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
@@ -108,6 +136,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     db().from('leads').select('extra').eq('tenant_id', tenantId).not('extra', 'is', null).limit(5000),
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
     listZoomOptions(tenantId).catch(() => []),
+    db().from('workflow_hooks').select('*').eq('tenant_id', tenantId),
   ])
   const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
   return {
@@ -147,6 +176,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     members: members.map((m) => ({ id: m.id, name: m.name })),
     sources: (sources.data ?? []) as { id: string; name: string }[],
     zoomAccounts: zoomAccounts.map((z) => ({ id: z.id, name: z.name, is_default: z.is_default })),
+    hooks: (hooks.data ?? []) as WorkflowHook[],
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
     extraKeys: [...new Set(((leadExtras.data ?? []) as { extra: Record<string, unknown> | null }[]).flatMap((l) => Object.keys(l.extra ?? {})))],
     leadTags: [...new Set(((leadTags.data ?? []) as { tags: string[] }[]).flatMap((l) => l.tags ?? []))].sort((a, b) => a.localeCompare(b)),
