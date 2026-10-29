@@ -280,7 +280,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'condition':
       return conditionProblem(d as unknown as ConditionData) ? 'Finish the condition' : null
     case 'switch':
-      if (!casesOf(d).length) return 'Add at least one path'
+      if (casesOf(d).length < 2) return 'Add at least 2 paths'
       return casesOf(d).some((c) => conditionProblem(c)) ? 'Finish every path’s condition' : null
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
