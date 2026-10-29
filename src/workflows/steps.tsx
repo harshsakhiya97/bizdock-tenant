@@ -102,10 +102,8 @@ export const linkVarOf = (d: Record<string, unknown>) =>
 /** what a Create Zoom meeting step gives later steps */
 export const ZOOM_VARS = ['zoom_link', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
 export function zoomWhen(d: Record<string, unknown>) {
-  const t = String(d.time || '11:00')
-  if (d.when === 'fixed') return d.date ? `${day(String(d.date))}, ${t}` : 'Pick the date'
-  const n = Number(d.days) || 0
-  return n === 0 ? `Same day, ${t}` : `${n} day${n === 1 ? '' : 's'} later, ${t}`
+  if (!d.date) return 'Pick the date'
+  return `${day(String(d.date))}, ${String(d.time || '11:00')} – ${String(d.end_time || '12:00')}`
 }
 export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow[])
 const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
@@ -137,7 +135,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
     case 'zoom_meeting': {
       const acc = ctx.zoomAccounts?.find((z) => z.id === d.account)?.name ?? 'default Zoom'
-      const when = d.use_webhook && ctx.triggerEvent === 'form_submitted' ? 'Time from the webhook' : `${zoomWhen(d)} · ${Number(d.duration) || 60} min`
+      const when = d.use_webhook && ctx.triggerEvent === 'form_submitted' ? 'Time from the webhook' : zoomWhen(d)
       const mm = (d.meet_members ?? []) as string[]
       const who =
         d.meet_mode === 'single'
@@ -212,8 +210,9 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (d.meet_mode === 'single' && !((d.meet_members ?? []) as string[]).length) return 'Pick who the meeting is with'
       if (d.meet_mode === 'round_robin' && ((d.meet_members ?? []) as string[]).length < 2) return 'Tick at least two people for round robin'
       if (d.use_webhook && ctx.triggerEvent === 'form_submitted') return null
-      if (d.when === 'fixed' && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''))) return 'Pick the date'
-      if (!/^\d{2}:\d{2}$/.test(String(d.time ?? ''))) return 'Set the time'
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''))) return 'Pick the date'
+      if (!/^\d{2}:\d{2}$/.test(String(d.time ?? '')) || !/^\d{2}:\d{2}$/.test(String(d.end_time ?? ''))) return 'Set the start and end time'
+      if (String(d.end_time) <= String(d.time)) return 'The end time must be after the start time'
       return null
     case 'email':
       if (d.to === 'team' && !d.member_id) return 'Pick the team member'
