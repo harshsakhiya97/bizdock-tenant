@@ -147,7 +147,7 @@ export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, 
   wait: { amount: 1, unit: 'days' },
   wait_event: { amount: 2, unit: 'hours', when: 'before' },
   condition: { field: 'stage', op: 'is', value: '' },
-  switch: { cases: [{ id: 'c1', label: '', field: 'stage', op: 'is', value: '' }] },
+  switch: { cases: [{ id: 'c1', label: '', field: 'stage', op: 'is', value: '' }, { id: 'c2', label: '', field: 'stage', op: 'is', value: '' }] },
   goto: { workflow_id: '' },
 }
 
