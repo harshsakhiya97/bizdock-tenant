@@ -4,9 +4,9 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
-import { VarOptions, varGroups } from './varGroups'
+import { STEP_VAR_LABEL, VarOptions, varGroups } from './varGroups'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
-import { ALL_TRIGGERS, STEP_META, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
+import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, bulkBefore, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
@@ -250,7 +250,14 @@ function BulkFields({
   const put = (next: BulkRow[]) => onChange({ ...d, rows: next })
   const setRow = (id: string, patch: Partial<BulkRow>) => put(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
   const stop = (d.stop ?? { field: 'tag', op: 'is', value: '' }) as ConditionData
-  const outOfOrder = rows.some((r, i) => i > 0 && rowMinutes(r) < rowMinutes(rows[i - 1]))
+  const anchor = bulkAnchor(d)
+  const before = bulkBefore(d)
+  // a later row goes later: with "before", a later row has the smaller time
+  const outOfOrder = rows.some((r, i) => i > 0 && (before ? rowMinutes(r) > rowMinutes(rows[i - 1]) : rowMinutes(r) < rowMinutes(rows[i - 1])))
+  // fields a time can come from: the webhook / form fields and earlier steps (e.g. the Zoom meeting's start)
+  const dateGroups = varGroups(extraFields).filter((g) => g.label !== 'Lead')
+  const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
+  const anchorName = anchorText(d, ctx, label)
 
   function add() {
     const last = rows[rows.length - 1]
@@ -268,6 +275,37 @@ function BulkFields({
           </button>
         </div>
         {error && <Hint>Couldn’t load templates: {error}</Hint>}
+        <div className="bulk-anchor">
+          <span className="muted small">Times count</span>
+          <select
+            className="input input-sm"
+            aria-label="Before or after"
+            value={before ? 'before' : 'after'}
+            onChange={(e) => onChange({ ...d, direction: e.target.value })}
+            disabled={disabled || anchor === 'start'}
+          >
+            <option value="after">after</option>
+            <option value="before">before</option>
+          </select>
+          <select
+            className="input input-sm"
+            aria-label="Counted from"
+            value={anchor}
+            onChange={(e) => onChange({ ...d, anchor: e.target.value, direction: e.target.value === 'start' ? 'after' : d.direction })}
+            disabled={disabled}
+          >
+            <option value="start">the start (trigger)</option>
+            <option value="event">the webinar / event{ctx.event ? ` · ${ctx.event.title}` : ''}</option>
+            <option value="meeting">the lead’s meeting</option>
+            <option value="var">a field (webhook / earlier step)</option>
+          </select>
+          {anchor === 'var' && (
+            <select className="input input-sm" aria-label="Field" value={String(d.anchor_var ?? '')} onChange={(e) => onChange({ ...d, anchor_var: e.target.value })} disabled={disabled}>
+              <option value="">— pick a field —</option>
+              <VarOptions groups={dateGroups} />
+            </select>
+          )}
+        </div>
         <div className="table-wrap bulk-wrap">
           <table className="table bulk-table">
             <thead>
@@ -275,7 +313,7 @@ function BulkFields({
                 <th>#</th>
                 <th>Send to</th>
                 <th>Template</th>
-                <th>After the start</th>
+                <th>{before ? 'Before' : 'After'} {anchor === 'start' ? 'the start' : anchorName}</th>
                 <th />
               </tr>
             </thead>
@@ -391,7 +429,14 @@ function BulkFields({
           </button>
         )}
         <Hint>
-          Each message goes this long after the workflow started for the lead (0 = right away). If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
+          {anchor === 'start'
+            ? 'Each message goes this long after the workflow started for the lead (0 = right away).'
+            : anchor === 'event'
+              ? `Each message goes this long ${before ? 'before' : 'after'} the webinar / event starts.`
+              : anchor === 'meeting'
+                ? `Each message goes this long ${before ? 'before' : 'after'} the start of the lead’s latest meeting (e.g. the one a Create Zoom meeting step booked); a rescheduled meeting moves them too.`
+                : `Each message goes this long ${before ? 'before' : 'after'} the date-time in the picked field (e.g. 2026-11-02 16:00, India time).`}{' '}
+          If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
         </Hint>
         {outOfOrder && <div className="alert alert-warning small">Messages go in time order, not row order: a row is earlier than the one above it.</div>}
       </div>

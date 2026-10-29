@@ -10,6 +10,7 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   zoom_meeting_id: 'Zoom meeting ID',
   zoom_date: 'Zoom meeting date',
   zoom_time: 'Zoom meeting time',
+  zoom_start: 'Zoom meeting start',
   generated_link: 'Generated link',
   generated_link_code: 'Generated link code',
 }
