@@ -428,36 +428,28 @@ function GotoFields({ d, set, disabled, vars }: { d: Record<string, unknown>; se
   return (
     <div>
       <span className="field-label">Pass data to the workflow</span>
-      <Hint>Each field reaches the next workflow’s steps as {'{{name}}'}: type text, or pick a variable of this workflow (e.g. the Zoom short link).</Hint>
+      <Hint>Name each field and pick the variable it carries (e.g. the Zoom short link); the next workflow’s steps use it as {'{{name}}'}.</Hint>
       <div className="goto-rows">
         {rows.map((r, i) => (
           <div key={r.id} className="goto-row">
             <TextInput
               aria-label="Field name"
-              placeholder="field_name"
+              placeholder="Name, e.g. meeting_link"
               value={r.name}
               disabled={disabled}
               onChange={(e) => put(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
             />
-            <TextInput
-              aria-label="Value"
-              placeholder="Text or {{variable}}"
-              value={r.value}
-              disabled={disabled}
-              onChange={(e) => put(rows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
-            />
             <select
-              className="input input-sm"
+              className="input"
               aria-label="Variable"
-              value=""
+              value={/^\{\{\w+\}\}$/.test(r.value) ? r.value.slice(2, -2) : ''}
               disabled={disabled}
               onChange={(e) => {
                 const k = e.target.value
-                if (!k) return
-                put(rows.map((x, j) => (j === i ? { ...x, value: `{{${k}}}`, name: x.name || k } : x)))
+                put(rows.map((x, j) => (j === i ? { ...x, value: k ? `{{${k}}}` : '', name: x.name || k } : x)))
               }}
             >
-              <option value="">Variable…</option>
+              <option value="">— variable —</option>
               {vars.map(([k, l]) => (
                 <option key={k} value={k}>
                   {l}
