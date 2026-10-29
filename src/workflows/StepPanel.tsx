@@ -3,6 +3,7 @@ import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
+import { HookTrigger } from './HookTrigger'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
@@ -438,13 +439,14 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
   const members = ((d.meet_members ?? []) as string[]).filter(Boolean)
   // only when the trigger is a meeting webhook: the fields it saves with each post
   const hooks = meetingHooks(ctx)
-  const fromForm = hooks.length > 0
+  const fromForm = hooks.length > 0 || (ctx.hookVars ?? []).length > 0
   // the trigger isn't a meeting webhook (any more): the step uses its own date and time
   useEffect(() => {
     if (!fromForm && d.use_webhook && !disabled) set('use_webhook', false)
   }, [fromForm, d.use_webhook, disabled, set])
   const fieldOpts: [string, string][] = []
   for (const f of hooks.flatMap((p) => p.saved ?? [])) if (!fieldOpts.some(([k]) => k === f.key)) fieldOpts.push([f.key, f.label])
+  for (const [k, l] of ctx.hookVars ?? []) if (!fieldOpts.some(([x]) => x === k)) fieldOpts.push([k, l])
   if (!fieldOpts.length) fieldOpts.push(['meeting_start', 'Meeting Start time'], ['meeting_end', 'Meeting End time'])
   return (
     <>
@@ -923,6 +925,8 @@ function TriggerFields({
         </Select>
         <Hint>{ALL_TRIGGERS.find((x) => x.value === t.event)?.hint}</Hint>
       </div>
+
+      {t.event === 'webhook_call' && <HookTrigger workflowId={ctx.selfId} disabled={disabled} />}
 
       {t.event === 'form_submitted' && (
         <>

@@ -3,7 +3,7 @@ import type { Edge, Node } from '@xyflow/react'
 export type Unit = 'minutes' | 'hours' | 'days'
 
 /** what starts a workflow (the trigger box) */
-export type TriggerEvent = 'form_submitted' | 'lead_added' | 'stage_changed' | 'tag_added' | 'before_event' | 'after_event'
+export type TriggerEvent = 'form_submitted' | 'lead_added' | 'stage_changed' | 'tag_added' | 'before_event' | 'after_event' | 'webhook_call'
 export type TriggerData = {
   event: TriggerEvent
   /** optional box name shown on the canvas */
@@ -97,6 +97,8 @@ export type RefData = {
   leadTags?: string[]
   /** the workflow being edited */
   selfId?: string
+  /** the workflows' own webhooks ("On webhook call") */
+  hooks?: WorkflowHook[]
   /** Zoom accounts (Create Zoom meeting) */
   zoomAccounts?: { id: string; name: string; is_default: boolean }[]
 }
@@ -116,6 +118,8 @@ export type FlowContext = RefData & {
   triggerEvent?: TriggerEvent
   /** the webhooks picked in a "form submitted" trigger (none = any of the funnel's) */
   triggerPages?: string[]
+  /** "On webhook call": the post's fields as [key in the run, label] */
+  hookVars?: [string, string][]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
@@ -152,6 +156,19 @@ export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {
   tag_added: { event: 'tag_added', tag: '' },
   before_event: { event: 'before_event', event_id: '', amount: 1, unit: 'days' },
   after_event: { event: 'after_event', event_id: '', amount: 1, unit: 'hours' },
+  webhook_call: { event: 'webhook_call' },
+}
+
+/** the own webhook of an "On webhook call" workflow */
+export type WorkflowHook = {
+  id: string
+  workflow_id: string
+  webhook_key: string
+  /** post field → variable name (empty = every field) */
+  field_map: Record<string, string>
+  test_mode_until: string | null
+  sample: Record<string, unknown> | null
+  sample_at: string | null
 }
 
 /** a field name as a message variable: "Company Name" → company_name */

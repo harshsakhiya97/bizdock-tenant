@@ -1036,3 +1036,13 @@ a.db-card:hover { border-color: var(--brand); }
 .int-guide-groups b { color: var(--text); font-weight: 600; }
 .int-guide-groups ul { margin: 3px 0 0; padding-left: 16px; list-style: circle; display: flex; flex-direction: column; gap: 2px; }
 .int-guide-groups code { font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; user-select: all; word-break: break-all; }
+
+/* "On webhook call" trigger */
+.hook-url { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
+.hook-url code { flex: 1; min-width: 0; font-size: 12px; word-break: break-all; }
+.hook-fields { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); max-height: 340px; overflow: auto; }
+.hook-field { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.hook-field + .hook-field { border-top: 1px solid var(--line); }
+.hook-field-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.hook-field-main code { font-size: 12px; word-break: break-all; }
+.hook-field-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

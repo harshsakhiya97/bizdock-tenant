@@ -21,6 +21,8 @@ export type Run = {
   leads: { first_name: string; last_name: string | null; phone: string } | null
   is_test: boolean
   test_data: Record<string, string> | null
+  /** started by a post to the workflow's own webhook */
+  payload: Record<string, unknown> | null
 }
 
 const STATUS: Record<Run['status'], { label: string; tone: string }> = {
@@ -99,7 +101,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     setLoading(true)
     void db()
       .from('workflow_runs')
-      .select('id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, is_test, test_data, leads(first_name, last_name, phone)')
+      .select('id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, is_test, test_data, payload, leads(first_name, last_name, phone)')
       .eq('workflow_id', workflow.id)
       .order('created_at', { ascending: false })
       .limit(100)
@@ -124,7 +126,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     const { error } = await db().rpc('workflow_rerun', { p_run: r.id })
     setRerunning(null)
     if (error) return setMsg({ error: error.message })
-    const who = r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : (r.test_data?.name ?? 'the test')
+    const who = r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : (r.test_data?.name ?? (r.payload ? 'the webhook post' : 'the test'))
     setMsg({ ok: `Started again for ${who}.${workflow.is_active || r.is_test ? '' : ' The workflow is off, so it stops at once — turn it on first.'}` })
     load()
   }
@@ -183,11 +185,16 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                           </Link>
                         ) : r.is_test ? (
                           <span className="strong">{r.test_data?.name ?? 'Test'}</span>
+                        ) : r.payload ? (
+                          <span className="strong">{String(r.payload.name ?? r.payload.first_name ?? 'Webhook post')}</span>
                         ) : (
                           <span className="muted">—</span>
                         )}
                         {r.is_test && <span className="badge badge-purple" style={{ marginLeft: 6 }}>Test</span>}
-                        {(r.leads?.phone ?? r.test_data?.phone) && <div className="muted small">{r.leads?.phone ?? r.test_data?.phone}</div>}
+                        {r.payload && <span className="badge badge-muted" style={{ marginLeft: 6 }}>Webhook</span>}
+                        {(r.leads?.phone ?? r.test_data?.phone ?? (r.payload?.phone as string | undefined)) && (
+                          <div className="muted small">{r.leads?.phone ?? r.test_data?.phone ?? String(r.payload?.phone)}</div>
+                        )}
                       </td>
                       <td className="nowrap">
                         <span className={cn('badge', st.tone)}>{st.label}</span>
@@ -225,7 +232,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                             type="button"
                             className="btn btn-outline btn-sm"
                             title="Run the workflow again from the start for this lead"
-                            disabled={rerunning === r.id || (!r.lead_id && !r.is_test)}
+                            disabled={rerunning === r.id || (!r.lead_id && !r.is_test && !r.payload)}
                             onClick={() => void rerun(r)}
                           >
                             <RotateCcw size={13} className={rerunning === r.id ? 'spin' : undefined} /> Re-run
