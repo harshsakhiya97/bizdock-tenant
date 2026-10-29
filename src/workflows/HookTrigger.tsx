@@ -185,7 +185,6 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
                       value={picked[k]}
                       disabled={disabled}
                       onChange={(e) => setPicked((p) => ({ ...p, [k]: e.target.value }))}
-                      style={{ width: 170 }}
                     />
                   )}
                 </div>
