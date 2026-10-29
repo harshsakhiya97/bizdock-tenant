@@ -742,20 +742,10 @@ function MessageField({
       </Label>
       <textarea ref={ref} id={id} className="input" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
       {!disabled && (
-        <div className="cb-var-groups">
-          {varGroups(extras).map((g) => (
-            <div key={g.label}>
-              <span className="cb-var-group">{g.label}</span>
-              <div className="cb-vars">
-                {g.items.map(([k, l]) => (
-                  <button key={k} type="button" onClick={() => insert(k)} title={`Insert {{${k}}}`}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
+          <option value="">Insert a field…</option>
+          <VarOptions groups={varGroups(extras)} show={(k, l) => `${l} {{${k}}}`} />
+        </select>
       )}
       {hint && <Hint>{hint}</Hint>}
     </div>
