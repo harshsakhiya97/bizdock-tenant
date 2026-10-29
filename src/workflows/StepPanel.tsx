@@ -446,7 +446,6 @@ function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unk
           <div>
             <Label htmlFor="cb-zm-ev">End date &amp; time</Label>
             <Select id="cb-zm-ev" value={String(d.end_var ?? 'meeting_end')} onChange={(e) => set('end_var', e.target.value)} disabled={disabled}>
-              <option value="">— none (use the length below) —</option>
               {fieldOpts.map(([k, l]) => (
                 <option key={k} value={k}>
                   {l}
@@ -456,22 +455,28 @@ function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unk
           </div>
         </div>
       ) : (
-        <div>
-          <span className="field-label">When</span>
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            <Select aria-label="When" value={String(d.when ?? 'in')} onChange={(e) => set('when', e.target.value)} disabled={disabled} style={{ width: 'auto' }}>
-              <option value="in">Days after this step</option>
-              <option value="fixed">On a date</option>
-            </Select>
-            {d.when === 'fixed' ? (
-              <TextInput aria-label="Date" type="date" value={String(d.date ?? '')} onChange={(e) => set('date', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
-            ) : (
-              <TextInput aria-label="Days" type="number" min={0} value={String(d.days ?? 1)} onChange={(e) => set('days', Math.max(0, Number(e.target.value) || 0))} disabled={disabled} style={{ width: 80 }} />
-            )}
-            <span className="muted small">at</span>
-            <TextInput aria-label="Time" type="time" step={900} value={String(d.time ?? '11:00')} onChange={(e) => set('time', e.target.value)} disabled={disabled} style={{ width: 'auto' }} />
+        <div className="form-grid">
+          <div className="span-2">
+            <Label htmlFor="cb-zm-date" required>
+              Date
+            </Label>
+            <TextInput id="cb-zm-date" type="date" value={String(d.date ?? '')} onChange={(e) => set('date', e.target.value)} disabled={disabled} />
           </div>
-          <Hint>India time. “0 days” = the same day.</Hint>
+          <div>
+            <Label htmlFor="cb-zm-st" required>
+              Start time
+            </Label>
+            <TextInput id="cb-zm-st" type="time" step={900} value={String(d.time ?? '11:00')} onChange={(e) => set('time', e.target.value)} disabled={disabled} />
+          </div>
+          <div>
+            <Label htmlFor="cb-zm-et" required>
+              End time
+            </Label>
+            <TextInput id="cb-zm-et" type="time" step={900} value={String(d.end_time ?? '12:00')} onChange={(e) => set('end_time', e.target.value)} disabled={disabled} />
+          </div>
+          <div className="span-2">
+            <Hint>India time.</Hint>
+          </div>
         </div>
       )}
       <div>
@@ -517,10 +522,6 @@ function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unk
           <Hint>Each new meeting goes to the next ticked person, in this order. Inactive people are skipped.</Hint>
         </div>
       )}
-      <div>
-        <Label htmlFor="cb-zm-dur">Length (minutes)</Label>
-        <TextInput id="cb-zm-dur" type="number" min={15} step={15} value={String(d.duration ?? 60)} onChange={(e) => set('duration', Math.max(15, Number(e.target.value) || 60))} disabled={disabled} />
-      </div>
     </>
   )
 }
