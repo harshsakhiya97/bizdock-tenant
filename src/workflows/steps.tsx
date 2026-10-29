@@ -170,9 +170,11 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'bulk_whatsapp': {
       const rows = rowsOf(d)
       if (!rows.length) return 'No messages yet'
-      const last = rows[rows.length - 1]
-      const stop = d.stop_on ? ` · stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}` : ''
-      return `${rows.length} message${rows.length === 1 ? '' : 's'} · last ${unitText(Number(last.amount) || 0, last.unit)} ${bulkBefore(d) ? 'before' : 'after'} ${anchorText(d, ctx)}${stop}`
+      // one line per message: template · 10 minutes before / after
+      const dir = bulkBefore(d) ? 'before' : 'after'
+      const lines = rows.map((r) => `${r.template || 'No template'} · ${unitText(Number(r.amount) || 0, r.unit)} ${dir}`)
+      const stop = d.stop_on ? [`Stops if ${conditionText(d.stop as ConditionData, ctx).replace(/^\w/, (c) => c.toLowerCase())}`] : []
+      return [...lines, ...stop].join('\n')
     }
     case 'generate_link':
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
