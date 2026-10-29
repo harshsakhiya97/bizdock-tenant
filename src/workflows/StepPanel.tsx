@@ -5,7 +5,8 @@ import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
-import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
+import { SearchSelect } from '@/components/SearchSelect'
+import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, bulkBefore, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, needsValue, normalize, opsFor } from './conditions'
@@ -371,25 +372,20 @@ function BulkFields({
                         {error ? (
                           <input className="input input-sm" placeholder="Template name" value={r.template} onChange={(e) => setRow(r.id, { template: e.target.value })} disabled={disabled} />
                         ) : (
-                          <select
-                            className="input input-sm"
-                            aria-label="Template"
+                          <SearchSelect
                             value={picked ? `${picked.elementName}|${picked.language?.value ?? ''}` : r.template ? '__missing' : ''}
-                            onChange={(e) => {
-                              const t = e.target.value ? pickTemplate(list, e.target.value, r.params ?? {}, extraFields) : null
+                            onChange={(v) => {
+                              if (v === '__missing') return
+                              const t = v ? pickTemplate(list, v, r.params ?? {}, extraFields) : null
                               setRow(r.id, t ? { template: t.template, template_language: t.template_language, template_body: t.template_body, params: t.params } : { template: '', template_language: '', template_body: '', params: {} })
                               if (t && Object.keys(t.params).length) setOpen(r.id)
                             }}
                             disabled={disabled || !list}
-                          >
-                            <option value="">{list ? '— pick —' : 'Loading…'}</option>
-                            {r.template && !picked && list && <option value="__missing">{r.template} (not found)</option>}
-                            {(list ?? []).map((t) => (
-                              <option key={t.id} value={`${t.elementName}|${t.language?.value ?? ''}`}>
-                                {t.elementName} · {t.language?.value}
-                              </option>
-                            ))}
-                          </select>
+                            placeholder={list ? '— pick —' : 'Loading…'}
+                            searchPlaceholder="Search templates…"
+                            emptyText="No template matches"
+                            options={templateOptions(list, r.template && !picked ? `${r.template} (not found)` : null, '— pick —')}
+                          />
                         )}
                       </td>
                       <td>

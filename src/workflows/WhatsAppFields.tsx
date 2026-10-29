@@ -1,7 +1,8 @@
 import { VarOptions, useVarGroups } from './varGroups'
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
-import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput } from '@/components/Field'
+import { SearchSelect, type SearchOption } from '@/components/SearchSelect'
 import { WaBubble } from '@/integrations/WaBubble'
 import { listWatiTemplates, type WatiTemplate } from '@/integrations/watiApi'
 import { useTenant } from '@/tenant/useTenant'
@@ -46,6 +47,18 @@ export function pickTemplate(list: WatiTemplate[] | null, key: string, oldParams
 export const findTemplate = (list: WatiTemplate[] | null, d: Record<string, unknown>) =>
   list?.find((t) => t.elementName === d.template && (!d.template_language || t.language?.value === d.template_language)) ?? null
 export const templateVars = (d: Record<string, unknown>) => (d.template ? varsIn(String(d.template_body ?? '')) : [])
+
+/** the templates as search-dropdown options ("name|language"), with an empty choice first */
+export function templateOptions(list: WatiTemplate[] | null, missing: string | null, none: string): SearchOption[] {
+  return [
+    { value: '', label: none },
+    ...(missing ? [{ value: '__missing', label: missing }] : []),
+    ...(list ?? []).map((t) => ({
+      value: `${t.elementName}|${t.language?.value ?? ''}`,
+      label: `${t.elementName} · ${t.language?.text ?? t.language?.value ?? ''} · ${(t.category ?? '').toLowerCase()}`,
+    })),
+  ]
+}
 
 /** "{{var}}  [text or a lead field]" for each variable of a template */
 export function TemplateParams({
@@ -124,15 +137,16 @@ export function WhatsAppFields({
             <Hint>Couldn’t load templates: {error}</Hint>
           </>
         ) : (
-          <Select id="cb-wa-t" value={picked ? `${picked.elementName}|${picked.language?.value ?? ''}` : name ? '__missing' : ''} onChange={(e) => pick(e.target.value)} disabled={disabled || !list}>
-            <option value="">{list ? '— No template: free message —' : 'Loading templates…'}</option>
-            {name && !picked && list && <option value="__missing">{name} (not approved / not found)</option>}
-            {(list ?? []).map((t) => (
-              <option key={t.id} value={`${t.elementName}|${t.language?.value ?? ''}`}>
-                {t.elementName} · {t.language?.text ?? t.language?.value} · {(t.category ?? '').toLowerCase()}
-              </option>
-            ))}
-          </Select>
+          <SearchSelect
+            id="cb-wa-t"
+            value={picked ? `${picked.elementName}|${picked.language?.value ?? ''}` : name ? '__missing' : ''}
+            onChange={(v) => v !== '__missing' && pick(v ?? '')}
+            disabled={disabled || !list}
+            placeholder={list ? '— No template: free message —' : 'Loading templates…'}
+            searchPlaceholder="Search templates…"
+            emptyText="No template matches"
+            options={templateOptions(list, name && !picked ? `${name} (not approved / not found)` : null, '— No template: free message —')}
+          />
         )}
         {!error && <Hint>Approved templates from your WhatsApp provider. Workflows send templates only: a free message can’t reach a lead who hasn’t written to you in the last 24 hours.</Hint>}
       </div>
