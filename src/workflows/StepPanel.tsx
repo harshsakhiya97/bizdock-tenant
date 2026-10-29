@@ -924,7 +924,7 @@ function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; c
               <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Move up" disabled={disabled || i === 0} onClick={() => put(cases.map((x, j) => (j === i - 1 ? cases[i] : j === i ? cases[i - 1] : x)))}>
                 <ArrowUp size={13} />
               </button>
-              <button type="button" className="btn btn-ghost btn-icon btn-sm danger-text" aria-label="Remove path" disabled={disabled || cases.length <= 2} title={cases.length <= 2 ? 'A Switch has at least 2 paths' : undefined} onClick={() => put(cases.filter((x) => x.id !== c.id))}>
+              <button type="button" className="btn btn-ghost btn-icon btn-sm danger-text" aria-label="Remove path" disabled={disabled || cases.length <= 1} onClick={() => put(cases.filter((x) => x.id !== c.id))}>
                 <Trash2 size={13} />
               </button>
             </div>
