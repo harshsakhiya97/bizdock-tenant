@@ -405,7 +405,7 @@ const SHORT_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 /** a sample code like the real ones (8 characters, no look-alikes) */
 const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => SHORT_ABC[b % SHORT_ABC.length]).join('')
 
-/** Create Zoom meeting: also make a short link of the Zoom link ({{generated_link}}, {{generated_link_code}}) */
+/** Create Zoom meeting: also make a short link of the Zoom link ({{zoom_short_link}}, {{zoom_short_link_code}}) */
 function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const [code] = useState(sampleCode)
   return (
@@ -424,8 +424,8 @@ function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: 
             {SHORT_BASE}/{code}
           </code>
           <small className="muted">
-            Use <code className="code-chip">{'{{generated_link}}'}</code> for the whole link, or <code className="code-chip">{'{{generated_link_code}}'}</code> for the code only (a template
-            button that already has your domain).
+            It opens the Zoom meeting link with its passcode. Use <code className="code-chip">{'{{zoom_short_link}}'}</code> for the whole link, or{' '}
+            <code className="code-chip">{'{{zoom_short_link_code}}'}</code> for the code only (a template button that already has your domain).
           </small>
         </div>
       )}
