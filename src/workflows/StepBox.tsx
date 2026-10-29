@@ -2,18 +2,11 @@ import { createContext, memo, useContext } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { AlertCircle, Plus as PlusIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { AddCtx } from './addCtx'
 import { STEP_META, caseLabel, casesOf, problem, summary, triggerLabel } from './steps'
 import type { FlowContext, StepNode, TriggerData } from './types'
 
 export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [], linkVars: [] })
-
-/** the builder's "+" actions: add a step under an exit, or add a Switch path */
-export const AddCtx = createContext<{ canEdit: boolean; used: Set<string>; onAdd: (source: string, handle: string | null) => void; onAddPath: (id: string) => void }>({
-  canEdit: false,
-  used: new Set(),
-  onAdd: () => {},
-  onAddPath: () => {},
-})
 
 /** a "+" under an exit (n8n style) */
 function Plus({ show, left, label, onClick, isPath }: { show: boolean; left: string; label: string; onClick: () => void; isPath?: boolean }) {
