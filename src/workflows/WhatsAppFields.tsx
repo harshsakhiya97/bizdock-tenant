@@ -47,6 +47,19 @@ export const findTemplate = (list: WatiTemplate[] | null, d: Record<string, unkn
 export const templateVars = (d: Record<string, unknown>) => (d.template ? varsIn(String(d.template_body ?? '')) : [])
 
 /** "{{var}}  [text or a lead field]" for each variable of a template */
+/** variables made by earlier steps, by name */
+const STEP_VAR_LABEL: Record<string, string> = {
+  zoom_short_link: 'Zoom short link',
+  zoom_short_link_code: 'Zoom short link code',
+  zoom_link: 'Zoom link',
+  zoom_password: 'Zoom passcode',
+  zoom_meeting_id: 'Zoom meeting ID',
+  zoom_date: 'Zoom meeting date',
+  zoom_time: 'Zoom meeting time',
+  generated_link: 'Generated link',
+  generated_link_code: 'Generated link code',
+}
+
 export function TemplateParams({
   vars,
   params,
@@ -76,13 +89,26 @@ export function TemplateParams({
                 </option>
               ))}
             </optgroup>
-            {extraFields.length > 0 && (
+            {extraFields.some((k) => STEP_VAR_LABEL[k]) && (
+              <optgroup label="From earlier steps">
+                {extraFields
+                  .filter((k) => STEP_VAR_LABEL[k])
+                  .map((k) => (
+                    <option key={k} value={k}>
+                      {STEP_VAR_LABEL[k]}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
+            {extraFields.some((k) => !STEP_VAR_LABEL[k]) && (
               <optgroup label="Extra fields">
-                {extraFields.map((k) => (
-                  <option key={k} value={k}>
-                    {k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
-                  </option>
-                ))}
+                {extraFields
+                  .filter((k) => !STEP_VAR_LABEL[k])
+                  .map((k) => (
+                    <option key={k} value={k}>
+                      {k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())}
+                    </option>
+                  ))}
               </optgroup>
             )}
           </select>

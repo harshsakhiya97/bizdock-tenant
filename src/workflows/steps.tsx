@@ -58,8 +58,8 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
         const k = linkVarOf(n.data)
         return [k, `${k}_code`]
       }),
-    ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
     ...(nodes.some((n) => n.type === 'zoom_meeting' && n.data.short_link) ? ['zoom_short_link', 'zoom_short_link_code'] : []),
+    ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
   ]
   return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars, triggerEvent: t.event, triggerPages: t.pages ?? [] }
 }
