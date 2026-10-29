@@ -267,6 +267,6 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
       if (d.workflow_id === ctx.selfId) return 'Pick another workflow'
-      return ((d.fields ?? []) as { name: string; value: string }[]).some((f) => !f.name?.trim() && f.value?.trim()) ? 'Name every passed field' : null
+      return ((d.fields ?? []) as { name: string; value: string }[]).some((f) => !f.name?.trim() || !f.value?.trim()) ? 'Give every passed field a name and a variable' : null
   }
 }
