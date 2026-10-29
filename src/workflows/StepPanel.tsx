@@ -1,10 +1,10 @@
-import { Fragment, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateVars, useWatiTemplates } from './WhatsAppFields'
-import { ALL_TRIGGERS, STEP_META, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
+import { ALL_TRIGGERS, STEP_META, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowMinutes, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
@@ -71,7 +71,7 @@ export function StepPanel({
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'zoom_meeting' && (
           <>
-            <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} fromForm={ctx.triggerEvent === 'form_submitted'} />
+            <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
             <MessageField id="cb-zm-topic" label="Meeting topic" value={String(d.topic ?? '')} onChange={(v) => set('topic', v)} disabled={ro} rows={2} />
             <Hint>
               Later steps can use <code>{'{{zoom_link}}'}</code>, <code>{'{{zoom_password}}'}</code>, <code>{'{{zoom_date}}'}</code> and <code>{'{{zoom_time}}'}</code>. The meeting is added to the lead’s Meetings (a test run only creates the Zoom meeting).
@@ -400,11 +400,16 @@ function BulkFields({
 }
 
 /** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
-function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; fromForm: boolean }) {
+function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const zooms = ctx.zoomAccounts ?? []
   const members = ((d.meet_members ?? []) as string[]).filter(Boolean)
-  // the fields the trigger's webhook(s) save with each post
-  const hooks = ctx.triggerPages?.length ? ctx.pages.filter((p) => ctx.triggerPages!.includes(p.id)) : ctx.pages
+  // only when the trigger is a meeting webhook: the fields it saves with each post
+  const hooks = meetingHooks(ctx)
+  const fromForm = hooks.length > 0
+  // the trigger isn't a meeting webhook (any more): the step uses its own date and time
+  useEffect(() => {
+    if (!fromForm && d.use_webhook && !disabled) set('use_webhook', false)
+  }, [fromForm, d.use_webhook, disabled, set])
   const fieldOpts: [string, string][] = []
   for (const f of hooks.flatMap((p) => p.saved ?? [])) if (!fieldOpts.some(([k]) => k === f.key)) fieldOpts.push([f.key, f.label])
   if (!fieldOpts.length) fieldOpts.push(['meeting_start', 'Meeting date & time'], ['meeting_end', 'Meeting end time'])

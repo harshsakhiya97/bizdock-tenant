@@ -83,7 +83,7 @@ export type WorkflowRow = {
 /** everything the boxes / side panel need to describe and pick things */
 export type RefData = {
   funnels: { id: string; name: string; business_id: string; sub_business_id: string | null; event_id: string | null; tags: string[]; stages: { id: string; name: string }[] }[]
-  pages: { id: string; name: string; funnel_id: string; fields: string[]; saved?: { key: string; label: string }[] }[]
+  pages: { id: string; name: string; funnel_id: string; fields: string[]; saved?: { key: string; label: string }[]; action?: string }[]
   events: { id: string; title: string; date: string; time: string | null; endTime: string | null }[]
   /** lead sources (conditions) */
   sources?: { id: string; name: string }[]
