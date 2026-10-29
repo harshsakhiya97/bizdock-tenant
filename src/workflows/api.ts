@@ -97,7 +97,7 @@ export async function archiveWorkflow(id: string) {
 export async function loadRefData(tenantId: string): Promise<RefData> {
   const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts] = await Promise.all([
     listFunnels(tenantId),
-    db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample').eq('tenant_id', tenantId).order('created_at'),
+    db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample, action').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
     listEventTypes(tenantId),
     listMemberOptions(tenantId),
@@ -122,7 +122,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     })),
     // the funnel's webhook forms (kept as `pages` in workflows); fields a lead from it can carry:
     // the standard optional ones + extra fields from its mapping
-    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string> | null; sample: Record<string, string> | null }[]).map((p) => {
+    pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string> | null; sample: Record<string, string> | null; action: string }[]).map((p) => {
       const map: Record<string, string> = p.field_map ?? {}
       const keys = [...new Set([...Object.keys(p.sample ?? {}), ...Object.keys(map)])]
       // nested keys (a.b.0.c) count only when mapped
@@ -139,7 +139,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
           t === 'extra' ? { key: k, label: k } : t.startsWith('extra:') ? { key: t.slice(6).trim() || k, label: t.slice(6).trim() || k } : { key: t, label: targetLabel(t) },
         )
         .filter((f, i, all) => all.findIndex((x) => x.key === f.key) === i)
-      return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras], saved }
+      return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras], saved, action: p.action }
     }),
     events: events
       .filter((e) => ok.has(e.type_id))

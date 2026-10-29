@@ -101,6 +101,15 @@ export const linkVarOf = (d: Record<string, unknown>) =>
     .replace(/^_+|_+$/g, '') || 'generated_link'
 /** what a Create Zoom meeting step gives later steps */
 export const ZOOM_VARS = ['zoom_link', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
+/** the meeting webhooks the trigger listens to (a funnel form trigger: its picked webhooks, or all of the funnel's) */
+export function meetingHooks(ctx: FlowContext) {
+  if (ctx.triggerEvent !== 'form_submitted' || !ctx.funnel) return []
+  const hooks = ctx.triggerPages?.length ? ctx.pages.filter((p) => ctx.triggerPages!.includes(p.id)) : ctx.pages
+  return hooks.filter((p) => p.action === 'create_meeting')
+}
+/** the step takes its time from the webhook (only when the trigger is a meeting webhook) */
+export const zoomFromHook = (d: Record<string, unknown>, ctx: FlowContext) => !!d.use_webhook && meetingHooks(ctx).length > 0
+
 export function zoomWhen(d: Record<string, unknown>) {
   if (!d.date) return 'Pick the date'
   return `${day(String(d.date))}, ${String(d.time || '11:00')} – ${String(d.end_time || '12:00')}`
@@ -135,7 +144,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return d.url ? `{{${linkVarOf(d)}}} → ${String(d.url)}` : 'No URL yet'
     case 'zoom_meeting': {
       const acc = ctx.zoomAccounts?.find((z) => z.id === d.account)?.name ?? 'default Zoom'
-      const when = d.use_webhook && ctx.triggerEvent === 'form_submitted' ? 'Time from the webhook' : zoomWhen(d)
+      const when = zoomFromHook(d, ctx) ? 'Time from the webhook' : zoomWhen(d)
       const mm = (d.meet_members ?? []) as string[]
       const who =
         d.meet_mode === 'single'
@@ -209,7 +218,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (!ctx.zoomAccounts?.length) return 'Connect a Zoom account (System Connections)'
       if (d.meet_mode === 'single' && !((d.meet_members ?? []) as string[]).length) return 'Pick who the meeting is with'
       if (d.meet_mode === 'round_robin' && ((d.meet_members ?? []) as string[]).length < 2) return 'Tick at least two people for round robin'
-      if (d.use_webhook && ctx.triggerEvent === 'form_submitted') return null
+      if (zoomFromHook(d, ctx)) return null
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.date ?? ''))) return 'Pick the date'
       if (!/^\d{2}:\d{2}$/.test(String(d.time ?? '')) || !/^\d{2}:\d{2}$/.test(String(d.end_time ?? ''))) return 'Set the start and end time'
       if (String(d.end_time) <= String(d.time)) return 'The end time must be after the start time'
