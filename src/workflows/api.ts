@@ -74,7 +74,7 @@ export async function saveWorkflow(
       funnel_id: !eventTrigger && t.funnel_id ? t.funnel_id : null,
       event_id: eventTrigger && t.event_id ? t.event_id : null,
       // generated links open on this app's address (e.g. https://pride.viralsakhiya.com/pride/T7P46LXK)
-      nodes: slimNodes(w.nodes).map((n) => (n.type === 'generate_link' ? { ...n, data: { ...n.data, base_url: SHORT_BASE } } : n)),
+      nodes: slimNodes(w.nodes).map((n) => (n.type === 'generate_link' || n.type === 'zoom_meeting' ? { ...n, data: { ...n.data, base_url: SHORT_BASE } } : n)),
       edges: slimEdges(w.edges),
       updated_by: memberId ?? null,
     })
