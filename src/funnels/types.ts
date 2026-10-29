@@ -126,11 +126,11 @@ export type WebhookAction = 'create_lead' | 'update_lead' | 'create_meeting' | '
 export type MatchBy = 'phone' | 'email' | 'both'
 export type MeetMode = 'owner' | 'single' | 'round_robin'
 /** what the add / edit webhook modal saves */
-export type WebhookInput = { name: string; action: WebhookAction; match_by: MatchBy; meet_mode: MeetMode; meet_members: string[]; zoom_account_id: string | null }
+export type WebhookInput = { name: string; action: WebhookAction; match_by: MatchBy }
 export const WEBHOOK_ACTIONS: { value: WebhookAction; label: string; hint: string; badge: string }[] = [
   { value: 'create_lead', label: 'Create a new lead', hint: 'Each post adds a lead (the same phone again updates it).', badge: 'Creates leads' },
   { value: 'update_lead', label: 'Update fields of a lead', hint: 'Finds the lead and saves the mapped fields on it.', badge: 'Updates leads' },
-  { value: 'create_meeting', label: 'Create a meeting for a lead', hint: 'Finds the lead and books a meeting at the date-time sent.', badge: 'Books meetings' },
+  { value: 'create_meeting', label: 'Meeting booked', hint: 'Finds the lead and saves the booked date-time on it; a workflow step creates the meeting.', badge: 'Meeting bookings' },
   { value: 'purchase', label: 'Purchase (payment received)', hint: 'Finds the lead and logs the payment on it (Razorpay or any gateway).', badge: 'Logs payments' },
 ]
 export const MATCH_BY: { value: MatchBy; label: string }[] = [

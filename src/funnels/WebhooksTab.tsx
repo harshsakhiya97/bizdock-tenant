@@ -10,10 +10,9 @@ import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { addWebhook, deleteWebhook, regenerateWebhookKey, setWebhookActive, updateWebhook, webhookUrl } from './api'
-import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { FieldMapping } from './FieldMapping'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
-import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type MeetMode, type SubmissionRow, type WebhookAction, type WebhookInput } from './types'
+import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type SubmissionRow, type WebhookAction, type WebhookInput } from './types'
 import { useCopy } from './useCopy'
 
 type Kind = 'html' | 'js' | 'curl'
@@ -26,7 +25,6 @@ export function WebhooksTab({
   funnelId,
   hooks,
   submissions,
-  members = [],
   canEdit,
   onChanged,
   onError,
@@ -34,8 +32,6 @@ export function WebhooksTab({
   funnelId: string
   hooks: FunnelWebhook[] | null
   submissions: SubmissionRow[]
-  /** team members, for who a meeting webhook books with */
-  members?: { id: string; name: string }[]
   canEdit: boolean
   onChanged: (msg: string) => void
   onError: (msg: string) => void
@@ -57,14 +53,7 @@ export function WebhooksTab({
   const [hookName, setHookName] = useState('')
   const [hookAction, setHookAction] = useState<WebhookAction>('create_lead')
   const [hookMatch, setHookMatch] = useState<MatchBy>('phone')
-  const [meetMode, setMeetMode] = useState<MeetMode>('owner')
-  const [meetMembers, setMeetMembers] = useState<string[]>([])
   const [formError, setFormError] = useState<string | null>(null)
-  const [hookZoom, setHookZoom] = useState('')
-  const [zooms, setZooms] = useState<ZoomOption[]>([])
-  useEffect(() => {
-    void listZoomOptions(tenant.id).then(setZooms, () => setZooms([]))
-  }, [tenant.id])
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [snippet, setSnippet] = useState<Record<string, Kind | undefined>>({})
   const [busy, setBusy] = useState(false)
@@ -73,12 +62,9 @@ export function WebhooksTab({
     setHookName(naming?.hook?.name ?? '')
     setHookAction(naming?.hook?.action ?? 'create_lead')
     setHookMatch(naming?.hook?.match_by ?? 'phone')
-    setMeetMode(naming?.hook?.meet_mode ?? 'owner')
-    setMeetMembers(naming?.hook?.meet_members ?? [])
-    setHookZoom(naming?.hook?.zoom_account_id ?? '')
     setFormError(null)
   }, [naming])
-  const toggleMeet = (id: string, on: boolean) => setMeetMembers((p) => (on ? [...p, id] : p.filter((x) => x !== id)))
+
 
   // new leads / form posts per webhook
   const stats = useMemo(() => {
@@ -254,16 +240,11 @@ export function WebhooksTab({
                   disabled={busy || !hookName.trim()}
                   onClick={() => {
                     const n = naming
-                    if (hookAction === 'create_meeting' && meetMode === 'single' && !meetMembers.length) return setFormError('Pick who the meetings are with.')
-                    if (hookAction === 'create_meeting' && meetMode === 'round_robin' && meetMembers.length < 2) return setFormError('Tick at least two people for round robin.')
                     setNaming(null)
                     const w: WebhookInput = {
                       name: hookName,
                       action: hookAction,
                       match_by: hookMatch,
-                      meet_mode: meetMode,
-                      meet_members: meetMode === 'owner' ? [] : meetMode === 'single' ? meetMembers.slice(0, 1) : meetMembers,
-                      zoom_account_id: hookAction === 'create_meeting' ? hookZoom || null : null,
                     }
                     void run(
                       () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w)),
@@ -310,60 +291,6 @@ export function WebhooksTab({
                 ))}
               </Select>
               <Hint>Looked up among this business’s leads. If no lead matches, the post is only logged (shown as “no match”).</Hint>
-            </div>
-          )}
-          {hookAction === 'create_meeting' && (
-            <div style={{ marginTop: 14 }}>
-              <Label htmlFor="hook-meet">Meet with</Label>
-              <Select id="hook-meet" value={meetMode} onChange={(e) => setMeetMode(e.target.value as MeetMode)}>
-                <option value="owner">Owner of the lead</option>
-                <option value="single">One person</option>
-                <option value="round_robin">Round robin (take turns)</option>
-              </Select>
-              {meetMode === 'owner' && <Hint>The meeting goes to whoever owns the lead (none if the lead is unassigned).</Hint>}
-              {meetMode === 'single' && (
-                <div style={{ marginTop: 10 }}>
-                  <Label htmlFor="hook-meet-one" required>
-                    Team member
-                  </Label>
-                  <Select id="hook-meet-one" value={meetMembers[0] ?? ''} onChange={(e) => setMeetMembers(e.target.value ? [e.target.value] : [])}>
-                    <option value="">— select —</option>
-                    {members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              )}
-              {meetMode === 'round_robin' && (
-                <div style={{ marginTop: 10 }}>
-                  <span className="field-label">Team members (in turn)</span>
-                  <div className="check-list">
-                    {members.map((m) => (
-                      <label key={m.id} className="check">
-                        <input type="checkbox" checked={meetMembers.includes(m.id)} onChange={(e) => toggleMeet(m.id, e.target.checked)} />
-                        {m.name}
-                      </label>
-                    ))}
-                  </div>
-                  <Hint>Each new meeting goes to the next ticked person, in this order. Inactive people are skipped.</Hint>
-                </div>
-              )}
-            </div>
-          )}
-          {hookAction === 'create_meeting' && zooms.length > 0 && (
-            <div style={{ marginTop: 14 }}>
-              <Label htmlFor="hook-zoom">Zoom</Label>
-              <Select id="hook-zoom" value={hookZoom} onChange={(e) => setHookZoom(e.target.value)}>
-                <option value="">No Zoom (use the link the form sends, if any)</option>
-                {zooms.map((z) => (
-                  <option key={z.id} value={z.id}>
-                    Create a Zoom meeting on {z.name}
-                  </option>
-                ))}
-              </Select>
-              <Hint>With a Zoom account, each booked meeting gets its own Zoom meeting; attendance and chat come in after it ends.</Hint>
             </div>
           )}
           {formError && (

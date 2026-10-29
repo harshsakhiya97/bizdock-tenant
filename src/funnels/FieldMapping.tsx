@@ -268,8 +268,8 @@ export function FieldMapping({
           )}
           {page.action === 'create_meeting' && (
             <div className="muted small">
-              The lead is found by its phone / email; the meeting runs from <b>Meeting date &amp; time</b> to <b>Meeting end time</b> (30 minutes if no end is sent;
-              a time without a time zone is taken as India time). If <b>Team member</b> is mapped and the name is found in Team, the meeting goes to that person; otherwise to the webhook’s <b>Meet with</b> setting.
+              The lead is found by its phone / email. <b>Meeting date &amp; time</b>, <b>Meeting end time</b> and <b>Team member</b> are saved with the post
+              (a time without a time zone is taken as India time) and passed to the funnel’s workflows, where a step books the meeting.
             </div>
           )}
           {page.action === 'purchase' && <div className="muted small">For now a payment is logged on the lead’s activity (amount, product, payment ID); bookings aren’t changed.</div>}
