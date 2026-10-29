@@ -60,7 +60,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
       }),
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
   ]
-  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars, triggerEvent: t.event }
+  return { ...ref, funnel, event, pages, stages, tags, fieldKeys, linkVars, triggerEvent: t.event, triggerPages: t.pages ?? [] }
 }
 
 export function triggerSummary(t: TriggerData, ctx: FlowContext): string {

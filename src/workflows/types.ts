@@ -83,7 +83,7 @@ export type WorkflowRow = {
 /** everything the boxes / side panel need to describe and pick things */
 export type RefData = {
   funnels: { id: string; name: string; business_id: string; sub_business_id: string | null; event_id: string | null; tags: string[]; stages: { id: string; name: string }[] }[]
-  pages: { id: string; name: string; funnel_id: string; fields: string[] }[]
+  pages: { id: string; name: string; funnel_id: string; fields: string[]; saved?: { key: string; label: string }[] }[]
   events: { id: string; title: string; date: string; time: string | null; endTime: string | null }[]
   /** lead sources (conditions) */
   sources?: { id: string; name: string }[]
@@ -114,6 +114,8 @@ export type FlowContext = RefData & {
   linkVars: string[]
   /** what starts the workflow */
   triggerEvent?: TriggerEvent
+  /** the webhooks picked in a "form submitted" trigger (none = any of the funnel's) */
+  triggerPages?: string[]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
