@@ -403,12 +403,11 @@ function BulkFields({
 function ZoomFields({ d, ctx, set, disabled, fromForm }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; fromForm: boolean }) {
   const zooms = ctx.zoomAccounts ?? []
   const members = ((d.meet_members ?? []) as string[]).filter(Boolean)
-  // the form post's fields: the meeting ones first, then the webhook's other fields
-  const fieldOpts: [string, string][] = [
-    ['meeting_start', 'Meeting date & time (start)'],
-    ['meeting_end', 'Meeting end time'],
-    ...[...new Set(ctx.fieldKeys)].filter((k) => !['meeting_start', 'meeting_end', 'company_name', 'purpose', 'note'].includes(k)).map((k) => [k, k] as [string, string]),
-  ]
+  // the fields the trigger's webhook(s) save with each post
+  const hooks = ctx.triggerPages?.length ? ctx.pages.filter((p) => ctx.triggerPages!.includes(p.id)) : ctx.pages
+  const fieldOpts: [string, string][] = []
+  for (const f of hooks.flatMap((p) => p.saved ?? [])) if (!fieldOpts.some(([k]) => k === f.key)) fieldOpts.push([f.key, f.label])
+  if (!fieldOpts.length) fieldOpts.push(['meeting_start', 'Meeting date & time'], ['meeting_end', 'Meeting end time'])
   return (
     <>
       <div>

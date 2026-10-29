@@ -2,7 +2,7 @@ import { listZoomOptions } from '@/zoom/api'
 import { db } from '@/lib/supabase'
 import { listEvents, listEventTypes } from '@/calendar/api'
 import { listFunnels } from '@/funnels/api'
-import { guessTarget } from '@/funnels/fieldMap'
+import { guessTarget, targetLabel } from '@/funnels/fieldMap'
 import { listMemberOptions } from '@/leads/api'
 import type { FlowEdge, RefData, StepNode, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { TRIGGER_DEFAULTS } from './types'
@@ -125,8 +125,21 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     pages: ((pages.data ?? []) as { id: string; name: string; funnel_id: string; field_map: Record<string, string> | null; sample: Record<string, string> | null }[]).map((p) => {
       const map: Record<string, string> = p.field_map ?? {}
       const keys = [...new Set([...Object.keys(p.sample ?? {}), ...Object.keys(map)])]
-      const extras = keys.filter((k) => (map[k] ?? guessTarget(k)) === 'extra')
-      return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras] }
+      // nested keys (a.b.0.c) count only when mapped
+      const targetOf = (k: string) => map[k] ?? (k.includes('.') ? 'ignore' : guessTarget(k))
+      const extras = keys.flatMap((k) => {
+        const t = targetOf(k)
+        return t === 'extra' ? [k] : t.startsWith('extra:') ? [t.slice(6).trim() || k] : []
+      })
+      // what the webhook saves with each post (the names they have in the post's data)
+      const saved = keys
+        .map((k) => ({ k, t: targetOf(k) }))
+        .filter(({ t }) => t !== 'ignore')
+        .map(({ k, t }) =>
+          t === 'extra' ? { key: k, label: k } : t.startsWith('extra:') ? { key: t.slice(6).trim() || k, label: t.slice(6).trim() || k } : { key: t, label: targetLabel(t) },
+        )
+        .filter((f, i, all) => all.findIndex((x) => x.key === f.key) === i)
+      return { id: p.id, name: p.name, funnel_id: p.funnel_id, fields: ['company_name', 'purpose', 'note', ...extras], saved }
     }),
     events: events
       .filter((e) => ok.has(e.type_id))
