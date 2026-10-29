@@ -270,6 +270,7 @@ function BulkFields({
   ].filter((g) => g.items.length)
   const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
   const anchorName = anchorText(d, ctx, label)
+  const whenLabel = `${before ? 'Before' : 'After'} ${anchor === 'start' ? 'the start' : anchorName}`
 
   function add() {
     const last = rows[rows.length - 1]
@@ -323,8 +324,6 @@ function BulkFields({
                 <th>#</th>
                 <th>Send to</th>
                 <th>Template</th>
-                <th>{before ? 'Before' : 'After'} {anchor === 'start' ? 'the start' : anchorName}</th>
-                <th />
               </tr>
             </thead>
             <tbody>
@@ -389,6 +388,7 @@ function BulkFields({
                         )}
                       </td>
                       <td>
+                        <span className="bulk-when-label">{whenLabel}</span>
                         <div className="bulk-when">
                           <input className="input input-sm" type="number" min={0} aria-label="Amount" value={r.amount} onChange={(e) => setRow(r.id, { amount: Math.max(0, Number(e.target.value) || 0) })} disabled={disabled} />
                           <select className="input input-sm" aria-label="Unit" value={r.unit} onChange={(e) => setRow(r.id, { unit: e.target.value as Unit })} disabled={disabled}>
