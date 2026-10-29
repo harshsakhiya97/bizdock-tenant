@@ -159,6 +159,19 @@ export function StepPanel({
             <Hint>The lead leaves this workflow here and starts the chosen one from its first step (its trigger is skipped).</Hint>
           </div>
         )}
+        {kind === 'goto' && (
+          <GotoFields
+            d={d}
+            set={set}
+            disabled={ro}
+            vars={[
+              ...VARIABLES.map(([k, l]) => [k, l] as [string, string]),
+              ...[...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars]
+                .filter((k) => k && !VARIABLES.some(([v]) => v === k))
+                .map((k) => [k, k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())] as [string, string]),
+            ]}
+          />
+        )}
 
         {issue && <div className="alert alert-warning small">{issue}</div>}
       </div>
@@ -407,6 +420,82 @@ const SHORT_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => SHORT_ABC[b % SHORT_ABC.length]).join('')
 
 /** Create Zoom meeting: also make a short link of the Zoom link ({{zoom_short_link}}, {{zoom_short_link_code}}) */
+type PassField = { id: string; name: string; value: string }
+/** Go to workflow: fields passed to the next workflow (its steps use them as {{name}}) */
+function GotoFields({ d, set, disabled, vars }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; vars: [string, string][] }) {
+  const rows = (d.fields ?? []) as PassField[]
+  const put = (next: PassField[]) => set('fields', next)
+  return (
+    <div>
+      <span className="field-label">Pass data to the workflow</span>
+      <Hint>Each field reaches the next workflow’s steps as {'{{name}}'}: type text, or pick a variable of this workflow (e.g. the Zoom short link).</Hint>
+      <div className="goto-rows">
+        {rows.map((r, i) => (
+          <div key={r.id} className="goto-row">
+            <TextInput
+              aria-label="Field name"
+              placeholder="field_name"
+              value={r.name}
+              disabled={disabled}
+              onChange={(e) => put(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
+            />
+            <TextInput
+              aria-label="Value"
+              placeholder="Text or {{variable}}"
+              value={r.value}
+              disabled={disabled}
+              onChange={(e) => put(rows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
+            />
+            <select
+              className="input input-sm"
+              aria-label="Variable"
+              value=""
+              disabled={disabled}
+              onChange={(e) => {
+                const k = e.target.value
+                if (!k) return
+                put(rows.map((x, j) => (j === i ? { ...x, value: `{{${k}}}`, name: x.name || k } : x)))
+              }}
+            >
+              <option value="">Variable…</option>
+              {vars.map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l}
+                </option>
+              ))}
+            </select>
+            {!disabled && (
+              <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => put(rows.filter((_, j) => j !== i))}>
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {!disabled && (
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          style={{ marginTop: 6 }}
+          onClick={() => put([...rows, { id: `f${Date.now().toString(36)}`, name: '', value: '' }])}
+        >
+          <Plus size={14} /> Add field
+        </button>
+      )}
+      {rows.some((r) => r.name.trim()) && (
+        <Hint>
+          The next workflow can use{' '}
+          {rows
+            .filter((r) => r.name.trim())
+            .map((r) => `{{${varKey(r.name)}}}`)
+            .join(', ')}
+          .
+        </Hint>
+      )}
+    </div>
+  )
+}
+
 function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const [code] = useState(sampleCode)
   return (

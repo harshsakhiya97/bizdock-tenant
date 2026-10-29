@@ -254,7 +254,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         )}
       </div>
       <div className="alert alert-info small cb-note">
-        <Info size={15} /> WhatsApp, Bulk WhatsApp, Generate link and Wait steps run now. Email, Call, Wait for event, Switch and Go to workflow are saved but don’t run yet.
+        <Info size={15} /> WhatsApp, Bulk WhatsApp, Generate link, Create Zoom meeting, Wait and Go to workflow steps run now. Email, Call, Wait for event and Switch are saved but don’t run yet.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {!dirty && <Flash msg={notice.ok} dep={notice} />}

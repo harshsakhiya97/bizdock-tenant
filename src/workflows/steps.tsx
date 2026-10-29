@@ -193,8 +193,11 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       const n = casesOf(d).length
       return `${n} path${n === 1 ? '' : 's'} + otherwise`
     }
-    case 'goto':
-      return ctx.workflows.find((w) => w.id === d.workflow_id)?.name ?? 'Pick the workflow'
+    case 'goto': {
+      const name = ctx.workflows.find((w) => w.id === d.workflow_id)?.name ?? 'Pick the workflow'
+      const n = ((d.fields ?? []) as { name: string }[]).filter((f) => f.name?.trim()).length
+      return n ? `${name} · passes ${n} field${n === 1 ? '' : 's'}` : name
+    }
   }
 }
 
@@ -263,6 +266,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return casesOf(d).some((c) => conditionProblem(c)) ? 'Finish every path’s condition' : null
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
-      return d.workflow_id === ctx.selfId ? 'Pick another workflow' : null
+      if (d.workflow_id === ctx.selfId) return 'Pick another workflow'
+      return ((d.fields ?? []) as { name: string; value: string }[]).some((f) => !f.name?.trim() && f.value?.trim()) ? 'Name every passed field' : null
   }
 }
