@@ -208,7 +208,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return conditionText(d as unknown as ConditionData, ctx)
     case 'switch': {
       const n = casesOf(d).length
-      return `${n} path${n === 1 ? '' : 's'} + otherwise`
+      return `${n} path${n === 1 ? '' : 's'}`
     }
     case 'goto': {
       const name = ctx.workflows.find((w) => w.id === d.workflow_id)?.name ?? 'Pick the workflow'

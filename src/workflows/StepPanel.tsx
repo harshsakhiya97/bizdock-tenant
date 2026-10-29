@@ -910,7 +910,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
   )
 }
 
-/** Switch: several paths, each with its own condition, checked top to bottom; the rest go "Otherwise". */
+/** Switch: several paths, each with its own condition, checked top to bottom. */
 function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const cases = casesOf(d)
   const put = (next: SwitchCase[]) => set('cases', next)
@@ -938,7 +938,7 @@ function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; c
           <Plus size={14} /> Add path
         </button>
       )}
-      <Hint>Each lead goes down the first path it matches; leads matching none go down “Otherwise”. A path with no line ends the workflow for those leads.</Hint>
+      <Hint>Each lead goes down the first path it matches; a lead matching none, or a path with no line, ends the workflow there.</Hint>
     </>
   )
 }
