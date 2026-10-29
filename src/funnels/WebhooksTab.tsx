@@ -43,7 +43,9 @@ export function WebhooksTab({
   async function openWorkflow(h: FunnelWebhook) {
     setBusy(true)
     try {
-      navigate(`/workflows/${await workflowForWebhook(tenant.id, membership?.id, funnelId, h)}`)
+      navigate(`/workflows/${await workflowForWebhook(tenant.id, membership?.id, funnelId, h)}`, {
+        state: { back: { to: `/funnels/${funnelId}?tab=webhooks`, label: 'Back to webhooks' } },
+      })
     } catch (e) {
       onError((e as Error).message)
       setBusy(false)

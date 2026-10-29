@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Empty } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { getWorkflow, loadRefData } from './api'
+import { useBackTo } from './backTo'
 import { RunsPanel } from './RunsPanel'
 import type { RefData, WorkflowRow } from './types'
 
@@ -16,6 +17,7 @@ export function WorkflowPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
   const { can } = useAuth()
+  const back = useBackTo()
   const [wf, setWf] = useState<WorkflowRow | null | undefined>(undefined)
   const [refData, setRefData] = useState<RefData | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -41,8 +43,8 @@ export function WorkflowPage() {
   return (
     <>
       <div className="fp-head" style={{ marginBottom: 10 }}>
-        <Link to="/workflows" className="link-btn muted small">
-          <ArrowLeft size={14} /> All workflows
+        <Link to={back.to} className="link-btn muted small">
+          <ArrowLeft size={14} /> {back.label}
         </Link>
       </div>
       <div className="panel">
