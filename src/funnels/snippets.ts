@@ -34,7 +34,7 @@ function replyOf(h: Hook) {
     case 'update_lead':
       return '{"ok":true,"status":"updated","lead_id":"…"}  (no lead with this phone / email → "no_match")'
     case 'create_meeting':
-      return '{"ok":true,"status":"meeting","lead_id":"…","meeting_id":"…"}  (no lead → "no_match")'
+      return '{"ok":true,"status":"meeting","lead_id":"…"}  (no lead → "no_match")'
     case 'purchase':
       return '{"ok":true,"status":"payment","lead_id":"…"}  (no lead → "no_match")'
     default:
