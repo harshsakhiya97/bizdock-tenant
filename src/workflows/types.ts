@@ -27,7 +27,7 @@ export type TriggerData = {
 /** a lead field ("stage", "email", "x:<extra field>", "meeting", "payment"…), how it's compared, and the value (see conditions.ts) */
 export type ConditionData = { field: string; op: string; value: string }
 
-/** one path of a Switch box: leads matching it go down its line (checked top to bottom, else "Otherwise") */
+/** one path of a Switch box: leads matching it go down its line (checked top to bottom) */
 export type SwitchCase = ConditionData & { id: string; label: string }
 
 /** one message of a Bulk WhatsApp step: sent this long after the trigger */

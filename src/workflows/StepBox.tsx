@@ -70,22 +70,22 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
       {type === 'trigger' ? <div className="cb-sub">{name ? `${auto} · ${summary(type, data, ctx)}` : summary(type, data, ctx)}</div> : (name || bulkCount > 0) && <div className="cb-sub">{auto}</div>}
       {type === 'switch' ? (
         (() => {
-          // one exit per path + "Otherwise", spread along the bottom, then a "+" to add a path
-          const exits = [...casesOf(data).map((c, i) => ({ id: c.id, label: caseLabel(c, i, ctx) })), { id: 'else', label: 'Otherwise' }]
+          // one exit per path, spread along the bottom, then a "+" to add a path
+          const exits = casesOf(data).map((c, i) => ({ id: c.id, label: caseLabel(c, i, ctx) }))
           const slots = exits.length + (add.canEdit ? 1 : 0)
           const at = (i: number) => `${((i + 0.5) / slots) * 100}%`
           return (
             <>
               <div className="cb-paths">
                 {exits.map((x) => (
-                  <span key={x.id} className={cn(x.id === 'else' && 'is-else')} title={x.label}>
+                  <span key={x.id} title={x.label}>
                     {x.label}
                   </span>
                 ))}
                 {add.canEdit && <span className="is-new">New path</span>}
               </div>
               {exits.map((x, i) => (
-                <Handle key={x.id} id={x.id} type="source" position={Position.Bottom} className={cn('cb-handle', x.id === 'else' && 'is-no')} style={{ left: at(i) }} />
+                <Handle key={x.id} id={x.id} type="source" position={Position.Bottom} className="cb-handle" style={{ left: at(i) }} />
               ))}
               {exits.map((x, i) => (
                 <Plus key={x.id} show={free(x.id)} left={at(i)} label={`Add a step on “${x.label}”`} onClick={() => add.onAdd(id, x.id)} />

@@ -110,7 +110,6 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     return edges.map((e) => {
       const n = sw.get(e.source)
       if (!n || !e.sourceHandle) return e
-      if (e.sourceHandle === 'else') return { ...e, label: 'Otherwise', className: 'is-no' }
       const i = casesOf(n.data).findIndex((c) => c.id === e.sourceHandle)
       return i < 0 ? e : { ...e, label: caseLabel(casesOf(n.data)[i], i, ctx) }
     })
@@ -165,7 +164,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       // under the "+" that was clicked (a Switch / Yes-No exit: under that exit), joined to it
       const w = target.measured?.width ?? 260
       const h = target.measured?.height ?? 90
-      const exits: (string | null)[] = target.type === 'switch' ? [...casesOf(target.data).map((c) => c.id), 'else'] : target.type === 'condition' ? ['yes', 'no'] : [null]
+      const exits: (string | null)[] = target.type === 'switch' ? casesOf(target.data).map((c) => c.id) : target.type === 'condition' ? ['yes', 'no'] : [null]
       const i = Math.max(0, exits.indexOf(from.handle))
       const shift = exits.length > 1 ? (i - (exits.length - 1) / 2) * (w + 40) : 0
       pos = { x: target.position.x + shift, y: target.position.y + h + 90 }
@@ -226,7 +225,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     setNodes((ns) => ns.map((n) => (n.id === selectedId ? { ...n, data } : n)))
     // a removed Switch path takes its line with it
     if (selected?.type === 'switch') {
-      const keep = new Set([...casesOf(data).map((c) => c.id), 'else'])
+      const keep = new Set(casesOf(data).map((c) => c.id))
       setEdges((es) => es.filter((e) => e.source !== selectedId || !e.sourceHandle || keep.has(e.sourceHandle)))
     }
     touch()
@@ -354,7 +353,6 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                         const base = String((f.data as Record<string, unknown>).name || STEP_META[f.type as StepKind]?.label || 'the step')
                         if (!from.handle) return base
                         if (from.handle === 'yes' || from.handle === 'no') return `${base} → ${from.handle === 'yes' ? 'Yes' : 'No'}`
-                        if (from.handle === 'else') return `${base} → Otherwise`
                         const i = casesOf(f.data).findIndex((c) => c.id === from.handle)
                         return i < 0 ? base : `${base} → ${caseLabel(casesOf(f.data)[i], i, ctx)}`
                       }
