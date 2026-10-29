@@ -123,7 +123,7 @@ export const linkVarOf = (d: Record<string, unknown>) =>
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'generated_link'
 /** what a Create Zoom meeting step gives later steps */
-export const ZOOM_VARS = ['zoom_link', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
+export const ZOOM_VARS = ['zoom_link', 'zoom_date_time', 'zoom_meeting_id', 'zoom_password', 'zoom_date', 'zoom_time']
 /** the meeting webhooks the trigger listens to (a funnel form trigger: its picked webhooks, or all of the funnel's) */
 export function meetingHooks(ctx: FlowContext) {
   if (ctx.triggerEvent === 'webhook_call') return []

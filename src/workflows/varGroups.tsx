@@ -5,6 +5,7 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   zoom_short_link: 'Zoom short link',
   zoom_short_link_code: 'Zoom short link code',
   zoom_link: 'Zoom link',
+  zoom_date_time: 'Zoom date & time (29 Oct 2026 5pm-8pm)',
   zoom_password: 'Zoom passcode',
   zoom_meeting_id: 'Zoom meeting ID',
   zoom_date: 'Zoom meeting date',
