@@ -445,7 +445,7 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
   }, [fromForm, d.use_webhook, disabled, set])
   const fieldOpts: [string, string][] = []
   for (const f of hooks.flatMap((p) => p.saved ?? [])) if (!fieldOpts.some(([k]) => k === f.key)) fieldOpts.push([f.key, f.label])
-  if (!fieldOpts.length) fieldOpts.push(['meeting_start', 'Meeting date & time'], ['meeting_end', 'Meeting end time'])
+  if (!fieldOpts.length) fieldOpts.push(['meeting_start', 'Meeting Start time'], ['meeting_end', 'Meeting End time'])
   return (
     <>
       <div>

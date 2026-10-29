@@ -79,7 +79,7 @@ export function FieldMapping({
           page.match_by === 'phone' && !chosen.has('phone') ? 'Phone' : null,
           page.match_by === 'email' && !chosen.has('email') ? 'Email' : null,
           page.match_by === 'both' && !chosen.has('phone') && !chosen.has('email') ? 'Phone or Email' : null,
-          page.action === 'create_meeting' && !chosen.has('meeting_start') ? 'Meeting date & time' : null,
+          page.action === 'create_meeting' && !chosen.has('meeting_start') ? 'Meeting Start time' : null,
         ]
   ).filter(Boolean)
   const targets = targetsFor(page.action ?? 'create_lead')
@@ -268,7 +268,7 @@ export function FieldMapping({
           )}
           {page.action === 'create_meeting' && (
             <div className="muted small">
-              The lead is found by its phone / email. <b>Meeting date &amp; time</b>, <b>Meeting end time</b> and <b>Team member</b> are saved with the post
+              The lead is found by its phone / email. <b>Meeting Start time</b>, <b>Meeting End time</b> and <b>Team member</b> are saved with the post
               (a time without a time zone is taken as India time) and passed to the funnel’s workflows, where a step books the meeting.
             </div>
           )}
