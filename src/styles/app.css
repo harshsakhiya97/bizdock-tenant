@@ -1099,7 +1099,7 @@ a.db-card:hover { border-color: var(--brand); }
 
 /* condition "includes any of" */
 .cond-multi { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow: auto; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
-.cond-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); min-height: 40px; }
-.cond-chips .tag-chip { display: inline-flex; align-items: center; gap: 4px; }
+.cond-chips { min-width: 0; box-sizing: border-box; width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); min-height: 40px; }
+.cond-chips .tag-chip { max-width: 100%; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 4px; }
 .cond-chips .tag-chip button { border: 0; background: none; padding: 0; cursor: pointer; color: inherit; display: inline-flex; }
-.cond-chips .input { flex: 1; min-width: 120px; border: 0; box-shadow: none; height: 30px; padding: 0 4px; }
+.cond-chips .input { flex: 1; min-width: 80px; border: 0; box-shadow: none; height: 30px; padding: 0 4px; }
