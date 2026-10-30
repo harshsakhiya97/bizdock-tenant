@@ -113,14 +113,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     () => funnels.filter((f) => !selected || (f.business_id === selected.id && (!sub || f.sub_business_id === sub.id))),
     [funnels, selected, sub],
   )
-  const funnel = scopedFunnels.find((f) => f.id === funnelId) ?? null
+  // Studio Rental has no funnel / source filter: its one funnel (if it has just one), else all of them
+  const funnel = studio ? (scopedFunnels.length === 1 ? scopedFunnels[0] : null) : (scopedFunnels.find((f) => f.id === funnelId) ?? null)
   const stageById = useMemo(() => {
     const m = new Map<string, StageRow>()
     for (const f of funnels) for (const s of f.funnel_stages) m.set(s.id, s)
     return m
   }, [funnels])
   const funnelName = (id: string | null) => (id ? (funnels.find((f) => f.id === id)?.name ?? '—') : 'No funnel')
-  const noFunnel = funnelId === 'none'
+  const noFunnel = !studio && funnelId === 'none'
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
 
@@ -160,7 +161,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           (l.email ?? '').toLowerCase().includes(q) ||
           (l.city ?? '').toLowerCase().includes(q),
       )
-      .filter((l) => !filters.source || l.source_id === filters.source)
+      .filter((l) => studio || !filters.source || l.source_id === filters.source)
       .filter((l) => !filters.temp || l.temperature === filters.temp)
       .filter((l) => !filters.owner || (filters.owner === 'none' ? !l.owner_id : l.owner_id === filters.owner))
       .filter((l) => {
@@ -334,6 +335,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
+          {!studio && (
           <select className="input input-sm filter-select" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
             <option value="all">All funnels</option>
             {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
@@ -343,6 +345,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          )}
           <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Temperature">
             <option value="">Temperature</option>
             {TEMPERATURES.map((t) => (
@@ -351,6 +354,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          {!studio && (
           <select className="input input-sm filter-select" value={filters.source} onChange={(e) => setF('source', e.target.value)} aria-label="Source">
             <option value="">Source</option>
             {sources.map((s) => (
@@ -359,6 +363,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          )}
           <select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
             <option value="">Owner</option>
             <option value="none">Unassigned</option>
