@@ -7,7 +7,7 @@ import type { ConditionData, FlowContext } from './types'
  * Extra fields (form / sheet columns) are "x:<key>".
  */
 export type CondKind = 'text' | 'number' | 'date' | 'select' | 'tag' | 'presence'
-export type CondOp = 'eq' | 'neq' | 'empty' | 'not_empty' | 'gt' | 'gte' | 'lt' | 'lte' | 'exists' | 'not_exists'
+export type CondOp = 'eq' | 'neq' | 'empty' | 'not_empty' | 'gt' | 'gte' | 'lt' | 'lte' | 'exists' | 'not_exists' | 'in' | 'starts' | 'ends'
 
 type FieldDef = { value: string; label: string; kind: CondKind; group: 'Lead' | 'Activity' | 'Extra fields' }
 
@@ -57,8 +57,11 @@ export const OP_LABEL: Record<CondOp, string> = {
   lte: 'less than or equal (<=)',
   exists: 'has',
   not_exists: 'has none',
+  in: 'includes any of',
+  starts: 'starts with',
+  ends: 'ends with',
 }
-const SHORT_OP: Record<CondOp, string> = { eq: '=', neq: '≠', empty: 'is empty', not_empty: 'is not empty', gt: '>', gte: '≥', lt: '<', lte: '≤', exists: 'has', not_exists: 'has none' }
+const SHORT_OP: Record<CondOp, string> = { eq: '=', neq: '≠', empty: 'is empty', not_empty: 'is not empty', gt: '>', gte: '≥', lt: '<', lte: '≤', exists: 'has', not_exists: 'has none', in: 'includes', starts: 'starts with', ends: 'ends with' }
 
 const PRESENCE_LABEL: Record<string, [string, string]> = {
   meeting: ['Has a meeting', 'Has no meeting'],
@@ -74,9 +77,16 @@ export function fieldDef(field: string): FieldDef {
   return LEAD_FIELDS.find((f) => f.value === field) ?? { value: field, label: field, kind: 'text', group: 'Lead' }
 }
 
-export function opsFor(kind: CondKind): CondOp[] {
+/** "Mumbai\nPune" → ["Mumbai", "Pune"]: the values of "includes any of" */
+export const listValues = (v: string) => v.split('\n').map((x) => x.trim()).filter(Boolean)
+
+/** the comparisons a field offers (extra fields: as text and as numbers) */
+export function opsFor(kind: CondKind, field = ''): CondOp[] {
   if (kind === 'presence') return ['exists', 'not_exists']
+  if (field.startsWith('x:')) return ['eq', 'neq', 'in', 'starts', 'ends', 'gt', 'gte', 'lt', 'lte', 'empty', 'not_empty']
   if (kind === 'number' || kind === 'date') return ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'empty', 'not_empty']
+  if (kind === 'select') return ['eq', 'neq', 'in', 'empty', 'not_empty']
+  if (kind === 'text') return ['eq', 'neq', 'in', 'starts', 'ends', 'empty', 'not_empty']
   return ['eq', 'neq', 'empty', 'not_empty']
 }
 
@@ -86,7 +96,8 @@ export function normalize(c: Partial<ConditionData> | undefined): { field: strin
   const op = String(c?.op ?? 'eq')
   if (field === 'field_filled') return { field: `x:${c?.value ?? ''}`, op: op === 'is_not' ? 'empty' : 'not_empty', value: '' }
   const o: CondOp = op === 'is' ? 'eq' : op === 'is_not' ? 'neq' : (op as CondOp)
-  return { field, op: opsFor(fieldDef(field).kind).includes(o) ? o : opsFor(fieldDef(field).kind)[0], value: String(c?.value ?? '') }
+  const ops = opsFor(fieldDef(field).kind, field)
+  return { field, op: ops.includes(o) ? o : ops[0], value: String(c?.value ?? '') }
 }
 
 export const needsValue = (op: CondOp) => !['empty', 'not_empty', 'exists', 'not_exists'].includes(op)
@@ -110,7 +121,9 @@ export function conditionText(raw: ConditionData, ctx: FlowContext): string {
   if (c.field.startsWith('x:') && !c.field.slice(2)) return 'Pick a field'
   if (!needsValue(c.op)) return `${def.label} ${SHORT_OP[c.op]}`
   if (!c.value.trim()) return `Finish: ${def.label}`
-  const shown = choicesFor(c.field, ctx)?.find((o) => o.value === c.value)?.label ?? c.value
+  const choices = choicesFor(c.field, ctx)
+  if (c.op === 'in') return `${def.label} includes ${listValues(c.value).map((v) => choices?.find((o) => o.value === v)?.label ?? v).join(', ')}`
+  const shown = choices?.find((o) => o.value === c.value)?.label ?? c.value
   if (def.kind === 'tag') return `${c.op === 'eq' ? 'Has' : 'Doesn’t have'} tag ${shown}`
   return `${def.label} ${SHORT_OP[c.op]} ${shown}`
 }
@@ -119,6 +132,7 @@ export function conditionText(raw: ConditionData, ctx: FlowContext): string {
 export function conditionProblem(raw: ConditionData | undefined): string | null {
   const c = normalize(raw)
   if (c.field.startsWith('x:') && !c.field.slice(2)) return 'Pick the field'
+  if (c.op === 'in' && !listValues(c.value).length) return 'Add at least one value'
   if (needsValue(c.op) && !c.value.trim()) return 'Enter the value'
   const kind = fieldDef(c.field).kind
   if (needsValue(c.op) && ['gt', 'gte', 'lt', 'lte'].includes(c.op)) {

@@ -9,7 +9,7 @@ import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
 import { SHORT_BASE } from './api'
-import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, needsValue, normalize, opsFor } from './conditions'
+import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, listValues, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
 const UNITS: Unit[] = ['minutes', 'hours', 'days']
@@ -833,14 +833,14 @@ function ConditionFields({
 function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: ConditionData; ctx: FlowContext; disabled: boolean; onChange: (c: ConditionData) => void }) {
   const c = normalize(raw)
   const def = fieldDef(c.field)
-  const ops = opsFor(def.kind)
+  const ops = opsFor(def.kind, c.field)
   const choices = choicesFor(c.field, ctx)
   const extras = [...new Set([...ctx.fieldKeys, ...(ctx.extraKeys ?? [])])].filter((k) => k && !LEAD_FIELDS.some((f) => f.value === k)).sort((a, b) => a.localeCompare(b))
   const isExtra = c.field.startsWith('x:')
   const put = (n: Partial<{ field: string; op: string; value: string }>) => onChange({ ...raw, field: c.field, op: c.op, value: c.value, ...n })
   function pickField(f: string) {
     const k = fieldDef(f).kind
-    put({ field: f, op: opsFor(k)[0], value: '' })
+    put({ field: f, op: opsFor(k, f)[0], value: '' })
   }
   return (
     <>
@@ -876,7 +876,16 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
         )}
       </div>
       <div className="form-grid" style={{ gridTemplateColumns: needsValue(c.op) ? '170px 1fr' : '1fr' }}>
-        <Select aria-label="How to compare" value={c.op} onChange={(e) => put({ op: e.target.value })} disabled={disabled}>
+        <Select
+          aria-label="How to compare"
+          value={c.op}
+          onChange={(e) => {
+            const op = e.target.value
+            // one value ↔ a list of values
+            put({ op, value: op === 'in' ? c.value : (listValues(c.value)[0] ?? '') })
+          }}
+          disabled={disabled}
+        >
           {ops.map((o) => (
             <option key={o} value={o}>
               {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : 'hasn’t paid') : OP_LABEL[o]}
@@ -884,7 +893,28 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           ))}
         </Select>
         {needsValue(c.op) &&
-          (def.kind === 'tag' ? (
+          (c.op === 'in' ? (
+            choices ? (
+              <div className="cond-multi">
+                {choices.map((o) => {
+                  const on = listValues(c.value).includes(o.value)
+                  return (
+                    <label key={o.value} className="check-inline">
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        disabled={disabled}
+                        onChange={() => put({ value: (on ? listValues(c.value).filter((v) => v !== o.value) : [...listValues(c.value), o.value]).join('\n') })}
+                      />{' '}
+                      {o.label}
+                    </label>
+                  )
+                })}
+              </div>
+            ) : (
+              <ValueChips values={listValues(c.value)} onChange={(vs) => put({ value: vs.join('\n') })} disabled={disabled} />
+            )
+          ) : def.kind === 'tag' ? (
             <>
               <TextInput aria-label="Tag" list={`${id}-tags`} placeholder="Pick or type a tag" value={c.value} onChange={(e) => put({ value: e.target.value })} disabled={disabled} />
               <datalist id={`${id}-tags`}>
@@ -918,6 +948,45 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
       {c.field === 'payment' && <Hint>A payment received on any of the lead’s bookings, or a purchase logged by a webhook.</Hint>}
       {isExtra && <Hint>Text is compared without case; with &gt; / &lt; the value must be a number.</Hint>}
     </>
+  )
+}
+
+/** "includes any of": the typed values as chips (Enter or comma adds one) */
+function ValueChips({ values, onChange, disabled }: { values: string[]; onChange: (v: string[]) => void; disabled: boolean }) {
+  const [draft, setDraft] = useState('')
+  const add = (raw: string) => {
+    const v = raw.trim()
+    if (v && !values.some((x) => x.toLowerCase() === v.toLowerCase())) onChange([...values, v])
+    setDraft('')
+  }
+  return (
+    <div className="cond-chips">
+      {values.map((v) => (
+        <span key={v} className="tag-chip">
+          {v}
+          {!disabled && (
+            <button type="button" aria-label={`Remove ${v}`} onClick={() => onChange(values.filter((x) => x !== v))}>
+              <X size={11} />
+            </button>
+          )}
+        </span>
+      ))}
+      <input
+        className="input input-sm"
+        aria-label="Add a value"
+        placeholder={values.length ? 'Add another…' : 'Type a value, press Enter'}
+        value={draft}
+        disabled={disabled}
+        onChange={(e) => (e.target.value.endsWith(',') ? add(e.target.value.slice(0, -1)) : setDraft(e.target.value))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            add(draft)
+          } else if (e.key === 'Backspace' && !draft && values.length) onChange(values.slice(0, -1))
+        }}
+        onBlur={() => draft.trim() && add(draft)}
+      />
+    </div>
   )
 }
 
