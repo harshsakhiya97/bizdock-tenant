@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { Activity, Network, Play, Plus, Trash2 } from 'lucide-react'
+import { Activity, Network, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Button } from '@/components/Button'
@@ -9,7 +9,7 @@ import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { archiveWorkflow, createWorkflow, listWorkflows, loadRefData, setWorkflowActive } from './api'
+import { archiveWorkflow, createWorkflow, listWorkflows, loadRefData, setWorkflowActive, updateWorkflowMeta } from './api'
 import { STEP_META, TRIGGERS, flowContext, triggerLabel, triggerSummary } from './steps'
 import type { RefData, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -36,6 +36,7 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
   const [runCounts, setRunCounts] = useState<Map<string, { total: number; waiting: number; failed: number }>>(new Map())
   const [viewing, setViewing] = useState<WorkflowRow | null>(null)
   const [testing, setTesting] = useState<WorkflowRow | null>(null)
+  const [editing, setEditing] = useState<WorkflowRow | null>(null)
 
   const load = useCallback(() => {
     listWorkflows(tenant.id)
@@ -229,6 +230,11 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
                       <td className="muted nowrap">{new Date(w.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
                       <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right' }} className="nowrap">
                         {can('workflows', 'edit') && (
+                          <button type="button" className="btn btn-ghost btn-icon" aria-label={`Edit ${w.name}`} title="Name & funnel" onClick={() => setEditing(w)}>
+                            <Pencil size={15} />
+                          </button>
+                        )}
+                        {can('workflows', 'edit') && (
                           <button type="button" className="btn btn-ghost btn-icon" aria-label={`Test run ${w.name}`} title="Test run" onClick={() => setTesting(w)}>
                             <Play size={15} />
                           </button>
@@ -266,6 +272,19 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
           <RunsList workflow={viewing} />
         </Modal>
       )}
+      {editing && (
+        <EditWorkflowModal
+          workflow={editing}
+          funnels={(refData?.funnels ?? []).filter((f) => inScope(f.business_id, f.sub_business_id) || f.id === editing.funnel_id)}
+          onClose={() => setEditing(null)}
+          onSave={async (name, funnel) => {
+            await updateWorkflowMeta(editing, name, funnel)
+            setEditing(null)
+            setNotice({ ok: 'Workflow saved.' })
+            load()
+          }}
+        />
+      )}
       {creating && (
         <NewWorkflowModal
           refData={refData && { ...refData, funnels: refData.funnels.filter((f) => inScope(f.business_id, f.sub_business_id)) }}
@@ -290,6 +309,91 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
         onConfirm={remove}
       />
     </>
+  )
+}
+
+/** the pencil in the list: name, and the funnel (the trigger's funnel, or "Used in funnel" for On webhook call) */
+function EditWorkflowModal({
+  workflow,
+  funnels,
+  onClose,
+  onSave,
+}: {
+  workflow: WorkflowRow
+  funnels: RefData['funnels']
+  onClose: () => void
+  onSave: (name: string, funnelId: string | null) => Promise<void>
+}) {
+  const [name, setName] = useState(workflow.name)
+  const [funnelId, setFunnelId] = useState(workflow.funnel_id ?? '')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const t = workflow.trigger_type
+  const eventTrigger = t === 'before_event' || t === 'after_event'
+  const needsFunnel = t === 'form_submitted' || t === 'stage_changed'
+  const moved = (workflow.funnel_id ?? '') !== funnelId
+
+  async function go() {
+    if (!name.trim()) return setError('Give the workflow a name.')
+    if (needsFunnel && !funnelId) return setError('Pick the funnel.')
+    setBusy(true)
+    setError(null)
+    try {
+      await onSave(name, eventTrigger ? (workflow.funnel_id ?? null) : funnelId || null)
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      width={520}
+      title="Edit workflow"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button onClick={go} disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <div className="stack">
+        <div>
+          <Label htmlFor="wf-edit-name" required>
+            Name
+          </Label>
+          <TextInput id="wf-edit-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+        </div>
+        {eventTrigger ? (
+          <Hint>This workflow follows its webinar / event, so its funnel comes from there.</Hint>
+        ) : (
+          <div>
+            <Label htmlFor="wf-edit-funnel" required={needsFunnel}>
+              {t === 'webhook_call' ? 'Used in funnel' : 'Funnel'}
+            </Label>
+            <Select id="wf-edit-funnel" value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
+              <option value="">{t === 'lead_added' ? 'Any funnel' : t === 'webhook_call' ? '— not set —' : '— select —'}</option>
+              {funnels.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </Select>
+            {moved && t === 'form_submitted' && <Hint>The trigger’s picked forms are cleared: pick the new funnel’s forms in the builder.</Hint>}
+            {t === 'webhook_call' && <Hint>Only to keep things tidy: the workflow shows under this funnel. Posts don’t add leads to it.</Hint>}
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }
 

@@ -110,6 +110,19 @@ export async function saveWorkflow(
   if (error) throw error
 }
 
+/** rename a workflow and / or move it to another funnel (its trigger box follows; a form trigger's picked forms / stage reset) */
+export async function updateWorkflowMeta(w: WorkflowRow, name: string, funnelId: string | null) {
+  const moved = (w.funnel_id ?? null) !== funnelId
+  const nodes = w.nodes.map((n) =>
+    n.type === 'trigger' && moved ? { ...n, data: { ...n.data, funnel_id: funnelId ?? '', pages: [], stage_id: '' } } : n,
+  )
+  const { error } = await db()
+    .from('workflows')
+    .update({ name: name.trim() || 'Workflow', ...(moved ? { funnel_id: funnelId, nodes } : {}) })
+    .eq('id', w.id)
+  if (error) throw error
+}
+
 export async function setWorkflowActive(id: string, active: boolean) {
   const { error } = await db().from('workflows').update({ is_active: active }).eq('id', id)
   if (error) throw error
