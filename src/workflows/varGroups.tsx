@@ -14,6 +14,8 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   zoom_start: 'Zoom meeting start',
   generated_link: 'Generated link',
   generated_link_code: 'Generated link code',
+  generated_link_full_url: 'Generated link – full URL',
+  generated_link_parameters: 'Generated link – parameters only',
 }
 
 const pretty = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -29,7 +31,8 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
   const known = new Set(lead.map(([k]) => k))
   const rest = [...new Set(extra)].filter((k) => k && !known.has(k))
   // a Generate link step named "x" makes {{x}} and {{x_code}}
-  const steps = rest.filter((k) => STEP_VAR_LABEL[k] || rest.includes(`${k}_code`) || (k.endsWith('_code') && rest.includes(k.slice(0, -5))))
+  const base = (k: string) => ['_code', '_full_url', '_parameters'].map((x) => (k.endsWith(x) ? k.slice(0, -x.length) : '')).find((b) => b && rest.includes(`${b}_code`))
+  const steps = rest.filter((k) => STEP_VAR_LABEL[k] || rest.includes(`${k}_code`) || !!base(k))
   const fields = rest.filter((k) => !steps.includes(k))
   return [
     { label: 'Lead', items: lead.map(([k, l]) => [k, l] as [string, string]) },

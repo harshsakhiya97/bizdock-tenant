@@ -57,7 +57,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
       .filter((n) => n.type === 'generate_link')
       .flatMap((n) => {
         const k = linkVarOf(n.data)
-        return [k, `${k}_code`]
+        return [k, `${k}_code`, `${k}_full_url`, `${k}_parameters`]
       }),
     ...(nodes.some((n) => n.type === 'zoom_meeting' && n.data.short_link) ? ['zoom_short_link', 'zoom_short_link_code'] : []),
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
