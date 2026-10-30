@@ -9,6 +9,14 @@ import type { LeadRow } from './types'
 const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const
 const HIDDEN = new Set(['name', 'first_name', 'last_name', 'email', 'phone', 'city', ...UTM_KEYS])
 const label = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+/** the time the form says it was sent: shown once, as "Lead date" */
+const DATE_KEYS = new Set(['submitted', 'submitted_at', 'submitted_at_utc', 'submitted_on', 'timestamp'])
+const fmtDate = (v: string) => {
+  const t = Date.parse(v)
+  return Number.isNaN(t) ? v : new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+/** links and long text get a whole row, after the rest */
+const isLong = (v: string) => v.length > 60 || /^https?:\/\//i.test(v)
 
 /** Where a lead came from (landing page, UTMs, extra form fields) and every form post / import for it. */
 export function LeadOrigin({ lead }: { lead: LeadRow }) {
@@ -35,8 +43,12 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
   }, [lead.id, lead.landing_page_id, lead.webhook_id])
 
   const utms = UTM_KEYS.filter((k) => lead[k])
-  const extra = Object.entries(lead.extra ?? {}).filter(([, v]) => String(v ?? '').trim())
-  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !extra.length && !subs?.length) return null
+  const all = Object.entries(lead.extra ?? {}).filter(([, v]) => String(v ?? '').trim())
+  const sent = all.find(([k]) => DATE_KEYS.has(k.toLowerCase()))
+  const leadDate = fmtDate(sent ? String(sent[1]) : lead.created_at)
+  const extra = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && !isLong(String(v)))
+  const wide = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && isLong(String(v)))
+  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !all.length && !subs?.length) return null
   const pageName = (id: string | null) => (id ? pages.get(id) ?? 'Landing page' : null)
   const hookName = (id: string | null) => (id ? hooks.get(id) ?? 'Webhook' : null)
   const formOf = (s: Pick<SubmissionRow, 'webhook_id' | 'landing_page_id'>) => hookName(s.webhook_id) ?? pageName(s.landing_page_id)
@@ -51,6 +63,10 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
         ))}
         {extra.map(([k, v]) => (
           <FragmentRow key={k} k={label(k)} v={String(v)} />
+        ))}
+        <FragmentRow k="Lead date" v={leadDate} />
+        {wide.map(([k, v]) => (
+          <FragmentRow key={k} k={label(k)} v={String(v)} wide />
         ))}
       </dl>
 
@@ -101,9 +117,9 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
   )
 }
 
-function FragmentRow({ k, v }: { k: string; v: string }) {
+function FragmentRow({ k, v, wide }: { k: string; v: string; wide?: boolean }) {
   return (
-    <div>
+    <div className={wide ? 'info-wide' : undefined}>
       <dt>{k}</dt>
       <dd>{v}</dd>
     </div>
