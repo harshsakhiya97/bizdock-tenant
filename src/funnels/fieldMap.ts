@@ -8,6 +8,7 @@ export const LEAD_TARGETS = [
   { value: 'city', label: 'City' },
   { value: 'company_name', label: 'Company name' },
   { value: 'purpose', label: 'Purpose' },
+  { value: 'lead_source', label: 'Lead source (by name)' },
   { value: 'note', label: 'Note' },
   { value: 'tags', label: 'Tags (each value a tag)' },
   { value: 'utm_source', label: 'utm_source' },
