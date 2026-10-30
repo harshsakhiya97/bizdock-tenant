@@ -1092,3 +1092,7 @@ a.db-card:hover { border-color: var(--brand); }
 .cb-plus.is-path .cb-plus-stem { background: transparent; border-left: 1.5px dashed var(--line-strong, #cbd5e1); }
 .cb-box { position: relative; }
 .cb-paths span.is-new { color: var(--text-faint, #94a3b8); font-weight: 600; }
+
+/* Generate link: its variables, one per line */
+.gl-vars { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--text-muted); }
+.gl-vars .code-chip { margin-right: 4px; }
