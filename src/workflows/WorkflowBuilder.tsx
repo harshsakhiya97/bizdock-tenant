@@ -231,8 +231,34 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     }
     touch()
   }
+  /**
+   * steps being deleted: a Switch path they hung from goes too (a Switch keeps at least its 2 starting paths;
+   * the path's other lines, if any, keep it)
+   */
+  function dropPaths(removed: Set<string>) {
+    const gone = new Map<string, Set<string>>()
+    for (const e of edges) {
+      if (!removed.has(e.target) || !e.sourceHandle || removed.has(e.source)) continue
+      const sw = nodes.find((n) => n.id === e.source && n.type === 'switch')
+      if (!sw) continue
+      const stillUsed = edges.some((x) => x.source === e.source && x.sourceHandle === e.sourceHandle && !removed.has(x.target))
+      if (stillUsed) continue
+      gone.set(sw.id, (gone.get(sw.id) ?? new Set()).add(e.sourceHandle))
+    }
+    if (!gone.size) return
+    setNodes((ns) =>
+      ns.map((n) => {
+        const drop = gone.get(n.id)
+        if (!drop) return n
+        let cases = casesOf(n.data)
+        for (const c of [...cases].reverse()) if (drop.has(c.id) && cases.length > 2) cases = cases.filter((x) => x.id !== c.id)
+        return { ...n, data: { ...n.data, cases } }
+      }),
+    )
+  }
   function deleteSelected() {
     if (!selected || selected.type === 'trigger') return
+    dropPaths(new Set([selected.id]))
     setNodes((ns) => ns.filter((n) => n.id !== selected.id))
     setEdges((es) => es.filter((e) => e.source !== selected.id && e.target !== selected.id))
     setSelectedId(null)
@@ -312,6 +338,8 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             onNodesChange={(c) => {
               // the trigger stays
               const safe = c.filter((x) => !(x.type === 'remove' && x.id === 'trigger'))
+              const removed = new Set(safe.flatMap((x) => (x.type === 'remove' ? [x.id] : [])))
+              if (removed.size) dropPaths(removed)
               onNodesChange(safe)
               if (safe.some((x) => x.type === 'position' || x.type === 'remove')) touch()
               if (safe.some((x) => x.type === 'remove' && x.id === selectedId)) setSelectedId(null)
