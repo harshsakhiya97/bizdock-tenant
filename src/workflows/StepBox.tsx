@@ -1,5 +1,5 @@
-import { createContext, memo, useContext } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { createContext, memo, useContext, useEffect } from 'react'
+import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
 import { AlertCircle, Plus as PlusIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { AddCtx } from './addCtx'
@@ -35,6 +35,12 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
   const add = useContext(AddCtx)
   // an exit with no line yet gets a "+"
   const free = (handle: string | null) => add.canEdit && !add.used.has(`${id}|${handle ?? ''}`)
+  // a Switch's exits change with its paths: tell the canvas, so new exits can be joined and lines follow them
+  const updateInternals = useUpdateNodeInternals()
+  const exitKey = type === 'switch' ? `${casesOf(data).map((c) => c.id).join(',')}|${add.canEdit}` : ''
+  useEffect(() => {
+    if (type === 'switch') updateInternals(id)
+  }, [exitKey, id, type, updateInternals])
   const meta = STEP_META[type]
   const Icon = meta.icon
   const issue = problem(type, data, ctx)
