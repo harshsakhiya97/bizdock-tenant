@@ -740,10 +740,20 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
       <div>
         <Label htmlFor="cb-gl-var">Use it in later steps as</Label>
         <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
-        <Hint>
-          <code className="code-chip">{`{{${name}}}`}</code> is the whole link; <code className="code-chip">{`{{${name}_code}}`}</code> is the code only (for a template whose button already has your domain).
-          Your URL as filled in: <code className="code-chip">{`{{${name}_full_url}}`}</code> the full URL, <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?” (e.g. fname=Harsh&phone=98…).
-        </Hint>
+        <ul className="gl-vars">
+          <li>
+            <code className="code-chip">{`{{${name}}}`}</code> the short link
+          </li>
+          <li>
+            <code className="code-chip">{`{{${name}_code}}`}</code> the code only (for a template whose button already has your domain)
+          </li>
+          <li>
+            <code className="code-chip">{`{{${name}_full_url}}`}</code> your URL as filled in, in full
+          </li>
+          <li>
+            <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?” (e.g. fname=Harsh&phone=98…)
+          </li>
+        </ul>
       </div>
     </>
   )
