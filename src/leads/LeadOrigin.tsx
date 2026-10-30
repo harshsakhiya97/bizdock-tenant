@@ -56,6 +56,7 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
   return (
     <FormSection title="Source & form submissions" description="Filled in by a webhook form, a Google Sheet or an import.">
       <dl className="info-grid">
+        <FragmentRow k="Lead date" v={leadDate} />
         {lead.webhook_id && <FragmentRow k="Form" v={hookName(lead.webhook_id) ?? ''} />}
         {lead.landing_page_id && <FragmentRow k="Landing page" v={pageName(lead.landing_page_id) ?? ''} />}
         {utms.map((k) => (
@@ -64,7 +65,6 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
         {extra.map(([k, v]) => (
           <FragmentRow key={k} k={label(k)} v={String(v)} />
         ))}
-        <FragmentRow k="Lead date" v={leadDate} />
         {wide.map(([k, v]) => (
           <FragmentRow key={k} k={label(k)} v={String(v)} wide />
         ))}
