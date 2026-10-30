@@ -39,7 +39,7 @@ export const releases: Release[] = [
       'Deleting a step in the middle joins the step before to the step after.',
       'Workflow opened from a funnel’s webhook: Back / Cancel return to its Webhooks tab.',
       'Lead details: Lead date (the form’s submitted time) first; links and long values on a full row.',
-      'Studio Rental leads list: Purpose, Time, Describes and Lead date (with time) instead of Temp, Funnel and Value.',
+      'Studio Rental leads list: Purpose, Time, Describes and Lead date (with time) instead of Temp, Funnel and Value; no Funnel and Source filters.',
     ],
     fixed: [
       'Purpose sent by webhooks, sheets and imports is saved on the lead (it was only kept as an extra field).',
