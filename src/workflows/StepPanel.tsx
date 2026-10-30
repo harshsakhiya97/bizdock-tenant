@@ -875,7 +875,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           <TextInput aria-label="Field name" placeholder="e.g. annual_revenue" value={c.field.slice(2)} onChange={(e) => put({ field: `x:${e.target.value.trim()}` })} disabled={disabled} style={{ marginTop: 6 }} />
         )}
       </div>
-      <div className="form-grid" style={{ gridTemplateColumns: needsValue(c.op) ? '170px 1fr' : '1fr' }}>
+      <div className="form-grid" style={{ gridTemplateColumns: needsValue(c.op) && c.op !== 'in' ? '170px minmax(0, 1fr)' : 'minmax(0, 1fr)' }}>
         <Select
           aria-label="How to compare"
           value={c.op}
