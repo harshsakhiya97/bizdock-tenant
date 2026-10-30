@@ -17,8 +17,11 @@ import { db } from '@/lib/supabase'
 import { RunsList } from './RunsPanel'
 import { TestRunModal } from './TestRunModal'
 
-/** Sidebar → Workflows: every workflow with its trigger, steps and on / off. */
-export function WorkflowsPage() {
+/**
+ * Sidebar → Workflows: every workflow with its trigger, steps and on / off.
+ * With a funnel (its Workflows tab): the same list for that funnel — new workflows start in it, and Back returns there.
+ */
+export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventId?: string | null } = {}) {
   const tenant = useTenant()
   const navigate = useNavigate()
   const { can, membership } = useAuth()
@@ -68,11 +71,12 @@ export function WorkflowsPage() {
   const scoped = useMemo(
     () =>
       (rows ?? []).filter((w) => {
+        if (funnelId) return w.funnel_id === funnelId || (!!eventId && w.event_id === eventId)
         if (!w.funnel_id) return true
         const f = funnelOf.get(w.funnel_id)
         return !f || inScope(f.business_id, f.sub_business_id)
       }),
-    [rows, funnelOf, inScope],
+    [rows, funnelOf, inScope, funnelId, eventId],
   )
   const visible = useMemo(
     () =>
@@ -108,23 +112,28 @@ export function WorkflowsPage() {
     }
   }
 
+  // opened from a funnel: Back / Cancel in the builder return to its Workflows tab
+  const open = (id: string) =>
+    navigate(`/workflows/${id}`, funnelId ? { state: { back: { to: `/funnels/${funnelId}?tab=workflows`, label: 'Back to workflows' } } } : undefined)
+  const newButton = can('workflows', 'add') && (
+    <button type="button" className={cn('btn btn-primary', funnelId && 'btn-sm')} onClick={() => setCreating(true)}>
+      <Plus size={16} /> New workflow
+    </button>
+  )
+
   return (
     <>
+      {!funnelId && (
       <PageHead
         title="Workflows"
         subtitle="Messages and calls that go out on their own: after a form, before or after a webinar, when a lead moves stage…"
-        actions={
-          can('workflows', 'add') && (
-            <button type="button" className="btn btn-primary" onClick={() => setCreating(true)}>
-              <Plus size={16} /> New workflow
-            </button>
-          )
-        }
+        actions={newButton}
       />
+      )}
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       <Flash msg={notice.ok} dep={notice} />
 
-      <div className="panel">
+      <div className={funnelId ? undefined : 'panel'}>
         <div className="panel-bar">
           <div className="tabs">
             {(['all', 'on', 'off'] as const).map((f) => (
@@ -133,13 +142,22 @@ export function WorkflowsPage() {
               </button>
             ))}
           </div>
-          <SearchInput placeholder="Search workflows" value={query} onChange={setQuery} width={220} />
+          <div className="row" style={{ gap: 8 }}>
+            <SearchInput placeholder="Search workflows" value={query} onChange={setQuery} width={220} />
+            {funnelId && newButton}
+          </div>
         </div>
 
         {!rows ? (
           <div className="empty">Loading workflows…</div>
         ) : visible.length === 0 ? (
-          <Empty icon={Network}>{rows.length ? 'No workflows match.' : 'No workflows yet. Create one: pick what starts it, then add the steps.'}</Empty>
+          <Empty icon={Network}>
+            {scoped.length
+              ? 'No workflows match.'
+              : funnelId
+                ? 'No workflows for this funnel yet. A workflow shows here when its trigger uses this funnel, or when it’s marked “Used in funnel”.'
+                : 'No workflows yet. Create one: pick what starts it, then add the steps.'}
+          </Empty>
         ) : (
           <div className="table-wrap">
             <table className="table">
@@ -147,7 +165,7 @@ export function WorkflowsPage() {
                 <tr>
                   <th>Workflow</th>
                   <th>Starts when</th>
-                  <th>Funnel</th>
+                  {!funnelId && <th>Funnel</th>}
                   <th>Steps</th>
                   <th>Runs</th>
                   <th>Status</th>
@@ -162,13 +180,13 @@ export function WorkflowsPage() {
                   const steps = w.nodes.filter((n) => n.type !== 'trigger')
                   const kinds = [...new Set(steps.map((n) => n.type!))]
                   return (
-                    <tr key={w.id} className="is-clickable" onClick={() => navigate(`/workflows/${w.id}`)}>
+                    <tr key={w.id} className="is-clickable" onClick={() => open(w.id)}>
                       <td className="strong">{w.name}</td>
                       <td>
                         <div>{triggerLabel(t.event)}</div>
                         <div className="muted small">{ctx ? triggerSummary(t, ctx) : '…'}</div>
                       </td>
-                      <td>{funnelLabel(w) ?? <span className="muted">—</span>}</td>
+                      {!funnelId && <td>{funnelLabel(w) ?? <span className="muted">—</span>}</td>}
                       <td>
                         <div className="wf-kinds">
                           {kinds.map((k) => {
@@ -252,9 +270,10 @@ export function WorkflowsPage() {
         <NewWorkflowModal
           refData={refData && { ...refData, funnels: refData.funnels.filter((f) => inScope(f.business_id, f.sub_business_id)) }}
           onClose={() => setCreating(false)}
-          onCreate={async (name, trigger, funnelId) => {
-            const id = await createWorkflow(tenant.id, membership?.id, name, trigger, funnelId)
-            navigate(`/workflows/${id}`)
+          initialFunnel={funnelId}
+          onCreate={async (name, trigger, pickedFunnel) => {
+            const id = await createWorkflow(tenant.id, membership?.id, name, trigger, pickedFunnel)
+            open(id)
           }}
         />
       )}
@@ -276,19 +295,21 @@ export function WorkflowsPage() {
 
 function NewWorkflowModal({
   refData,
+  initialFunnel,
   onClose,
   onCreate,
 }: {
   refData: RefData | null
+  initialFunnel?: string
   onClose: () => void
   onCreate: (name: string, trigger: TriggerEvent, funnelId?: string) => Promise<void>
 }) {
   const [name, setName] = useState('')
   const [trigger, setTrigger] = useState<TriggerEvent>('form_submitted')
-  const [funnelId, setFunnelId] = useState('')
+  const [funnelId, setFunnelId] = useState(initialFunnel ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const funnelTrigger = trigger === 'form_submitted' || trigger === 'stage_changed' || trigger === 'lead_added'
+  const funnelTrigger = trigger === 'form_submitted' || trigger === 'stage_changed' || trigger === 'lead_added' || trigger === 'webhook_call'
 
   async function go() {
     if (!name.trim()) return setError('Give the workflow a name.')
@@ -342,9 +363,9 @@ function NewWorkflowModal({
         </div>
         {funnelTrigger && (
           <div>
-            <Label htmlFor="wf-funnel">Funnel</Label>
+            <Label htmlFor="wf-funnel">{trigger === 'webhook_call' ? 'Used in funnel' : 'Funnel'}</Label>
             <Select id="wf-funnel" value={funnelId} onChange={(e) => setFunnelId(e.target.value)}>
-              <option value="">{trigger === 'lead_added' ? 'Any funnel' : '— pick now or in the builder —'}</option>
+              <option value="">{trigger === 'lead_added' ? 'Any funnel' : trigger === 'webhook_call' ? '— not set —' : '— pick now or in the builder —'}</option>
               {(refData?.funnels ?? []).map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
