@@ -182,6 +182,8 @@ export const VARIABLES = [
   ['phone', 'Phone'],
   ['email', 'Email'],
   ['city', 'City'],
+  // when this workflow started for the lead (the form post / trigger), India time: 2026-10-30 10:59
+  ['submitted_at', 'Form submitted (date & time)'],
   ['funnel', 'Funnel'],
   ['landing_page', 'Landing page'],
   ['event_title', 'Event title'],

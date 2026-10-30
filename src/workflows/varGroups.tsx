@@ -47,7 +47,7 @@ export function useVarGroups(extra: string[], lead: readonly (readonly [string, 
   if (!hook) return varGroups(extra, lead)
   const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
   return [
-    { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
+    { label: 'Webhook fields', items: [...hook.map((k) => [k, k] as [string, string]), ...(hook.includes('submitted_at') ? [] : [['submitted_at', 'Received at (date & time)'] as [string, string]])] },
     { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
   ].filter((g) => g.items.length)
 }
