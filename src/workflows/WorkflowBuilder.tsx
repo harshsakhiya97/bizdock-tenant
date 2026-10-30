@@ -138,7 +138,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   const [adding, setAdding] = useState(false)
   const [find, setFind] = useState('')
   // a "+" under a box's exit: the next step goes there
-  const [from, setFrom] = useState<{ source: string; handle: string | null } | null>(null)
+  const [from, setFrom] = useState<{ source: string; handle: string | null; fresh?: boolean } | null>(null)
   const used = useMemo(() => new Set(edges.map((e) => `${e.source}|${e.sourceHandle ?? ''}`)), [edges])
 
   const onConnect = useCallback(
@@ -208,15 +208,16 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         setAdding(true)
       },
       // the Switch's extra "+": a new path, then its settings open (same as editing it)
+      // the Switch's dotted "+": a new path, then pick its step (its condition is set later)
       onAddPath: (nodeId: string) => {
+        const caseId = `c${Date.now().toString(36)}`
         setNodes((ns) =>
-          ns.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, cases: [...casesOf(n.data), { id: `c${Date.now().toString(36)}`, label: '', field: 'stage', op: 'is', value: '' }] } } : n,
-          ),
+          ns.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, cases: [...casesOf(n.data), { id: caseId, label: '', field: 'stage', op: 'is', value: '' }] } } : n)),
         )
-        setAdding(false)
-        setFrom(null)
-        setSelectedId(nodeId)
+        setFrom({ source: nodeId, handle: caseId, fresh: true })
+        setSelectedId(null)
+        setFind('')
+        setAdding(true)
         setDirty(true)
       },
     }),
@@ -255,6 +256,15 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         return { ...n, data: { ...n.data, cases } }
       }),
     )
+  }
+  // closing the step list: a path just made for it (no step picked) goes again
+  function closeAdd() {
+    if (from?.fresh && from.handle) {
+      const { source, handle } = from
+      setNodes((ns) => ns.map((n) => (n.id === source ? { ...n, data: { ...n.data, cases: casesOf(n.data).filter((c) => c.id !== handle) } } : n)))
+    }
+    setAdding(false)
+    setFrom(null)
   }
   function deleteSelected() {
     if (!selected || selected.type === 'trigger') return
@@ -350,7 +360,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             }}
             onConnect={onConnect}
             isValidConnection={isValidConnection}
-            onNodeClick={(_, n) => (setSelectedId(n.id), setAdding(false))}
+            onNodeClick={(_, n) => (adding && closeAdd(), setSelectedId(n.id))}
             onPaneClick={() => setSelectedId(null)}
             defaultEdgeOptions={EDGE_DEFAULTS}
             nodesDraggable={canEdit}
@@ -392,7 +402,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                     . You can also drag a step onto the canvas.
                   </div>
                 </div>
-                <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={() => (setAdding(false), setFrom(null))}>
+                <button type="button" className="btn btn-ghost btn-icon" aria-label="Close" onClick={closeAdd}>
                   <X size={16} />
                 </button>
               </div>
