@@ -53,6 +53,8 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
   const tags = [...new Set([...(funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags), ...(ref.leadTags ?? [])])].sort((a, b) => a.localeCompare(b))
   const fieldKeys = [...new Set(pages.flatMap((p) => p.fields))].filter((k) => k !== 'city')
   const linkVars = [
+    // the trigger's: when the workflow started (the form post)
+    'submitted_at',
     ...nodes
       .filter((n) => n.type === 'generate_link')
       .flatMap((n) => {

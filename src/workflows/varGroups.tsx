@@ -3,6 +3,8 @@ import { VARIABLES } from './types'
 
 /** variables made by earlier steps, by name */
 export const STEP_VAR_LABEL: Record<string, string> = {
+  // from the trigger: when this workflow started (the form post), India time: 2026-10-30 10:59
+  submitted_at: 'Form submitted (date & time)',
   zoom_short_link: 'Zoom short link',
   zoom_short_link_code: 'Zoom short link code',
   zoom_link: 'Zoom link',
@@ -50,7 +52,7 @@ export function useVarGroups(extra: string[], lead: readonly (readonly [string, 
   if (!hook) return varGroups(extra, lead)
   const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
   return [
-    { label: 'Webhook fields', items: [...hook.map((k) => [k, k] as [string, string]), ...(hook.includes('submitted_at') ? [] : [['submitted_at', 'Received at (date & time)'] as [string, string]])] },
+    { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
     { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
   ].filter((g) => g.items.length)
 }
