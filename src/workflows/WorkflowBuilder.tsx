@@ -6,6 +6,7 @@ import {
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
+  SelectionMode,
   addEdge,
   useEdgesState,
   useNodesState,
@@ -399,6 +400,12 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             nodesDraggable={canEdit}
             nodesConnectable={canEdit}
             elementsSelectable
+            // n8n style: drag on empty canvas draws a box to select several steps (move / delete them together);
+            // pan with the middle / right button, the trackpad, or Space + drag
+            selectionOnDrag={canEdit}
+            panOnDrag={canEdit ? [1, 2] : true}
+            panOnScroll={canEdit}
+            selectionMode={SelectionMode.Partial}
             deleteKeyCode={canEdit ? ['Backspace', 'Delete'] : null}
             proOptions={{ hideAttribution: true }}
             minZoom={0.3}
