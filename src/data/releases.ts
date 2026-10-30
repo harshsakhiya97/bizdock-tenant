@@ -13,6 +13,42 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.8',
+    date: '2026-10-30',
+    title: 'Zoom, webhook workflows and an easier builder',
+    summary: 'Zoom accounts with attendance and comments, workflows started by their own webhook, Bulk WhatsApp timed from any field, and an n8n-style workflow builder.',
+    new: [
+      'Zoom: connect several Zoom accounts in System Connections (with a step-by-step guide to get the keys and the exact scopes) and test each one.',
+      'Zoom on meetings and calendar events: pick the account (and meeting or webinar); the Zoom meeting is created, moved when rescheduled and removed when cancelled. Join / Start as host links on the meeting.',
+      'Zoom attendance, Q&A and chat: fetched 5 minutes after the meeting ends (tried again every 5 minutes until Zoom’s report is ready; chat from the cloud recording), or straight away with Fetch attendance.',
+      'Workflows: Create Zoom meeting step — time from the meeting webhook or a picked date with start / end time; meet with the lead’s owner, one person or round robin; books the lead’s meeting. Later steps use {{zoom_link}}, {{zoom_date_time}} (e.g. “29 Oct 2026 5pm-8pm”), {{zoom_password}} and more; optionally the Zoom link as a short link ({{zoom_short_link}}, {{zoom_short_link_code}}).',
+      'Workflows: “On webhook call” trigger — the workflow’s own webhook URL, a test post to see its fields, and the picked fields as variables (not tied to a funnel; nothing saved on leads).',
+      'Workflows: Go to workflow passes fields to the next workflow (each a name + a variable); the hand-over can be the next workflow’s test.',
+      'Bulk WhatsApp: times count from the start or from a date-time field (webhook or an earlier step, e.g. the Zoom meeting start), with before / after on each message.',
+      'Workflow builder: a + under every free exit adds the next step there; a Switch shows a dotted + to add a path and pick its step.',
+      'Workflow builder: drag a box on the canvas to select several steps and move or delete them together.',
+      'Webhook field mapping: Lead source (by name) — sets the lead’s Source, added to the Sources list when new.',
+    ],
+    improved: [
+      'Meeting webhooks only log the booking; the Create Zoom meeting step books the meeting.',
+      'Meetings can’t be scheduled or rescheduled in the past.',
+      'Variable pickers grouped everywhere (Lead / Extra fields / From earlier steps); message boxes have an “Insert a field…” dropdown; “On webhook call” workflows list only the webhook’s fields.',
+      'WhatsApp and Bulk WhatsApp: searchable template dropdown.',
+      'Bulk WhatsApp: each message on two lines in the table; the card on the canvas lists every message with its time.',
+      'Switch: starts with 1 path; no Otherwise exit; deleting a path’s step removes that path.',
+      'Deleting a step in the middle joins the step before to the step after.',
+      'Workflow opened from a funnel’s webhook: Back / Cancel return to its Webhooks tab.',
+      'Lead details: Lead date (the form’s submitted time) first; links and long values on a full row.',
+      'Studio Rental leads list: Purpose, Time, Describes and Lead date (with time) instead of Temp, Funnel and Value.',
+    ],
+    fixed: [
+      'Purpose sent by webhooks, sheets and imports is saved on the lead (it was only kept as an extra field).',
+      'Re-runs keep the webhook’s fields (date & time from the webhook works on re-runs).',
+      'Go to workflow passes only the step’s fields.',
+      'New Switch paths can be joined to steps.',
+    ],
+  },
+  {
     version: '0.7',
     date: '2026-10-28',
     title: 'Smarter webhooks and workflows',
