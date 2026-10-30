@@ -236,10 +236,37 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
    * steps being deleted: a Switch path they hung from goes too (a Switch keeps at least 1 path;
    * the path's other lines, if any, keep it)
    */
-  function dropPaths(removed: Set<string>) {
+  /**
+   * steps being deleted from the middle of a line: the step before joins the step after (through a run of
+   * deleted steps too); not when a deleted step splits into several paths
+   */
+  function bridges(removed: Set<string>): FlowEdge[] {
+    const out: FlowEdge[] = []
+    for (const e of edges) {
+      if (!removed.has(e.target) || removed.has(e.source)) continue
+      let cur = e.target
+      const seen = new Set<string>()
+      while (removed.has(cur) && !seen.has(cur)) {
+        seen.add(cur)
+        const outs = edges.filter((x) => x.source === cur)
+        if (outs.length !== 1) break
+        cur = outs[0].target
+      }
+      if (removed.has(cur) || cur === e.source || cur === 'trigger') continue
+      const taken = (s: string, h: string | null | undefined) =>
+        edges.some((x) => x.source === s && (x.sourceHandle ?? null) === (h ?? null) && !removed.has(x.target)) ||
+        out.some((x) => x.source === s && (x.sourceHandle ?? null) === (h ?? null))
+      if (taken(e.source, e.sourceHandle)) continue
+      out.push(withLook({ id: newId('e'), source: e.source, sourceHandle: e.sourceHandle ?? undefined, target: cur } as FlowEdge))
+    }
+    return out
+  }
+  function dropPaths(removed: Set<string>, bridged: FlowEdge[] = []) {
     const gone = new Map<string, Set<string>>()
     for (const e of edges) {
       if (!removed.has(e.target) || !e.sourceHandle || removed.has(e.source)) continue
+      // the path now goes on to the next step: it stays
+      if (bridged.some((b) => b.source === e.source && b.sourceHandle === e.sourceHandle)) continue
       const sw = nodes.find((n) => n.id === e.source && n.type === 'switch')
       if (!sw) continue
       const stillUsed = edges.some((x) => x.source === e.source && x.sourceHandle === e.sourceHandle && !removed.has(x.target))
@@ -268,9 +295,11 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   }
   function deleteSelected() {
     if (!selected || selected.type === 'trigger') return
-    dropPaths(new Set([selected.id]))
+    const removed = new Set([selected.id])
+    const join = bridges(removed)
+    dropPaths(removed, join)
     setNodes((ns) => ns.filter((n) => n.id !== selected.id))
-    setEdges((es) => es.filter((e) => e.source !== selected.id && e.target !== selected.id))
+    setEdges((es) => [...es.filter((e) => e.source !== selected.id && e.target !== selected.id), ...join])
     setSelectedId(null)
     touch()
   }
@@ -349,7 +378,11 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
               // the trigger stays
               const safe = c.filter((x) => !(x.type === 'remove' && x.id === 'trigger'))
               const removed = new Set(safe.flatMap((x) => (x.type === 'remove' ? [x.id] : [])))
-              if (removed.size) dropPaths(removed)
+              if (removed.size) {
+                const join = bridges(removed)
+                dropPaths(removed, join)
+                if (join.length) setEdges((es) => [...es, ...join])
+              }
               onNodesChange(safe)
               if (safe.some((x) => x.type === 'position' || x.type === 'remove')) touch()
               if (safe.some((x) => x.type === 'remove' && x.id === selectedId)) setSelectedId(null)
