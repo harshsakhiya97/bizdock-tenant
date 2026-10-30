@@ -7,6 +7,11 @@ import { db } from '@/lib/supabase'
 import { STEP_META, unitText } from './steps'
 import type { StepKind, StepNode, Unit, WorkflowRow } from './types'
 
+/** times in a step's note ("2026-10-30T15:11:41.005Z") as "30 Oct 2026, 8:41 pm" */
+const readable = (s: string) =>
+  s.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b/g, (iso) =>
+    new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }),
+  )
 type LogLine = { at: string; node_id: string; kind: string; status: string; detail: string }
 export type Run = {
   id: string
@@ -247,7 +252,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                             <ol className="run-log">
                               {r.log.map((l, i) => (
                                 <li key={i} className={`is-${l.status}`}>
-                                  <span className="muted small">{time(l.at)}</span> <b>{STEP_META[l.kind as StepKind]?.label ?? l.kind}</b> · {l.detail}
+                                  <span className="muted small">{time(l.at)}</span> <b>{STEP_META[l.kind as StepKind]?.label ?? l.kind}</b> · {readable(l.detail)}
                                 </li>
                               ))}
                             </ol>
