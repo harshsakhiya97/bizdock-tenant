@@ -1040,7 +1040,23 @@ function TriggerFields({
         <Hint>{ALL_TRIGGERS.find((x) => x.value === t.event)?.hint}</Hint>
       </div>
 
-      {t.event === 'webhook_call' && <HookTrigger workflowId={ctx.selfId} disabled={disabled} />}
+      {t.event === 'webhook_call' && (
+        <>
+          <div>
+            <Label htmlFor="tr-used-in">Used in funnel</Label>
+            <Select id="tr-used-in" value={t.funnel_id ?? ''} disabled={disabled} onChange={(e) => set({ funnel_id: e.target.value })}>
+              <option value="">— not set —</option>
+              {ctx.funnels.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </Select>
+            <Hint>Only to keep things tidy: the workflow shows under this funnel (its Workflows tab). Posts don’t add leads to it.</Hint>
+          </div>
+          <HookTrigger workflowId={ctx.selfId} disabled={disabled} />
+        </>
+      )}
 
       {t.event === 'form_submitted' && (
         <>

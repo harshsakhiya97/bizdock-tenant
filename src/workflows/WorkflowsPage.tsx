@@ -61,6 +61,10 @@ export function WorkflowsPage() {
   // follows the business picked in the top bar through the workflow's funnel; workflows without a funnel show everywhere
   const { inScope } = useBusiness()
   const funnelOf = useMemo(() => new Map((refData?.funnels ?? []).map((f) => [f.id, f])), [refData])
+  // the workflow's funnel: its trigger's (or the one it's marked as used in), or the funnel of its webinar / event
+  const funnelLabel = (w: { funnel_id: string | null; event_id: string | null }) =>
+    (w.funnel_id ? funnelOf.get(w.funnel_id)?.name : null) ??
+    (w.event_id ? (refData?.funnels ?? []).filter((f) => f.event_id === w.event_id).map((f) => f.name).join(', ') || null : null)
   const scoped = useMemo(
     () =>
       (rows ?? []).filter((w) => {
@@ -143,6 +147,7 @@ export function WorkflowsPage() {
                 <tr>
                   <th>Workflow</th>
                   <th>Starts when</th>
+                  <th>Funnel</th>
                   <th>Steps</th>
                   <th>Runs</th>
                   <th>Status</th>
@@ -163,6 +168,7 @@ export function WorkflowsPage() {
                         <div>{triggerLabel(t.event)}</div>
                         <div className="muted small">{ctx ? triggerSummary(t, ctx) : '…'}</div>
                       </td>
+                      <td>{funnelLabel(w) ?? <span className="muted">—</span>}</td>
                       <td>
                         <div className="wf-kinds">
                           {kinds.map((k) => {

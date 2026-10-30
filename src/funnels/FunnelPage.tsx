@@ -14,6 +14,7 @@ import { FunnelDrawer } from './FunnelDrawer'
 import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
+import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -24,6 +25,7 @@ const TABS = [
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'leads', label: 'Leads' },
+  { key: 'workflows', label: 'Workflows' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -268,6 +270,8 @@ export function FunnelPage() {
               onError={(msg) => setNotice({ error: msg })}
             />
           )}
+
+          {tab === 'workflows' && <FunnelWorkflowsTab tenantId={tenant.id} funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' &&
             (!leads ? (
