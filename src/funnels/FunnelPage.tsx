@@ -271,7 +271,7 @@ export function FunnelPage() {
             />
           )}
 
-          {tab === 'workflows' && <FunnelWorkflowsTab tenantId={tenant.id} funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
+          {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' &&
             (!leads ? (
