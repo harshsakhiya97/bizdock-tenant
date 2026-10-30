@@ -15,6 +15,7 @@ import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
+import { listWorkflows } from '@/workflows/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -23,9 +24,9 @@ const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'pages', label: 'Landing pages' },
   { key: 'webhooks', label: 'Webhooks' },
+  { key: 'workflows', label: 'Workflows' },
   { key: 'whatsapp', label: 'WhatsApp' },
   { key: 'leads', label: 'Leads' },
-  { key: 'workflows', label: 'Workflows' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -47,6 +48,7 @@ export function FunnelPage() {
   const [sheets, setSheets] = useState<FunnelSheet[] | null>(null)
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
+  const [flowCount, setFlowCount] = useState<number | null>(null)
   const [sources, setSources] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [event, setEvent] = useState<EventRow | null>(null)
@@ -60,6 +62,8 @@ export function FunnelPage() {
         setFunnel(f)
         if (!f) return
         void listEvents(tenant.id).then((ev) => setEvent(ev.find((e) => e.id === f.event_id) ?? null))
+        // same as its Workflows tab: the funnel's, or started by its webinar / event
+        void listWorkflows(tenant.id).then((ws) => setFlowCount(ws.filter((w) => w.funnel_id === f.id || (!!f.event_id && w.event_id === f.event_id)).length))
       })
       .catch((e: Error) => setNotice({ error: e.message }))
     listLandingPages(id).then(setPages).catch((e: Error) => setNotice({ error: e.message }))
@@ -147,6 +151,7 @@ export function FunnelPage() {
                 {t.key === 'webhooks' && hooks && <span className="muted small"> {hooks.length}</span>}
                 {t.key === 'whatsapp' && sheets && <span className="muted small"> {sheets.length}</span>}
                 {t.key === 'leads' && leads && <span className="muted small"> {leads.length}</span>}
+                {t.key === 'workflows' && flowCount != null && <span className="muted small"> {flowCount}</span>}
               </button>
             ))}
           </div>
