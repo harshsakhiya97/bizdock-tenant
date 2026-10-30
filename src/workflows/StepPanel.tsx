@@ -742,6 +742,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
         <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
         <Hint>
           <code className="code-chip">{`{{${name}}}`}</code> is the whole link; <code className="code-chip">{`{{${name}_code}}`}</code> is the code only (for a template whose button already has your domain).
+          Your URL as filled in: <code className="code-chip">{`{{${name}_full_url}}`}</code> the full URL, <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?” (e.g. fname=Harsh&phone=98…).
         </Hint>
       </div>
     </>
