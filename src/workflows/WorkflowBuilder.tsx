@@ -232,7 +232,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     touch()
   }
   /**
-   * steps being deleted: a Switch path they hung from goes too (a Switch keeps at least its 2 starting paths;
+   * steps being deleted: a Switch path they hung from goes too (a Switch keeps at least 1 path;
    * the path's other lines, if any, keep it)
    */
   function dropPaths(removed: Set<string>) {
@@ -251,7 +251,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         const drop = gone.get(n.id)
         if (!drop) return n
         let cases = casesOf(n.data)
-        for (const c of [...cases].reverse()) if (drop.has(c.id) && cases.length > 2) cases = cases.filter((x) => x.id !== c.id)
+        for (const c of [...cases].reverse()) if (drop.has(c.id) && cases.length > 1) cases = cases.filter((x) => x.id !== c.id)
         return { ...n, data: { ...n.data, cases } }
       }),
     )
