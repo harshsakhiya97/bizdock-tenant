@@ -4,6 +4,7 @@ import { scheduleFollowUp } from '@/followups/api'
 import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
+import { activeType } from '@/business/activeType'
 import { ConfirmModal, Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
@@ -39,12 +40,26 @@ const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', a
 
 type PendingMove = { ids: string[]; stage: StageRow }
 
+/** an extra form field by name (any case / spacing) */
+const extraOf = (l: LeadRow, key: string) => {
+  const hit = Object.entries(l.extra ?? {}).find(([k]) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_') === key)
+  return hit && hit[1] != null ? String(hit[1]).trim() : ''
+}
+/** when the form was sent (its "submitted" field), else when the lead was added: "30 Oct 2026, 10:59 am" */
+const leadDate = (l: LeadRow) => {
+  const sent = ['submitted', 'submitted_at', 'submitted_at_utc', 'submitted_on', 'timestamp'].map((k) => extraOf(l, k)).find(Boolean)
+  const t = sent && !Number.isNaN(Date.parse(sent)) ? Date.parse(sent) : Date.parse(l.created_at)
+  return new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+}
+
 /** Leads, or (customers) leads with a confirmed / completed booking and their revenue. */
 export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const tenant = useTenant()
   const { can, scope, membership, businesses } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const me = membership?.id
+  // Studio Rental: Purpose, Time, Describes and the lead date (with time) instead of Temp / Funnel / Value
+  const studio = activeType(selected, sub) === 'studio_rental'
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
@@ -519,9 +534,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     />
                   </th>
                   <th>{Word}</th>
-                  <th>Temp</th>
+                  {!studio && <th>Temp</th>}
                   <th>Source</th>
-                  {!funnel && <th>Funnel</th>}
+                  {studio && (
+                    <>
+                      <th>Purpose</th>
+                      <th>Time</th>
+                      <th>Describes</th>
+                    </>
+                  )}
+                  {!funnel && !studio && <th>Funnel</th>}
                   <th>Owner</th>
                   <th>Next follow-up</th>
                   {customers ? (
@@ -531,9 +553,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                       <th style={{ textAlign: 'right' }}>Balance</th>
                     </>
                   ) : (
-                    <th style={{ textAlign: 'right' }}>Value</th>
+                    !studio && <th style={{ textAlign: 'right' }}>Value</th>
                   )}
-                  <th>Created</th>
+                  <th>{studio ? 'Lead date' : 'Created'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -561,9 +583,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           </div>
                         )}
                       </td>
-                      <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
+                      {!studio && <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>}
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
-                      {!funnel && <td className="muted">{funnelName(l.funnel_id)}</td>}
+                      {studio && (
+                        <>
+                          <td>{l.purpose || extraOf(l, 'purpose') || <span className="muted">—</span>}</td>
+                          <td className="nowrap">{extraOf(l, 'time') || <span className="muted">—</span>}</td>
+                          <td>{extraOf(l, 'describes') || <span className="muted">—</span>}</td>
+                        </>
+                      )}
+                      {!funnel && !studio && <td className="muted">{funnelName(l.funnel_id)}</td>}
                       <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
                       <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
                       {customers ? (
@@ -579,12 +608,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           </td>
                         </>
                       ) : (
-                        <td className="num" style={{ textAlign: 'right' }}>
-                          {money(l.estimated_amount)}
-                        </td>
+                        !studio && (
+                          <td className="num" style={{ textAlign: 'right' }}>
+                            {money(l.estimated_amount)}
+                          </td>
+                        )
                       )}
                       <td className="muted nowrap">
-                        {new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {studio
+                          ? leadDate(l)
+                          : new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                     </tr>
                   )
