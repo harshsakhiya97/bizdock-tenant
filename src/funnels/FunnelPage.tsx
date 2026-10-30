@@ -22,11 +22,11 @@ import { Flash } from '@/components/Flash'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
-  { key: 'pages', label: 'Landing pages' },
+  { key: 'leads', label: 'Leads' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'workflows', label: 'Workflows' },
+  { key: 'pages', label: 'Landing pages' },
   { key: 'whatsapp', label: 'WhatsApp' },
-  { key: 'leads', label: 'Leads' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
