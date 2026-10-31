@@ -37,6 +37,7 @@ export const releases: Release[] = [
     improved: [
       'Funnel page tabs: Overview, Leads, Webhooks, Workflows, Landing pages, WhatsApp (with counts).',
       'Workflow runs: times in the step notes shown as date & time.',
+      'Masters → WhatsApp messages: bigger editor with bold / italic / strike, Insert a field and a WhatsApp preview; Situation filter and 10 a page.',
       'Meeting webhooks only log the booking; the Create Zoom meeting step books the meeting.',
       'Meetings can’t be scheduled or rescheduled in the past.',
       'Variable pickers grouped everywhere (Lead / Extra fields / From earlier steps); message boxes have an “Insert a field…” dropdown; “On webhook call” workflows list only the webhook’s fields.',
@@ -53,6 +54,7 @@ export const releases: Release[] = [
       'Re-runs keep the webhook’s fields (date & time from the webhook works on re-runs).',
       'Go to workflow passes only the step’s fields.',
       'New Switch paths can be joined to steps.',
+      'WhatsApp from a lead: emojis in the message come through (they showed as ◆).',
     ],
   },
   {
