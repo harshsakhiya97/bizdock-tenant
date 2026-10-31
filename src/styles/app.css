@@ -1116,3 +1116,11 @@ a.db-card:hover { border-color: var(--brand); }
 .tpl-preview { background: #efeae2; border-radius: var(--radius); padding: 12px; max-height: 470px; overflow: auto; }
 .tpl-body-cell { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wa-tpl small { white-space: pre-line; }
+
+/* Bulk WhatsApp: drag a message by its number to reorder the list */
+.bulk-grip { display: inline-flex; align-items: center; gap: 1px; margin-left: -6px; cursor: grab; user-select: none; }
+.bulk-grip:active { cursor: grabbing; }
+.bulk-grip svg { color: var(--line-strong); }
+.bulk-grip:hover svg { color: var(--text-muted); }
+.bulk-table tr.is-dragging { opacity: 0.45; }
+.bulk-table tr.is-drop-over { box-shadow: inset 0 2px 0 var(--brand); }
