@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { ArrowUp, Braces, Eye, EyeOff, Plus, Trash2, X } from 'lucide-react'
+import { ArrowUp, Braces, Eye, EyeOff, Plus, Save, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
@@ -23,6 +23,9 @@ export function StepPanel({
   onChange,
   onDelete,
   onClose,
+  onSave,
+  saving = false,
+  dirty = false,
 }: {
   node: StepNode
   ctx: FlowContext
@@ -30,6 +33,9 @@ export function StepPanel({
   onChange: (data: Record<string, unknown>) => void
   onDelete: () => void
   onClose: () => void
+  onSave?: () => void
+  saving?: boolean
+  dirty?: boolean
 }) {
   const kind = node.type as StepKind
   // extra fields + earlier steps' variables (grouped in every variable picker)
@@ -177,11 +183,18 @@ export function StepPanel({
         {issue && <div className="alert alert-warning small">{issue}</div>}
       </div>
 
-      {canEdit && kind !== 'trigger' && (
+      {canEdit && (
         <div className="cb-panel-foot">
-          <button type="button" className="btn btn-ghost danger-text" onClick={onDelete}>
-            <Trash2 size={15} /> Delete step
-          </button>
+          {kind !== 'trigger' ? (
+            <button type="button" className="btn btn-ghost danger-text" onClick={onDelete}>
+              <Trash2 size={15} /> Delete step
+            </button>
+          ) : <span />}
+          {onSave && (
+            <button type="button" className="btn btn-primary" onClick={onSave} disabled={saving || !dirty}>
+              <Save size={15} /> {saving ? 'Saving…' : dirty ? 'Save' : 'Saved'}
+            </button>
+          )}
         </div>
       )}
     </aside>
