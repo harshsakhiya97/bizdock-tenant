@@ -49,13 +49,48 @@ export const HookVarsContext = createContext<string[] | null>(null)
 /** varGroups, but for a webhook-call workflow: its webhook's fields, then the earlier steps' variables */
 export function useVarGroups(extra: string[], lead: readonly (readonly [string, string])[] = VARIABLES): VarGroup[] {
   const hook = useContext(HookVarsContext)
-  if (!hook) return varGroups(extra, lead)
+  const dates = useContext(DateVarsContext)
+  if (!hook) return withDateParts(varGroups(extra, lead), dates)
   const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
-  return [
-    { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
-    { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
-  ].filter((g) => g.items.length)
+  return withDateParts(
+    [
+      { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
+      { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
+    ].filter((g) => g.items.length),
+    dates,
+  )
 }
+
+/** the fields holding a date / date-time / time (each also gives {{x_date}}, {{x_time}}, {{x_datetime}}) */
+export const DateVarsContext = createContext<string[]>([])
+
+/** the ready-made formats of a date field, as the runner fills them (India time) */
+export const DATE_PARTS = [
+  ['_date', 'date', '29 Oct 2026'],
+  ['_time', 'time', '4:00 pm'],
+  ['_datetime', 'date & time', '29 Oct 2026, 4:00 pm'],
+] as const
+
+/** after each date field: its date / time / date & time versions */
+function withDateParts(groups: VarGroup[], dates: string[]): VarGroup[] {
+  if (!dates.length) return groups
+  return groups.map((g) => ({
+    ...g,
+    items: g.items.flatMap(([k, l]) =>
+      dates.includes(k)
+        ? [[k, l] as [string, string], ...DATE_PARTS.map(([x, w, eg]) => [`${k}${x}`, `${l === k ? k : l} – ${w} (${eg})`] as [string, string])]
+        : [[k, l] as [string, string]],
+    ),
+  }))
+}
+
+/** a value that reads as a date, a date-time or a time: 2026-10-29 / 2026-10-29 16:00 / 29/10/2026 / 4:00 pm */
+export const looksLikeWhen = (v: unknown) => {
+  const s = String(v ?? '').trim()
+  return /^\d{4}-\d{2}-\d{2}([ T]\d{1,2}:\d{2}.*)?$/.test(s) || /^\d{1,2}[/.-]\d{1,2}[/.-]\d{4}( .*)?$/.test(s) || /^\d{1,2}:\d{2}(:\d{2})?\s*([ap]\.?m\.?)?$/i.test(s)
+}
+/** a field named like a date (when there is no sample value to go by) */
+export const namedLikeWhen = (k: string) => /(date|time|_at$|^when)/i.test(k)
 
 /** <optgroup>s for a variable <select> */
 export function VarOptions({ groups, show }: { groups: VarGroup[]; show?: (key: string, label: string) => string }) {

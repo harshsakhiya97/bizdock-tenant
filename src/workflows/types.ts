@@ -122,6 +122,8 @@ export type FlowContext = RefData & {
   triggerPages?: string[]
   /** "On webhook call": the post's fields as [key in the run, label] */
   hookVars?: [string, string][]
+  /** fields holding a date / time (they also give _date, _time, _datetime) */
+  dateVars?: string[]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
