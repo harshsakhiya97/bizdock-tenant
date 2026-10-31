@@ -184,6 +184,27 @@ const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
       ? `To ${d.custom_phone ? `+91 ${String(d.custom_phone)}` : 'a number'} · `
       : ''
 
+/** who a WhatsApp message goes to, for the box: Lead / a team member / the custom number */
+const toName = (r: Record<string, unknown>, ctx: FlowContext) =>
+  r.to === 'team'
+    ? (ctx.members.find((m) => m.id === r.member_id)?.name ?? 'Team member')
+    : r.to === 'custom'
+      ? r.custom_phone
+        ? `+91 ${String(r.custom_phone)}`
+        : 'A number'
+      : 'Lead'
+/** WhatsApp / Bulk WhatsApp boxes: each message as To / Template / When */
+export function messageBlocks(kind: StepKind, d: Record<string, unknown>, ctx: FlowContext): { to: string; template: string; when: string }[] | null {
+  if (kind === 'whatsapp') return [{ to: toName(d, ctx), template: (d.template as string) || (d.message ? 'Free message' : 'No template yet'), when: 'Right away' }]
+  if (kind !== 'bulk_whatsapp') return null
+  const from = anchorText(d, ctx)
+  return rowsOf(d).map((r) => ({
+    to: toName(r as unknown as Record<string, unknown>, ctx),
+    template: r.template || 'No template yet',
+    when: `${unitText(Number(r.amount) || 0, r.unit)} ${rowDir(r, d)} ${from}`,
+  }))
+}
+
 /** one-line summary shown inside a box */
 export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowContext): string {
   switch (kind) {
