@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { ArrowUp, Braces, Eye, EyeOff, Plus, Save, Trash2, X } from 'lucide-react'
+import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
@@ -272,6 +272,9 @@ function BulkFields({
   const [open, setOpen] = useState<string | null>(null)
   // the row whose message preview is shown
   const [peek, setPeek] = useState<string | null>(null)
+  // drag to reorder (only how the list looks: each message still goes at its own time)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
   const rows = rowsOf(d)
   const put = (next: BulkRow[]) => onChange({ ...d, rows: next })
   const setRow = (id: string, patch: Partial<BulkRow>) => put(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -287,6 +290,33 @@ function BulkFields({
   ].filter((g) => g.items.length)
   const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
   const anchorName = anchorText(d, ctx, label)
+
+  function moveTo(targetId: string) {
+    if (!dragId || dragId === targetId) return
+    const from = rows.findIndex((r) => r.id === dragId)
+    const to = rows.findIndex((r) => r.id === targetId)
+    if (from < 0 || to < 0) return
+    const next = [...rows]
+    const [m] = next.splice(from, 1)
+    next.splice(to, 0, m)
+    put(next)
+  }
+  const dropProps = (id: string) =>
+    disabled
+      ? {}
+      : {
+          onDragOver: (e: React.DragEvent) => {
+            if (!dragId) return
+            e.preventDefault()
+            if (overId !== id) setOverId(id)
+          },
+          onDrop: (e: React.DragEvent) => {
+            e.preventDefault()
+            moveTo(id)
+            setDragId(null)
+            setOverId(null)
+          },
+        }
 
   function add() {
     const last = rows[rows.length - 1]
@@ -346,8 +376,32 @@ function BulkFields({
                 const missing = vars.filter((v) => !String(r.params?.[v] ?? '').trim()).length
                 return (
                   <Fragment key={r.id}>
-                    <tr>
-                      <td className="muted">{i + 1}</td>
+                    <tr className={cn(dragId === r.id && 'is-dragging', overId === r.id && dragId !== r.id && 'is-drop-over')} {...dropProps(r.id)}>
+                      <td className="muted">
+                        {!disabled && rows.length > 1 ? (
+                          <span
+                            className="bulk-grip"
+                            draggable
+                            title="Drag to reorder"
+                            onDragStart={(e) => {
+                              e.dataTransfer.effectAllowed = 'move'
+                              e.dataTransfer.setData('text/plain', r.id)
+                              const tr = (e.currentTarget as HTMLElement).closest('tr')
+                              if (tr) e.dataTransfer.setDragImage(tr, 20, 20)
+                              setDragId(r.id)
+                            }}
+                            onDragEnd={() => {
+                              setDragId(null)
+                              setOverId(null)
+                            }}
+                          >
+                            <GripVertical size={14} />
+                            {i + 1}
+                          </span>
+                        ) : (
+                          i + 1
+                        )}
+                      </td>
                       <td>
                         <select className="input input-sm" aria-label="Send to" value={r.to} onChange={(e) => setRow(r.id, { to: e.target.value as BulkRow['to'] })} disabled={disabled}>
                           <option value="lead">Lead</option>
@@ -442,7 +496,7 @@ function BulkFields({
                       </td>
                     </tr>
                     {peek === r.id && picked && (
-                      <tr className="bulk-vars">
+                      <tr className="bulk-vars" {...dropProps(r.id)}>
                         <td />
                         <td colSpan={4}>
                           <div className="wa-phone">
@@ -458,7 +512,7 @@ function BulkFields({
                       </tr>
                     )}
                     {open === r.id && vars.length > 0 && (
-                      <tr className="bulk-vars">
+                      <tr className="bulk-vars" {...dropProps(r.id)}>
                         <td />
                         <td colSpan={4}>
                           <TemplateParams vars={vars} params={r.params ?? {}} onChange={(p) => setRow(r.id, { params: p })} disabled={disabled} extraFields={extraFields} />
@@ -483,7 +537,7 @@ function BulkFields({
             : 'Each message goes this long before or after (set on each row) the date-time in the picked field (e.g. 2026-11-02 16:00, India time).'}{' '}
           If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
         </Hint>
-        {outOfOrder && <div className="alert alert-warning small">Messages go in time order, not row order: a row is earlier than the one above it.</div>}
+        {outOfOrder && <Hint>The list order is only for you: each message goes at its own time.</Hint>}
       </div>
 
       <div className="stack" style={{ gap: 10 }}>
