@@ -19,6 +19,8 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [page, setPage] = useState(1)
+  // situation filter ('' = all)
+  const [cat, setCat] = useState<TemplateCategory | ''>('')
 
   const load = useCallback(() => {
     listTemplates(tenant.id).then(setRows, (e: Error) => onNotice({ error: e.message }))
@@ -42,7 +44,8 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
   }
 
   // 10 a page
-  const pages = Math.max(1, Math.ceil((rows?.length ?? 0) / PAGE))
+  const shown = (rows ?? []).filter((t) => !cat || t.category === cat)
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE))
   const current = Math.min(page, pages)
 
   async function remove(t: MessageTemplate) {
@@ -62,11 +65,29 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
           <b>WhatsApp messages</b>
           <div className="muted small">Ready messages by situation, picked when you WhatsApp a lead or client.</div>
         </div>
+        <div className="row" style={{ gap: 8 }}>
+        <select
+          className="input input-sm filter-select"
+          aria-label="Situation"
+          value={cat}
+          onChange={(e) => {
+            setCat(e.target.value as TemplateCategory | '')
+            setPage(1)
+          }}
+        >
+          <option value="">All situations</option>
+          {(Object.keys(CATEGORY_LABEL) as TemplateCategory[]).map((c) => (
+            <option key={c} value={c}>
+              {CATEGORY_LABEL[c]} ({(rows ?? []).filter((t) => t.category === c).length})
+            </option>
+          ))}
+        </select>
         {canEdit && (
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => { setError(null); setEdit({ category: 'follow_up', is_active: true, title: '', body: '' }) }}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => { setError(null); setEdit({ category: cat || 'follow_up', is_active: true, title: '', body: '' }) }}>
             <Plus size={15} /> Add message
           </button>
         )}
+        </div>
       </div>
       {!rows ? (
         <div className="empty">Loading…</div>
@@ -83,7 +104,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
               </tr>
             </thead>
             <tbody>
-              {rows.slice((current - 1) * PAGE, current * PAGE).map((t) => (
+              {shown.slice((current - 1) * PAGE, current * PAGE).map((t) => (
                 <tr key={t.id}>
                   <td className="nowrap">{CATEGORY_LABEL[t.category]}</td>
                   <td className="nowrap">
@@ -107,17 +128,17 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
                   </td>
                 </tr>
               ))}
-              {!rows.length && (
+              {!shown.length && (
                 <tr>
-                  <td colSpan={5} className="muted">No messages yet.</td>
+                  <td colSpan={5} className="muted">{rows.length ? 'No messages for this situation.' : 'No messages yet.'}</td>
                 </tr>
               )}
             </tbody>
           </table>
-          {rows.length > PAGE && (
+          {shown.length > PAGE && (
             <div className="table-foot">
               <span>
-                Showing {(current - 1) * PAGE + 1}–{Math.min(current * PAGE, rows.length)} of {rows.length}
+                Showing {(current - 1) * PAGE + 1}–{Math.min(current * PAGE, shown.length)} of {shown.length}
               </span>
               <div className="pager">
                 <button type="button" onClick={() => setPage(Math.max(1, current - 1))} aria-label="Previous">
