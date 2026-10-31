@@ -3,7 +3,7 @@ import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflo
 import { AlertCircle, Plus as PlusIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { AddCtx } from './addCtx'
-import { STEP_META, caseLabel, casesOf, problem, summary, triggerLabel } from './steps'
+import { STEP_META, caseLabel, casesOf, messageBlocks, problem, summary, triggerLabel } from './steps'
 import type { FlowContext, StepNode, TriggerData } from './types'
 
 export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [], linkVars: [] })
@@ -48,7 +48,10 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
   const auto = type === 'trigger' ? triggerLabel((data as unknown as TriggerData).event) : summary(type, data, ctx)
   // Bulk WhatsApp: its messages go on lines under the title ("3 messages" when it has no name)
   const bulkCount = type === 'bulk_whatsapp' ? (Array.isArray(data.rows) ? data.rows.length : 0) : 0
-  const title = name || (bulkCount ? `${bulkCount} message${bulkCount === 1 ? '' : 's'}` : auto)
+  const title = name || (bulkCount ? `${bulkCount} message${bulkCount === 1 ? '' : 's'}` : type === 'whatsapp' ? 'WhatsApp message' : auto)
+  // WhatsApp / Bulk WhatsApp: To / Template / When for each message (and a Bulk step's stop rule)
+  const blocks = messageBlocks(type, data, ctx)
+  const stopText = type === 'bulk_whatsapp' && data.stop_on ? summary(type, data, ctx).split('\n').filter((l) => l.startsWith('Stops if')).join('') : ''
   return (
     <div className={cn('cb-box', selected && 'is-selected', type === 'trigger' && 'is-trigger')} style={{ ['--c' as string]: meta.color }}>
       {type !== 'trigger' && <Handle type="target" position={Position.Top} className="cb-handle" />}
@@ -66,7 +69,29 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
           </span>
         )}
       </div>
-      {type === 'trigger' ? <div className="cb-sub">{name ? `${auto} · ${summary(type, data, ctx)}` : summary(type, data, ctx)}</div> : (name || bulkCount > 0) && <div className="cb-sub">{auto}</div>}
+      {type === 'trigger' ? (
+        <div className="cb-sub">{name ? `${auto} · ${summary(type, data, ctx)}` : summary(type, data, ctx)}</div>
+      ) : blocks ? (
+        blocks.length > 0 || stopText ? (
+          <div className="cb-msgs">
+            {blocks.map((b, i) => (
+              <dl key={i} className="cb-msg">
+                <dt>To:</dt>
+                <dd>{b.to}</dd>
+                <dt>Template:</dt>
+                <dd>{b.template}</dd>
+                <dt>When:</dt>
+                <dd>{b.when}</dd>
+              </dl>
+            ))}
+            {stopText && <div className="cb-sub">{stopText}</div>}
+          </div>
+        ) : (
+          <div className="cb-sub">No messages yet</div>
+        )
+      ) : (
+        name && <div className="cb-sub">{auto}</div>
+      )}
       {type === 'switch' ? (
         (() => {
           // one exit per path, spread along the bottom, then a "+" to add a path
