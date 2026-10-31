@@ -211,7 +211,8 @@ export async function sendWhatsApp(
 ) {
   const digits = (lead.whatsapp || lead.phone).replace(/\D/g, '')
   const to = digits.length === 10 ? `91${digits}` : digits
-  window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg.body)}`, '_blank', 'noopener')
+  // api.whatsapp.com keeps emojis (wa.me's redirect turns them into ◆ in the WhatsApp app)
+  window.open(`https://api.whatsapp.com/send?phone=${to}&text=${encodeURIComponent(msg.body)}`, '_blank', 'noopener')
   const { error } = await db()
     .from('lead_messages')
     .insert({ tenant_id: tenantId, lead_id: lead.id, template_id: msg.template_id, title: msg.title, body: msg.body, sent_by: memberId ?? null })
