@@ -175,8 +175,33 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       // without a drop position: under the selected box (or the last one), joined to it
       const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
       pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
-      if (!position && anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto' && !edges.some((e) => e.source === anchor.id)) {
+      const plain = anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto'
+      const outs = plain ? edges.filter((e) => e.source === anchor.id) : []
+      if (!position && plain && !outs.length) {
         setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
+      } else if (!position && plain && outs.length === 1 && selectedId === anchor.id && kind !== 'goto') {
+        // a selected box that already has a next step: the new one goes in between, and the steps below move down
+        const out = outs[0]
+        const next = nodes.find((n) => n.id === out.target)
+        pos = { x: anchor.position.x, y: anchor.position.y + (anchor.measured?.height ?? 90) + 90 }
+        const shift = next ? Math.max(0, pos.y + 110 + 90 - next.position.y) : 0
+        if (next && shift) {
+          const below = new Set<string>()
+          const queue = [next.id]
+          while (queue.length) {
+            const cur = queue.shift()!
+            if (below.has(cur) || cur === anchor.id || cur === 'trigger') continue
+            below.add(cur)
+            for (const e of edges) if (e.source === cur) queue.push(e.target)
+          }
+          setNodes((ns) => ns.map((n) => (below.has(n.id) ? { ...n, position: { x: n.position.x, y: n.position.y + shift } } : n)))
+        }
+        setEdges((eds) => [
+          ...eds.filter((e) => e.id !== out.id),
+          withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge),
+          // a Switch / Yes-No goes on through its first path / Yes
+          withLook({ id: newId('e'), source: id, sourceHandle: kind === 'switch' ? 'c1' : kind === 'condition' ? 'yes' : undefined, target: out.target } as FlowEdge),
+        ])
       }
     }
     setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
