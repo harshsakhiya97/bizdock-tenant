@@ -75,14 +75,11 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
         blocks.length > 0 || stopText ? (
           <div className="cb-msgs">
             {blocks.map((b, i) => (
-              <dl key={i} className="cb-msg">
-                <dt>To:</dt>
-                <dd>{b.to}</dd>
-                <dt>Template:</dt>
-                <dd>{b.template}</dd>
-                <dt>When:</dt>
-                <dd>{b.when}</dd>
-              </dl>
+              <div key={i} className="cb-msg">
+                <div>{b.to}</div>
+                <div>{b.template}</div>
+                {b.when && <div>{b.when}</div>}
+              </div>
             ))}
             {stopText && <div className="cb-sub">{stopText}</div>}
           </div>
