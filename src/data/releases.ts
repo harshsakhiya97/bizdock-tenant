@@ -33,6 +33,10 @@ export const releases: Release[] = [
       'Workflows: Funnel column; On webhook call workflows can be marked “Used in funnel”; edit (pencil) to change a workflow’s name and funnel.',
       'Funnel page: Workflows tab — the funnel’s workflows with runs, test run, on / off, delete and New workflow.',
       'Workflow variables: Form submitted (date & time) {{submitted_at}}; Generate link also gives {{generated_link_full_url}} and {{generated_link_parameters}} (the part after “?”).',
+      'Date fields in messages: any field holding a date or time (webhook fields, {{submitted_at}}, the Zoom start) also gives {{field_date}} “29 Oct 2026”, {{field_time}} “4:00 pm” and {{field_datetime}} “29 Oct 2026, 4:00 pm” (India time).',
+      'Switch / Yes-No in “On webhook call” workflows: conditions on the webhook’s fields and earlier steps’ values (no lead needed).',
+      'Bulk WhatsApp: a preview button on each message shows the WhatsApp message; drag a message by its number to reorder the list (each still goes at its own time).',
+      'Workflow builder: a Save button at the bottom of every step’s panel.',
     ],
     improved: [
       'Funnel page tabs: Overview, Leads, Webhooks, Workflows, Landing pages, WhatsApp (with counts).',
@@ -45,6 +49,8 @@ export const releases: Release[] = [
       'Bulk WhatsApp: each message on two lines in the table; the card on the canvas lists every message with its time.',
       'Switch: starts with 1 path; no Otherwise exit; deleting a path’s step removes that path.',
       'Deleting a step in the middle joins the step before to the step after.',
+      'Workflow builder: + with a step selected adds the new step between it and its next step (the steps below move down).',
+      'WhatsApp and Bulk WhatsApp boxes on the canvas: each message as its own lines — who it goes to, the template and (Bulk) when.',
       'Workflow opened from a funnel’s webhook: Back / Cancel return to its Webhooks tab.',
       'Lead details: Lead date (the form’s submitted time) first; links and long values on a full row.',
       'Studio Rental leads list: Purpose, Time, Describes and Lead date (with time) instead of Temp, Funnel and Value; no Funnel and Source filters.',
@@ -55,6 +61,7 @@ export const releases: Release[] = [
       'Go to workflow passes only the step’s fields.',
       'New Switch paths can be joined to steps.',
       'WhatsApp from a lead: emojis in the message come through (they showed as ◆).',
+      'Step panels: long content (like the message preview) no longer squeezes or overflows the panel.',
     ],
   },
   {
