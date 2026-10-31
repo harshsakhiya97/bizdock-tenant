@@ -1103,3 +1103,13 @@ a.db-card:hover { border-color: var(--brand); }
 .cond-chips .tag-chip { max-width: 100%; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 4px; }
 .cond-chips .tag-chip button { border: 0; background: none; padding: 0; cursor: pointer; color: inherit; display: inline-flex; }
 .cond-chips .input { flex: 1; min-width: 80px; border: 0; box-shadow: none; height: 30px; padding: 0 4px; }
+
+/* Masters → WhatsApp messages: editor + WhatsApp preview */
+.tpl-editor { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .tpl-editor { grid-template-columns: minmax(0, 1fr); } }
+.tpl-toolbar { display: flex; align-items: center; gap: 2px; margin-bottom: 6px; }
+.tpl-toolbar .input { width: auto; margin-left: 6px; }
+.tpl-textarea { font-size: 13.5px; line-height: 1.5; resize: vertical; }
+.tpl-preview { background: #efeae2; border-radius: var(--radius); padding: 12px; max-height: 470px; overflow: auto; }
+.tpl-body-cell { max-width: 460px; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.wa-tpl small { white-space: pre-line; }

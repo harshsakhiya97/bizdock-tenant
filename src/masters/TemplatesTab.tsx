@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Bold, Italic, Pencil, Plus, Strikethrough, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { deleteTemplate, listTemplates, saveTemplate } from '@/bookings/api'
 import { CATEGORY_LABEL, type MessageTemplate, type TemplateCategory } from '@/bookings/types'
 import { useTenant } from '@/tenant/useTenant'
+import { WaBubble } from '@/integrations/WaBubble'
 
 const VARS = ['first_name', 'purpose', 'required_on', 'business', 'booking_date', 'booking_time']
 
@@ -82,7 +83,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
                   <td className="nowrap">
                     <b>{t.title}</b>
                   </td>
-                  <td className="muted small" style={{ maxWidth: 460 }}>{t.body}</td>
+                  <td className="muted small tpl-body-cell">{t.body}</td>
                   <td>{t.is_active ? 'Yes' : 'No'}</td>
                   <td className="num nowrap">
                     {canEdit && (
@@ -112,7 +113,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
         <Modal
           open
           onClose={() => setEdit(null)}
-          width={600}
+          width={980}
           title={edit.id ? 'Edit message' : 'Add message'}
           footer={
             <>
@@ -148,11 +149,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
               <TextInput id="t-title" value={edit.title ?? ''} onChange={(e) => setEdit({ ...edit, title: e.target.value })} />
             </div>
             <div className="span-2">
-              <Label htmlFor="t-body" required>
-                Message
-              </Label>
-              <textarea id="t-body" className="input" rows={5} value={edit.body ?? ''} onChange={(e) => setEdit({ ...edit, body: e.target.value })} />
-              <Hint>Fills in: {VARS.map((v) => `{{${v}}}`).join(' ')}</Hint>
+              <MessageEditor value={edit.body ?? ''} onChange={(body) => setEdit({ ...edit, body })} />
             </div>
             <label className="check-inline span-2">
               <input type="checkbox" checked={edit.is_active ?? true} onChange={(e) => setEdit({ ...edit, is_active: e.target.checked })} /> Active
@@ -161,5 +158,71 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
         </Modal>
       )}
     </>
+  )
+}
+
+/**
+ * The message box: WhatsApp formatting (*bold* _italic_ ~strike~), line breaks and emojis are kept as typed;
+ * buttons wrap the selected text; a variable is inserted at the cursor; the right side shows it as WhatsApp will.
+ */
+function MessageEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  function wrap(mark: string) {
+    const el = ref.current
+    if (!el) return
+    const a = el.selectionStart
+    const b = el.selectionEnd
+    const sel = value.slice(a, b) || 'text'
+    onChange(value.slice(0, a) + mark + sel + mark + value.slice(b))
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(a + mark.length, a + mark.length + sel.length)
+    })
+  }
+  function insert(tag: string) {
+    const el = ref.current
+    const a = el?.selectionStart ?? value.length
+    const b = el?.selectionEnd ?? value.length
+    onChange(value.slice(0, a) + tag + value.slice(b))
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(a + tag.length, a + tag.length)
+    })
+  }
+  return (
+    <div className="tpl-editor">
+      <div>
+        <Label htmlFor="t-body" required>
+          Message
+        </Label>
+        <div className="tpl-toolbar">
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Bold (*text*)" aria-label="Bold" onClick={() => wrap('*')}>
+            <Bold size={15} />
+          </button>
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Italic (_text_)" aria-label="Italic" onClick={() => wrap('_')}>
+            <Italic size={15} />
+          </button>
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Strikethrough (~text~)" aria-label="Strikethrough" onClick={() => wrap('~')}>
+            <Strikethrough size={15} />
+          </button>
+          <select className="input input-sm" aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(`{{${e.target.value}}}`)}>
+            <option value="">Insert a field…</option>
+            {VARS.map((v) => (
+              <option key={v} value={v}>
+                {`{{${v}}}`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <textarea ref={ref} id="t-body" className="input tpl-textarea" rows={16} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Type or paste the message. Line breaks and emojis stay as they are." />
+        <Hint>*bold* · _italic_ · ~strike~ · line breaks and emojis are kept. Fills in: {VARS.map((v) => `{{${v}}}`).join(' ')}</Hint>
+      </div>
+      <div>
+        <span className="field-label">Preview</span>
+        <div className="tpl-preview">
+          <WaBubble body={value} />
+        </div>
+      </div>
+    </div>
   )
 }

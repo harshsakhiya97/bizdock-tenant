@@ -108,7 +108,7 @@ export function WhatsAppModal({
         )}
         <div>
           <span className="field-label">Message</span>
-          <textarea className="input" rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Pick a message above or type your own" />
+          <textarea className="input" rows={10} value={text} onChange={(e) => setText(e.target.value)} placeholder="Pick a message above or type your own" />
           <Hint>Opens WhatsApp (web or app) with this text to {lead.whatsapp || lead.phone}. Sending through a WhatsApp provider comes later.</Hint>
         </div>
       </div>
