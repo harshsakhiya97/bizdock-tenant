@@ -571,6 +571,9 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cb-panel { position: absolute; top: 10px; right: 10px; bottom: 10px; z-index: 6; width: 340px; max-width: calc(100% - 20px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: 0 8px 24px rgba(15, 23, 42, .12); min-height: 0; }
 .cb-panel-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 10px 14px; border-bottom: 1px solid var(--line); }
 .cb-panel-body { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+/* the panel scrolls; its parts keep their own height (a long preview no longer spills over the next one) */
+.cb-panel-body > * { flex-shrink: 0; }
+.btn.is-on { color: var(--brand); background: var(--brand-soft); }
 .cb-panel-foot { padding: 8px 10px; border-top: 1px solid var(--line); }
 .cb-vars { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .cb-vars button { border: 1px solid var(--line); background: var(--surface-muted); border-radius: 5px; padding: 2px 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px; color: var(--text-muted); cursor: pointer; }
