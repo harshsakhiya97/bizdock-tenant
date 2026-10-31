@@ -1,5 +1,6 @@
 import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
+import { looksLikeWhen, namedLikeWhen } from './varGroups'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
@@ -71,6 +72,21 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
       ? Object.values(hook.field_map).filter(Boolean).map((v) => [v, v] as [string, string])
       : Object.keys(hook.sample ?? {}).map((k) => [k, k] as [string, string])
     : []
+  // fields holding a date / date-time / time: by the test post's value, else by the name
+  const sampleOf = (name: string) => {
+    if (!hook) return undefined
+    const src = Object.entries(hook.field_map ?? {}).find(([, v]) => v === name)?.[0] ?? name
+    return (hook.sample ?? {})[src]
+  }
+  const fieldList = t.event === 'webhook_call' ? hookVars.map(([k]) => k) : fieldKeys
+  const dateVars = [
+    ...fieldList.filter((k) => {
+      const v = sampleOf(k)
+      return v != null && String(v).trim() !== '' ? looksLikeWhen(v) : namedLikeWhen(k)
+    }),
+    'submitted_at',
+    ...(nodes.some((n) => n.type === 'zoom_meeting') ? ['zoom_start'] : []),
+  ]
   return {
     ...ref,
     funnel: hook ? null : funnel,
@@ -83,6 +99,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     triggerEvent: t.event,
     triggerPages: t.pages ?? [],
     hookVars,
+    dateVars,
   }
 }
 
