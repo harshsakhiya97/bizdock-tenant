@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { ArrowUp, Braces, Plus, Trash2, X } from 'lucide-react'
+import { ArrowUp, Braces, Eye, EyeOff, Plus, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
+import { WaBubble } from '@/integrations/WaBubble'
 import { HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
@@ -254,6 +255,8 @@ function BulkFields({
 }) {
   const { list, error, loading, reload } = useWatiTemplates()
   const [open, setOpen] = useState<string | null>(null)
+  // the row whose message preview is shown
+  const [peek, setPeek] = useState<string | null>(null)
   const rows = rowsOf(d)
   const put = (next: BulkRow[]) => onChange({ ...d, rows: next })
   const setRow = (id: string, patch: Partial<BulkRow>) => put(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)))
@@ -405,6 +408,17 @@ function BulkFields({
                             <Braces size={14} /> {vars.length}
                           </button>
                         )}
+                        {picked && (
+                          <button
+                            type="button"
+                            className={cn('btn btn-ghost btn-icon btn-sm', peek === r.id && 'is-on')}
+                            title={peek === r.id ? 'Hide preview' : 'Preview'}
+                            aria-label={`Preview message ${i + 1}`}
+                            onClick={() => setPeek(peek === r.id ? null : r.id)}
+                          >
+                            {peek === r.id ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        )}
                         {!disabled && (
                           <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label={`Remove message ${i + 1}`} onClick={() => put(rows.filter((x) => x.id !== r.id))}>
                             <Trash2 size={14} />
@@ -412,6 +426,22 @@ function BulkFields({
                         )}
                       </td>
                     </tr>
+                    {peek === r.id && picked && (
+                      <tr className="bulk-vars">
+                        <td />
+                        <td colSpan={4}>
+                          <div className="wa-phone">
+                            <WaBubble
+                              headerType={picked.header?.typeString ?? picked.header?.headerTypeString ?? 'none'}
+                              headerText={picked.header?.text ?? null}
+                              body={picked.bodyOriginal || picked.body || r.template_body || ''}
+                              footer={picked.footer}
+                              buttons={(picked.buttons ?? []).map((b) => ({ type: b.type, text: b.parameter?.text ?? '' }))}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                     {open === r.id && vars.length > 0 && (
                       <tr className="bulk-vars">
                         <td />
