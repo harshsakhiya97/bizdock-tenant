@@ -1,4 +1,5 @@
 import type { ConditionData, FlowContext } from './types'
+import { STEP_VAR_LABEL } from './varGroups'
 
 /**
  * What a Switch path / Yes-No / Bulk WhatsApp stop condition can check.
@@ -70,6 +71,8 @@ const PRESENCE_LABEL: Record<string, [string, string]> = {
 
 /** the field's definition (extra fields: "x:<key>", compared as text or number) */
 export function fieldDef(field: string): FieldDef {
+  // a value of the run: a webhook field or an earlier step's (e.g. {{submitted_at}}) — "v:<key>"
+  if (field.startsWith('v:')) return { value: field, label: STEP_VAR_LABEL[field.slice(2)] ?? field.slice(2).replace(/_/g, ' '), kind: 'number', group: 'Extra fields' }
   if (field.startsWith('x:')) return { value: field, label: field.slice(2).replace(/_/g, ' '), kind: 'number', group: 'Extra fields' }
   // older conditions
   if (field === 'field_filled') return { value: field, label: 'Form field', kind: 'text', group: 'Lead' }
@@ -83,7 +86,7 @@ export const listValues = (v: string) => v.split('\n').map((x) => x.trim()).filt
 /** the comparisons a field offers (extra fields: as text and as numbers) */
 export function opsFor(kind: CondKind, field = ''): CondOp[] {
   if (kind === 'presence') return ['exists', 'not_exists']
-  if (field.startsWith('x:')) return ['eq', 'neq', 'in', 'starts', 'ends', 'gt', 'gte', 'lt', 'lte', 'empty', 'not_empty']
+  if (field.startsWith('x:') || field.startsWith('v:')) return ['eq', 'neq', 'in', 'starts', 'ends', 'gt', 'gte', 'lt', 'lte', 'empty', 'not_empty']
   if (kind === 'number' || kind === 'date') return ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'empty', 'not_empty']
   if (kind === 'select') return ['eq', 'neq', 'in', 'empty', 'not_empty']
   if (kind === 'text') return ['eq', 'neq', 'in', 'starts', 'ends', 'empty', 'not_empty']
@@ -131,13 +134,14 @@ export function conditionText(raw: ConditionData, ctx: FlowContext): string {
 /** a problem with the condition, or null */
 export function conditionProblem(raw: ConditionData | undefined): string | null {
   const c = normalize(raw)
-  if (c.field.startsWith('x:') && !c.field.slice(2)) return 'Pick the field'
+  if ((c.field.startsWith('x:') || c.field.startsWith('v:')) && !c.field.slice(2)) return 'Pick the field'
   if (c.op === 'in' && !listValues(c.value).length) return 'Add at least one value'
   if (needsValue(c.op) && !c.value.trim()) return 'Enter the value'
   const kind = fieldDef(c.field).kind
   if (needsValue(c.op) && ['gt', 'gte', 'lt', 'lte'].includes(c.op)) {
     if (kind === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(c.value.trim())) return 'Pick a date'
-    if (kind !== 'date' && Number.isNaN(Number(c.value))) return 'Enter a number'
+    // a run value (v:) may be a number or a date-time
+    if (kind !== 'date' && !c.field.startsWith('v:') && Number.isNaN(Number(c.value))) return 'Enter a number'
   }
   return null
 }
