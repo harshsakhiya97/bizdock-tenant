@@ -158,6 +158,9 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     [edges],
   )
 
+  // the box picked on the canvas: the open one, else the one still highlighted after its panel was closed
+  const pickedId = selectedId ?? nodes.find((n) => n.selected)?.id ?? null
+
   function addStep(kind: StepKind, position?: { x: number; y: number }) {
     const id = newId(kind)
     const target = from && nodes.find((n) => n.id === from.source)
@@ -173,13 +176,13 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       setEdges((eds) => [...eds, withLook({ id: newId('e'), source: target.id, sourceHandle: from.handle ?? undefined, target: id } as FlowEdge)])
     } else {
       // without a drop position: under the selected box (or the last one), joined to it
-      const anchor = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
+      const anchor = nodes.find((n) => n.id === pickedId) ?? nodes[nodes.length - 1]
       pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
       const plain = anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto'
       const outs = plain ? edges.filter((e) => e.source === anchor.id) : []
       if (!position && plain && !outs.length) {
         setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
-      } else if (!position && plain && outs.length === 1 && selectedId === anchor.id && kind !== 'goto') {
+      } else if (!position && plain && outs.length === 1 && pickedId === anchor.id && kind !== 'goto') {
         // a selected box that already has a next step: the new one goes in between, and the steps below move down
         const out = outs[0]
         const next = nodes.find((n) => n.id === out.target)
@@ -460,7 +463,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                         const i = casesOf(f.data).findIndex((c) => c.id === from.handle)
                         return i < 0 ? base : `${base} → ${caseLabel(casesOf(f.data)[i], i, ctx)}`
                       }
-                      const a = nodes.find((n) => n.id === selectedId) ?? nodes[nodes.length - 1]
+                      const a = nodes.find((n) => n.id === pickedId) ?? nodes[nodes.length - 1]
                       if (!a) return 'the trigger'
                       return String((a.data as Record<string, unknown>).name || STEP_META[a.type as StepKind]?.label || 'the last step')
                     })()}</b>
