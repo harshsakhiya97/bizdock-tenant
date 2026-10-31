@@ -1111,5 +1111,5 @@ a.db-card:hover { border-color: var(--brand); }
 .tpl-toolbar .input { width: auto; margin-left: 6px; }
 .tpl-textarea { font-size: 13.5px; line-height: 1.5; resize: vertical; }
 .tpl-preview { background: #efeae2; border-radius: var(--radius); padding: 12px; max-height: 470px; overflow: auto; }
-.tpl-body-cell { max-width: 460px; white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tpl-body-cell { white-space: pre-line; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .wa-tpl small { white-space: pre-line; }
