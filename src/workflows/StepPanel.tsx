@@ -836,17 +836,46 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
   const ops = opsFor(def.kind, c.field)
   const choices = choicesFor(c.field, ctx)
   const extras = [...new Set([...ctx.fieldKeys, ...(ctx.extraKeys ?? [])])].filter((k) => k && !LEAD_FIELDS.some((f) => f.value === k)).sort((a, b) => a.localeCompare(b))
-  const isExtra = c.field.startsWith('x:')
+  const isExtra = c.field.startsWith('x:') || c.field.startsWith('v:')
   const put = (n: Partial<{ field: string; op: string; value: string }>) => onChange({ ...raw, field: c.field, op: c.op, value: c.value, ...n })
+  // "On webhook call": no lead — the webhook's fields and the earlier steps' values
+  const hookOnly = ctx.triggerEvent === 'webhook_call'
+  const hookFields = [...new Set(ctx.fieldKeys)]
+  const stepVars = [...new Set(ctx.linkVars)].filter((k) => !hookFields.includes(k))
   function pickField(f: string) {
     const k = fieldDef(f).kind
     put({ field: f, op: opsFor(k, f)[0], value: '' })
   }
   return (
     <>
+      {hookOnly ? (
+        <div>
+          <Label htmlFor={`${id}-f`}>If</Label>
+          <Select id={`${id}-f`} value={c.field.startsWith('v:') ? c.field : ''} disabled={disabled} onChange={(e) => e.target.value && pickField(e.target.value)}>
+            <option value="">— pick a field —</option>
+            {hookFields.length > 0 && (
+              <optgroup label="Webhook fields">
+                {hookFields.map((k) => (
+                  <option key={k} value={`v:${k}`}>
+                    {k}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="From earlier steps">
+              {stepVars.map((k) => (
+                <option key={k} value={`v:${k}`}>
+                  {STEP_VAR_LABEL[k] ?? k}
+                </option>
+              ))}
+            </optgroup>
+          </Select>
+          {!hookFields.length && <Hint>Send a test post to the trigger’s webhook to pick its fields here.</Hint>}
+        </div>
+      ) : (
       <div>
         <Label htmlFor={`${id}-f`}>If the lead’s</Label>
-        <Select id={`${id}-f`} value={isExtra && !extras.includes(c.field.slice(2)) ? 'x:' : c.field} disabled={disabled} onChange={(e) => pickField(e.target.value)}>
+        <Select id={`${id}-f`} value={c.field.startsWith('x:') && !extras.includes(c.field.slice(2)) ? 'x:' : c.field} disabled={disabled} onChange={(e) => pickField(e.target.value)}>
           <optgroup label="Lead">
             {LEAD_FIELDS.filter((f) => f.group === 'Lead').map((f) => (
               <option key={f.value} value={f.value}>
@@ -871,10 +900,11 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
             <option value="x:">Other field (type its name)…</option>
           </optgroup>
         </Select>
-        {isExtra && !extras.includes(c.field.slice(2)) && (
+        {c.field.startsWith('x:') && !extras.includes(c.field.slice(2)) && (
           <TextInput aria-label="Field name" placeholder="e.g. annual_revenue" value={c.field.slice(2)} onChange={(e) => put({ field: `x:${e.target.value.trim()}` })} disabled={disabled} style={{ marginTop: 6 }} />
         )}
       </div>
+      )}
       <div className="form-grid" style={{ gridTemplateColumns: needsValue(c.op) && c.op !== 'in' ? '170px minmax(0, 1fr)' : 'minmax(0, 1fr)' }}>
         <Select
           aria-label="How to compare"
