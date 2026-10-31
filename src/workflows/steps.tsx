@@ -193,9 +193,9 @@ const toName = (r: Record<string, unknown>, ctx: FlowContext) =>
         ? `+91 ${String(r.custom_phone)}`
         : 'A number'
       : 'Lead'
-/** WhatsApp / Bulk WhatsApp boxes: each message as To / Template / When */
+/** WhatsApp / Bulk WhatsApp boxes: each message's to, template and (Bulk) when, one per line */
 export function messageBlocks(kind: StepKind, d: Record<string, unknown>, ctx: FlowContext): { to: string; template: string; when: string }[] | null {
-  if (kind === 'whatsapp') return [{ to: toName(d, ctx), template: (d.template as string) || (d.message ? 'Free message' : 'No template yet'), when: 'Right away' }]
+  if (kind === 'whatsapp') return [{ to: toName(d, ctx), template: (d.template as string) || (d.message ? 'Free message' : 'No template yet'), when: '' }]
   if (kind !== 'bulk_whatsapp') return null
   const from = anchorText(d, ctx)
   return rowsOf(d).map((r) => ({
