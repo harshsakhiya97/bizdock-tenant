@@ -495,6 +495,9 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
               onChange={updateData}
               onDelete={deleteSelected}
               onClose={() => setSelectedId(null)}
+              onSave={() => void save()}
+              saving={busy}
+              dirty={dirty && loaded}
             />
           )}
           {loaded && issues.size > 0 && (
