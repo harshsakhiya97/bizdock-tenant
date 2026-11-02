@@ -5,7 +5,7 @@ import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Wallet, Plus,
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
-import { ConfirmModal, Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
+import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
@@ -78,6 +78,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [stageTab, setStageTab] = useState<string>('all')
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [picked, setPicked] = useState<Set<string>>(new Set())
+  // the list: 20 a page by default
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(20)
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
   const [bulk, setBulk] = useState({ owner: '', temp: '', followUp: '', stage: '', reason: '' })
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -207,6 +210,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, stageById, revenue])
+
+  // back to page 1 when the list changes (tab, filters, funnel, business)
+  useEffect(() => setPage(1), [stageTab, filters, funnelId, selected, sub])
+  const pages = Math.max(1, Math.ceil(visible.length / perPage))
+  const current = Math.min(page, pages)
+  const pageRows = visible.slice((current - 1) * perPage, current * perPage)
 
   const pickedIds = visible.filter((l) => picked.has(l.id)).map((l) => l.id)
   const allPicked = visible.length > 0 && pickedIds.length === visible.length
@@ -525,6 +534,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed (Paid Podcast: once a payment is received).' : 'No leads here yet.'}</Empty>
         ) : (
+          <>
           <div className="table-wrap">
             <table className="table">
               <thead>
@@ -564,7 +574,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((l) => {
+                {pageRows.map((l) => {
                   const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
@@ -630,6 +640,17 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </tbody>
             </table>
           </div>
+            <PageFoot
+              total={visible.length}
+              page={current}
+              perPage={perPage}
+              onPage={setPage}
+              onPerPage={(n) => {
+                setPerPage(n)
+                setPage(1)
+              }}
+            />
+          </>
         )}
       </div>
 

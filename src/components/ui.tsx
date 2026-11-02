@@ -244,3 +244,74 @@ export function ConfirmModal({
     </Modal>
   )
 }
+
+/** the page numbers to show: all when few, else first, last and the ones around the current page (… between) */
+function pageList(current: number, pages: number): (number | '…')[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
+  const out: (number | '…')[] = [1]
+  const from = Math.max(2, current - 1)
+  const to = Math.min(pages - 1, current + 1)
+  if (from > 2) out.push('…')
+  for (let n = from; n <= to; n++) out.push(n)
+  if (to < pages - 1) out.push('…')
+  out.push(pages)
+  return out
+}
+
+/** Under a list: "Showing 1–20 of 79", rows per page, and the pages. */
+export function PageFoot({
+  total,
+  page,
+  perPage,
+  onPage,
+  onPerPage,
+  sizes = [10, 20, 50, 100],
+}: {
+  total: number
+  page: number
+  perPage: number
+  onPage: (n: number) => void
+  onPerPage: (n: number) => void
+  sizes?: number[]
+}) {
+  const pages = Math.max(1, Math.ceil(total / perPage))
+  const current = Math.min(page, pages)
+  return (
+    <div className="table-foot">
+      <span className="page-foot-info">
+        Showing {total === 0 ? 0 : (current - 1) * perPage + 1}–{Math.min(current * perPage, total)} of {total}
+        <label className="page-size">
+          Rows
+          <select className="input input-sm" value={perPage} onChange={(e) => onPerPage(Number(e.target.value))} aria-label="Rows per page">
+            {sizes.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+      </span>
+      {pages > 1 && (
+        <div className="pager">
+          <button type="button" onClick={() => onPage(Math.max(1, current - 1))} disabled={current === 1} aria-label="Previous">
+            <ChevronLeft size={14} />
+          </button>
+          {pageList(current, pages).map((n, i) =>
+            n === '…' ? (
+              <span key={`gap${i}`} className="pager-gap">
+                …
+              </span>
+            ) : (
+              <button key={n} type="button" className={n === current ? 'is-active' : ''} onClick={() => onPage(n)}>
+                {n}
+              </button>
+            ),
+          )}
+          <button type="button" onClick={() => onPage(Math.min(pages, current + 1))} disabled={current === pages} aria-label="Next">
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
