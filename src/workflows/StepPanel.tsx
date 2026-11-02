@@ -806,7 +806,19 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
   }
   const linkGroups = useVarGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))
   // what a lead would get (a sample code: every lead gets a new one)
-  const sample = `${shortBase()}/T7P46LXK`
+  // what each variable would hold for a sample lead (every lead gets its own code)
+  const code = 'T7P46LXK'
+  const SAMPLE: Record<string, string> = { full_name: 'Harsh', name: 'Harsh', fname: 'Harsh', first_name: 'Harsh', phone: '9867333582', email: 'harsh@gmail.com', city: 'Mumbai' }
+  const filled = url.trim()
+    ? url.trim().replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/g, (_m, k: string, at: number) => (at === 0 ? `{${k}}` : encodeURIComponent(SAMPLE[k] ?? k)))
+    : 'https://your-site.com/page?fname=Harsh&phone=9867333582'
+  const q = filled.indexOf('?')
+  const examples = {
+    link: `${shortBase()}/${code}`,
+    code,
+    full: filled,
+    params: q < 0 ? '(nothing: your URL has no “?”)' : filled.slice(q + 1),
+  }
   return (
     <>
       <div>
@@ -831,26 +843,25 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
         )}
         <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
       </div>
-      <div className="gl-preview">
-        <span className="field-label">Each lead gets a link like</span>
-        <code>{sample}</code>
-        <small className="muted">A new code for every lead; it opens your URL with their details filled in. Clicks are counted.</small>
-      </div>
       <div>
         <Label htmlFor="cb-gl-var">Use it in later steps as</Label>
         <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
         <ul className="gl-vars">
           <li>
-            <code className="code-chip">{`{{${name}}}`}</code> the short link
+            <code className="code-chip">{`{{${name}}}`}</code> the short link (a new code for every lead; clicks are counted)
+            <span className="gl-eg">e.g. <code>{examples.link}</code></span>
           </li>
           <li>
             <code className="code-chip">{`{{${name}_code}}`}</code> the code only (for a template whose button already has your domain)
+            <span className="gl-eg">e.g. <code>{examples.code}</code></span>
           </li>
           <li>
             <code className="code-chip">{`{{${name}_full_url}}`}</code> your URL as filled in, in full
+            <span className="gl-eg">e.g. <code>{examples.full}</code></span>
           </li>
           <li>
-            <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?” (e.g. fname=Harsh&phone=98…)
+            <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?”
+            <span className="gl-eg">e.g. <code>{examples.params}</code></span>
           </li>
         </ul>
       </div>
