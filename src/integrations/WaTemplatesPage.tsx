@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { ArrowLeft, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router'
+import { ArrowLeft, Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -30,6 +30,9 @@ export const bubbleOf = (t: WatiTemplate) => ({
 /** WhatsApp → Templates: the workspace's templates from its WhatsApp provider (WATI). */
 export function WaTemplatesPage() {
   const tenant = useTenant()
+  const navigate = useNavigate()
+  // Duplicate: the new-template page, filled in from this one
+  const duplicate = (t: WatiTemplate) => navigate('/integrations/whatsapp/templates/new', { state: { from: t } })
   const [rows, setRows] = useState<WatiTemplate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState('APPROVED')
@@ -119,18 +122,38 @@ export function WaTemplatesPage() {
             {shown.map((t) => {
               const st = statusOf(t.status)
               return (
-                <button key={t.id} type="button" className="tpl-card" onClick={() => setOpen(t)}>
+                <div
+                  key={t.id}
+                  role="button"
+                  tabIndex={0}
+                  className="tpl-card"
+                  onClick={() => setOpen(t)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(t))}
+                >
                   <div className="tpl-top">
                     <b>{t.elementName}</b>
                     <span className={cn('badge', st.tone)}>{st.label}</span>
                   </div>
-                  <div className="muted small">
-                    {cap(t.category)} · {t.language?.text ?? t.language?.value ?? '—'}
+                  <div className="row-between">
+                    <span className="muted small">
+                      {cap(t.category)} · {t.language?.text ?? t.language?.value ?? '—'}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      title="Start a new template from this one"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        duplicate(t)
+                      }}
+                    >
+                      <Copy size={14} /> Duplicate
+                    </button>
                   </div>
                   <div className="tpl-preview">
                     <WaBubble {...bubbleOf(t)} />
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>
@@ -151,6 +174,9 @@ export function WaTemplatesPage() {
               <div className="foot-end">
                 <button type="button" className="btn btn-outline" onClick={() => setOpen(null)}>
                   Close
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => duplicate(open)}>
+                  <Copy size={15} /> Duplicate
                 </button>
               </div>
             </>

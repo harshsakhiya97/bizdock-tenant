@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { ArrowLeft, Bold, Italic, Plus, Strikethrough, Trash2 } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
-import { createWatiTemplate, type WatiTemplateInput } from './watiApi'
+import { createWatiTemplate, type WatiTemplate, type WatiTemplateInput } from './watiApi'
 
 const CATEGORIES = [
   { value: 'MARKETING', label: 'Marketing', hint: 'Offers, reminders to book, announcements' },
@@ -36,21 +36,49 @@ const BTN: Record<BtnKind, { label: string; valueLabel?: string; placeholder?: s
 const slug = (v: string) => v.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+/, '').slice(0, 512)
 const varsIn = (s: string) => [...new Set([...s.matchAll(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g)].map((m) => m[1]))]
 
-/** New WhatsApp template (WATI): same parts as WATI's own form, with a live preview. */
+/** an existing template's parts, to start a new one from (Duplicate) */
+function fromTemplate(t: WatiTemplate | null | undefined) {
+  if (!t) return null
+  const h = String(t.header?.typeString ?? t.header?.headerTypeString ?? 'none').toLowerCase()
+  const kind = (b: string): BtnKind | null =>
+    b === 'url' ? 'url' : b === 'call' || b === 'phone_number' ? 'call' : b === 'copy_offer_code' ? 'copy_offer_code' : b === 'quick_reply' ? 'quick_reply' : null
+  return {
+    name: slug(`${t.elementName}_copy`),
+    category: String(t.category ?? 'MARKETING').toUpperCase(),
+    language: t.language?.key || t.language?.value || 'en',
+    headerType: ((HEADERS as readonly string[]).includes(h) ? h : 'none') as HeaderType,
+    headerText: t.header?.text ?? '',
+    headerLink: t.header?.link ?? '',
+    body: t.bodyOriginal || t.body || '',
+    samples: Object.fromEntries((t.customParams ?? []).map((p) => [p.paramName, p.paramValue ?? ''])),
+    footer: t.footer ?? '',
+    buttons: (t.buttons ?? []).flatMap((b): Btn[] => {
+      const k = kind(String(b.type ?? '').toLowerCase())
+      if (!k) return []
+      const p = b.parameter ?? {}
+      return [{ kind: k, text: p.text ?? '', value: k === 'url' ? (p.url ?? '') : k === 'call' ? (p.phoneNumber ?? '') : k === 'copy_offer_code' ? (p.copyOfferCode ?? '') : '' }]
+    }),
+  }
+}
+
+/** New WhatsApp template (WATI): same parts as WATI's own form, with a live preview. Opened from Duplicate: prefilled. */
 export function WaTemplateNewPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
+  const from = (useLocation().state as { from?: WatiTemplate } | null)?.from
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const copy = useMemo(() => fromTemplate(from), [])
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const [name, setName] = useState('')
-  const [category, setCategory] = useState('MARKETING')
-  const [language, setLanguage] = useState('en')
-  const [headerType, setHeaderType] = useState<HeaderType>('none')
-  const [headerText, setHeaderText] = useState('')
-  const [headerLink, setHeaderLink] = useState('')
-  const [body, setBody] = useState('')
-  const [samples, setSamples] = useState<Record<string, string>>({})
-  const [footer, setFooter] = useState('')
-  const [buttons, setButtons] = useState<Btn[]>([])
+  const [name, setName] = useState(copy?.name ?? '')
+  const [category, setCategory] = useState(copy?.category ?? 'MARKETING')
+  const [language, setLanguage] = useState(copy?.language ?? 'en')
+  const [headerType, setHeaderType] = useState<HeaderType>(copy?.headerType ?? 'none')
+  const [headerText, setHeaderText] = useState(copy?.headerText ?? '')
+  const [headerLink, setHeaderLink] = useState(copy?.headerLink ?? '')
+  const [body, setBody] = useState(copy?.body ?? '')
+  const [samples, setSamples] = useState<Record<string, string>>(copy?.samples ?? {})
+  const [footer, setFooter] = useState(copy?.footer ?? '')
+  const [buttons, setButtons] = useState<Btn[]>(copy?.buttons ?? [])
   const [newVar, setNewVar] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -146,8 +174,8 @@ export function WaTemplateNewPage() {
       </Link>
       <div className="row-between page-top">
         <div className="page-head">
-          <h2>New template</h2>
-          <p>Submitted to WATI and sent to Meta for approval. Approval usually takes a few minutes to a day.</p>
+          <h2>{from ? `New template · copy of ${from.elementName}` : 'New template'}</h2>
+          <p>{from ? 'Everything is filled in from that template: give it a new name, change what you need and submit. ' : ''}Submitted to WATI and sent to Meta for approval. Approval usually takes a few minutes to a day.</p>
         </div>
         <div className="row page-actions">
           {error && <span className="err-text">{error}</span>}
@@ -183,6 +211,7 @@ export function WaTemplateNewPage() {
                 Language
               </Label>
               <Select id="t-lang" value={language} onChange={(e) => setLanguage(e.target.value)}>
+                {!LANGUAGES.some((l) => l.value === language) && <option value={language}>{from?.language?.text || language}</option>}
                 {LANGUAGES.map((l) => (
                   <option key={l.value} value={l.value}>
                     {l.label}
