@@ -37,6 +37,7 @@ export const releases: Release[] = [
       'Switch / Yes-No in “On webhook call” workflows: conditions on the webhook’s fields and earlier steps’ values (no lead needed).',
       'Bulk WhatsApp: a preview button on each message shows the WhatsApp message; drag a message by its number to reorder the list (each still goes at its own time).',
       'Workflow builder: a Save button at the bottom of every step’s panel.',
+      'Podcast Studio Rental: the old Studio CRM’s enquiries, follow-up notes, bookings (with invoice numbers), payments and studio WhatsApp messages brought in; imported leads carry the old-crm tag.',
     ],
     improved: [
       'Funnel page tabs: Overview, Leads, Webhooks, Workflows, Landing pages, WhatsApp (with counts).',
@@ -51,6 +52,7 @@ export const releases: Release[] = [
       'Deleting a step in the middle joins the step before to the step after.',
       'Workflow builder: + with a step selected adds the new step between it and its next step (the steps below move down).',
       'WhatsApp and Bulk WhatsApp boxes on the canvas: each message as its own lines — who it goes to, the template and (Bulk) when.',
+      'Leads and Customers lists: 20 a page, with a Rows dropdown (10 / 20 / 50 / 100) and page numbers.',
       'Workflow opened from a funnel’s webhook: Back / Cancel return to its Webhooks tab.',
       'Lead details: Lead date (the form’s submitted time) first; links and long values on a full row.',
       'Studio Rental leads list: Purpose, Time, Describes and Lead date (with time) instead of Temp, Funnel and Value; no Funnel and Source filters.',
