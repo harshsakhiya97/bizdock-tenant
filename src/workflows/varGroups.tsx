@@ -47,9 +47,14 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
 export const HookVarsContext = createContext<string[] | null>(null)
 
 /** varGroups, but for a webhook-call workflow: its webhook's fields, then the earlier steps' variables */
-export function useVarGroups(extra: string[], lead: readonly (readonly [string, string])[] = VARIABLES): VarGroup[] {
+/** the workflow (or its funnel) has an event / webinar: only then do Event title / date / time / link have a value */
+export const HasEventContext = createContext(true)
+
+export function useVarGroups(extra: string[], leadVars: readonly (readonly [string, string])[] = VARIABLES): VarGroup[] {
   const hook = useContext(HookVarsContext)
   const dates = useContext(DateVarsContext)
+  const hasEvent = useContext(HasEventContext)
+  const lead = hasEvent ? leadVars : leadVars.filter(([k]) => !k.startsWith('event_'))
   if (!hook) return withDateParts(varGroups(extra, lead), dates)
   const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
   return withDateParts(
