@@ -4,6 +4,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
+import { ConfirmModal } from '@/components/ui'
 import { FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { clock, fmtDay, minutesOf } from '@/components/SlotCalendar'
@@ -146,18 +147,23 @@ export function MeetingDrawer({
       footer={
         <>
           {canDelete ? (
-            confirmDel ? (
-              <Button variant="danger" onClick={remove} disabled={busy}>
-                Delete for good?
-              </Button>
-            ) : (
-              <Button variant="ghost" className="danger-text" onClick={() => setConfirmDel(true)} disabled={busy}>
-                <Trash2 size={15} /> Delete
-              </Button>
-            )
+            <Button variant="ghost" className="danger-text" onClick={() => setConfirmDel(true)} disabled={busy}>
+              <Trash2 size={15} /> Delete
+            </Button>
           ) : (
             <span />
           )}
+          <ConfirmModal
+            open={confirmDel}
+            icon={Trash2}
+            danger
+            title="Delete this meeting?"
+            message={`The meeting${guest ? ` with ${fullName(guest)}` : ''} is removed for good. This can’t be undone.`}
+            confirmLabel={busy ? 'Deleting…' : 'Delete'}
+            busy={busy}
+            onCancel={() => setConfirmDel(false)}
+            onConfirm={() => void remove()}
+          />
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             <Button variant="outline" onClick={onClose}>

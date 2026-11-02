@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Paged } from '@/components/ui'
+import { Paged, ConfirmModal } from '@/components/ui'
 import { Bold, Italic, Pencil, Plus, Strikethrough, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
@@ -44,13 +44,20 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
 
   const shown = (rows ?? []).filter((t) => !cat || t.category === cat)
 
+  // the message waiting for "Delete?" to be confirmed
+  const [toDelete, setToDelete] = useState<MessageTemplate | null>(null)
+  const [deleting, setDeleting] = useState(false)
   async function remove(t: MessageTemplate) {
+    setDeleting(true)
     try {
       await deleteTemplate(t.id)
       onNotice({ ok: `${t.title} removed.` })
+      setToDelete(null)
       load()
     } catch (e) {
       onNotice({ error: (e as Error).message })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -115,7 +122,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
                         <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Edit" onClick={() => { setError(null); setEdit(t) }}>
                           <Pencil size={14} />
                         </button>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Remove" onClick={() => void remove(t)}>
+                        <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Remove" onClick={() => setToDelete(t)}>
                           <Trash2 size={14} />
                         </button>
                       </>
@@ -134,6 +141,18 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
 )}
 </Paged>
       )}
+
+      <ConfirmModal
+        open={!!toDelete}
+        icon={Trash2}
+        danger
+        title={`Delete “${toDelete?.title ?? ''}”?`}
+        message="This WhatsApp message is removed from the list for good. Messages already sent are kept on the leads."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        busy={deleting}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => toDelete && void remove(toDelete)}
+      />
 
       {edit && (
         <Modal
