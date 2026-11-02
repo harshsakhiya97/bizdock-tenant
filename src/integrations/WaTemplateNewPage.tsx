@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { ArrowLeft, Bold, Italic, Plus, Strikethrough, Trash2 } from 'lucide-react'
+import { ArrowLeft, Bold, Italic, Loader2, Plus, Strikethrough, Trash2, Upload } from 'lucide-react'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
-import { createWatiTemplate, type WatiTemplate, type WatiTemplateInput } from './watiApi'
+import { createWatiTemplate, uploadWaMedia, type WatiTemplate, type WatiTemplateInput } from './watiApi'
 
 const CATEGORIES = [
   { value: 'MARKETING', label: 'Marketing', hint: 'Offers, reminders to book, announcements' },
@@ -22,6 +22,12 @@ const LANGUAGES = [
 ]
 const HEADERS = ['none', 'text', 'image', 'video', 'document'] as const
 type HeaderType = (typeof HEADERS)[number]
+/** header files WhatsApp takes, and their size limits (MB) */
+const MEDIA = {
+  image: { types: ['image/jpeg', 'image/png'], accept: '.jpg,.jpeg,.png', label: '.jpg or .png', max: 5 },
+  video: { types: ['video/mp4', 'video/3gpp'], accept: '.mp4,.3gp', label: '.mp4', max: 16 },
+  document: { types: ['application/pdf'], accept: '.pdf', label: '.pdf', max: 16 },
+} as const
 const SUGGESTED_VARS = ['name', 'purpose', 'booking_date', 'booking_time', 'business', 'amount']
 
 type BtnKind = 'url' | 'call' | 'copy_offer_code' | 'quick_reply'
@@ -82,6 +88,27 @@ export function WaTemplateNewPage() {
   const [newVar, setNewVar] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // the header's sample file: uploaded to our storage, its public link used for WATI
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [fileName, setFileName] = useState<string | null>(null)
+  async function uploadHeader(file: File | undefined) {
+    if (!file) return
+    const rule = MEDIA[headerType as keyof typeof MEDIA]
+    if (rule && !(rule.types as readonly string[]).includes(file.type)) return setError(`Pick a ${rule.label} file.`)
+    if (rule && file.size > rule.max * 1024 * 1024) return setError(`That file is over ${rule.max} MB (WhatsApp’s limit for a ${headerType}).`)
+    setError(null)
+    setUploading(true)
+    try {
+      setHeaderLink(await uploadWaMedia(tenant.id, file))
+      setFileName(file.name)
+    } catch (e) {
+      setError(`Upload failed: ${(e as Error).message}`)
+    } finally {
+      setUploading(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const vars = useMemo(() => varsIn(body), [body])
   const quick = buttons.filter((b) => b.kind === 'quick_reply').length
@@ -242,8 +269,32 @@ export function WaTemplateNewPage() {
             )}
             {['image', 'video', 'document'].includes(headerType) && (
               <>
-                <TextInput placeholder={`Sample ${headerType} link (https://…)`} value={headerLink} onChange={(e) => setHeaderLink(e.target.value)} />
-                <Hint>A public link to a sample {headerType}, used by Meta to review. The real file is chosen when sending.</Hint>
+                <div className="tpl-media-row">
+                  <TextInput
+                    placeholder={`Sample ${headerType} link (https://…)`}
+                    value={headerLink}
+                    onChange={(e) => {
+                      setHeaderLink(e.target.value)
+                      setFileName(null)
+                    }}
+                  />
+                  <span className="muted small">or</span>
+                  <button type="button" className="btn btn-outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} {uploading ? 'Uploading…' : 'Upload file'}
+                  </button>
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    hidden
+                    accept={MEDIA[headerType as keyof typeof MEDIA]?.accept}
+                    onChange={(e) => void uploadHeader(e.target.files?.[0])}
+                  />
+                </div>
+                {fileName && <div className="small">Uploaded: <b>{fileName}</b></div>}
+                <Hint>
+                  {MEDIA[headerType as keyof typeof MEDIA]?.label} up to {MEDIA[headerType as keyof typeof MEDIA]?.max} MB. A sample {headerType} for Meta’s review; the
+                  upload is kept in your storage and its public link is sent to WhatsApp.
+                </Hint>
               </>
             )}
           </section>
@@ -345,6 +396,7 @@ export function WaTemplateNewPage() {
             <WaBubble
               headerType={headerType}
               headerText={headerText}
+              mediaUrl={/^https?:\/\//.test(headerLink.trim()) ? headerLink.trim() : null}
               body={body.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (m, v: string) => samples[v]?.trim() || m)}
               footer={footer}
               buttons={buttons.map((b) => ({ type: b.kind, text: b.kind === 'copy_offer_code' ? 'Copy offer code' : b.text }))}

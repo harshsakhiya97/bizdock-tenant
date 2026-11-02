@@ -55,3 +55,13 @@ export const createWatiTemplate = (tenantId: string, template: WatiTemplateInput
 
 export const deleteWatiTemplate = (tenantId: string, t: WatiTemplate) =>
   call({ tenant_id: tenantId, action: 'delete', waba_id: t.wabaId, name: t.elementName, language: t.language?.value })
+
+/** a template header's sample file (image / video / document) put in our public storage; its link goes to WATI */
+export async function uploadWaMedia(tenantId: string, file: File) {
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '')
+  const base = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'file'
+  const path = `${tenantId}/${Date.now().toString(36)}-${base}.${ext}`
+  const { error } = await db().storage.from('wa-media').upload(path, file, { contentType: file.type, upsert: false })
+  if (error) throw new Error(error.message)
+  return db().storage.from('wa-media').getPublicUrl(path).data.publicUrl
+}
