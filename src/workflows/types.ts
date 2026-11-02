@@ -186,6 +186,8 @@ export const VARIABLES = [
   ['phone', 'Phone'],
   ['email', 'Email'],
   ['city', 'City'],
+  ['lead_date', 'Lead date (29 Oct 2026)'],
+  ['lead_datetime', 'Lead date & time (29 Oct 2026, 4:00 pm)'],
   ['funnel', 'Funnel'],
   ['landing_page', 'Landing page'],
   ['event_title', 'Event title'],
