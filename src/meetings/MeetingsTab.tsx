@@ -1,4 +1,5 @@
 import { CalendarPlus } from 'lucide-react'
+import { Paged } from '@/components/ui'
 import { clock, fmtDay } from '@/components/SlotCalendar'
 import { MEETING_STATUS, MODE_LABEL, type MeetingRow } from './types'
 
@@ -36,7 +37,9 @@ export function MeetingsTab({
       ) : sorted.length === 0 ? (
         <div className="muted small">No meetings yet.</div>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={sorted}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -48,7 +51,7 @@ export function MeetingsTab({
               </tr>
             </thead>
             <tbody>
-              {sorted.map((m) => {
+              {paged.map((m) => {
                 const moved = (m.reschedules ?? []).length
                 return (
                   <tr key={m.id} className="is-clickable" onClick={() => onOpen(m)}>
@@ -81,6 +84,8 @@ export function MeetingsTab({
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
     </div>
   )

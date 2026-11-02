@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, Eye, FileText, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
-import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
+import { Empty, PageHead, SearchInput, StatCard, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { money } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
@@ -100,7 +100,9 @@ export function InvoicesPage() {
         ) : visible.length === 0 ? (
           <Empty icon={FileText}>{scoped.length ? 'No invoices match these filters.' : 'No invoices yet. Every booking gets one.'}</Empty>
         ) : (
-          <div className="table-wrap">
+          <Paged rows={visible}>
+{(paged) => (
+<div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
@@ -116,7 +118,7 @@ export function InvoicesPage() {
                 </tr>
               </thead>
               <tbody>
-                {visible.map((b) => {
+                {paged.map((b) => {
                   const st = PAY_META[payState(b)]
                   const paidParts = b.booking_payments.filter((p) => p.status === 'paid').length
                   return (
@@ -160,6 +162,8 @@ export function InvoicesPage() {
               </tbody>
             </table>
           </div>
+)}
+</Paged>
         )}
       </div>
     </>

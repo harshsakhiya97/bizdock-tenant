@@ -4,7 +4,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Label, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
-import { PageHead } from '@/components/ui'
+import { PageHead, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import {
@@ -270,7 +270,9 @@ export function AttendancePage() {
               <div className="panel-bar">
                 <b>Monthly discipline · {monthLabel}</b>
               </div>
-              <div className="table-wrap">
+              <Paged rows={stats}>
+{(paged) => (
+<div className="table-wrap">
                 <table className="table disc-table">
                   <thead>
                     <tr>
@@ -288,7 +290,7 @@ export function AttendancePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.map((x) => (
+                    {paged.map((x) => (
                       <tr key={x.p.id}>
                         <td>
                           <button type="button" className="link-btn" onClick={() => setLogPerson(x.p.id)}>
@@ -322,6 +324,8 @@ export function AttendancePage() {
                   </tbody>
                 </table>
               </div>
+)}
+</Paged>
               <p className="muted small att-foot">
                 Working days skip each person’s weekly off and holidays. Half day = worked under {settings.half_day_hours} h. Break issue = a tea break over{' '}
                 {settings.tea_break_min + 5} min or lunch over {settings.lunch_break_min + 5} min. Score = (present − ½ late − ¼ break issues − ½ half days) ÷ working
@@ -341,7 +345,9 @@ export function AttendancePage() {
                   {people.filter((p) => rowOf(p.id, today)?.is_late).length} late
                 </span>
               </div>
-              <table className="table table-split">
+              <Paged rows={people}>
+{(paged) => (
+<table className="table table-split">
                 <thead>
                   <tr>
                     <th>Member</th>
@@ -351,7 +357,7 @@ export function AttendancePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {people.map((p) => {
+                  {paged.map((p) => {
                     const r = rowOf(p.id, today)
                     const st = dayStatus(today, today, p, r, offs, settings)
                     const onBreak = r?.attendance_breaks.some((b) => !b.ended_at)
@@ -376,6 +382,8 @@ export function AttendancePage() {
                   })}
                 </tbody>
               </table>
+)}
+</Paged>
             </div>
           )}
 

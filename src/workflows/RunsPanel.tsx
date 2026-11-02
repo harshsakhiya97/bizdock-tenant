@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Paged } from '@/components/ui'
 import { Link } from 'react-router'
 import { Check, Circle, Clock, Minus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -164,7 +165,9 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
       {!runs ? null : !runs.length ? (
         <div className="empty">No runs yet. When the workflow is on, each form submission of its funnel starts one.</div>
       ) : (
-        <div className="table-wrap run-scroll">
+        <Paged rows={runs}>
+{(paged) => (
+<div className="table-wrap run-scroll">
           <table className="table run-table">
             <thead>
               <tr>
@@ -176,7 +179,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
               </tr>
             </thead>
             <tbody>
-              {runs.map((r) => {
+              {paged.map((r) => {
                 const st = STATUS[r.status]
                 const ss = states(r, path)
                 return (
@@ -268,6 +271,8 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
     </div>
   )

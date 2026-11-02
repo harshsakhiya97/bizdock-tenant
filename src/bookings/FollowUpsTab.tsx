@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Paged } from '@/components/ui'
 import { MessageCircle, PhoneCall, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
@@ -233,7 +234,9 @@ export function FollowUpsTab({
           ) : done.length === 0 ? (
             <div className="muted small">No calls logged yet.</div>
           ) : (
-            <div className="table-wrap">
+            <Paged rows={done}>
+{(paged) => (
+<div className="table-wrap">
               <table className="table table-compact">
                 <thead>
                   <tr>
@@ -244,7 +247,7 @@ export function FollowUpsTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {done.map((f) => (
+                  {paged.map((f) => (
                     <tr key={f.id}>
                       <td className="nowrap">{when(f.completed_at ?? f.due_at)}</td>
                       <td>{outcomeName(f.outcome_id) ?? '—'}</td>
@@ -255,6 +258,8 @@ export function FollowUpsTab({
                 </tbody>
               </table>
             </div>
+)}
+</Paged>
           )}
         </>
       )}

@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { Paged } from '@/components/ui'
 import { CalendarPlus, FileText } from 'lucide-react'
 import { money } from '@/leads/labels'
 import type { BookingRefs } from './useBookingRefs'
@@ -51,7 +52,9 @@ export function BookingsTab({
       ) : bookings.length === 0 ? (
         <div className="muted small">No {one}s yet.</div>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={bookings}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -65,7 +68,7 @@ export function BookingsTab({
               </tr>
             </thead>
             <tbody>
-              {bookings.map((b) => (
+              {paged.map((b) => (
                 <tr key={b.id} className="is-clickable" onClick={() => onOpen(b)}>
                   <td className="nowrap">{slotText(b)}</td>
                   <td>{b.purpose ?? '—'}</td>
@@ -90,6 +93,8 @@ export function BookingsTab({
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
     </div>
   )
@@ -116,7 +121,9 @@ export function InvoicesTab({
       {done.length === 0 ? (
         <div className="muted small">No invoices yet.</div>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={done}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -130,7 +137,7 @@ export function InvoicesTab({
               </tr>
             </thead>
             <tbody>
-              {done.map((b) => (
+              {paged.map((b) => (
                 <tr key={b.id}>
                   <td>
                     <b>{b.invoice_no}</b>
@@ -150,6 +157,8 @@ export function InvoicesTab({
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
       {canCreate && todo.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>

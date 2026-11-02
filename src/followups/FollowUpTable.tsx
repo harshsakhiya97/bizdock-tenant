@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Paged } from '@/components/ui'
 import { Link } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
@@ -45,7 +46,9 @@ export function FollowUpTable({
   return (
     <>
     {sent && <div className="alert alert-info">{sent}</div>}
-    <div className="table-wrap">
+    <Paged rows={rows}>
+{(paged) => (
+<div className="table-wrap">
       <table className="table fu-table">
         <thead>
           <tr>
@@ -59,7 +62,7 @@ export function FollowUpTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((f) => {
+          {paged.map((f) => {
             const l = f.leads
             const s = l ? stageById.get(l.stage_id) : undefined
             const M = modeOf(f.mode)
@@ -158,6 +161,8 @@ export function FollowUpTable({
         </tbody>
       </table>
     </div>
+)}
+</Paged>
     {wa && wl && (
       <WhatsAppModal
         lead={{ id: wl.id, name: waName, phone: wl.phone, whatsapp: wl.whatsapp, subtitle: [wl.purpose, wl.required_on ? fmtDay(wl.required_on) : null].filter(Boolean).join(' · ') }}

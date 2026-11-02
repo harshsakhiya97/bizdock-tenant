@@ -6,7 +6,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
-import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
+import { ConfirmModal, Empty, PageHead, SearchInput, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { archiveWorkflow, createWorkflow, listWorkflows, loadRefData, setWorkflowActive, updateWorkflowMeta } from './api'
@@ -160,7 +160,9 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
                 : 'No workflows yet. Create one: pick what starts it, then add the steps.'}
           </Empty>
         ) : (
-          <div className="table-wrap">
+          <Paged rows={visible}>
+{(paged) => (
+<div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
@@ -175,7 +177,7 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
                 </tr>
               </thead>
               <tbody>
-                {visible.map((w) => {
+                {paged.map((w) => {
                   const t = (w.nodes.find((n) => n.type === 'trigger')?.data ?? { event: w.trigger_type }) as unknown as TriggerData
                   const ctx = refData ? flowContext(refData, w.nodes) : null
                   const steps = w.nodes.filter((n) => n.type !== 'trigger')
@@ -251,6 +253,8 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
               </tbody>
             </table>
           </div>
+)}
+</Paged>
         )}
       </div>
 
