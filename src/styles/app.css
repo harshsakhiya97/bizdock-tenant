@@ -1136,3 +1136,7 @@ a.db-card:hover { border-color: var(--brand); }
 .page-size select { width: auto; min-width: 64px; height: 28px; padding-top: 0; padding-bottom: 0; }
 .pager button:disabled { opacity: 0.45; cursor: default; }
 .pager-gap { padding: 0 2px; color: var(--text-muted); }
+
+/* Generate link: an example under each variable */
+.gl-eg { display: block; margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+.gl-eg code { font-size: 12px; color: var(--brand); word-break: break-all; }
