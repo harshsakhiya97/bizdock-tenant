@@ -51,7 +51,8 @@ function fromTemplate(t: WatiTemplate | null | undefined) {
   return {
     name: slug(`${t.elementName}_copy`),
     category: String(t.category ?? 'MARKETING').toUpperCase(),
-    language: t.language?.key || t.language?.value || 'en',
+    // WATI lists the code as language.value (e.g. en_US); .key is the name ("English (US)")
+    language: t.language?.value || 'en',
     headerType: ((HEADERS as readonly string[]).includes(h) ? h : 'none') as HeaderType,
     headerText: t.header?.text ?? '',
     headerLink: t.header?.link ?? '',
@@ -238,7 +239,7 @@ export function WaTemplateNewPage() {
                 Language
               </Label>
               <Select id="t-lang" value={language} onChange={(e) => setLanguage(e.target.value)}>
-                {!LANGUAGES.some((l) => l.value === language) && <option value={language}>{from?.language?.text || language}</option>}
+                {!LANGUAGES.some((l) => l.value === language) && <option value={language}>{from?.language?.text || from?.language?.key || language}</option>}
                 {LANGUAGES.map((l) => (
                   <option key={l.value} value={l.value}>
                     {l.label}
