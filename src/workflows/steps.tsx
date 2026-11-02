@@ -49,7 +49,10 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     (eventTrigger ? (ref.funnels.find((f) => f.event_id && f.event_id === t.event_id) ?? null) : null)
   const eventId = eventTrigger ? t.event_id : funnel?.event_id
   const event = ref.events.find((e) => e.id === eventId) ?? null
-  const pages = funnel ? ref.pages.filter((p) => p.funnel_id === funnel.id) : ref.pages
+  // only this workflow's funnel(s): its webhooks' fields and the extra fields saved on its leads (none from other funnels / businesses)
+  const scope = funnel ? [funnel.id] : eventTrigger ? ref.funnels.filter((f) => f.event_id && f.event_id === t.event_id).map((f) => f.id) : []
+  const pages = ref.pages.filter((p) => scope.includes(p.funnel_id))
+  const extraKeys = [...new Set(scope.flatMap((id) => ref.extraKeysByFunnel?.[id] ?? []))]
   const stages = funnel ? funnel.stages : []
   const tags = [...new Set([...(funnel ? [funnel] : ref.funnels).flatMap((f) => f.tags), ...(ref.leadTags ?? [])])].sort((a, b) => a.localeCompare(b))
   const fieldKeys = [...new Set(pages.flatMap((p) => p.fields))].filter((k) => k !== 'city')
@@ -95,6 +98,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     stages,
     tags,
     fieldKeys: t.event === 'webhook_call' ? hookVars.map(([k]) => k) : fieldKeys,
+    extraKeys: t.event === 'webhook_call' ? [] : extraKeys,
     linkVars,
     triggerEvent: t.event,
     triggerPages: t.pages ?? [],

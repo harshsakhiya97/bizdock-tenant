@@ -153,7 +153,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     // tags already given to leads
     db().from('leads').select('tags').eq('tenant_id', tenantId).not('tags', 'eq', '{}').limit(5000),
     // extra fields saved on leads (form / sheet columns kept as "extra")
-    db().from('leads').select('extra').eq('tenant_id', tenantId).not('extra', 'is', null).limit(5000),
+    db().from('leads').select('funnel_id, extra').eq('tenant_id', tenantId).not('extra', 'is', null).limit(5000),
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
     listZoomOptions(tenantId).catch(() => []),
     db().from('workflow_hooks').select('*').eq('tenant_id', tenantId),
@@ -198,7 +198,14 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     zoomAccounts: zoomAccounts.map((z) => ({ id: z.id, name: z.name, is_default: z.is_default })),
     hooks: (hooks.data ?? []) as WorkflowHook[],
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
-    extraKeys: [...new Set(((leadExtras.data ?? []) as { extra: Record<string, unknown> | null }[]).flatMap((l) => Object.keys(l.extra ?? {})))],
+    // extra fields saved on each funnel's leads (a workflow only offers its own funnel's)
+    extraKeysByFunnel: ((leadExtras.data ?? []) as { funnel_id: string | null; extra: Record<string, unknown> | null }[]).reduce<Record<string, string[]>>((m, l) => {
+      if (!l.funnel_id) return m
+      const keys = new Set(m[l.funnel_id] ?? [])
+      for (const k of Object.keys(l.extra ?? {})) keys.add(k)
+      m[l.funnel_id] = [...keys]
+      return m
+    }, {}),
     leadTags: [...new Set(((leadTags.data ?? []) as { tags: string[] }[]).flatMap((l) => l.tags ?? []))].sort((a, b) => a.localeCompare(b)),
   }
 }
