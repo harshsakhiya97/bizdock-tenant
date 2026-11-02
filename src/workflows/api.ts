@@ -83,8 +83,15 @@ const slimNodes = (nodes: StepNode[]) => nodes.map(({ id, type, position, data }
 const slimEdges = (edges: FlowEdge[]) =>
   edges.map(({ id, source, target, sourceHandle, label }) => ({ id, source, target, sourceHandle: sourceHandle ?? null, label }))
 
-/** where this app's generated links open: <origin><base>/<code> */
-export const SHORT_BASE = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '')
+/** this app's own address (localhost while testing) */
+const HERE = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '')
+let base = HERE
+/** the workspace's address (its primary domain + folder, e.g. https://pride.viralsakhiya.com/pride), set when it loads */
+export function setShortBase(appUrl: string | null | undefined) {
+  base = (appUrl ?? '').trim().replace(/\/+$/, '') || HERE
+}
+/** where generated links open: the workspace's address /<code> (also when the builder runs on localhost) */
+export const shortBase = () => base
 
 export async function saveWorkflow(
   id: string,
@@ -102,7 +109,7 @@ export async function saveWorkflow(
       funnel_id: !eventTrigger && t.funnel_id ? t.funnel_id : null,
       event_id: eventTrigger && t.event_id ? t.event_id : null,
       // generated links open on this app's address (e.g. https://pride.viralsakhiya.com/pride/T7P46LXK)
-      nodes: slimNodes(w.nodes).map((n) => (n.type === 'generate_link' || n.type === 'zoom_meeting' ? { ...n, data: { ...n.data, base_url: SHORT_BASE } } : n)),
+      nodes: slimNodes(w.nodes).map((n) => (n.type === 'generate_link' || n.type === 'zoom_meeting' ? { ...n, data: { ...n.data, base_url: shortBase() } } : n)),
       edges: slimEdges(w.edges),
       updated_by: memberId ?? null,
     })
