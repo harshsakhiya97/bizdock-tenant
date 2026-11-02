@@ -35,9 +35,12 @@ export function WaBubble({
   footer,
   buttons,
   time = '11:30',
+  mediaUrl,
 }: {
   headerType?: string | null
   headerText?: string | null
+  /** the header file's link: shown in the bubble (image / video) */
+  mediaUrl?: string | null
   body: string
   footer?: string | null
   buttons?: BubbleButton[]
@@ -49,8 +52,18 @@ export function WaBubble({
       <div className="wa-bubble">
         {ht === 'text' && headerText && <div className="wa-head-text">{headerText}</div>}
         {['image', 'video', 'document'].includes(ht) && (
-          <div className="wa-media">
-            {ht === 'image' ? <ImageIcon size={26} /> : ht === 'video' ? <Video size={26} /> : <FileText size={26} />}
+          <div className={mediaUrl && ht !== 'document' ? 'wa-media has-file' : 'wa-media'}>
+            {mediaUrl && ht === 'image' ? (
+              <img src={mediaUrl} alt="" />
+            ) : mediaUrl && ht === 'video' ? (
+              <video src={mediaUrl} controls preload="metadata" />
+            ) : ht === 'image' ? (
+              <ImageIcon size={26} />
+            ) : ht === 'video' ? (
+              <Video size={26} />
+            ) : (
+              <FileText size={26} />
+            )}
           </div>
         )}
         <div className="wa-body">{body ? format(body) : <span className="muted">Template message…</span>}</div>
