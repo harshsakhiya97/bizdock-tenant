@@ -85,13 +85,14 @@ const slimEdges = (edges: FlowEdge[]) =>
 
 /** this app's own address (localhost while testing) */
 const HERE = `${window.location.origin}${import.meta.env.BASE_URL}`.replace(/\/+$/, '')
-let base = HERE
+// kept on the window, so a hot reload of this file while testing doesn't fall back to localhost
+const store = globalThis as { __bizdockAppUrl?: string }
 /** the workspace's address (its primary domain + folder, e.g. https://pride.viralsakhiya.com/pride), set when it loads */
 export function setShortBase(appUrl: string | null | undefined) {
-  base = (appUrl ?? '').trim().replace(/\/+$/, '') || HERE
+  store.__bizdockAppUrl = (appUrl ?? '').trim().replace(/\/+$/, '') || undefined
 }
 /** where generated links open: the workspace's address /<code> (also when the builder runs on localhost) */
-export const shortBase = () => base
+export const shortBase = () => store.__bizdockAppUrl || HERE
 
 export async function saveWorkflow(
   id: string,
