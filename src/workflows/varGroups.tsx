@@ -50,12 +50,21 @@ export const HookVarsContext = createContext<string[] | null>(null)
 /** the workflow (or its funnel) has an event / webinar: only then do Event title / date / time / link have a value */
 export const HasEventContext = createContext(true)
 
+/** a Get lead details step is in the workflow: a webhook-call workflow also has the lead's fields */
+export const LeadLookupContext = createContext(false)
+
 export function useVarGroups(extra: string[], leadVars: readonly (readonly [string, string])[] = VARIABLES): VarGroup[] {
   const hook = useContext(HookVarsContext)
   const dates = useContext(DateVarsContext)
   const hasEvent = useContext(HasEventContext)
+  const lookup = useContext(LeadLookupContext)
   const lead = hasEvent ? leadVars : leadVars.filter(([k]) => !k.startsWith('event_'))
   if (!hook) return withDateParts(varGroups(extra, lead), dates)
+  // webhook fields, then the found lead's fields (Lead, Extra fields) and the earlier steps'
+  if (lookup) {
+    const hookGroup = { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) }
+    return withDateParts([hookGroup, ...varGroups([...new Set(extra)].filter((k) => k && !hook.includes(k)), lead)].filter((g) => g.items.length), dates)
+  }
   const steps = [...new Set(extra)].filter((k) => k && !hook.includes(k))
   return withDateParts(
     [

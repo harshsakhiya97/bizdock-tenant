@@ -105,7 +105,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     window.addEventListener(HOOK_EVENT, on)
     return () => window.removeEventListener(HOOK_EVENT, on)
   }, [])
-  const ctx = useMemo(() => flowContext({ ...refData, hooks, selfId: workflow.id }, nodes), [refData, hooks, nodes, workflow.id])
+  const ctx = useMemo(() => flowContext({ ...refData, hooks, selfId: workflow.id, selfFunnelId: workflow.funnel_id }, nodes), [refData, hooks, nodes, workflow.id, workflow.funnel_id])
   // lines out of a Switch show their path's name
   const shownEdges = useMemo(() => {
     const sw = new Map(nodes.filter((n) => n.type === 'switch').map((n) => [n.id, n]))

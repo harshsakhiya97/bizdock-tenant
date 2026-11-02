@@ -62,7 +62,7 @@ export const newBulkRow = (amount = 0, unit: Unit = 'minutes'): BulkRow => ({
 export type Recipient = 'lead' | 'team' | 'custom'
 
 /** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
-export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'zoom_meeting' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
+export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'zoom_meeting' | 'lead_lookup' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -101,6 +101,8 @@ export type RefData = {
   leadTags?: string[]
   /** the workflow being edited */
   selfId?: string
+  /** its funnel (Used in funnel) */
+  selfFunnelId?: string | null
   /** the workflows' own webhooks ("On webhook call") */
   hooks?: WorkflowHook[]
   /** Zoom accounts (Create Zoom meeting) */
@@ -126,6 +128,10 @@ export type FlowContext = RefData & {
   hookVars?: [string, string][]
   /** fields holding a date / time (they also give _date, _time, _datetime) */
   dateVars?: string[]
+  /** a Get lead details step is in the workflow: later steps have the lead's fields */
+  leadLookup?: boolean
+  /** extra fields saved on the leads of the workflow's sub-business (what Get lead details gives) */
+  lookupExtraKeys?: string[]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
@@ -146,6 +152,7 @@ export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, 
     meet_members: [],
     short_link: false,
   },
+  lead_lookup: { match: 'phone', value_var: '' },
   email: { to: 'lead', member_id: '', subject: '', body: '' },
   call: { script: '' },
   wait: { amount: 1, unit: 'days' },
