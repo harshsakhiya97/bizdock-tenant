@@ -5,7 +5,7 @@ import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } fro
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
-import { DateVarsContext, HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
+import { DateVarsContext, HasEventContext, HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
@@ -55,6 +55,7 @@ export function StepPanel({
   return (
     <HookVarsContext.Provider value={hookKeys}>
     <DateVarsContext.Provider value={ctx.dateVars ?? []}>
+    <HasEventContext.Provider value={!!ctx.event}>
     <aside className={kind === 'bulk_whatsapp' ? 'cb-panel is-wide' : 'cb-panel'}>
       <div className="cb-panel-head">
         <span className="cb-icon" style={{ ['--c' as string]: meta.color }}>
@@ -199,6 +200,7 @@ export function StepPanel({
         </div>
       )}
     </aside>
+    </HasEventContext.Provider>
     </DateVarsContext.Provider>
     </HookVarsContext.Provider>
   )
