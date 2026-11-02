@@ -93,8 +93,10 @@ export type RefData = {
   members: { id: string; name: string }[]
   /** other workflows (Go to workflow) */
   workflows: { id: string; name: string; is_active: boolean }[]
-  /** keys of extra fields saved on leads */
+  /** keys of extra fields saved on the leads of this workflow's funnel */
   extraKeys?: string[]
+  /** keys of extra fields saved on leads, per funnel */
+  extraKeysByFunnel?: Record<string, string[]>
   /** tags already used on leads */
   leadTags?: string[]
   /** the workflow being edited */
