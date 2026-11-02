@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { CircleAlert, RefreshCw, Video } from 'lucide-react'
 import { Link } from 'react-router'
-import { Tabs } from '@/components/ui'
+import { Tabs, Paged } from '@/components/ui'
 import { listZoomData, pullZoom, retryZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
 
 const time = (s: string | null) => (s ? new Date(s).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '—')
@@ -137,7 +137,9 @@ export function ZoomPanel({
             <div className="muted small">Loading…</div>
           ) : tab === 'Attendance' ? (
             data.attendees.length ? (
-              <table className="table table-compact zp-table">
+              <Paged rows={data.attendees}>
+{(paged) => (
+<table className="table table-compact zp-table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -147,7 +149,7 @@ export function ZoomPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {data.attendees.map((a) => (
+                  {paged.map((a) => (
                     <tr key={a.id}>
                       <td>
                         {a.lead_id ? <Link to={`/leads/${a.lead_id}`}>{a.name || a.email}</Link> : a.name || a.email || '—'}
@@ -163,6 +165,8 @@ export function ZoomPanel({
                   ))}
                 </tbody>
               </table>
+)}
+</Paged>
             ) : (
               <div className="muted small">No attendance yet.</div>
             )

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Paged } from '@/components/ui'
 import { Plus } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { listSimple, saveSimple } from './api'
@@ -78,7 +79,9 @@ export function SimpleList({
       {!rows ? (
         <div className="empty">Loading…</div>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={rows}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table master-table">
             <thead>
               <tr>
@@ -91,7 +94,7 @@ export function SimpleList({
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {paged.map((r) => (
                 <tr key={r.id} className={r.is_active ? undefined : 'is-off'}>
                   <td>
                     <input
@@ -202,6 +205,8 @@ export function SimpleList({
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
     </>
   )

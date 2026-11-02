@@ -121,7 +121,7 @@ export function DataTable<T extends { id: string }>({
   columns,
   rows,
   empty = 'Nothing here yet.',
-  pageSize = 10,
+  pageSize = 20,
   onRowClick,
   bare,
 }: {
@@ -133,9 +133,10 @@ export function DataTable<T extends { id: string }>({
   bare?: boolean
 }) {
   const [page, setPage] = useState(1)
-  const pages = Math.max(1, Math.ceil(rows.length / pageSize))
+  const [perPage, setPerPage] = useState(pageSize)
+  const pages = Math.max(1, Math.ceil(rows.length / perPage))
   const current = Math.min(page, pages)
-  const slice = rows.slice((current - 1) * pageSize, current * pageSize)
+  const slice = rows.slice((current - 1) * perPage, current * perPage)
   return (
     <div className={bare ? undefined : 'card'}>
       {rows.length === 0 ? (
@@ -170,24 +171,16 @@ export function DataTable<T extends { id: string }>({
               </tbody>
             </table>
           </div>
-          <div className="table-foot">
-            <span>
-              Showing {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, rows.length)} of {rows.length}
-            </span>
-            <div className="pager">
-              <button type="button" onClick={() => setPage(Math.max(1, current - 1))} aria-label="Previous">
-                <ChevronLeft size={14} />
-              </button>
-              {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-                <button key={n} type="button" className={n === current ? 'is-active' : ''} onClick={() => setPage(n)}>
-                  {n}
-                </button>
-              ))}
-              <button type="button" onClick={() => setPage(Math.min(pages, current + 1))} aria-label="Next">
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
+          <PageFoot
+            total={rows.length}
+            page={current}
+            perPage={perPage}
+            onPage={setPage}
+            onPerPage={(n) => {
+              setPerPage(n)
+              setPage(1)
+            }}
+          />
         </>
       )}
     </div>
@@ -313,5 +306,37 @@ export function PageFoot({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * The standard list paging: 20 a page, a Rows dropdown and the pages under the list.
+ * `children` gets the rows of the current page; back to page 1 when the list's length or `reset` changes.
+ */
+export function Paged<T>({ rows, reset, children }: { rows: T[]; reset?: unknown; children: (rows: T[]) => ReactNode }) {
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(20)
+  const key = `${rows.length}|${typeof reset === 'object' ? JSON.stringify(reset) : String(reset ?? '')}`
+  const [seen, setSeen] = useState(key)
+  if (key !== seen) {
+    setSeen(key)
+    setPage(1)
+  }
+  const pages = Math.max(1, Math.ceil(rows.length / perPage))
+  const current = Math.min(page, pages)
+  return (
+    <>
+      {children(rows.slice((current - 1) * perPage, current * perPage))}
+      <PageFoot
+        total={rows.length}
+        page={current}
+        perPage={perPage}
+        onPage={setPage}
+        onPerPage={(n) => {
+          setPerPage(n)
+          setPage(1)
+        }}
+      />
+    </>
   )
 }

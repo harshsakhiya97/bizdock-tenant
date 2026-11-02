@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, CalendarDays, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { Empty } from '@/components/ui'
+import { Empty, Paged } from '@/components/ui'
 import { listEvents, type EventRow } from '@/calendar/api'
 import { listFunnelLeads, listMemberOptions, listSources } from '@/leads/api'
 import { followUp, fullName, money, tempOf } from '@/leads/labels'
@@ -284,7 +284,9 @@ export function FunnelPage() {
             ) : leads.length === 0 ? (
               <Empty icon={Users}>No leads in this funnel yet.</Empty>
             ) : (
-              <div className="table-wrap">
+              <Paged rows={leads}>
+{(paged) => (
+<div className="table-wrap">
                 <table className="table">
                   <thead>
                     <tr>
@@ -298,7 +300,7 @@ export function FunnelPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {leads.map((l) => {
+                    {paged.map((l) => {
                       const t = tempOf(l.temperature)
                       const fu = followUp(l.next_follow_up_at)
                       return (
@@ -333,6 +335,8 @@ export function FunnelPage() {
                   </tbody>
                 </table>
               </div>
+)}
+</Paged>
             ))}
         </div>
       </div>

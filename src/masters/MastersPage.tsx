@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { Package, Pencil, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
-import { Empty, PageHead } from '@/components/ui'
+import { Empty, PageHead, Paged } from '@/components/ui'
 import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
@@ -101,7 +101,9 @@ function Overview({ go }: { go: (t: Tab) => void }) {
     ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t]!.title, table: t, purpose: SIMPLE[t]!.purpose })),
   ]
   return (
-    <div className="table-wrap">
+    <Paged rows={rows}>
+{(paged) => (
+<div className="table-wrap">
       <table className="table">
         <thead>
           <tr>
@@ -111,7 +113,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {paged.map((r) => (
             <tr key={r.tab} className="is-clickable" onClick={() => go(r.tab)}>
               <td>
                 <button type="button" className="link-btn">
@@ -134,6 +136,8 @@ function Overview({ go }: { go: (t: Tab) => void }) {
         </tbody>
       </table>
     </div>
+)}
+</Paged>
   )
 }
 
@@ -183,7 +187,9 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
       ) : visible.length === 0 ? (
         <Empty icon={Package}>No services yet. Add the services you offer (studio, editing, host…) so they can be picked on a booking.</Empty>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={visible}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -197,7 +203,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
               </tr>
             </thead>
             <tbody>
-              {visible.map((p) => {
+              {paged.map((p) => {
                 const total = Number(p.price) * (1 + (p.gst_applicable ? Number(p.gst_rate) : 0) / 100)
                 return (
                   <tr key={p.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && setDrawer({ product: p })}>
@@ -225,6 +231,8 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
             </tbody>
           </table>
         </div>
+)}
+</Paged>
       )}
       {drawer && (
         <ProductDrawer

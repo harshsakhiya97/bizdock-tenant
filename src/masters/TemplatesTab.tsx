@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bold, ChevronLeft, ChevronRight, Italic, Pencil, Plus, Strikethrough, Trash2 } from 'lucide-react'
+import { Paged } from '@/components/ui'
+import { Bold, Italic, Pencil, Plus, Strikethrough, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { Modal } from '@/components/Modal'
@@ -8,7 +9,6 @@ import { CATEGORY_LABEL, type MessageTemplate, type TemplateCategory } from '@/b
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from '@/integrations/WaBubble'
 
-const PAGE = 10
 const VARS = ['first_name', 'purpose', 'required_on', 'business', 'booking_date', 'booking_time']
 
 /** Masters → WhatsApp messages: ready messages picked from a lead / client by situation. */
@@ -18,7 +18,6 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
   const [edit, setEdit] = useState<Partial<MessageTemplate> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [page, setPage] = useState(1)
   // situation filter ('' = all)
   const [cat, setCat] = useState<TemplateCategory | ''>('')
 
@@ -43,10 +42,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
     }
   }
 
-  // 10 a page
   const shown = (rows ?? []).filter((t) => !cat || t.category === cat)
-  const pages = Math.max(1, Math.ceil(shown.length / PAGE))
-  const current = Math.min(page, pages)
 
   async function remove(t: MessageTemplate) {
     try {
@@ -70,10 +66,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
           className="input input-sm filter-select"
           aria-label="Situation"
           value={cat}
-          onChange={(e) => {
-            setCat(e.target.value as TemplateCategory | '')
-            setPage(1)
-          }}
+          onChange={(e) => setCat(e.target.value as TemplateCategory | '')}
         >
           <option value="">All situations</option>
           {(Object.keys(CATEGORY_LABEL) as TemplateCategory[]).map((c) => (
@@ -92,7 +85,9 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
       {!rows ? (
         <div className="empty">Loading…</div>
       ) : (
-        <div className="table-wrap">
+        <Paged rows={shown} reset={cat}>
+{(paged) => (
+<div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
@@ -104,7 +99,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
               </tr>
             </thead>
             <tbody>
-              {shown.slice((current - 1) * PAGE, current * PAGE).map((t) => (
+              {paged.map((t) => (
                 <tr key={t.id}>
                   <td className="nowrap">{CATEGORY_LABEL[t.category]}</td>
                   <td className="nowrap">
@@ -135,27 +130,9 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
               )}
             </tbody>
           </table>
-          {shown.length > PAGE && (
-            <div className="table-foot">
-              <span>
-                Showing {(current - 1) * PAGE + 1}–{Math.min(current * PAGE, shown.length)} of {shown.length}
-              </span>
-              <div className="pager">
-                <button type="button" onClick={() => setPage(Math.max(1, current - 1))} aria-label="Previous">
-                  <ChevronLeft size={14} />
-                </button>
-                {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-                  <button key={n} type="button" className={n === current ? 'is-active' : ''} onClick={() => setPage(n)}>
-                    {n}
-                  </button>
-                ))}
-                <button type="button" onClick={() => setPage(Math.min(pages, current + 1))} aria-label="Next">
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+)}
+</Paged>
       )}
 
       {edit && (
