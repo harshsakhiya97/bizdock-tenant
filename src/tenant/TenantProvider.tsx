@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Loader2, TriangleAlert } from 'lucide-react'
 import { registry, selectTenantDatabase } from '@/lib/supabase'
 import { applyBranding } from './branding'
+import { setShortBase } from '@/workflows/api'
 import { TenantContext, type Tenant } from './tenant-context'
 
 type State = { status: 'loading' } | { status: 'not-found' } | { status: 'ready'; tenant: Tenant }
@@ -31,6 +32,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         const { supabase_url, supabase_key, ...tenant } = row
         selectTenantDatabase(supabase_url, supabase_key)
         applyBranding(tenant)
+        setShortBase(tenant.app_url)
         setState({ status: 'ready', tenant })
       })
       .catch(() => setState({ status: 'not-found' }))

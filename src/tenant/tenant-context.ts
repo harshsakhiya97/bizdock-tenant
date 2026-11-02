@@ -7,6 +7,8 @@ export type Tenant = {
   logo_url: string | null
   favicon_url: string | null
   primary_color: string
+  /** the workspace's address: primary domain + folder (no trailing /) */
+  app_url?: string | null
 }
 
 export const TenantContext = createContext<Tenant | null>(null)

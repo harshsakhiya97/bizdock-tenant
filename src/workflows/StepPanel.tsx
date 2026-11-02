@@ -9,7 +9,7 @@ import { DateVarsContext, HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGro
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
-import { SHORT_BASE } from './api'
+import { shortBase } from './api'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, listValues, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
@@ -637,7 +637,7 @@ function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: 
         <div className="gl-preview">
           <span className="field-label">Each lead gets a link like</span>
           <code>
-            {SHORT_BASE}/{code}
+            {shortBase()}/{code}
           </code>
           <small className="muted">
             It opens the Zoom meeting link with its passcode. Use <code className="code-chip">{'{{zoom_short_link}}'}</code> for the whole link, or{' '}
@@ -806,7 +806,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
   }
   const linkGroups = useVarGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))
   // what a lead would get (a sample code: every lead gets a new one)
-  const sample = `${SHORT_BASE}/T7P46LXK`
+  const sample = `${shortBase()}/T7P46LXK`
   return (
     <>
       <div>
