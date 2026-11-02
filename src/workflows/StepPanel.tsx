@@ -5,7 +5,7 @@ import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } fro
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
-import { DateVarsContext, HasEventContext, HookVarsContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
+import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
@@ -42,9 +42,11 @@ export function StepPanel({
   // a webhook-call workflow has only its webhook's fields (no lead, so no lead / extra fields)
   const hookOnly = ctx.triggerEvent === 'webhook_call'
   const hookKeys = hookOnly ? ctx.fieldKeys : null
+  // Get lead details: also the found lead's extra fields
+  const lookupExtras = (ctx.lookupExtraKeys ?? []).map(varKey)
   const extras = hookOnly
-    ? [...new Set([...ctx.fieldKeys, ...ctx.linkVars])]
-    : [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? [])].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))
+    ? [...new Set([...ctx.fieldKeys, ...lookupExtras.filter((k) => !VARIABLES.some(([v]) => v === k)), ...ctx.linkVars])]
+    : [...new Set(['purpose', ...ctx.fieldKeys, ...(ctx.extraKeys ?? []), ...lookupExtras].map(varKey)), ...ctx.linkVars].filter((k) => k && !VARIABLES.some(([v]) => v === k))
   const d = node.data
   const meta = STEP_META[kind]
   const Icon = meta.icon
@@ -56,6 +58,7 @@ export function StepPanel({
     <HookVarsContext.Provider value={hookKeys}>
     <DateVarsContext.Provider value={ctx.dateVars ?? []}>
     <HasEventContext.Provider value={!!ctx.event}>
+    <LeadLookupContext.Provider value={!!ctx.leadLookup}>
     <aside className={kind === 'bulk_whatsapp' ? 'cb-panel is-wide' : 'cb-panel'}>
       <div className="cb-panel-head">
         <span className="cb-icon" style={{ ['--c' as string]: meta.color }}>
@@ -88,6 +91,7 @@ export function StepPanel({
             extraFields={extras}
           />
         )}
+        {kind === 'lead_lookup' && <LeadLookupFields d={d} set={set} disabled={ro} hookOnly={hookOnly} fieldKeys={ctx.fieldKeys} />}
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'zoom_meeting' && (
           <>
@@ -200,9 +204,44 @@ export function StepPanel({
         </div>
       )}
     </aside>
+    </LeadLookupContext.Provider>
     </HasEventContext.Provider>
     </DateVarsContext.Provider>
     </HookVarsContext.Provider>
+  )
+}
+
+/** Get lead details: match the lead's phone / email with a field from the trigger or an earlier step */
+function LeadLookupFields({ d, set, disabled, hookOnly, fieldKeys }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; hookOnly: boolean; fieldKeys: string[] }) {
+  const by = d.match === 'email' ? 'email' : 'phone'
+  const groups = [
+    { label: hookOnly ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(fieldKeys.map(varKey))].filter(Boolean).map((k) => [k, k] as [string, string]) },
+  ].filter((g) => g.items.length)
+  return (
+    <>
+      <div className="form-grid" style={{ gridTemplateColumns: '120px 1fr' }}>
+        <div>
+          <Label htmlFor="cb-ll-by">Match by</Label>
+          <Select id="cb-ll-by" value={by} onChange={(e) => set('match', e.target.value)} disabled={disabled}>
+            <option value="phone">Phone</option>
+            <option value="email">Email</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="cb-ll-var" required>
+            With the field
+          </Label>
+          <Select id="cb-ll-var" value={String(d.value_var ?? '')} onChange={(e) => set('value_var', e.target.value)} disabled={disabled}>
+            <option value="">— select —</option>
+            <VarOptions groups={groups} show={(k) => `{{${k}}}`} />
+            {!!d.value_var && !groups.some((g) => g.items.some(([k]) => k === d.value_var)) && <option value={String(d.value_var)}>{`{{${String(d.value_var)}}}`}</option>}
+          </Select>
+        </div>
+      </div>
+      <Hint>
+        Finds the newest lead in this workflow’s sub-business with this {by === 'phone' ? 'phone number (last 10 digits)' : 'email'}. If there’s none, the run stops with “Lead not found”. After this step, the next steps use that lead: its fields (Lead and Extra fields in every field list), conditions on it, WhatsApp to it and meetings on it.
+      </Hint>
+    </>
   )
 }
 
