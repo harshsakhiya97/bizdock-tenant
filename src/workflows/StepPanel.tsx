@@ -846,23 +846,23 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
       <div>
         <Label htmlFor="cb-gl-var">Use it in later steps as</Label>
         <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
-        <ul className="gl-vars">
-          <li>
-            <code className="code-chip">{`{{${name}}}`}</code> the short link (a new code for every lead; clicks are counted)
-            <span className="gl-eg">e.g. <code>{examples.link}</code></span>
-          </li>
-          <li>
-            <code className="code-chip">{`{{${name}_code}}`}</code> the code only (for a template whose button already has your domain)
-            <span className="gl-eg">e.g. <code>{examples.code}</code></span>
-          </li>
-          <li>
-            <code className="code-chip">{`{{${name}_full_url}}`}</code> your URL as filled in, in full
-            <span className="gl-eg">e.g. <code>{examples.full}</code></span>
-          </li>
-          <li>
-            <code className="code-chip">{`{{${name}_parameters}}`}</code> only the part after “?”
-            <span className="gl-eg">e.g. <code>{examples.params}</code></span>
-          </li>
+        <ul className="gl-vars gl-vars-list">
+          {(
+            [
+              [`{{${name}}}`, examples.link, 'the short link (a new code for every lead; clicks are counted)'],
+              [`{{${name}_code}}`, examples.code, 'the code only (for a template whose button already has your domain)'],
+              [`{{${name}_full_url}}`, examples.full, 'your URL as filled in, in full'],
+              [`{{${name}_parameters}}`, examples.params, 'only the part after “?”'],
+            ] as const
+          ).map(([v, eg, what]) => (
+            <li key={v}>
+              <code className="code-chip">{v}</code>
+              <span className="gl-eg">
+                e.g. <code>{eg}</code>
+              </span>
+              <span className="gl-what">{what}</span>
+            </li>
+          ))}
         </ul>
       </div>
     </>
