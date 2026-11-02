@@ -111,7 +111,8 @@ export function WaTemplateNewPage() {
     }
   }
 
-  const vars = useMemo(() => varsIn(body), [body])
+  // the body's variables, then a button link's (each needs a sample value)
+  const vars = useMemo(() => varsIn([body, ...buttons.filter((b) => b.kind === 'url').map((b) => b.value)].join(' ')), [body, buttons])
   const quick = buttons.filter((b) => b.kind === 'quick_reply').length
   const cta = buttons.length - quick
 
@@ -156,6 +157,13 @@ export function WaTemplateNewPage() {
     for (const b of buttons) {
       if (b.kind !== 'copy_offer_code' && !b.text.trim()) return setError('Every button needs its text.')
       if (BTN[b.kind].valueLabel && !b.value.trim()) return setError(`${BTN[b.kind].valueLabel} is missing on a button.`)
+      if (b.kind === 'url') {
+        const u = b.value.trim()
+        const n = (u.match(/\{\{/g) ?? []).length
+        if (!/^https?:\/\/[^\s{}]+/.test(u)) return setError(`The “${b.text || 'website'}” button needs a full link starting with https://`)
+        if (n > 1 || (n === 1 && !/\{\{\s*[a-zA-Z0-9_]+\s*\}\}$/.test(u)))
+          return setError(`The “${b.text || 'website'}” button link can have one {{variable}}, and only at the very end (e.g. https://site.com/page/{{2}}).`)
+      }
     }
     const template: WatiTemplateInput = {
       type: 'template',
@@ -164,7 +172,8 @@ export function WaTemplateNewPage() {
       buttonsType: !buttons.length ? 'NONE' : quick && cta ? 'quick_reply_and_call_to_action' : quick ? 'quick_reply' : 'call_to_action',
       buttons: buttons.map((b): { type: string; parameter: Record<string, string> } =>
         b.kind === 'url'
-          ? { type: 'url', parameter: { text: b.text.trim(), phoneNumber: '', url: b.value.trim(), urlType: 'static' } }
+          ? // a URL with a {{variable}} (only at the very end, as Meta allows) is a dynamic URL
+            { type: 'url', parameter: { text: b.text.trim(), phoneNumber: '', url: b.value.trim(), urlType: /\{\{\s*[a-zA-Z0-9_]+\s*\}\}/.test(b.value) ? 'dynamic' : 'static' } }
           : b.kind === 'call'
             ? { type: 'call', parameter: { text: b.text.trim(), phoneNumber: b.value.replace(/[^\d+]/g, ''), url: '', urlType: 'none' } }
             : b.kind === 'copy_offer_code'
