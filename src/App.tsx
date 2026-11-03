@@ -28,6 +28,9 @@ import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
+import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
+import { BookingCalendarEditPage } from '@/widgets/BookingCalendarEditPage'
+import { EmbedPage } from '@/widgets/EmbedPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
 
 export default function App() {
@@ -38,6 +41,8 @@ export default function App() {
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             {/* short links made by workflows: <app>/<code> */}
+            {/* widgets embedded on other sites (no login): <app>/embed/<code> */}
+            <Route path="/embed/:code" element={<EmbedPage />} />
             <Route path="/:code" element={<ShortLinkPage />} />
             <Route element={<RequireAuth />}>
               <Route
@@ -149,6 +154,8 @@ export default function App() {
                   }
                 />
                 <Route path="/widgets" element={<RequirePermission module="widgets"><WidgetsPage /></RequirePermission>} />
+                <Route path="/widgets/booking-calendar" element={<RequirePermission module="widgets"><BookingCalendarsPage /></RequirePermission>} />
+                <Route path="/widgets/booking-calendar/:id" element={<RequirePermission module="widgets"><BookingCalendarEditPage /></RequirePermission>} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/whats-new" element={<WhatsNewPage />} />
               </Route>
