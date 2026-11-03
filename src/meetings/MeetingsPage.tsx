@@ -13,13 +13,17 @@ import { fullName } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listMeetings } from './api'
+import { db } from '@/lib/supabase'
+import { listWidgets, type WidgetRow } from '@/widgets/api'
 import { MeetingDrawer } from './MeetingDrawer'
 import { MEETING_STATUS, MODE_LABEL, type MeetingRow, type MeetingStatus } from './types'
 
 /** Paid Podcast: meetings with guests to decide if they qualify. Calendar like the shoot calendar. */
 export function MeetingsPage() {
   const tenant = useTenant()
-  const { can } = useAuth()
+  const { can, membership } = useAuth()
+  // the team member / booking calendar filters: Owner and Tech Support only
+  const isAdmin = !!membership && (membership.is_support || membership.role.level <= 1)
   const { inScope } = useBusiness()
   const refs = useBookingRefs()
   const canAdd = can('meetings', 'add')
@@ -29,6 +33,11 @@ export function MeetingsPage() {
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [status, setStatus] = useState<'' | MeetingStatus>('')
+  const [memberF, setMemberF] = useState('')
+  const [widgetF, setWidgetF] = useState('')
+  const [widgets, setWidgets] = useState<WidgetRow[]>([])
+  // booking calendar → its booked slots ("member|2026-11-05 10:30"), to tell which meetings came from it
+  const [booked, setBooked] = useState<Map<string, Set<string>>>(new Map())
   const [drawer, setDrawer] = useState<{ meeting: MeetingRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [book, setBook] = useState<LeadRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -43,6 +52,26 @@ export function MeetingsPage() {
     void listLeads(tenant.id).then(setLeads, () => setLeads([]))
     void listMemberOptions(tenant.id).then(setMembers, () => setMembers([]))
   }, [tenant.id])
+  useEffect(() => {
+    if (!isAdmin) return
+    listWidgets(tenant.id).then((w) => setWidgets(w.filter((x) => x.kind === 'booking_calendar' && x.is_active)), () => setWidgets([]))
+    void db()
+      .from('widget_bookings')
+      .select('widget_id, member_id, starts_at')
+      .eq('tenant_id', tenant.id)
+      .eq('status', 'booked')
+      .then(({ data }) => {
+        const m = new Map<string, Set<string>>()
+        for (const b of (data ?? []) as { widget_id: string; member_id: string | null; starts_at: string }[]) {
+          if (!b.member_id) continue
+          const ist = new Date(Date.parse(b.starts_at) + 330 * 60_000).toISOString()
+          const set = m.get(b.widget_id) ?? new Set<string>()
+          set.add(`${b.member_id}|${ist.slice(0, 10)} ${ist.slice(11, 16)}`)
+          m.set(b.widget_id, set)
+        }
+        setBooked(m)
+      })
+  }, [tenant.id, isAdmin])
 
   const leadById = useMemo(() => new Map(leads.map((l) => [l.id, l])), [leads])
   const name = useCallback((m: MeetingRow) => {
@@ -50,7 +79,16 @@ export function MeetingsPage() {
     return l ? fullName(l) : 'Guest'
   }, [leadById])
   const scoped = useMemo(() => (meetings ?? []).filter((m) => inScope(m.business_id, m.sub_business_id)), [meetings, inScope])
-  const visible = useMemo(() => scoped.filter((m) => !status || m.status === status), [scoped, status])
+  const visible = useMemo(
+    () =>
+      scoped.filter(
+        (m) =>
+          (!status || m.status === status) &&
+          (!memberF || m.assigned_to === memberF) &&
+          (!widgetF || !!booked.get(widgetF)?.has(`${m.assigned_to}|${m.meeting_date} ${String(m.start_time ?? '').slice(0, 5)}`)),
+      ),
+    [scoped, status, memberF, widgetF, booked],
+  )
   const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
   // ---- stats for the month on screen ----
@@ -140,14 +178,36 @@ export function MeetingsPage() {
           if (m) setDrawer({ meeting: m })
         }}
         filters={
-          <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
-            <option value="">All</option>
-            {(Object.keys(MEETING_STATUS) as MeetingStatus[]).map((s) => (
-              <option key={s} value={s}>
-                {MEETING_STATUS[s].label}
-              </option>
-            ))}
-          </select>
+          <>
+            {isAdmin && (
+              <select className="input input-sm filter-select" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
+                <option value="">All team members</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            {isAdmin && widgets.length > 0 && (
+              <select className="input input-sm filter-select" value={widgetF} onChange={(e) => setWidgetF(e.target.value)} aria-label="Booking calendar">
+                <option value="">All bookings</option>
+                {widgets.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
+              <option value="">All statuses</option>
+              {(Object.keys(MEETING_STATUS) as MeetingStatus[]).map((s) => (
+                <option key={s} value={s}>
+                  {MEETING_STATUS[s].label}
+                </option>
+              ))}
+            </select>
+          </>
         }
       />
 
