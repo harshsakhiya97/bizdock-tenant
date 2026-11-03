@@ -15,6 +15,7 @@ import type { RefData, TriggerData, TriggerEvent, WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 import { db } from '@/lib/supabase'
 import { RunsList } from './RunsPanel'
+import { listWidgets } from '@/widgets/api'
 import { TestRunModal } from './TestRunModal'
 
 /**
@@ -38,10 +39,16 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
   const [testing, setTesting] = useState<WorkflowRow | null>(null)
   const [editing, setEditing] = useState<WorkflowRow | null>(null)
 
+  const [widgetOf, setWidgetOf] = useState<Map<string, string>>(new Map())
   const load = useCallback(() => {
     listWorkflows(tenant.id)
       .then(setRows)
       .catch((e: Error) => setNotice({ error: e.message }))
+    // workflows a widget sends its bookings to (shown in the Funnel column)
+    listWidgets(tenant.id).then(
+      (ws) => setWidgetOf(new Map(ws.flatMap((x) => (x.config.webhook?.type === 'workflow' && x.config.webhook.workflow_id ? [[x.config.webhook.workflow_id, x.name] as [string, string]] : [])))),
+      () => setWidgetOf(new Map()),
+    )
     void db()
       .from('workflow_runs')
       .select('workflow_id, status')
@@ -189,7 +196,17 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
                         <div>{triggerLabel(t.event)}</div>
                         <div className="muted small">{ctx ? triggerSummary(t, ctx) : '…'}</div>
                       </td>
-                      {!funnelId && <td>{funnelLabel(w) ?? <span className="muted">—</span>}</td>}
+                      {!funnelId && (
+                        <td>
+                          {funnelLabel(w) ?? (!widgetOf.has(w.id) && <span className="muted">—</span>)}
+                          {widgetOf.has(w.id) && (
+                            <div className={funnelLabel(w) ? 'muted small' : undefined}>
+                              {widgetOf.get(w.id)}
+                              <div className="muted small">Booking Calendar widget</div>
+                            </div>
+                          )}
+                        </td>
+                      )}
                       <td>
                         <div className="wf-kinds">
                           {kinds.map((k) => {

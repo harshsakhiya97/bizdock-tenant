@@ -7,7 +7,7 @@ import { Flash } from '@/components/Flash'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { listWorkflows } from '@/workflows/api'
+import { archiveWorkflow, listWorkflows } from '@/workflows/api'
 import { archiveWidget, countBookings, DAYS, INTERVALS, listWidgets, updateWidget, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
@@ -58,7 +58,10 @@ export function BookingCalendarsPage() {
     setBusy(true)
     try {
       await archiveWidget(deleting.id)
-      setNotice({ ok: `Deleted “${deleting.name}”. Its embed stops showing on your pages.` })
+      // its own workflow goes with it
+      const wf = deleting.config.webhook?.type === 'workflow' ? deleting.config.webhook.workflow_id : ''
+      if (wf) await archiveWorkflow(wf)
+      setNotice({ ok: `Deleted “${deleting.name}”${wf ? ' and its workflow' : ''}. Its embed stops showing on your pages.` })
       setDeleting(null)
       load()
     } catch (e) {
@@ -170,7 +173,11 @@ export function BookingCalendarsPage() {
         icon={Trash2}
         danger
         title="Delete this booking calendar?"
-        message={deleting ? `“${deleting.name}” is removed and its embed stops showing on your pages. Bookings already made are kept.` : ''}
+        message={
+          deleting
+            ? `“${deleting.name}” is removed and its embed stops showing on your pages.${deleting.config.webhook?.type === 'workflow' && deleting.config.webhook.workflow_id ? ` Its workflow “${flows.get(deleting.config.webhook.workflow_id) ?? 'its workflow'}” is deleted too.` : ''} Bookings already made are kept.`
+            : ''
+        }
         confirmLabel={busy ? 'Deleting…' : 'Delete'}
         busy={busy}
         onCancel={() => setDeleting(null)}
