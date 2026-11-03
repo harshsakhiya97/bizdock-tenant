@@ -13,6 +13,30 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.10',
+    date: '2026-11-03',
+    title: 'Widgets: Booking Calendar',
+    summary: 'A new Widgets module with an embeddable Booking Calendar: visitors give their details, pick a free slot of your team, and a Zoom meeting is booked with the lead automatically.',
+    new: [
+      'Widgets module (Admin, after Masters) with its own row in Access Control (open, add, edit, delete); widget types shown as cards with how many are active.',
+      'Booking Calendar widget: name, funnel, time interval (15 min – 2 hrs), days with their own hours, team members, colour (the theme colour by default), how far ahead and how much notice, and after booking a message (with Insert a field) or a redirect to a page.',
+      'Booking Calendar embed: an iframe at <workspace address>/embed/<code> — Your Details (name, phone, email), then Date & Time with each slot as a range (10:00 – 10:30 am); always India time. The side steps can be opened to check what was picked.',
+      'Team calendar: slots follow the picked members’ BizDock meetings — one member: their busy times show as Booked; several: a slot stays open while any is free (“2 slots available”, with a fill bar on the slot and the day) and each booking goes round robin to a free member. A booked slot shows as Booked for the next visitor.',
+      'Each booking calendar gets its own workflow when first saved: On webhook call (its fields known, nothing to test) → Get lead details (phone or email; adds the lead to the funnel if not found) → Create Zoom meeting at the booked time with the booked team member. A Workflow button opens it, and Back / Save there return to the widget.',
+      'Embed details from the page’s address: ?name (or fname & lname), email and phone on the page with the iframe fill Your Details; with all three it opens on Date & Time.',
+      'Get lead details: match by “Phone or email (either one)”, and “If not found, add the lead” to the workflow’s funnel.',
+      'Create Zoom meeting: meet with “Team member from the webhook” (the member id the webhook sends).',
+      'Meetings: Team member and Booking calendar filters (Owner and Tech Support only).',
+      'Workflows list: a booking calendar’s workflow shows the widget’s name in the Funnel column; deleting a booking calendar deletes its workflow too.',
+    ],
+    improved: [
+      'A booking calendar workflow’s trigger lists the booking’s fields read-only (no field ticks to get wrong).',
+    ],
+    fixed: [
+      'Slots held by a deleted booking calendar no longer show as booked.',
+    ],
+  },
+  {
     version: '0.9',
     date: '2026-11-03',
     title: 'Get lead details, run controls and template tools',
