@@ -1176,11 +1176,13 @@ a.db-card:hover { border-color: var(--brand); }
 .bk-center { min-height: 60vh; display: grid; place-items: center; }
 .bk-card { display: flex; max-width: 980px; margin: 0 auto; background: #fff; border: 1px solid var(--bk-line); border-radius: 18px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, .08); min-height: 620px; }
 .bk-side { width: 300px; flex-shrink: 0; padding: 22px 18px; display: flex; flex-direction: column; gap: 10px; color: #fff; background: color-mix(in srgb, var(--bk) 55%, #0b1530); }
-.bk-step { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; font-weight: 600; font-size: 14.5px; background: rgba(255, 255, 255, .06); opacity: .75; }
+.bk-step { width: 100%; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; font-weight: 600; font-size: 14.5px; background: rgba(255, 255, 255, .06); opacity: .75; }
 .bk-step span { flex: 1; }
 .bk-step i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, .25); }
 .bk-step.is-on { opacity: 1; background: rgba(255, 255, 255, .14); }
 .bk-step.is-done { opacity: 1; }
+.bk-step:hover:not(:disabled) { background: rgba(255, 255, 255, .18); }
+.bk-step:disabled { cursor: default; }
 .bk-step.is-done i { background: #22c55e; }
 .bk-picked { margin-top: auto; display: grid; gap: 6px; padding: 14px; border-radius: 10px; background: rgba(255, 255, 255, .08); font-size: 13.5px; }
 .bk-picked span { display: flex; align-items: center; gap: 6px; opacity: .9; }
