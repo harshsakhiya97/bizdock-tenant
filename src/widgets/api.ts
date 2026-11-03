@@ -1,4 +1,6 @@
 import { db } from '@/lib/supabase'
+import { createWorkflow, ensureWorkflowHook } from '@/workflows/api'
+import { STEP_DEFAULTS } from '@/workflows/types'
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'
 export const DAYS: { key: DayKey; label: string; short: string }[] = [
@@ -103,6 +105,55 @@ export async function archiveWidget(id: string) {
 export async function countBookings(tenantId: string): Promise<Record<string, number>> {
   const { data } = await db().from('widget_bookings').select('widget_id').eq('tenant_id', tenantId).eq('status', 'booked')
   return (data ?? []).reduce<Record<string, number>>((m, r) => ({ ...m, [r.widget_id as string]: (m[r.widget_id as string] ?? 0) + 1 }), {})
+}
+
+/** what each booking sends (example values): the builder shows these fields without a test post */
+export const BOOKING_FIELDS: Record<string, string> = {
+  meeting_start: '2026-11-04 15:00',
+  meeting_end: '2026-11-04 15:30',
+  meeting_date: '2026-11-04',
+  meeting_time: '15:00',
+  meeting_end_time: '15:30',
+  member_id: '',
+  member_name: 'Team member',
+  member_email: 'member@example.com',
+  member_phone: '9876543210',
+  widget: '',
+  booking_id: '',
+}
+
+/**
+ * The widget's own "On webhook call" workflow: its fields known up front (no test needed) and a first
+ * Create Zoom meeting step timed from the booking (and with the booked team member).
+ */
+export async function createBookingWorkflow(tenantId: string, memberId: string | undefined, name: string, withTeam: boolean) {
+  const id = await createWorkflow(tenantId, memberId, `${name.trim()} – bookings`, 'webhook_call')
+  const trigger = { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'webhook_call' } }
+  const zoom = {
+    id: `zoom_${crypto.randomUUID().slice(0, 8)}`,
+    type: 'zoom_meeting',
+    position: { x: 0, y: 170 },
+    data: {
+      ...STEP_DEFAULTS.zoom_meeting,
+      topic: name.trim() || 'Booked call',
+      use_webhook: true,
+      start_var: 'meeting_start',
+      end_var: 'meeting_end',
+      meet_mode: withTeam ? 'webhook' : 'owner',
+      meet_var: 'member_id',
+    },
+  }
+  const { error } = await db()
+    .from('workflows')
+    .update({ nodes: [trigger, zoom], edges: [{ id: `e_trigger_${zoom.id}`, source: 'trigger', target: zoom.id }] })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  const hook = await ensureWorkflowHook(id)
+  await db()
+    .from('workflow_hooks')
+    .update({ sample: { ...BOOKING_FIELDS, widget: name.trim() }, sample_at: new Date().toISOString(), field_map: {} })
+    .eq('id', hook.id)
+  return id
 }
 
 /** the iframe to paste on a page */
