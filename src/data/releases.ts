@@ -13,6 +13,32 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.9',
+    date: '2026-11-03',
+    title: 'Get lead details, run controls and template tools',
+    summary: 'A Get lead details step, Lead date fields, status filter and Cancel on workflow runs, WhatsApp template Duplicate and file upload, and one standard paging on every list.',
+    new: [
+      'Workflows: Get lead details step — match by phone (last 10 digits) or email with a field from the trigger; finds the newest lead in the workflow’s sub-business. Later steps use that lead’s fields and work on that lead (conditions, WhatsApp to the lead, meetings); no match stops the run with “Lead not found”.',
+      'Workflow fields: Lead date {{lead_date}} (29 Oct 2026) and Lead date & time {{lead_datetime}} (29 Oct 2026, 4:00 pm) — when the lead came in.',
+      'Workflow runs: status filter (Running, Completed, Failed, Stopped / cancelled) and a Cancel button on unfinished runs (asks first; nothing after it runs; Re-run starts it again).',
+      'WhatsApp templates: Duplicate (on each card and in the template view) opens New template filled in from it.',
+      'WhatsApp templates: upload the header image, video or PDF; it’s kept in our storage, its public link goes to WATI, and it shows in the preview.',
+    ],
+    improved: [
+      'Lists: one standard paging everywhere — 20 a page, a Rows dropdown and page numbers (Masters, Workflows, runs, bookings, invoices, follow-ups, meetings, funnel leads, attendance, Zoom attendees, Businesses, Team).',
+      'Deletes: a confirm popup for deleting a meeting and a WhatsApp message, like every other delete.',
+      'Generate link and Create Zoom meeting: each variable listed as its own block — the variable, an example, then what it holds.',
+      'Field pickers: the Zoom meeting’s fields under their own Zoom meeting heading.',
+      'Field pickers: only the workflow’s own funnel fields (its webhooks and its leads’ extra fields); Event title / date / time / link only when the workflow or its funnel has an event.',
+      'WhatsApp templates: when WATI or Meta refuses a template, their reason is shown.',
+    ],
+    fixed: [
+      'Short links (Generate link and the Zoom short link) are always made on the workspace’s address (e.g. https://pride.viralsakhiya.com/pride/…), also when the builder runs on localhost.',
+      'WhatsApp templates: Duplicate keeps the language code; a button link with a {{variable}} is sent as a dynamic URL (checked first, with a sample value).',
+      'WhatsApp templates: when the connection drops while saving, the page checks WATI and goes on if the template was saved, instead of showing “Failed to fetch”.',
+    ],
+  },
+  {
     version: '0.8',
     date: '2026-10-30',
     title: 'Zoom, webhook workflows and an easier builder',
