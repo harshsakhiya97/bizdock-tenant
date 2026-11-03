@@ -32,6 +32,8 @@ export function BookingCalendarEditPage() {
   const [linked, setLinked] = useState('')
   const [url, setUrl] = useState('')
   const [team, setTeam] = useState(false)
+  // after booking: show a message, or send them to a page
+  const [after, setAfter] = useState<'message' | 'redirect'>('message')
   const [members, setMembers] = useState<MemberOption[]>([])
   const [flows, setFlows] = useState<WorkflowRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +58,7 @@ export function BookingCalendarEditPage() {
       setLinked(w.config.webhook?.type === 'workflow' ? w.config.webhook.workflow_id : '')
       setUrl(w.config.webhook?.type === 'url' ? w.config.webhook.url : '')
       setTeam((w.config.members ?? []).length > 0)
+      setAfter(w.config.redirect_url?.trim() ? 'redirect' : 'message')
     }, (e: Error) => setError(e.message))
   }, [id, isNew, tenant.primary_color])
 
@@ -72,7 +75,8 @@ export function BookingCalendarEditPage() {
     if (!(cfg.days_ahead >= 1)) return 'Set how many days ahead people can book.'
     if (team && !cfg.members.length) return 'Pick at least one team member, or untick “Connect with the team’s calendar”.'
     if (hook === 'url' && !/^https?:\/\/\S+$/i.test(url.trim())) return 'Paste the webhook URL (starting with https://).'
-    if (cfg.redirect_url.trim() && !/^https?:\/\/\S+$/i.test(cfg.redirect_url.trim())) return 'The page to send them to must start with https://'
+    if (after === 'message' && !cfg.thank_you.trim()) return 'Write the message shown after booking.'
+    if (after === 'redirect' && !/^https?:\/\/\S+$/i.test(cfg.redirect_url.trim())) return 'Give the page to send them to (starting with https://).'
     return null
   }
 
@@ -94,7 +98,7 @@ export function BookingCalendarEditPage() {
         }
         webhook = { type: 'workflow', workflow_id: wf }
       }
-      const config: BookingConfig = { ...cfg, members: team ? cfg.members : [], webhook, redirect_url: cfg.redirect_url.trim(), thank_you: cfg.thank_you.trim() }
+      const config: BookingConfig = { ...cfg, members: team ? cfg.members : [], webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
       const made = hook === 'workflow' && webhook.type === 'workflow' && webhook.workflow_id !== linked
       if (isNew) {
         const w = await createWidget(tenant.id, membership?.id, name, config)
@@ -293,17 +297,39 @@ export function BookingCalendarEditPage() {
             )}
           </FormSection>
 
-          <FormSection title="After booking">
-            <div>
-              <Label htmlFor="bc-ty">Thank-you message</Label>
-              <TextArea id="bc-ty" rows={3} value={cfg.thank_you} onChange={(e) => set('thank_you', e.target.value)} />
-              <Hint>{'{{date}} and {{time}} are filled in, e.g. “4 Nov 2026” and “3:00 pm”.'}</Hint>
+          <FormSection title="After booking" description="What the visitor sees once the booking is made.">
+            <div className="wh-actions">
+              {(
+                [
+                  ['message', 'Show a message', 'A thank-you message in the calendar.'],
+                  ['redirect', 'Redirect to a page', 'Send them to your page, e.g. a thank-you page.'],
+                ] as ['message' | 'redirect', string, string][]
+              ).map(([v, l, h]) => (
+                <label key={v} className={cn('wh-action', after === v && 'is-on')}>
+                  <input type="radio" name="bc-after" checked={after === v} onChange={() => setAfter(v)} />
+                  <span>
+                    <b>{l}</b>
+                    <small>{h}</small>
+                  </span>
+                </label>
+              ))}
             </div>
-            <div style={{ marginTop: 12 }}>
-              <Label htmlFor="bc-redirect">Or send them to a page (optional)</Label>
-              <TextInput id="bc-redirect" value={cfg.redirect_url} placeholder="https://… (e.g. your thank-you page)" onChange={(e) => set('redirect_url', e.target.value)} />
-              <Hint>When set, the visitor goes to this page after booking instead of seeing the message.</Hint>
-            </div>
+            {after === 'message' ? (
+              <div style={{ marginTop: 12 }}>
+                <Label htmlFor="bc-ty" required>
+                  Message
+                </Label>
+                <TextArea id="bc-ty" rows={3} value={cfg.thank_you} onChange={(e) => set('thank_you', e.target.value)} />
+                <Hint>{'{{date}} and {{time}} are filled in, e.g. “4 Nov 2026” and “3:00 pm”.'}</Hint>
+              </div>
+            ) : (
+              <div style={{ marginTop: 12 }}>
+                <Label htmlFor="bc-redirect" required>
+                  Page URL
+                </Label>
+                <TextInput id="bc-redirect" value={cfg.redirect_url} placeholder="https://… (e.g. your thank-you page)" onChange={(e) => set('redirect_url', e.target.value)} />
+              </div>
+            )}
           </FormSection>
         </div>
       </div>
