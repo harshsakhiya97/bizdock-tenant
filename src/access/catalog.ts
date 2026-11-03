@@ -128,6 +128,16 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       },
       { key: 'masters', label: 'Masters', open: { kind: 'action', module: 'masters', action: 'edit', hint: 'Services, payment modes, sources, outcomes, WhatsApp messages' }, actions: [] },
       {
+        key: 'widgets',
+        label: 'Widgets',
+        open: { kind: 'action', module: 'widgets', action: 'view' },
+        actions: [
+          { module: 'widgets', action: 'add', label: 'Add widgets' },
+          { module: 'widgets', action: 'edit', label: 'Edit widgets' },
+          { module: 'widgets', action: 'delete', label: 'Delete widgets' },
+        ],
+      },
+      {
         key: 'access',
         label: 'Access Control',
         open: { kind: 'action', module: 'team', action: 'view', hint: 'See the team' },

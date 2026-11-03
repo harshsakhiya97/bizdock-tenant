@@ -1,4 +1,4 @@
-import { Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
+import { Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
 import type { SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -46,6 +46,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
     items: [
       { to: '/businesses', label: 'Businesses', icon: Building2, module: 'businesses' },
       { to: '/masters', label: 'Masters', icon: Database, module: 'masters', action: 'edit' },
+      { to: '/widgets', label: 'Widgets', icon: Blocks, module: 'widgets' },
       {
         to: '/access-control',
         label: 'Access Control',
@@ -67,6 +68,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/meetings': { title: 'Meetings', crumb: 'Guest meetings', icon: Handshake },
   '/attendance': { title: 'Attendance', crumb: 'Check in & discipline', icon: Clock3 },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
+  '/widgets': { title: 'Widgets', crumb: 'Overview', icon: Blocks },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
   '/customers': { title: 'Customers', crumb: 'Booked clients & revenue', icon: Contact },
   '/invoices': { title: 'Invoices', crumb: 'One invoice per booking', icon: FileText },
