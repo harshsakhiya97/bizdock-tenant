@@ -9,9 +9,9 @@ import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { createWorkflow, listWorkflows } from '@/workflows/api'
+import { listWorkflows } from '@/workflows/api'
 import type { WorkflowRow } from '@/workflows/types'
-import { createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
+import { createBookingWorkflow, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
 /** a BizDock workflow (made on save if not yet) or another tool's webhook URL */
@@ -112,7 +112,7 @@ export function BookingCalendarEditPage() {
         // its own "On webhook call" workflow: made once, then kept
         let wf = linked
         if (!wf) {
-          wf = await createWorkflow(tenant.id, membership?.id, `${name.trim()} – bookings`, 'webhook_call')
+          wf = await createBookingWorkflow(tenant.id, membership?.id, name, team && cfg.members.length > 0)
           setLinked(wf)
         }
         webhook = { type: 'workflow', workflow_id: wf }

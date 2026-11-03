@@ -244,7 +244,9 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
           ? (ctx.members.find((m) => m.id === mm[0])?.name ?? 'pick who')
           : d.meet_mode === 'round_robin'
             ? `round robin (${mm.length})`
-            : 'lead owner'
+            : d.meet_mode === 'webhook'
+              ? 'team member from the webhook'
+              : 'lead owner'
       return `${when} · with ${who} · ${acc}`
     }
     case 'lead_lookup':
