@@ -250,8 +250,15 @@ function LeadLookupFields({ d, set, disabled, hookOnly, fieldKeys }: { d: Record
       ) : (
         pick('cb-ll-var', 'With the field', 'value_var')
       )}
+      <label className="check">
+        <input type="checkbox" checked={!!d.create_missing} disabled={disabled} onChange={(e) => set('create_missing', e.target.checked)} />
+        <span>
+          <b>If not found, add the lead</b>
+          <small>A new lead in this workflow’s funnel with {'{{name}}'}, the phone and the email, then the next steps go on with it.</small>
+        </span>
+      </label>
       <Hint>
-        Finds the newest lead in this workflow’s sub-business with this {by === 'phone' ? 'phone number (last 10 digits)' : by === 'email' ? 'email' : 'phone number (last 10 digits) or email — whichever matches'}. If there’s none, the run stops with “Lead not found”. After this step, the next steps use that lead: its fields (Lead and Extra fields in every field list), conditions on it, WhatsApp to it and meetings on it.
+        Finds the newest lead in this workflow’s sub-business with this {by === 'phone' ? 'phone number (last 10 digits)' : by === 'email' ? 'email' : 'phone number (last 10 digits) or email — whichever matches'}. If there’s none, {d.create_missing ? 'it’s added to the funnel' : 'the run stops with “Lead not found”'}. After this step, the next steps use that lead: its fields (Lead and Extra fields in every field list), conditions on it, WhatsApp to it and meetings on it.
       </Hint>
     </>
   )

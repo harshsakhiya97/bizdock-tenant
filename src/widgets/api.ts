@@ -139,7 +139,7 @@ export async function createBookingWorkflow(tenantId: string, memberId: string |
     id: `lead_${crypto.randomUUID().slice(0, 8)}`,
     type: 'lead_lookup',
     position: { x: 0, y: 170 },
-    data: { match: 'any', phone_var: 'phone', email_var: 'email', value_var: '' },
+    data: { match: 'any', phone_var: 'phone', email_var: 'email', value_var: '', create_missing: true },
   }
   // the meeting between that lead and the booked team member, at the booked time
   const zoom = {
