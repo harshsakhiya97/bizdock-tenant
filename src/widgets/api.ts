@@ -183,7 +183,6 @@ export async function setWorkflowFunnel(workflowId: string, funnelId: string) {
 }
 
 
-/** the iframe to paste on a page */
 /** the iframe to paste (it sends the host page's address, so its ?name / email / phone fill Your Details) */
 export const embedCode = (url: string, name: string) =>
   `<iframe src="${url}" title="${name.replace(/"/g, '&quot;')}" referrerpolicy="unsafe-url" style="width:100%;max-width:980px;height:720px;border:0;"></iframe>`
