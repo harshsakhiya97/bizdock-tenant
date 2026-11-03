@@ -9,13 +9,10 @@ import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { listWorkflows } from '@/workflows/api'
-import type { WorkflowRow } from '@/workflows/types'
 import { createBookingWorkflow, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
 /** a BizDock workflow (made on save if not yet) or another tool's webhook URL */
-type HookChoice = 'workflow' | 'url'
 
 /** New / edit a Booking Calendar: slot length, days & hours, team, colour, booking window, webhook and after booking. */
 export function BookingCalendarEditPage() {
@@ -27,11 +24,8 @@ export function BookingCalendarEditPage() {
   const [row, setRow] = useState<WidgetRow | null>(null)
   const [name, setName] = useState('Book a call')
   const [cfg, setCfg] = useState<BookingConfig>(() => defaultBookingConfig(tenant.primary_color))
-  const [hook, setHook] = useState<HookChoice>('workflow')
   // the workflow already linked to this widget (kept when switching to a URL and back)
   const [linked, setLinked] = useState('')
-  const [url, setUrl] = useState('')
-  const [team, setTeam] = useState(false)
   // after booking: show a message, or send them to a page
   const [after, setAfter] = useState<'message' | 'redirect'>('message')
   const tyRef = useRef<HTMLTextAreaElement>(null)
@@ -40,7 +34,7 @@ export function BookingCalendarEditPage() {
     ['date', 'Date (4 Nov 2026)'],
     ['time', 'Start time (3:00 pm)'],
     ['end_time', 'End time (3:30 pm)'],
-    ...(team ? ([['member_name', 'Team member’s name']] as [string, string][]) : []),
+    ['member_name', 'Team member’s name'],
   ]
   function insertField(k: string) {
     const el = tyRef.current
@@ -54,7 +48,6 @@ export function BookingCalendarEditPage() {
     })
   }
   const [members, setMembers] = useState<MemberOption[]>([])
-  const [flows, setFlows] = useState<WorkflowRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
@@ -64,7 +57,6 @@ export function BookingCalendarEditPage() {
 
   useEffect(() => {
     void listMemberOptions(tenant.id).then(setMembers)
-    void listWorkflows(tenant.id).then((w) => setFlows(w.filter((x) => x.trigger_type === 'webhook_call')), () => undefined)
   }, [tenant.id])
   useEffect(() => {
     if (isNew) return
@@ -73,10 +65,7 @@ export function BookingCalendarEditPage() {
       setRow(w)
       setName(w.name)
       setCfg({ ...defaultBookingConfig(tenant.primary_color), ...w.config })
-      setHook(w.config.webhook?.type === 'url' ? 'url' : 'workflow')
       setLinked(w.config.webhook?.type === 'workflow' ? w.config.webhook.workflow_id : '')
-      setUrl(w.config.webhook?.type === 'url' ? w.config.webhook.url : '')
-      setTeam((w.config.members ?? []).length > 0)
       setAfter(w.config.redirect_url?.trim() ? 'redirect' : 'message')
     }, (e: Error) => setError(e.message))
   }, [id, isNew, tenant.primary_color])
@@ -84,7 +73,6 @@ export function BookingCalendarEditPage() {
   const set = <K extends keyof BookingConfig>(k: K, v: BookingConfig[K]) => setCfg((c) => ({ ...c, [k]: v }))
   const setDay = (k: DayKey, patch: Partial<BookingConfig['days'][DayKey]>) => setCfg((c) => ({ ...c, days: { ...c.days, [k]: { ...c.days[k], ...patch } } }))
   const toggleMember = (mid: string) => set('members', cfg.members.includes(mid) ? cfg.members.filter((x) => x !== mid) : [...cfg.members, mid])
-  const linkedFlow = flows.find((f) => f.id === linked)
 
   function problem(): string | null {
     if (!name.trim()) return 'Give the booking calendar a name.'
@@ -92,8 +80,7 @@ export function BookingCalendarEditPage() {
     if (!on.length) return 'Turn on at least one day.'
     for (const d of on) if (!(cfg.days[d.key].start < cfg.days[d.key].end)) return `${d.label}: the end time must be after the start time.`
     if (!(cfg.days_ahead >= 1)) return 'Set how many days ahead people can book.'
-    if (team && !cfg.members.length) return 'Pick at least one team member, or untick “Connect with the team’s calendar”.'
-    if (hook === 'url' && !/^https?:\/\/\S+$/i.test(url.trim())) return 'Paste the webhook URL (starting with https://).'
+    if (!cfg.members.length) return 'Pick at least one team member.'
     if (after === 'message' && !cfg.thank_you.trim()) return 'Write the message shown after booking.'
     if (after === 'redirect' && !/^https?:\/\/\S+$/i.test(cfg.redirect_url.trim())) return 'Give the page to send them to (starting with https://).'
     return null
@@ -106,19 +93,14 @@ export function BookingCalendarEditPage() {
     if (p) return setError(p)
     setBusy(true)
     try {
-      let webhook: BookingConfig['webhook']
-      if (hook === 'url') webhook = { type: 'url', url: url.trim() }
-      else {
-        // its own "On webhook call" workflow: made once, then kept
-        let wf = linked
-        if (!wf) {
-          wf = await createBookingWorkflow(tenant.id, membership?.id, name, team && cfg.members.length > 0)
-          setLinked(wf)
-        }
-        webhook = { type: 'workflow', workflow_id: wf }
+      // its own "On webhook call" workflow (with a Create Zoom meeting step): made on the first save, then kept
+      let wf = linked
+      if (!wf) {
+        wf = await createBookingWorkflow(tenant.id, membership?.id, name, true)
+        setLinked(wf)
       }
-      const config: BookingConfig = { ...cfg, members: team ? cfg.members : [], webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
-      const made = hook === 'workflow' && webhook.type === 'workflow' && webhook.workflow_id !== linked
+      const webhook: BookingConfig['webhook'] = { type: 'workflow', workflow_id: wf }
+      const config: BookingConfig = { ...cfg, webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
       if (isNew) {
         const w = await createWidget(tenant.id, membership?.id, name, config)
         navigate(`/widgets/booking-calendar/${w.id}`, { replace: true })
@@ -130,7 +112,6 @@ export function BookingCalendarEditPage() {
         setCfg(config)
         setSaved('Saved. The embed shows the changes straight away.')
       }
-      if (made || hook === 'workflow') void listWorkflows(tenant.id).then((w) => setFlows(w.filter((x) => x.trigger_type === 'webhook_call')))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -154,7 +135,7 @@ export function BookingCalendarEditPage() {
         subtitle="Visitors pick a free slot and submit; the booking goes to the webhook. All times are India time."
         actions={
           <div className="row" style={{ gap: 8 }}>
-            {row && hook === 'workflow' && linked && (
+            {row && linked && (
               <button
                 type="button"
                 className="btn btn-outline"
@@ -231,18 +212,8 @@ export function BookingCalendarEditPage() {
             </div>
           </FormSection>
 
-          <FormSection
-            title="Team calendar"
-          >
-            <label className="check">
-              <input type="checkbox" checked={team} onChange={(e) => setTeam(e.target.checked)} />
-              <span>
-                <b>Connect with the team’s calendar</b>
-                <small>Their meetings in BizDock make slots busy; each booking goes to one of them.</small>
-              </span>
-            </label>
-            {team && (
-            <div className="bc-members" style={{ marginTop: 10 }}>
+          <FormSection title="Team" description="Whose calendar the slots follow (required).">
+            <div className="bc-members">
               {members.map((m) => (
                 <label key={m.id} className={cn('bc-member', cfg.members.includes(m.id) && 'is-on')}>
                   <input type="checkbox" checked={cfg.members.includes(m.id)} onChange={() => toggleMember(m.id)} />
@@ -251,15 +222,12 @@ export function BookingCalendarEditPage() {
               ))}
               {!members.length && <span className="muted small">No team members yet.</span>}
             </div>
-            )}
             <Hint>
-              {!team
-                ? 'Not connected: every slot is open, and no team member is sent with the booking.'
-                : !cfg.members.length
-                  ? 'Tick the team members whose calendar it follows.'
-                  : cfg.members.length === 1
-                    ? 'Their busy times show as booked. The booking sends their id, name, email and phone to the webhook.'
-                    : `${cfg.members.length} picked: a slot stays open while any of them is free and goes round robin to a free one. The booking sends that member’s id, name, email and phone.`}
+              {!cfg.members.length
+                ? 'Pick at least one team member: their meetings in BizDock make slots busy, and each booking goes to one of them.'
+                : cfg.members.length === 1
+                  ? 'Their busy times show as booked. Each booking goes to them.'
+                  : `${cfg.members.length} picked: a slot stays open while any of them is free, and each booking goes round robin to a free one.`}
             </Hint>
           </FormSection>
 
@@ -288,41 +256,6 @@ export function BookingCalendarEditPage() {
                 <TextInput id="bc-notice" type="number" min={0} max={168} step={0.5} value={cfg.notice_hours} onChange={(e) => set('notice_hours', Math.max(0, Math.min(168, Number(e.target.value) || 0)))} />
               </div>
             </div>
-          </FormSection>
-
-          <FormSection title="Webhook" description="Where each booking is sent: meeting_start / meeting_end (2026-11-04 15:00), meeting_date, meeting_time, member_id, member_name, member_email, member_phone and booking_id.">
-            <div className="wh-actions">
-              {(
-                [
-                  ['workflow', linked ? 'BizDock workflow' : 'Create a new workflow & connect', linked ? `Connected to “${linkedFlow?.name ?? 'its workflow'}”.` : `Creates an “On webhook call” workflow (“${name.trim() || 'Booking calendar'} – bookings”) when you save, and sends the bookings to it.`],
-                  ['url', 'Other webhook URL', 'Another tool’s webhook; each booking is posted to it as JSON.'],
-                ] as [HookChoice, string, string][]
-              ).map(([v, l, h]) => (
-                <label key={v} className={cn('wh-action', hook === v && 'is-on')}>
-                  <input type="radio" name="bc-hook" checked={hook === v} onChange={() => setHook(v)} />
-                  <span>
-                    <b>{l}</b>
-                    <small>{h}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-            {hook === 'workflow' && linked && (
-              <Hint>
-                <Link to={`/workflows/${linked}`} state={{ back: { to: `/widgets/booking-calendar/${id}`, label: `Back to ${name || 'the booking calendar'}`, afterSave: true } }} className="link-btn">
-                  Open the workflow
-                </Link>{' '}
-                to add its steps (turn it on so bookings run it). To see the fields there, click “Listen for a test” on its trigger and make a test booking.
-              </Hint>
-            )}
-            {hook === 'url' && (
-              <div style={{ marginTop: 12 }}>
-                <Label htmlFor="bc-url" required>
-                  Webhook URL
-                </Label>
-                <TextInput id="bc-url" value={url} placeholder="https://…" onChange={(e) => setUrl(e.target.value)} />
-              </div>
-            )}
           </FormSection>
 
           <FormSection title="After booking" description="What the visitor sees once the booking is made.">
