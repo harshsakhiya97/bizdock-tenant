@@ -41,7 +41,14 @@ export function EmbedPage() {
   // Your Details filled in from the address (?name= / fname & lname, email, phone / mobile), e.g. passed on by the page it's embedded in
   const [who, setWho] = useState(() => {
     const q = new URLSearchParams(window.location.search)
-    const get = (...keys: string[]) => keys.map((k) => q.get(k)?.trim() ?? '').find(Boolean) ?? ''
+    // also the host page's own address (sent as the referrer: the embed code asks for the full one)
+    let host = new URLSearchParams()
+    try {
+      host = new URL(document.referrer).searchParams
+    } catch {
+      /* no referrer */
+    }
+    const get = (...keys: string[]) => keys.map((k) => q.get(k)?.trim() || host.get(k)?.trim() || '').find(Boolean) ?? ''
     const first = get('first_name', 'fname', 'firstname')
     const last = get('last_name', 'lname', 'lastname')
     return {

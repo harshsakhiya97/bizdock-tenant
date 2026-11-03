@@ -187,7 +187,7 @@ export async function setWorkflowFunnel(workflowId: string, funnelId: string) {
 export function embedCode(url: string, name: string) {
   const id = `bizdock-${url.split('/').pop()}`
   return [
-    `<iframe id="${id}" src="${url}" title="${name.replace(/"/g, '&quot;')}" style="width:100%;max-width:980px;height:720px;border:0;"></iframe>`,
+    `<iframe id="${id}" src="${url}" title="${name.replace(/"/g, '&quot;')}" referrerpolicy="unsafe-url" style="width:100%;max-width:980px;height:720px;border:0;"></iframe>`,
     // the page's own ?name=…&email=…&phone=… go into the calendar's Your Details
     `<script>(function(){var f=document.getElementById("${id}"),q=location.search.slice(1);if(f&&q)f.src=f.src.split("?")[0]+"?"+q})()</script>`,
   ].join('\n')
