@@ -1,7 +1,8 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
-import { Paged } from '@/components/ui'
+import { ConfirmModal, Paged } from '@/components/ui'
+import { Select } from '@/components/Field'
 import { Link } from 'react-router'
-import { Check, Circle, Clock, Minus, RefreshCw, RotateCcw, X } from 'lucide-react'
+import { Ban, Check, Circle, Clock, Minus, RefreshCw, RotateCcw, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
@@ -42,6 +43,18 @@ const STATUS: Record<Run['status'], { label: string; tone: string }> = {
 type StepState = 'done' | 'current' | 'failed' | 'skipped' | 'stopped' | 'pending'
 const STATE_ICON: Record<StepState, typeof Check> = { done: Check, current: Clock, failed: X, skipped: Minus, stopped: X, pending: Circle }
 const STATE_LABEL: Record<StepState, string> = { done: 'Done', current: 'Held here', failed: 'Failed', skipped: 'Skipped (not running yet)', stopped: 'Stopped here', pending: 'Pending' }
+
+/** the status filter: Running = starting, running a step or waiting */
+type Filter = 'all' | 'running' | 'done' | 'failed' | 'stopped'
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'running', label: 'Running' },
+  { value: 'done', label: 'Completed' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'stopped', label: 'Stopped / cancelled' },
+]
+const inFilter = (r: Run, f: Filter) => (f === 'all' ? true : f === 'running' ? r.status === 'queued' || r.status === 'running' || r.status === 'waiting' : r.status === f)
+const isOpen = (r: Run) => r.status === 'queued' || r.status === 'waiting' || r.status === 'running'
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 const time = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
@@ -99,6 +112,9 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
   const [loading, setLoading] = useState(false)
   const [rerunning, setRerunning] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
+  const [filter, setFilter] = useState<Filter>('all')
+  const [cancelRun, setCancelRun] = useState<Run | null>(null)
+  const [cancelling, setCancelling] = useState(false)
   const { can } = useAuth()
   const canRun = can('workflows', 'edit')
   const path = stepPath(workflow)
@@ -137,6 +153,25 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     load()
   }
 
+  const who = (r: Run) => (r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : (r.test_data?.name ?? String(r.payload?.name ?? r.payload?.first_name ?? 'this run')))
+
+  // stop a run that hasn't finished: nothing after it runs
+  async function cancel() {
+    if (!cancelRun) return
+    setCancelling(true)
+    setMsg({})
+    const { error } = await db().rpc('workflow_cancel', { p_run: cancelRun.id })
+    setCancelling(false)
+    if (error) {
+      setCancelRun(null)
+      return setMsg({ error: error.message })
+    }
+    setMsg({ ok: `Cancelled the run for ${who(cancelRun)}.` })
+    setCancelRun(null)
+    load()
+  }
+
+  const shown = (runs ?? []).filter((r) => inFilter(r, filter))
   const counts = (runs ?? []).reduce<Record<string, number>>((m, r) => ({ ...m, [r.status]: (m[r.status] ?? 0) + 1 }), {})
 
   return (
@@ -146,9 +181,19 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
           {runs ? `${runs.length} run${runs.length === 1 ? '' : 's'}` : 'Loading…'}
           {runs?.length ? ` · ${counts.done ?? 0} completed · ${counts.waiting ?? 0} waiting · ${counts.failed ?? 0} failed` : ''}
         </span>
-        <button type="button" className="btn btn-outline btn-sm" onClick={load} disabled={loading}>
-          <RefreshCw size={14} className={loading ? 'spin' : undefined} /> Refresh
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <Select aria-label="Status" value={filter} onChange={(e) => setFilter(e.target.value as Filter)} style={{ width: 'auto' }}>
+            {FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+                {runs && f.value !== 'all' ? ` (${(runs ?? []).filter((r) => inFilter(r, f.value)).length})` : ''}
+              </option>
+            ))}
+          </Select>
+          <button type="button" className="btn btn-outline btn-sm" onClick={load} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'spin' : undefined} /> Refresh
+          </button>
+        </div>
       </div>
       {msg.error && <div className="alert alert-error small">{msg.error}</div>}
       {msg.ok && <div className="alert alert-success small">{msg.ok}</div>}
@@ -164,8 +209,10 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
       </div>
       {!runs ? null : !runs.length ? (
         <div className="empty">No runs yet. When the workflow is on, each form submission of its funnel starts one.</div>
+      ) : !shown.length ? (
+        <div className="empty">No {FILTERS.find((f) => f.value === filter)?.label.toLowerCase()} runs.</div>
       ) : (
-        <Paged rows={runs}>
+        <Paged rows={shown} reset={filter}>
 {(paged) => (
 <div className="table-wrap run-scroll">
           <table className="table run-table">
@@ -245,6 +292,18 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                           >
                             <RotateCcw size={13} className={rerunning === r.id ? 'spin' : undefined} /> Re-run
                           </button>
+                          {isOpen(r) && (
+                            <button
+                              type="button"
+                              className="btn btn-outline btn-sm danger-text"
+                              style={{ marginLeft: 6 }}
+                              title="Stop this run here: none of its next steps run"
+                              disabled={r.status === 'running'}
+                              onClick={() => setCancelRun(r)}
+                            >
+                              <Ban size={13} /> Cancel
+                            </button>
+                          )}
                         </td>
                       )}
                     </tr>
@@ -274,6 +333,17 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
 )}
 </Paged>
       )}
+      <ConfirmModal
+        open={!!cancelRun}
+        icon={Ban}
+        danger
+        title="Cancel this run?"
+        message={cancelRun ? `The run for ${who(cancelRun)} stops here; none of its next steps (messages, meetings…) run. You can start it again with Re-run.` : ''}
+        confirmLabel={cancelling ? 'Cancelling…' : 'Cancel run'}
+        busy={cancelling}
+        onCancel={() => setCancelRun(null)}
+        onConfirm={() => void cancel()}
+      />
     </div>
   )
 }
