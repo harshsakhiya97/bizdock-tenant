@@ -250,6 +250,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return `${when} · with ${who} · ${acc}`
     }
     case 'lead_lookup':
+      if (d.match === 'any') return `Match phone {{${String(d.phone_var || 'phone')}}} or email {{${String(d.email_var || 'email')}}}`
       return d.value_var ? `Match ${d.match === 'email' ? 'email' : 'phone'} with {{${String(d.value_var)}}}` : 'Pick the field to match'
     case 'email':
       return toWho(d, ctx) + ((d.subject as string) || 'No subject yet')
@@ -325,7 +326,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if (String(d.end_time) <= String(d.time)) return 'The end time must be after the start time'
       return null
     case 'lead_lookup':
-      if (!d.value_var) return `Pick the field with the ${d.match === 'email' ? 'email' : 'phone number'}`
+      if (d.match === 'any' ? !(d.phone_var ?? 'phone') && !(d.email_var ?? 'email') : !d.value_var) return `Pick the field with the ${d.match === 'email' ? 'email' : 'phone number'}`
       return ctx.selfFunnelId || ctx.funnel ? null : 'Link this workflow to a funnel (Used in funnel) to find its leads'
     case 'email':
       if (d.to === 'team' && !d.member_id) return 'Pick the team member'

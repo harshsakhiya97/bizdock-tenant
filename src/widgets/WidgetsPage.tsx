@@ -13,7 +13,7 @@ const KINDS = [
     name: 'Booking Calendar',
     icon: CalendarDays,
     color: '#2563eb',
-    description: 'A calendar of free slots to put on any page. Visitors pick a date and time and submit; the booking goes to your webhook.',
+    description: 'A calendar of free slots to put on any page. Visitors pick a date and time and give their details; the booking runs its workflow.',
     usedFor: 'Call bookings on landing pages and websites',
   },
 ]
