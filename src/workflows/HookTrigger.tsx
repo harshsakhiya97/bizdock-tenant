@@ -4,6 +4,7 @@ import { Hint, TextInput } from '@/components/Field'
 import { webhookUrl } from '@/funnels/api'
 import { ensureWorkflowHook, getWorkflowHook, listenWorkflowHook, regenerateWorkflowHook, saveWorkflowHookFields } from './api'
 import { varKey, type WorkflowHook } from './types'
+import { db } from '@/lib/supabase'
 
 /** tell the builder the hook changed (its variables are used by the other steps) */
 export const HOOK_EVENT = 'bizdock:workflow-hook'
@@ -26,6 +27,18 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const poll = useRef<number | null>(null)
+  // the Booking Calendar this workflow belongs to: its fields are fixed, so no test or picking
+  const [widget, setWidget] = useState<string | null>(null)
+  useEffect(() => {
+    if (!workflowId) return
+    void db()
+      .from('widgets')
+      .select('name')
+      .is('archived_at', null)
+      .eq('config->webhook->>workflow_id', workflowId)
+      .limit(1)
+      .then(({ data }) => setWidget((data?.[0]?.name as string | undefined) ?? null))
+  }, [workflowId])
 
   useEffect(() => {
     if (!workflowId) return
@@ -134,6 +147,26 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
         <Hint>Send a POST (JSON or form) here. Each post starts this workflow while it’s on. Not tied to a funnel: nothing is saved on leads.</Hint>
       </div>
 
+      {widget && (
+        <div>
+          <span className="field-label">Fields from the booking calendar</span>
+          <Hint>
+            Sent by “{widget}” with every booking, under these names (use them as {'{{name}}'}, {'{{meeting_start}}'}…). They’re always all passed, so there’s nothing to test or pick.
+          </Hint>
+          <div className="hook-fields">
+            {fields.map(([k, v]) => (
+              <div key={k} className="hook-field">
+                <div className="hook-field-main">
+                  <code>{k}</code>
+                  <span className="muted small">e.g. {show(v).slice(0, 80) || '—'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!widget && (
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         {!disabled && (
           <button type="button" className="btn btn-outline btn-sm" disabled={listening} onClick={() => void listen()}>
@@ -148,9 +181,10 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
               : 'No test yet.'}
         </span>
       </div>
+      )}
       {error && <div className="alert alert-error small">{error}</div>}
 
-      {fields.length > 0 && (
+      {!widget && fields.length > 0 && (
         <div>
           <span className="field-label">Fields to use in the steps</span>
           <Hint>Tick the fields the steps need and name them (the name is the variable, e.g. {'{{phone}}'}). None ticked: every field, under its own name.</Hint>
