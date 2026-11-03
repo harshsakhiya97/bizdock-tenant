@@ -194,14 +194,24 @@ export function EmbedPage() {
     <div className="bk-wrap" style={style}>
       <div className="bk-card">
         <aside className="bk-side">
-          <div className={cn('bk-step', step === 1 && 'is-on', step > 1 && 'is-done')}>
+          {/* the steps can be opened from here (Date & Time once the details are filled), until it's booked */}
+          <button type="button" className={cn('bk-step', step === 1 && 'is-on', step > 1 && 'is-done')} disabled={step === 3 || busy} onClick={() => setStep(1)}>
             <User size={16} /> <span>Your Details</span>
             <i>{step > 1 ? <Check size={12} /> : null}</i>
-          </div>
-          <div className={cn('bk-step', step === 2 && 'is-on', step > 2 && 'is-done')}>
+          </button>
+          <button
+            type="button"
+            className={cn('bk-step', step === 2 && 'is-on', (step > 2 || !!slot) && 'is-done')}
+            disabled={step === 3 || busy}
+            onClick={() => {
+              const p = detailsProblem()
+              setError(p)
+              if (!p) setStep(2)
+            }}
+          >
             <CalendarDays size={16} /> <span>Date &amp; Time</span>
-            <i>{step > 2 ? <Check size={12} /> : null}</i>
-          </div>
+            <i>{step > 2 || slot ? <Check size={12} /> : null}</i>
+          </button>
           {slot && (
             <div className="bk-picked">
               <b>{w.name}</b>
