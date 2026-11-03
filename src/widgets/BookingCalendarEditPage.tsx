@@ -117,7 +117,7 @@ export function BookingCalendarEditPage() {
       </Link>
       <PageHead
         title={isNew ? 'New booking calendar' : name || 'Booking calendar'}
-        subtitle="Visitors pick a free slot and give their name, phone and email; the booking goes to the webhook. All times are India time."
+        subtitle="Visitors pick a free slot and submit; the booking goes to the webhook. All times are India time."
         actions={
           <div className="row" style={{ gap: 8 }}>
             {row && (
@@ -174,10 +174,10 @@ export function BookingCalendarEditPage() {
                       </span>
                     </label>
                     {h.on ? (
-                      <div className="row" style={{ gap: 8 }}>
-                        <TextInput type="time" aria-label={`${d.label} from`} value={h.start} onChange={(e) => setDay(d.key, { start: e.target.value })} />
+                      <div className="bc-times">
+                        <input type="time" className="input" aria-label={`${d.label} from`} value={h.start} onChange={(e) => setDay(d.key, { start: e.target.value })} />
                         <span className="muted small">to</span>
-                        <TextInput type="time" aria-label={`${d.label} to`} value={h.end} onChange={(e) => setDay(d.key, { end: e.target.value })} />
+                        <input type="time" className="input" aria-label={`${d.label} to`} value={h.end} onChange={(e) => setDay(d.key, { end: e.target.value })} />
                       </div>
                     ) : (
                       <span className="muted small">Closed</span>
@@ -235,7 +235,7 @@ export function BookingCalendarEditPage() {
             </div>
           </FormSection>
 
-          <FormSection title="Webhook" description="Where each booking is sent: name, phone, email, meeting_start / meeting_end (2026-11-04 15:00), meeting_date, meeting_time, member_id, member_name, member_email, member_phone.">
+          <FormSection title="Webhook" description="Where each booking is sent: meeting_start / meeting_end (2026-11-04 15:00), meeting_date, meeting_time, member_id, member_name, member_email, member_phone and booking_id.">
             <div className="wh-actions">
               {(
                 [
@@ -301,7 +301,7 @@ export function BookingCalendarEditPage() {
             <div>
               <Label htmlFor="bc-ty">Thank-you message</Label>
               <TextArea id="bc-ty" rows={3} value={cfg.thank_you} onChange={(e) => set('thank_you', e.target.value)} />
-              <Hint>{'{{name}}, {{date}} and {{time}} are filled in, e.g. “4 Nov 2026” and “3:00 pm”.'}</Hint>
+              <Hint>{'{{date}} and {{time}} are filled in, e.g. “4 Nov 2026” and “3:00 pm”.'}</Hint>
             </div>
             <div style={{ marginTop: 12 }}>
               <Label htmlFor="bc-redirect">Or send them to a page (optional)</Label>

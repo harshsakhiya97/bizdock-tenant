@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router'
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2, User } from 'lucide-react'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { bookSlot, publicWidget, widgetSlots, type PublicWidget, type Slot } from './api'
@@ -31,8 +31,7 @@ export function EmbedPage() {
   const [loading, setLoading] = useState(false)
   const [day, setDay] = useState<string | null>(null)
   const [slot, setSlot] = useState<Slot | null>(null)
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [who, setWho] = useState({ name: '', phone: '', email: '' })
+  const [step, setStep] = useState<1 | 3>(1)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
@@ -124,12 +123,9 @@ export function EmbedPage() {
   async function book() {
     if (!slot) return
     setError(null)
-    if (!who.name.trim()) return setError('Please enter your name.')
-    if (who.phone.replace(/\D/g, '').length < 10) return setError('Please enter a valid phone number.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim())) return setError('Please enter a valid email.')
     setBusy(true)
     try {
-      const r = await bookSlot(code, slot.starts_at, { name: who.name.trim(), phone: who.phone.trim(), email: who.email.trim() })
+      const r = await bookSlot(code, slot.starts_at)
       if (r.redirect_url) {
         // leave the iframe for the thank-you page
         try {
@@ -145,7 +141,6 @@ export function EmbedPage() {
       setError((e as Error).message)
       // the slot may have just gone: show the fresh slots
       if (/just booked|can.t be booked/i.test((e as Error).message)) {
-        setStep(1)
         setSlot(null)
         setReload((x) => x + 1)
       }
@@ -160,10 +155,6 @@ export function EmbedPage() {
           <div className={cn('bk-step', step === 1 && 'is-on', step > 1 && 'is-done')}>
             <CalendarDays size={16} /> <span>Date &amp; Time</span>
             <i>{step > 1 ? <Check size={12} /> : null}</i>
-          </div>
-          <div className={cn('bk-step', step === 2 && 'is-on', step > 2 && 'is-done')}>
-            <User size={16} /> <span>Your Information</span>
-            <i>{step > 2 ? <Check size={12} /> : null}</i>
           </div>
           {slot && (
             <div className="bk-picked">
@@ -276,37 +267,8 @@ export function EmbedPage() {
                 {error && <div className="bk-error">{error}</div>}
               </div>
               <div className="bk-foot">
-                <button type="button" className="bk-btn" disabled={!slot} onClick={() => setStep(2)}>
-                  Continue
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 2 && slot && (
-            <>
-              <div className="bk-head">Your Information</div>
-              <div className="bk-body bk-form">
-                <label>
-                  <span>Full name *</span>
-                  <input value={who.name} onChange={(e) => setWho({ ...who, name: e.target.value })} autoComplete="name" />
-                </label>
-                <label>
-                  <span>Phone *</span>
-                  <input type="tel" value={who.phone} onChange={(e) => setWho({ ...who, phone: e.target.value })} autoComplete="tel" placeholder="10-digit mobile number" />
-                </label>
-                <label>
-                  <span>Email *</span>
-                  <input type="email" value={who.email} onChange={(e) => setWho({ ...who, email: e.target.value })} autoComplete="email" />
-                </label>
-                {error && <div className="bk-error">{error}</div>}
-              </div>
-              <div className="bk-foot">
-                <button type="button" className="bk-btn is-ghost" onClick={() => setStep(1)} disabled={busy}>
-                  Back
-                </button>
-                <button type="button" className="bk-btn" onClick={() => void book()} disabled={busy}>
-                  {busy ? 'Booking…' : 'Book now'}
+                <button type="button" className="bk-btn" disabled={!slot || busy} onClick={() => void book()}>
+                  {busy ? 'Booking…' : 'Submit'}
                 </button>
               </div>
             </>
