@@ -38,8 +38,22 @@ export function EmbedPage() {
   const [loading, setLoading] = useState(false)
   const [day, setDay] = useState<string | null>(null)
   const [slot, setSlot] = useState<Slot | null>(null)
-  const [step, setStep] = useState<1 | 2 | 3>(1)
-  const [who, setWho] = useState({ name: '', phone: '', email: '' })
+  // Your Details filled in from the address (?name= / fname & lname, email, phone / mobile), e.g. passed on by the page it's embedded in
+  const [who, setWho] = useState(() => {
+    const q = new URLSearchParams(window.location.search)
+    const get = (...keys: string[]) => keys.map((k) => q.get(k)?.trim() ?? '').find(Boolean) ?? ''
+    const first = get('first_name', 'fname', 'firstname')
+    const last = get('last_name', 'lname', 'lastname')
+    return {
+      name: get('name', 'full_name', 'fullname') || [first, last].filter(Boolean).join(' '),
+      phone: get('phone', 'mobile', 'whatsapp', 'number'),
+      email: get('email', 'mail'),
+    }
+  })
+  // all three already given: start at Date & Time (Back still shows them)
+  const [step, setStep] = useState<1 | 2 | 3>(() =>
+    who.name.trim() && who.phone.replace(/\D/g, '').length >= 10 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim()) ? 2 : 1,
+  )
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
