@@ -25,7 +25,7 @@ export type BookingConfig = {
   /** at least this long from now (hours) */
   notice_hours: number
   webhook: { type: 'workflow'; workflow_id: string } | { type: 'url'; url: string } | { type: 'none' }
-  /** shown after booking ({{name}}, {{date}}, {{time}}) */
+  /** shown after booking ({{date}}, {{time}}) */
   thank_you: string
   /** or send them to this page */
   redirect_url: string
@@ -61,7 +61,7 @@ export const defaultBookingConfig = (color: string): BookingConfig => ({
   days_ahead: 30,
   notice_hours: 1,
   webhook: { type: 'workflow', workflow_id: '' },
-  thank_you: 'Thanks {{name}}! Your call is booked for {{date}} at {{time}}. You’ll get a confirmation shortly.',
+  thank_you: 'Thanks! Your call is booked for {{date}} at {{time}}. You’ll get a confirmation shortly.',
   redirect_url: '',
 })
 
@@ -125,8 +125,8 @@ export async function widgetSlots(code: string, from: string, to: string): Promi
   return (data ?? []) as Slot[]
 }
 
-export async function bookSlot(code: string, start: string, who: { name: string; phone: string; email: string }) {
-  const { data, error } = await db().functions.invoke('widget-book', { body: { code, start, ...who } })
+export async function bookSlot(code: string, start: string) {
+  const { data, error } = await db().functions.invoke('widget-book', { body: { code, start } })
   if (error) {
     const ctx = (error as { context?: Response }).context
     const payload = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null

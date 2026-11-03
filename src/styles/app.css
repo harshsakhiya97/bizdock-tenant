@@ -1157,11 +1157,12 @@ a.db-card:hover { border-color: var(--brand); }
 /* ---- Widgets: Booking Calendar settings ---- */
 .is-clickable.int-card { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
 .is-clickable.int-card:hover { border-color: var(--brand); }
-.bc-days { display: grid; gap: 8px; }
-.bc-day { display: grid; grid-template-columns: 160px 1fr; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.bc-days { display: grid; gap: 6px; max-width: 520px; }
+.bc-day { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.bc-day > .check { width: 140px; flex-shrink: 0; }
 .bc-day.is-off { background: var(--surface-2, #f8fafc); }
-.bc-day input[type='time'] { width: 130px; }
-@media (max-width: 560px) { .bc-day { grid-template-columns: 1fr; } }
+.bc-times { display: flex; align-items: center; gap: 8px; }
+.bc-times .input { width: 126px; height: 34px; padding: 0 8px; }
 .bc-members { display: flex; flex-wrap: wrap; gap: 8px; }
 .bc-member { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; font-size: 13.5px; }
 .bc-member.is-on { border-color: var(--brand); background: color-mix(in srgb, var(--brand) 8%, var(--surface)); }
