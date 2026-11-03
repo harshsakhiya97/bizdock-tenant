@@ -128,12 +128,22 @@ export function EmbedPage() {
   }
   const daySlots = day ? (byDay.get(day) ?? []) : []
 
+  /** step 1 (Your Details) → step 2 (Date & Time) */
+  function detailsProblem() {
+    if (!who.name.trim()) return 'Please enter your name.'
+    if (who.phone.replace(/\D/g, '').length < 10) return 'Please enter a valid phone number.'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim())) return 'Please enter a valid email.'
+    return null
+  }
+
   async function book() {
     if (!slot) return
     setError(null)
-    if (!who.name.trim()) return setError('Please enter your name.')
-    if (who.phone.replace(/\D/g, '').length < 10) return setError('Please enter a valid phone number.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim())) return setError('Please enter a valid email.')
+    const p = detailsProblem()
+    if (p) {
+      setStep(1)
+      return setError(p)
+    }
     setBusy(true)
     try {
       const r = await bookSlot(code, slot.starts_at, { name: who.name.trim(), phone: who.phone.trim(), email: who.email.trim() })
@@ -152,7 +162,6 @@ export function EmbedPage() {
       setError((e as Error).message)
       // the slot may have just gone: show the fresh slots
       if (/just booked|can.t be booked/i.test((e as Error).message)) {
-        setStep(1)
         setSlot(null)
         setReload((x) => x + 1)
       }
@@ -165,11 +174,11 @@ export function EmbedPage() {
       <div className="bk-card">
         <aside className="bk-side">
           <div className={cn('bk-step', step === 1 && 'is-on', step > 1 && 'is-done')}>
-            <CalendarDays size={16} /> <span>Date &amp; Time</span>
+            <User size={16} /> <span>Your Details</span>
             <i>{step > 1 ? <Check size={12} /> : null}</i>
           </div>
           <div className={cn('bk-step', step === 2 && 'is-on', step > 2 && 'is-done')}>
-            <User size={16} /> <span>Your Details</span>
+            <CalendarDays size={16} /> <span>Date &amp; Time</span>
             <i>{step > 2 ? <Check size={12} /> : null}</i>
           </div>
           {slot && (
@@ -186,7 +195,7 @@ export function EmbedPage() {
         </aside>
 
         <main className="bk-main">
-          {step === 1 && (
+          {step === 2 && (
             <>
               <div className="bk-head">Date &amp; Time</div>
               <div className="bk-body">
@@ -283,22 +292,17 @@ export function EmbedPage() {
                 {error && <div className="bk-error">{error}</div>}
               </div>
               <div className="bk-foot">
-                <button
-                  type="button"
-                  className="bk-btn"
-                  disabled={!slot}
-                  onClick={() => {
-                    setError(null)
-                    setStep(2)
-                  }}
-                >
-                  Continue
+                <button type="button" className="bk-btn is-ghost" onClick={() => setStep(1)} disabled={busy}>
+                  Back
+                </button>
+                <button type="button" className="bk-btn" disabled={!slot || busy} onClick={() => void book()}>
+                  {busy ? 'Booking…' : 'Submit'}
                 </button>
               </div>
             </>
           )}
 
-          {step === 2 && slot && (
+          {step === 1 && (
             <>
               <div className="bk-head">Your Details</div>
               <div className="bk-body bk-form">
@@ -317,11 +321,16 @@ export function EmbedPage() {
                 {error && <div className="bk-error">{error}</div>}
               </div>
               <div className="bk-foot">
-                <button type="button" className="bk-btn is-ghost" onClick={() => setStep(1)} disabled={busy}>
-                  Back
-                </button>
-                <button type="button" className="bk-btn" onClick={() => void book()} disabled={busy}>
-                  {busy ? 'Booking…' : 'Submit'}
+                <button
+                  type="button"
+                  className="bk-btn"
+                  onClick={() => {
+                    const p = detailsProblem()
+                    setError(p)
+                    if (!p) setStep(2)
+                  }}
+                >
+                  Continue
                 </button>
               </div>
             </>
