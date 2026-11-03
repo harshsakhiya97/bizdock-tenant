@@ -5,7 +5,7 @@ import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
-import { createWatiTemplate, uploadWaMedia, type WatiTemplate, type WatiTemplateInput } from './watiApi'
+import { createWatiTemplate, listWatiTemplates, uploadWaMedia, type WatiTemplate, type WatiTemplateInput } from './watiApi'
 
 const CATEGORIES = [
   { value: 'MARKETING', label: 'Marketing', hint: 'Offers, reminders to book, announcements' },
@@ -199,7 +199,16 @@ export function WaTemplateNewPage() {
       await createWatiTemplate(tenant.id, template)
       navigate('/integrations/whatsapp/templates', { replace: true })
     } catch (e) {
-      setError((e as Error).message)
+      // the connection dropped before WATI's answer came back (it can take a while with a video):
+      // the template may well be saved, so look for it before calling it a failure
+      const lost = /failed to (send a request|fetch)|load failed|networkerror|network request failed/i.test(`${(e as Error).name} ${(e as Error).message}`)
+      if (lost) {
+        const saved = await listWatiTemplates(tenant.id)
+          .then((all) => all.some((t) => t.elementName === element && (t.language?.value ?? language) === language))
+          .catch(() => false)
+        if (saved) return navigate('/integrations/whatsapp/templates', { replace: true })
+        setError('The connection dropped before WATI answered. Check Your templates in WATI (or reload this list) before submitting again, so it isn’t saved twice.')
+      } else setError((e as Error).message)
       setBusy(false)
     }
   }
