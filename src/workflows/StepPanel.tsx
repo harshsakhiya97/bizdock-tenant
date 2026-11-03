@@ -5,7 +5,7 @@ import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } fro
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
-import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, VarOptions, useVarGroups } from './varGroups'
+import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
@@ -327,7 +327,7 @@ function BulkFields({
   const fromSteps = [...new Set(ctx.linkVars)]
   const dateGroups = [
     { label: ctx.triggerEvent === 'webhook_call' ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(ctx.fieldKeys.map(varKey))].filter((k) => k && !fromSteps.includes(k)).map((k) => [k, k] as [string, string]) },
-    { label: 'From earlier steps', items: fromSteps.map((k) => [k, STEP_VAR_LABEL[k] ?? k] as [string, string]) },
+    ...stepGroups(fromSteps, (k) => STEP_VAR_LABEL[k] ?? k),
   ].filter((g) => g.items.length)
   const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
   const anchorName = anchorText(d, ctx, label)
@@ -1028,13 +1028,15 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                 ))}
               </optgroup>
             )}
-            <optgroup label="From earlier steps">
-              {stepVars.map((k) => (
-                <option key={k} value={`v:${k}`}>
-                  {STEP_VAR_LABEL[k] ?? k}
-                </option>
-              ))}
-            </optgroup>
+            {stepGroups(stepVars, (k) => STEP_VAR_LABEL[k] ?? k).map((g) => (
+              <optgroup key={g.label} label={g.label}>
+                {g.items.map(([k, l]) => (
+                  <option key={k} value={`v:${k}`}>
+                    {l}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </Select>
           {!hookFields.length && <Hint>Send a test post to the trigger’s webhook to pick its fields here.</Hint>}
         </div>

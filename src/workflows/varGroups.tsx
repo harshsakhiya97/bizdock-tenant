@@ -24,6 +24,20 @@ const pretty = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpp
 
 export type VarGroup = { label: string; items: [string, string][] }
 
+/** the Create Zoom meeting step's variables, in the order they're listed */
+const ZOOM_ORDER = ['zoom_start', 'zoom_date_time', 'zoom_date', 'zoom_time', 'zoom_link', 'zoom_short_link', 'zoom_short_link_code', 'zoom_meeting_id', 'zoom_password']
+const isZoom = (k: string) => k.startsWith('zoom_')
+
+/** earlier steps' variables: the Zoom meeting's under their own heading, the rest under From earlier steps */
+export function stepGroups(keys: string[], label: (k: string) => string = (k) => STEP_VAR_LABEL[k] ?? pretty(k)): VarGroup[] {
+  const rank = (k: string) => (ZOOM_ORDER.includes(k) ? ZOOM_ORDER.indexOf(k) : ZOOM_ORDER.length)
+  const zoom = keys.filter(isZoom).sort((a, b) => rank(a) - rank(b))
+  return [
+    { label: 'Zoom meeting', items: zoom.map((k) => [k, label(k)] as [string, string]) },
+    { label: 'From earlier steps', items: keys.filter((k) => !isZoom(k)).map((k) => [k, label(k)] as [string, string]) },
+  ].filter((g) => g.items.length)
+}
+
 /**
  * The variables a step can use, grouped the same way everywhere in the builder:
  * Lead (its standard fields), Extra fields (form / sheet / webhook fields), From earlier steps (Zoom, links…).
@@ -39,7 +53,7 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
   return [
     { label: 'Lead', items: lead.map(([k, l]) => [k, l] as [string, string]) },
     { label: 'Extra fields', items: fields.map((k) => [k, pretty(k)] as [string, string]) },
-    { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
+    ...stepGroups(steps),
   ].filter((g) => g.items.length)
 }
 
@@ -69,7 +83,7 @@ export function useVarGroups(extra: string[], leadVars: readonly (readonly [stri
   return withDateParts(
     [
       { label: 'Webhook fields', items: hook.map((k) => [k, k] as [string, string]) },
-      { label: 'From earlier steps', items: steps.map((k) => [k, STEP_VAR_LABEL[k] ?? pretty(k)] as [string, string]) },
+      ...stepGroups(steps),
     ].filter((g) => g.items.length),
     dates,
   )
