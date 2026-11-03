@@ -333,7 +333,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     touch()
   }
 
-  async function save(nextActive = active) {
+  async function save(nextActive = active, leave = false) {
     if (nextActive && issues.size) {
       setNotice({ error: 'Fix the steps marked with ! before turning the workflow on.' })
       return
@@ -346,6 +346,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       setDirty(false)
       setSavedAt(new Date().toISOString())
       setNotice({ ok: nextActive !== active ? (nextActive ? 'Workflow turned on and saved.' : 'Workflow turned off and saved.') : 'Workflow saved.' })
+      if (leave && back.afterSave) navigate(back.to)
     } catch (e) {
       setNotice({ error: (e as Error).message })
     } finally {
@@ -385,7 +386,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             <button type="button" className="btn btn-outline" onClick={() => navigate(back.to)} disabled={busy}>
               Cancel
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={busy || !loaded || !dirty}>
+            <button type="button" className="btn btn-primary" onClick={() => void save(active, true)} disabled={busy || !loaded || !dirty}>
               <Save size={15} /> {busy ? 'Saving…' : 'Save'}
             </button>
           </div>

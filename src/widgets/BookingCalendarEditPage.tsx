@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Code2, Save } from 'lucide-react'
+import { ArrowLeft, Code2, Network, Save } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { PageHead } from '@/components/ui'
@@ -154,6 +154,15 @@ export function BookingCalendarEditPage() {
         subtitle="Visitors pick a free slot and submit; the booking goes to the webhook. All times are India time."
         actions={
           <div className="row" style={{ gap: 8 }}>
+            {row && hook === 'workflow' && linked && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => navigate(`/workflows/${linked}`, { state: { back: { to: `/widgets/booking-calendar/${row.id}`, label: `Back to ${row.name}`, afterSave: true } } })}
+              >
+                <Network size={16} /> Workflow
+              </button>
+            )}
             {row && (
               <button type="button" className="btn btn-outline" onClick={() => setEmbed(true)}>
                 <Code2 size={16} /> Embed code
@@ -300,7 +309,7 @@ export function BookingCalendarEditPage() {
             </div>
             {hook === 'workflow' && linked && (
               <Hint>
-                <Link to={`/workflows/${linked}`} className="link-btn">
+                <Link to={`/workflows/${linked}`} state={{ back: { to: `/widgets/booking-calendar/${id}`, label: `Back to ${name || 'the booking calendar'}`, afterSave: true } }} className="link-btn">
                   Open the workflow
                 </Link>{' '}
                 to add its steps (turn it on so bookings run it). To see the fields there, click “Listen for a test” on its trigger and make a test booking.
