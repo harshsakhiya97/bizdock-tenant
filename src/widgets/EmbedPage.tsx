@@ -11,6 +11,13 @@ const WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 /** India date of a moment: 2026-11-04 */
 const istDay = (iso: string | number) => new Date(iso).toLocaleDateString('en-CA', { timeZone: TZ })
 const istTime = (iso: string) => new Date(iso).toLocaleTimeString('en-IN', { timeZone: TZ, hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s?(am|pm)$/i, (m) => ` ${m.trim().toLowerCase()}`)
+/** a slot as a range: "10:00 – 10:30 am", "11:30 am – 12:00 pm" */
+function range(a: string, b: string) {
+  const [s, e] = [istTime(a), istTime(b)]
+  const [st, sp] = s.split(' ')
+  const [et, ep] = e.split(' ')
+  return sp === ep ? `${st} – ${et} ${ep}` : `${s} – ${e}`
+}
 const ymd = (y: number, m: number, d: number) => `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 const niceDay = (day: string) => {
   const [y, m, d] = day.split('-').map(Number)
@@ -254,7 +261,7 @@ export function EmbedPage() {
                         const ok = open(s)
                         return (
                           <button key={s.starts_at} type="button" className={cn('bk-slot', !ok && 'is-booked', slot?.starts_at === s.starts_at && 'is-picked')} disabled={!ok} onClick={() => setSlot(s)}>
-                            <b>{istTime(s.starts_at)}</b>
+                            <b>{range(s.starts_at, s.ends_at)}</b>
                             {!ok ? <small>Booked</small> : s.total > 1 ? <small>{s.free} slot{s.free === 1 ? '' : 's'} available</small> : null}
                             {ok && s.total > 1 && <span className="bk-fill" style={{ width: `${Math.round((1 - s.free / s.total) * 100)}%` }} />}
                           </button>

@@ -1208,7 +1208,7 @@ a.db-card:hover { border-color: var(--brand); }
 .bk-day.is-picked .bk-fill { background: rgba(255, 255, 255, .6); }
 .bk-slots { margin-top: 18px; }
 .bk-slots-head { font-weight: 600; margin-bottom: 10px; }
-.bk-slot-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.bk-slot-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
 .bk-slot { position: relative; display: grid; gap: 2px; padding: 10px 8px; border: 1px solid color-mix(in srgb, var(--bk) 40%, #fff); border-radius: 8px; background: #fff; color: var(--bk-ink); font: inherit; cursor: pointer; overflow: hidden; text-align: center; }
 .bk-slot b { font-size: 14px; }
 .bk-slot small { font-size: 11.5px; color: var(--bk-muted); }
