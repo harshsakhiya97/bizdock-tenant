@@ -27,6 +27,7 @@ import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
+import { WidgetsPage } from '@/widgets/WidgetsPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
 
 export default function App() {
@@ -147,6 +148,7 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route path="/widgets" element={<RequirePermission module="widgets"><WidgetsPage /></RequirePermission>} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/whats-new" element={<WhatsNewPage />} />
               </Route>
