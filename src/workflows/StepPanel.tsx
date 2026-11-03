@@ -213,33 +213,45 @@ export function StepPanel({
 
 /** Get lead details: match the lead's phone / email with a field from the trigger or an earlier step */
 function LeadLookupFields({ d, set, disabled, hookOnly, fieldKeys }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; hookOnly: boolean; fieldKeys: string[] }) {
-  const by = d.match === 'email' ? 'email' : 'phone'
+  const by = d.match === 'email' ? 'email' : d.match === 'any' ? 'any' : 'phone'
   const groups = [
     { label: hookOnly ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(fieldKeys.map(varKey))].filter(Boolean).map((k) => [k, k] as [string, string]) },
   ].filter((g) => g.items.length)
+  const pick = (id: string, label: string, key: string, fallback = '') => {
+    const v = String(d[key] ?? fallback)
+    return (
+      <div>
+        <Label htmlFor={id} required>
+          {label}
+        </Label>
+        <Select id={id} value={v} onChange={(e) => set(key, e.target.value)} disabled={disabled}>
+          <option value="">— select —</option>
+          <VarOptions groups={groups} show={(k) => `{{${k}}}`} />
+          {!!v && !groups.some((g) => g.items.some(([k]) => k === v)) && <option value={v}>{`{{${v}}}`}</option>}
+        </Select>
+      </div>
+    )
+  }
   return (
     <>
-      <div className="form-grid" style={{ gridTemplateColumns: '120px 1fr' }}>
-        <div>
-          <Label htmlFor="cb-ll-by">Match by</Label>
-          <Select id="cb-ll-by" value={by} onChange={(e) => set('match', e.target.value)} disabled={disabled}>
-            <option value="phone">Phone</option>
-            <option value="email">Email</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="cb-ll-var" required>
-            With the field
-          </Label>
-          <Select id="cb-ll-var" value={String(d.value_var ?? '')} onChange={(e) => set('value_var', e.target.value)} disabled={disabled}>
-            <option value="">— select —</option>
-            <VarOptions groups={groups} show={(k) => `{{${k}}}`} />
-            {!!d.value_var && !groups.some((g) => g.items.some(([k]) => k === d.value_var)) && <option value={String(d.value_var)}>{`{{${String(d.value_var)}}}`}</option>}
-          </Select>
-        </div>
+      <div>
+        <Label htmlFor="cb-ll-by">Match by</Label>
+        <Select id="cb-ll-by" value={by} onChange={(e) => set('match', e.target.value)} disabled={disabled}>
+          <option value="phone">Phone</option>
+          <option value="email">Email</option>
+          <option value="any">Phone or email (either one)</option>
+        </Select>
       </div>
+      {by === 'any' ? (
+        <div className="form-grid">
+          {pick('cb-ll-ph', 'Phone field', 'phone_var', 'phone')}
+          {pick('cb-ll-em', 'Email field', 'email_var', 'email')}
+        </div>
+      ) : (
+        pick('cb-ll-var', 'With the field', 'value_var')
+      )}
       <Hint>
-        Finds the newest lead in this workflow’s sub-business with this {by === 'phone' ? 'phone number (last 10 digits)' : 'email'}. If there’s none, the run stops with “Lead not found”. After this step, the next steps use that lead: its fields (Lead and Extra fields in every field list), conditions on it, WhatsApp to it and meetings on it.
+        Finds the newest lead in this workflow’s sub-business with this {by === 'phone' ? 'phone number (last 10 digits)' : by === 'email' ? 'email' : 'phone number (last 10 digits) or email — whichever matches'}. If there’s none, the run stops with “Lead not found”. After this step, the next steps use that lead: its fields (Lead and Extra fields in every field list), conditions on it, WhatsApp to it and meetings on it.
       </Hint>
     </>
   )

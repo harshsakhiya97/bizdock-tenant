@@ -9,7 +9,9 @@ import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { createBookingWorkflow, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
+import { listFunnels } from '@/funnels/api'
+import { useBusiness } from '@/business/useBusiness'
+import { createBookingWorkflow, setWorkflowFunnel, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
 /** a BizDock workflow (made on save if not yet) or another tool's webhook URL */
@@ -31,6 +33,7 @@ export function BookingCalendarEditPage() {
   const tyRef = useRef<HTMLTextAreaElement>(null)
   // the message's fields: the booked slot (and the team member it went to)
   const msgFields: [string, string][] = [
+    ['name', 'Visitor’s name'],
     ['date', 'Date (4 Nov 2026)'],
     ['time', 'Start time (3:00 pm)'],
     ['end_time', 'End time (3:30 pm)'],
@@ -48,6 +51,8 @@ export function BookingCalendarEditPage() {
     })
   }
   const [members, setMembers] = useState<MemberOption[]>([])
+  const { inScope } = useBusiness()
+  const [funnels, setFunnels] = useState<{ id: string; name: string; business_id: string; sub_business_id: string | null }[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
@@ -57,6 +62,7 @@ export function BookingCalendarEditPage() {
 
   useEffect(() => {
     void listMemberOptions(tenant.id).then(setMembers)
+    void listFunnels(tenant.id).then(setFunnels, () => undefined)
   }, [tenant.id])
   useEffect(() => {
     if (isNew) return
@@ -80,6 +86,7 @@ export function BookingCalendarEditPage() {
     if (!on.length) return 'Turn on at least one day.'
     for (const d of on) if (!(cfg.days[d.key].start < cfg.days[d.key].end)) return `${d.label}: the end time must be after the start time.`
     if (!(cfg.days_ahead >= 1)) return 'Set how many days ahead people can book.'
+    if (!cfg.funnel_id) return 'Pick the funnel its leads come from.'
     if (!cfg.members.length) return 'Pick at least one team member.'
     if (after === 'message' && !cfg.thank_you.trim()) return 'Write the message shown after booking.'
     if (after === 'redirect' && !/^https?:\/\/\S+$/i.test(cfg.redirect_url.trim())) return 'Give the page to send them to (starting with https://).'
@@ -96,9 +103,9 @@ export function BookingCalendarEditPage() {
       // its own "On webhook call" workflow (with a Create Zoom meeting step): made on the first save, then kept
       let wf = linked
       if (!wf) {
-        wf = await createBookingWorkflow(tenant.id, membership?.id, name, true)
+        wf = await createBookingWorkflow(tenant.id, membership?.id, name, cfg.funnel_id ?? '')
         setLinked(wf)
-      }
+      } else if (cfg.funnel_id !== row?.config.funnel_id) await setWorkflowFunnel(wf, cfg.funnel_id ?? '')
       const webhook: BookingConfig['webhook'] = { type: 'workflow', workflow_id: wf }
       const config: BookingConfig = { ...cfg, webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
       if (isNew) {
@@ -132,7 +139,7 @@ export function BookingCalendarEditPage() {
       </Link>
       <PageHead
         title={isNew ? 'New booking calendar' : name || 'Booking calendar'}
-        subtitle="Visitors pick a free slot and submit; the booking goes to the webhook. All times are India time."
+        subtitle="Visitors pick a free slot and give their name, phone and email. Each booking runs its workflow: the lead is found and a Zoom meeting is booked with the team member. All times are India time."
         actions={
           <div className="row" style={{ gap: 8 }}>
             {row && linked && (
@@ -169,6 +176,22 @@ export function BookingCalendarEditPage() {
                   Name
                 </Label>
                 <TextInput id="bc-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Podcast strategy call" maxLength={80} />
+              </div>
+              <div>
+                <Label htmlFor="bc-funnel" required>
+                  Funnel
+                </Label>
+                <Select id="bc-funnel" value={cfg.funnel_id ?? ''} onChange={(e) => set('funnel_id', e.target.value)}>
+                  <option value="">— select —</option>
+                  {funnels
+                    .filter((f) => inScope(f.business_id, f.sub_business_id) || f.id === cfg.funnel_id)
+                    .map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                </Select>
+                <Hint>Where its visitors’ leads are: each booking is matched to the lead (by phone or email) in this funnel’s sub-business.</Hint>
               </div>
               <div>
                 <Label htmlFor="bc-int" required>
