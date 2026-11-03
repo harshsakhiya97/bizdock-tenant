@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, Code2, Save } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
+import { FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { PageHead } from '@/components/ui'
 import { Flash } from '@/components/Flash'
 import { listMemberOptions } from '@/leads/api'
@@ -34,6 +34,25 @@ export function BookingCalendarEditPage() {
   const [team, setTeam] = useState(false)
   // after booking: show a message, or send them to a page
   const [after, setAfter] = useState<'message' | 'redirect'>('message')
+  const tyRef = useRef<HTMLTextAreaElement>(null)
+  // the message's fields: the booked slot (and the team member it went to)
+  const msgFields: [string, string][] = [
+    ['date', 'Date (4 Nov 2026)'],
+    ['time', 'Start time (3:00 pm)'],
+    ['end_time', 'End time (3:30 pm)'],
+    ...(team ? ([['member_name', 'Team member’s name']] as [string, string][]) : []),
+  ]
+  function insertField(k: string) {
+    const el = tyRef.current
+    const tag = `{{${k}}}`
+    const at = el ? el.selectionStart : cfg.thank_you.length
+    const end = el ? el.selectionEnd : at
+    set('thank_you', cfg.thank_you.slice(0, at) + tag + cfg.thank_you.slice(end))
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(at + tag.length, at + tag.length)
+    })
+  }
   const [members, setMembers] = useState<MemberOption[]>([])
   const [flows, setFlows] = useState<WorkflowRow[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -319,8 +338,20 @@ export function BookingCalendarEditPage() {
                 <Label htmlFor="bc-ty" required>
                   Message
                 </Label>
-                <TextArea id="bc-ty" rows={3} value={cfg.thank_you} onChange={(e) => set('thank_you', e.target.value)} />
-                <Hint>{'{{date}} and {{time}} are filled in, e.g. “4 Nov 2026” and “3:00 pm”.'}</Hint>
+                <textarea id="bc-ty" ref={tyRef} className="input" rows={3} value={cfg.thank_you} onChange={(e) => set('thank_you', e.target.value)} />
+                <Select
+                  aria-label="Insert a field"
+                  value=""
+                  style={{ marginTop: 8, maxWidth: 280 }}
+                  onChange={(e) => e.target.value && insertField(e.target.value)}
+                >
+                  <option value="">Insert a field…</option>
+                  {msgFields.map(([k, l]) => (
+                    <option key={k} value={k}>
+                      {l}
+                    </option>
+                  ))}
+                </Select>
               </div>
             ) : (
               <div style={{ marginTop: 12 }}>
