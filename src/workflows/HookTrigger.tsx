@@ -147,25 +147,6 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
         <Hint>Send a POST (JSON or form) here. Each post starts this workflow while it’s on. Not tied to a funnel: nothing is saved on leads.</Hint>
       </div>
 
-      {widget && (
-        <div>
-          <span className="field-label">Fields from the booking calendar</span>
-          <Hint>
-            Sent by “{widget}” with every booking, under these names (use them as {'{{name}}'}, {'{{meeting_start}}'}…). They’re always all passed, so there’s nothing to test or pick.
-          </Hint>
-          <div className="hook-fields">
-            {fields.map(([k, v]) => (
-              <div key={k} className="hook-field">
-                <div className="hook-field-main">
-                  <code>{k}</code>
-                  <span className="muted small">e.g. {show(v).slice(0, 80) || '—'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {!widget && (
       <div className="row" style={{ gap: 8, alignItems: 'center' }}>
         {!disabled && (
