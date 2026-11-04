@@ -116,9 +116,6 @@ export const BOOKING_FIELDS: Record<string, string> = {
   email: 'visitor@example.com',
   meeting_start: '2026-11-04 15:00',
   meeting_end: '2026-11-04 15:30',
-  meeting_date: '2026-11-04',
-  meeting_time: '15:00',
-  meeting_end_time: '15:30',
   member_email: 'member@example.com',
   widget: '',
 }
