@@ -1,10 +1,11 @@
-import { createContext, memo, useContext, useEffect } from 'react'
+import { createContext, memo, useContext, useEffect, useState } from 'react'
 import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflow/react'
-import { AlertCircle, Plus as PlusIcon } from 'lucide-react'
+import { AlertCircle, Check, Copy, Plus as PlusIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { AddCtx } from './addCtx'
 import { STEP_META, caseLabel, casesOf, messageBlocks, problem, summary, triggerLabel } from './steps'
-import type { FlowContext, StepNode, TriggerData } from './types'
+import { copyStep } from './stepClipboard'
+import type { FlowContext, StepKind, StepNode, TriggerData } from './types'
 
 export const FlowCtx = createContext<FlowContext>({ funnels: [], pages: [], events: [], members: [], workflows: [], funnel: null, event: null, stages: [], tags: [], fieldKeys: [], linkVars: [] })
 
@@ -52,6 +53,12 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
   // WhatsApp / Bulk WhatsApp: To / Template / When for each message (and a Bulk step's stop rule)
   const blocks = messageBlocks(type, data, ctx)
   const stopText = type === 'bulk_whatsapp' && data.stop_on ? summary(type, data, ctx).split('\n').filter((l) => l.startsWith('Stops if')).join('') : ''
+  const [copied, setCopied] = useState(false)
+  useEffect(() => {
+    if (!copied) return
+    const t = setTimeout(() => setCopied(false), 1500)
+    return () => clearTimeout(t)
+  }, [copied])
   return (
     <div className={cn('cb-box', selected && 'is-selected', type === 'trigger' && 'is-trigger')} style={{ ['--c' as string]: meta.color }}>
       {type !== 'trigger' && <Handle type="target" position={Position.Top} className="cb-handle" />}
@@ -67,6 +74,21 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
           <span className="cb-issue" title={issue}>
             <AlertCircle size={15} />
           </span>
+        )}
+        {type !== 'trigger' && (
+          <button
+            type="button"
+            className={cn('cb-copy nodrag nopan', copied && 'is-done')}
+            title={copied ? 'Copied — paste it from + in any workflow' : 'Copy this step'}
+            aria-label="Copy this step"
+            onClick={(e) => {
+              e.stopPropagation()
+              copyStep({ type: type as Exclude<StepKind, 'trigger'>, data: JSON.parse(JSON.stringify(data)) as Record<string, unknown>, from: title })
+              setCopied(true)
+            }}
+          >
+            {copied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
         )}
       </div>
       {type === 'trigger' ? (

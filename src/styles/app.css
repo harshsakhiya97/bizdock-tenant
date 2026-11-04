@@ -556,6 +556,10 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 .cb-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cb-sub { margin-top: 6px; color: var(--text-muted); font-size: 12px; }
 .cb-issue { color: var(--warning); display: inline-flex; }
+.cb-copy { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; flex-shrink: 0; border: 0; border-radius: 6px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.cb-copy:hover { background: color-mix(in srgb, var(--text) 8%, transparent); color: var(--text); }
+.cb-copy.is-done { color: var(--success); }
+.cb-paste { border-style: dashed; border-color: var(--brand); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
 .cb-branches { display: flex; justify-content: space-between; padding: 6px 24% 0 18%; font-size: 10.5px; font-weight: 700; }
 .cb-branches span:first-child { color: var(--success); }
 .cb-branches span:last-child { color: var(--danger); }

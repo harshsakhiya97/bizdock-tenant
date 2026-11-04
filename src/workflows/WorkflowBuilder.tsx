@@ -15,7 +15,7 @@ import {
   type IsValidConnection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { AlertTriangle, Info, Plus, Save, Search, X } from 'lucide-react'
+import { AlertTriangle, ClipboardPaste, Info, Plus, Save, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useBackTo } from './backTo'
 import { HOOK_EVENT } from './HookTrigger'
@@ -25,6 +25,7 @@ import { saveWorkflow } from './api'
 import { AddCtx } from './addCtx'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
+import { useCopiedStep } from './stepClipboard'
 import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -161,7 +162,8 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   // the box picked on the canvas: the open one, else the one still highlighted after its panel was closed
   const pickedId = selectedId ?? nodes.find((n) => n.selected)?.id ?? null
 
-  function addStep(kind: StepKind, position?: { x: number; y: number }) {
+  const copied = useCopiedStep()
+  function addStep(kind: StepKind, position?: { x: number; y: number }, data?: Record<string, unknown>) {
     const id = newId(kind)
     const target = from && nodes.find((n) => n.id === from.source)
     let pos: { x: number; y: number }
@@ -207,7 +209,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
         ])
       }
     }
-    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
+    setNodes((ns) => [...ns.map((n) => ({ ...n, selected: false })), { id, type: kind, position: pos, data: data ? JSON.parse(JSON.stringify(data)) : { ...STEP_DEFAULTS[kind as Exclude<StepKind, 'trigger'>] }, selected: true }])
     setSelectedId(id)
     setAdding(false)
     setFrom(null)
@@ -480,6 +482,19 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                   <Search size={15} />
                   <input autoFocus placeholder="Search steps…" value={find} onChange={(e) => setFind(e.target.value)} />
                 </div>
+                {copied && STEP_META[copied.type] && (
+                  <button type="button" className="cb-tool cb-paste" onClick={() => addStep(copied.type, undefined, copied.data)}>
+                    <span className="cb-icon" style={{ ['--c' as string]: STEP_META[copied.type].color }}>
+                      <ClipboardPaste size={15} />
+                    </span>
+                    <span>
+                      <b>Paste copied step</b>
+                      <small>
+                        {STEP_META[copied.type].label} · {copied.from}
+                      </small>
+                    </span>
+                  </button>
+                )}
                 <div className="stack" style={{ gap: 6 }}>
                   {PALETTE.filter((k) => {
                     const q = find.trim().toLowerCase()
