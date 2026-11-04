@@ -6,19 +6,37 @@ import { varKey } from '@/workflows/types'
 import { FIELD_TYPES, type ProfileField, type ProfileFieldType } from './api'
 
 /** a dropdown's / multi-select's options as chips: type one, then Enter, Tab or Add option (an option may have commas) */
-function OptionsEditor({ label, options, onChange }: { label: string; options: string[]; onChange: (o: string[]) => void }) {
+function OptionsEditor({
+  label,
+  options,
+  onChange,
+  placeholder = 'Type an option, then Enter or Tab',
+  addLabel = 'Add option',
+  clean = (v: string) => v.trim(),
+  fixed,
+}: {
+  label: string
+  options: string[]
+  onChange: (o: string[]) => void
+  placeholder?: string
+  addLabel?: string
+  clean?: (v: string) => string
+  /** a chip that's always there (can't be removed) */
+  fixed?: string
+}) {
   const [draft, setDraft] = useState('')
   const add = () => {
-    const v = draft.trim()
+    const v = clean(draft)
     if (!v) return false
-    if (!options.some((o) => o.toLowerCase() === v.toLowerCase())) onChange([...options, v])
+    if (v !== fixed && !options.some((o) => o.toLowerCase() === v.toLowerCase())) onChange([...options, v])
     setDraft('')
     return true
   }
   return (
     <div className="pf-options">
-      {options.length > 0 && (
+      {(options.length > 0 || !!fixed) && (
         <div className="pf-chips">
+          {fixed && <span className="pf-chip is-fixed" title="Always (the field's own name)">{fixed}</span>}
           {options.map((o) => (
             <span key={o} className="pf-chip">
               {o}
@@ -31,8 +49,8 @@ function OptionsEditor({ label, options, onChange }: { label: string; options: s
       )}
       <div className="pf-option-add">
         <TextInput
-          aria-label={`${label || 'Field'}: new option`}
-          placeholder="Type an option, then Enter or Tab"
+          aria-label={`${label || 'Field'}: ${addLabel.toLowerCase()}`}
+          placeholder={placeholder}
           value={draft}
           maxLength={120}
           onChange={(e) => setDraft(e.target.value)}
@@ -44,18 +62,18 @@ function OptionsEditor({ label, options, onChange }: { label: string; options: s
           }}
         />
         <button type="button" className="btn btn-outline btn-sm" onClick={add} disabled={!draft.trim()}>
-          <Plus size={14} /> Add option
+          <Plus size={14} /> {addLabel}
         </button>
       </div>
     </div>
   )
 }
 
-/** always asked (they find or add the lead) */
-const FIXED: [string, string, string][] = [
-  ['name', 'Full name', 'Text'],
-  ['phone', 'Phone', 'Phone'],
-  ['email', 'Email', 'Email'],
+/** always asked (they find or add the lead), and the page-address names each one is filled from */
+const FIXED: [string, string, string, string][] = [
+  ['name', 'Full name', 'Text', 'name, full_name, fullname, or first_name / fname + last_name / lname'],
+  ['phone', 'Phone', 'Phone', 'phone, mobile, whatsapp, number'],
+  ['email', 'Email', 'Email', 'email, mail'],
 ]
 
 /**
@@ -82,10 +100,11 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
           <span>Required</span>
           <span />
         </div>
-        {FIXED.map(([k, l, t]) => (
+        {FIXED.map(([k, l, t, from]) => (
           <div key={k} className="pf-row is-fixed">
             <span className="pf-fixed-name">
               <Lock size={13} /> {l}
+              <small className="muted pf-from">From the page address: {from}</small>
             </span>
             <span className="muted">{t}</span>
             <span className="muted small">Always</span>
@@ -119,6 +138,18 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
                   <Trash2 size={14} />
                 </button>
               </span>
+            </div>
+            <div className="pf-from-row">
+              <span className="muted small">From the page address (e.g. ?{f.key || 'company_name'}=…)</span>
+              <OptionsEditor
+                label={f.label}
+                options={f.params ?? []}
+                onChange={(params) => put(i, { params })}
+                placeholder="Another name for it in the address, then Enter or Tab"
+                addLabel="Add name"
+                clean={varKey}
+                fixed={f.key || undefined}
+              />
             </div>
             {(f.type === 'select' || f.type === 'multiselect') && (
               <OptionsEditor label={f.label} options={f.options ?? []} onChange={(options) => put(i, { options })} />

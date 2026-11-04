@@ -1275,3 +1275,7 @@ a.db-card:hover { border-color: var(--brand); }
 .pf-chip button:hover { background: color-mix(in srgb, var(--brand) 15%, transparent); }
 .pf-option-add { display: flex; gap: 8px; align-items: center; }
 .pf-option-add .input { flex: 1; }
+.pf-fixed-name { flex-wrap: wrap; }
+.pf-from { display: block; width: 100%; font-weight: 400; font-size: 11.5px; margin-top: 2px; }
+.pf-from-row { display: flex; flex-direction: column; gap: 6px; }
+.pf-chip.is-fixed { padding-right: 10px; background: var(--surface-muted, #f1f5f9); color: var(--text-muted); }

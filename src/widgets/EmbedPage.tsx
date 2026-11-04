@@ -3,7 +3,7 @@ import { useParams } from 'react-router'
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { bookSlot, publicWidget, widgetSlots, type PublicWidget, type Slot } from './api'
+import { bookSlot, publicWidget, widgetSlots, type ProfileField, type PublicWidget, type Slot } from './api'
 
 const TZ = 'Asia/Kolkata'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -27,6 +27,41 @@ const niceDay = (day: string) => {
 const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate()
 
 /** <app>/embed/<code>: the public booking calendar shown in the iframe (no login). India time throughout. */
+/** a value from the embed's own address, else from the page it's on (sent as the referrer: the embed code asks for the full one) */
+function fromAddress(...keys: string[]) {
+  const q = new URLSearchParams(window.location.search)
+  let host = new URLSearchParams()
+  try {
+    host = new URL(document.referrer).searchParams
+  } catch {
+    /* no referrer */
+  }
+  // the names as given, and in the usual form (Company Name → company_name)
+  const names = [...new Set(keys.flatMap((k) => [k, k.toLowerCase()]))]
+  return names.map((k) => q.get(k)?.trim() || host.get(k)?.trim() || '').find(Boolean) ?? ''
+}
+
+/** a booking calendar's own fields filled from the page address (dropdowns: only one of their options) */
+function answersFromAddress(fields: ProfileField[]) {
+  const out: Record<string, string | string[]> = {}
+  for (const f of fields) {
+    const v = fromAddress(f.key, ...(f.params ?? []))
+    if (!v) continue
+    const opts = f.options ?? []
+    const match = (x: string) => opts.find((o) => o.toLowerCase() === x.trim().toLowerCase())
+    if (f.type === 'select') {
+      const o = match(v)
+      if (o) out[f.key] = o
+    } else if (f.type === 'multiselect') {
+      // the whole value as one option, else its comma-separated parts
+      const whole = match(v)
+      const picks = whole ? [whole] : v.split(',').map(match).filter((x): x is string => !!x)
+      if (picks.length) out[f.key] = opts.filter((o) => picks.includes(o))
+    } else out[f.key] = v
+  }
+  return out
+}
+
 export function EmbedPage() {
   const { code = '' } = useParams()
   const tenant = useTenant()
@@ -40,15 +75,7 @@ export function EmbedPage() {
   const [slot, setSlot] = useState<Slot | null>(null)
   // Your Details filled in from the address (?name= / fname & lname, email, phone / mobile), e.g. passed on by the page it's embedded in
   const [who, setWho] = useState(() => {
-    const q = new URLSearchParams(window.location.search)
-    // also the host page's own address (sent as the referrer: the embed code asks for the full one)
-    let host = new URLSearchParams()
-    try {
-      host = new URL(document.referrer).searchParams
-    } catch {
-      /* no referrer */
-    }
-    const get = (...keys: string[]) => keys.map((k) => q.get(k)?.trim() || host.get(k)?.trim() || '').find(Boolean) ?? ''
+    const get = fromAddress
     const first = get('first_name', 'fname', 'firstname')
     const last = get('last_name', 'lname', 'lastname')
     return {
@@ -78,8 +105,11 @@ export function EmbedPage() {
   useEffect(() => {
     publicWidget(code).then((x) => {
       setW(x)
-      // a required field of its own still to fill: start at Your Details
-      if (x?.fields?.some((f) => f.required)) setStep((s) => (s === 2 ? 1 : s))
+      // its own fields from the page address; a required one still empty: start at Your Details
+      const given = answersFromAddress(x?.fields ?? [])
+      setAnswers((a) => ({ ...given, ...a }))
+      const empty = (x?.fields ?? []).some((f) => f.required && !(Array.isArray(given[f.key]) ? given[f.key].length : String(given[f.key] ?? '').trim()))
+      if (empty) setStep((s) => (s === 2 ? 1 : s))
     }, () => setW(null))
   }, [code])
 
