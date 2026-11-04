@@ -29,7 +29,6 @@ import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
 import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
-import { BookingCalendarEditPage } from '@/widgets/BookingCalendarEditPage'
 import { EmbedPage } from '@/widgets/EmbedPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
 
@@ -154,8 +153,7 @@ export default function App() {
                   }
                 />
                 <Route path="/widgets" element={<RequirePermission module="widgets"><WidgetsPage /></RequirePermission>} />
-                <Route path="/widgets/booking-calendar" element={<RequirePermission module="widgets"><BookingCalendarsPage /></RequirePermission>} />
-                <Route path="/widgets/booking-calendar/:id" element={<RequirePermission module="widgets"><BookingCalendarEditPage /></RequirePermission>} />
+                <Route path="/widgets/booking-calendar/:id?" element={<RequirePermission module="widgets"><BookingCalendarsPage /></RequirePermission>} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/whats-new" element={<WhatsNewPage />} />
               </Route>

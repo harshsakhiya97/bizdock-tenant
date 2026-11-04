@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Code2, Network, Save } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { Code2, Network } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
+import { Button } from '@/components/Button'
+import { Drawer } from '@/components/Drawer'
 import { FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
-import { PageHead } from '@/components/ui'
-import { Flash } from '@/components/Flash'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
@@ -14,11 +14,11 @@ import { useBusiness } from '@/business/useBusiness'
 import { createBookingWorkflow, setBookingSample, setWorkflowFunnel, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
-/** a BizDock workflow (made on save if not yet) or another tool's webhook URL */
-
-/** New / edit a Booking Calendar: slot length, days & hours, team, colour, booking window, webhook and after booking. */
-export function BookingCalendarEditPage() {
-  const { id } = useParams()
+/**
+ * New / edit a Booking Calendar in the side drawer (like every add / edit): slot length, days & hours, team, colour,
+ * booking window and after booking. Saving closes it (a new one: its embed code opens on the list).
+ */
+export function BookingCalendarDrawer({ id, onClose, onSaved }: { id: string; onClose: () => void; onSaved: (w: WidgetRow, isNew: boolean) => void }) {
   const isNew = !id || id === 'new'
   const tenant = useTenant()
   const { membership, can } = useAuth()
@@ -54,7 +54,6 @@ export function BookingCalendarEditPage() {
   const { inScope } = useBusiness()
   const [funnels, setFunnels] = useState<{ id: string; name: string; business_id: string; sub_business_id: string | null }[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState<string | undefined>()
   const [busy, setBusy] = useState(false)
   const [missing, setMissing] = useState(false)
   const [embed, setEmbed] = useState(false)
@@ -95,7 +94,6 @@ export function BookingCalendarEditPage() {
 
   async function save() {
     setError(null)
-    setSaved(undefined)
     const p = problem()
     if (p) return setError(p)
     setBusy(true)
@@ -112,65 +110,62 @@ export function BookingCalendarEditPage() {
       const config: BookingConfig = { ...cfg, webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
       if (isNew) {
         const w = await createWidget(tenant.id, membership?.id, name, config)
-        navigate(`/widgets/booking-calendar/${w.id}`, { replace: true })
-        setSaved('Saved. Copy the embed code and paste it on your page.')
-        setEmbed(true)
-      } else {
-        await updateWidget(id!, { name: name.trim(), config })
-        setRow((r) => (r ? { ...r, name: name.trim(), config } : r))
-        setCfg(config)
-        setSaved('Saved. The embed shows the changes straight away.')
+        setBusy(false)
+        return onSaved(w, true)
       }
+      await updateWidget(id, { name: name.trim(), config })
+      setBusy(false)
+      return onSaved({ ...row!, name: name.trim(), config }, false)
     } catch (e) {
       setError((e as Error).message)
     }
     setBusy(false)
   }
 
-  if (missing)
-    return (
-      <div className="empty">
-        This booking calendar doesn’t exist or was deleted. <Link to="/widgets/booking-calendar" className="link-btn">Back to booking calendars</Link>
-      </div>
-    )
-
   return (
-    <>
-      <Link to="/widgets/booking-calendar" className="back-link">
-        <ArrowLeft size={14} /> Booking Calendar
-      </Link>
-      <PageHead
-        title={isNew ? 'New booking calendar' : name || 'Booking calendar'}
-        subtitle="Visitors pick a free slot and give their name, phone and email. Each booking runs its workflow: the lead is found and a Zoom meeting is booked with the team member. All times are India time."
-        actions={
+    <Drawer
+      open
+      onClose={onClose}
+      width={760}
+      title={isNew ? 'New booking calendar' : `Booking calendar · ${row?.name ?? ''}`}
+      footer={
+        <>
           <div className="row" style={{ gap: 8 }}>
             {row && linked && (
-              <button
-                type="button"
-                className="btn btn-outline"
+              <Button
+                variant="outline"
                 onClick={() => navigate(`/workflows/${linked}`, { state: { back: { to: `/widgets/booking-calendar/${row.id}`, label: `Back to ${row.name}`, afterSave: true } } })}
               >
-                <Network size={16} /> Workflow
-              </button>
+                <Network size={15} /> Workflow
+              </Button>
             )}
             {row && (
-              <button type="button" className="btn btn-outline" onClick={() => setEmbed(true)}>
-                <Code2 size={16} /> Embed code
-              </button>
-            )}
-            {canSave && (
-              <button type="button" className="btn btn-primary" onClick={() => void save()} disabled={busy}>
-                <Save size={16} /> {busy ? 'Saving…' : 'Save'}
-              </button>
+              <Button variant="outline" onClick={() => setEmbed(true)}>
+                <Code2 size={15} /> Embed code
+              </Button>
             )}
           </div>
-        }
-      />
-      {error && <div className="alert alert-error">{error}</div>}
-      <Flash msg={saved} dep={saved} />
-
-      <div className="panel">
-        <div className="panel-body stack" style={{ gap: 22, maxWidth: 820 }}>
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button variant="outline" onClick={onClose}>
+              {canSave ? 'Cancel' : 'Close'}
+            </Button>
+            {canSave && (
+              <Button onClick={() => void save()} disabled={busy || missing}>
+                {busy ? 'Saving…' : isNew ? 'Create booking calendar' : 'Save'}
+              </Button>
+            )}
+          </div>
+        </>
+      }
+    >
+      {missing ? (
+        <div className="empty">This booking calendar doesn’t exist or was deleted.</div>
+      ) : (
+        <div className="stack" style={{ gap: 22 }}>
+          <p className="muted small" style={{ margin: 0 }}>
+            Visitors pick a free slot and give their name, phone and email. Each booking runs its workflow: the lead is found and a Zoom meeting is booked with the team member. All times are India time.
+          </p>
           <FormSection title="Basics">
             <div className="form-grid">
               <div>
@@ -330,9 +325,9 @@ export function BookingCalendarEditPage() {
             )}
           </FormSection>
         </div>
-      </div>
+      )}
 
       {embed && row && <EmbedModal widget={row} onClose={() => setEmbed(false)} />}
-    </>
+    </Drawer>
   )
 }
