@@ -11,7 +11,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listFunnels } from '@/funnels/api'
 import { useBusiness } from '@/business/useBusiness'
-import { createBookingWorkflow, setWorkflowFunnel, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
+import { createBookingWorkflow, setBookingSample, setWorkflowFunnel, createWidget, DAYS, defaultBookingConfig, getWidget, INTERVALS, updateWidget, type BookingConfig, type DayKey, type WidgetRow } from './api'
 import { EmbedModal } from './EmbedModal'
 
 /** a BizDock workflow (made on save if not yet) or another tool's webhook URL */
@@ -106,6 +106,8 @@ export function BookingCalendarEditPage() {
         wf = await createBookingWorkflow(tenant.id, membership?.id, name, cfg.funnel_id ?? '')
         setLinked(wf)
       } else if (cfg.funnel_id !== row?.config.funnel_id) await setWorkflowFunnel(wf, cfg.funnel_id ?? '')
+      // its fields show the team member's real email (member_email)
+      await setBookingSample(wf, name, cfg.members[0]).catch(() => undefined)
       const webhook: BookingConfig['webhook'] = { type: 'workflow', workflow_id: wf }
       const config: BookingConfig = { ...cfg, webhook, redirect_url: after === 'redirect' ? cfg.redirect_url.trim() : '', thank_you: cfg.thank_you.trim() }
       if (isNew) {
