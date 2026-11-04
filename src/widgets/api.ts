@@ -16,7 +16,15 @@ export type DayHours = { on: boolean; start: string; end: string }
 
 /** a field the visitor fills in besides name, phone and email (sent to the webhook as its key) */
 export type ProfileFieldType = 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select' | 'multiselect'
-export type ProfileField = { key: string; label: string; type: ProfileFieldType; required: boolean; options?: string[] }
+export type ProfileField = {
+  key: string
+  label: string
+  type: ProfileFieldType
+  required: boolean
+  options?: string[]
+  /** other names it's filled from in the page address (besides its key): ?company=… */
+  params?: string[]
+}
 export const FIELD_TYPES: [ProfileFieldType, string][] = [
   ['text', 'Text'],
   ['textarea', 'Long text'],
