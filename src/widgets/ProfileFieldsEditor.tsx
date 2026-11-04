@@ -14,6 +14,7 @@ function OptionsEditor({
   addLabel = 'Add option',
   clean = (v: string) => v.trim(),
   fixed,
+  asParam = false,
 }: {
   label: string
   options: string[]
@@ -23,6 +24,8 @@ function OptionsEditor({
   clean?: (v: string) => string
   /** a chip that's always there (can't be removed) */
   fixed?: string
+  /** page-address names: outlined, as ?name= */
+  asParam?: boolean
 }) {
   const [draft, setDraft] = useState('')
   const add = () => {
@@ -36,10 +39,14 @@ function OptionsEditor({
     <div className="pf-options">
       {(options.length > 0 || !!fixed) && (
         <div className="pf-chips">
-          {fixed && <span className="pf-chip is-fixed" title="Always (the field's own name)">{fixed}</span>}
+          {fixed && (
+            <span className={asParam ? 'pf-chip is-param is-fixed' : 'pf-chip is-fixed'} title="Always (the field's own name)">
+              {asParam ? `?${fixed}=` : fixed}
+            </span>
+          )}
           {options.map((o) => (
-            <span key={o} className="pf-chip">
-              {o}
+            <span key={o} className={asParam ? 'pf-chip is-param' : 'pf-chip'}>
+              {asParam ? `?${o}=` : o}
               <button type="button" aria-label={`Remove ${o}`} title="Remove" onClick={() => onChange(options.filter((x) => x !== o))}>
                 <X size={12} />
               </button>
@@ -139,8 +146,14 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
                 </button>
               </span>
             </div>
-            <div className="pf-from-row">
-              <span className="muted small">From the page address (e.g. ?{f.key || 'company_name'}=…)</span>
+            {(f.type === 'select' || f.type === 'multiselect') && (
+              <div className="pf-sub">
+                <span className="pf-sub-label">Options</span>
+                <OptionsEditor label={f.label} options={f.options ?? []} onChange={(options) => put(i, { options })} />
+              </div>
+            )}
+            <div className="pf-sub">
+              <span className="pf-sub-label">Filled from the page address</span>
               <OptionsEditor
                 label={f.label}
                 options={f.params ?? []}
@@ -149,11 +162,10 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
                 addLabel="Add name"
                 clean={varKey}
                 fixed={f.key || undefined}
+                asParam
               />
             </div>
-            {(f.type === 'select' || f.type === 'multiselect') && (
-              <OptionsEditor label={f.label} options={f.options ?? []} onChange={(options) => put(i, { options })} />
-            )}
+
           </div>
         ))}
       </div>
