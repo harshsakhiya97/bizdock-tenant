@@ -170,6 +170,18 @@ export const looksLikeWhen = (v: unknown) => {
 /** a field named like a date (when there is no sample value to go by) */
 export const namedLikeWhen = (k: string) => /(date|time|_at$|^when)/i.test(k)
 
+/**
+ * A field's name as shown in the lists, in Title Case with spaces: meeting_end → Meeting End,
+ * "meeting_start – date (29 Oct 2026)" → "Meeting Start – Date (29 Oct 2026)" (examples in brackets kept as they are)
+ */
+export function fieldLabel(label: string): string {
+  return label
+    .replace(/_/g, ' ')
+    .split(/(\([^)]*\))/)
+    .map((part) => (part.startsWith('(') && /\d/.test(part) ? part : part.replace(/\b([a-z])([a-z]*)/gi, (_, a: string, b: string) => a.toUpperCase() + b)))
+    .join('')
+}
+
 /** <optgroup>s for a variable <select> */
 export function VarOptions({ groups, show }: { groups: VarGroup[]; show?: (key: string, label: string) => string }) {
   return (
@@ -178,7 +190,7 @@ export function VarOptions({ groups, show }: { groups: VarGroup[]; show?: (key: 
         <optgroup key={g.label} label={g.label}>
           {g.items.map(([k, l]) => (
             <option key={k} value={k}>
-              {show ? show(k, l) : l}
+              {show ? show(k, l) : fieldLabel(l)}
             </option>
           ))}
         </optgroup>
