@@ -91,7 +91,7 @@ export function StepPanel({
             extraFields={extras}
           />
         )}
-        {kind === 'lead_lookup' && <LeadLookupFields d={d} set={set} disabled={ro} hookOnly={hookOnly} fieldKeys={ctx.fieldKeys} />}
+        {kind === 'lead_lookup' && <LeadLookupFields d={d} set={set} put={(p) => onChange({ ...d, ...p })} disabled={ro} hookOnly={hookOnly} fieldKeys={ctx.fieldKeys} />}
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
         {kind === 'zoom_meeting' && (
           <>
@@ -206,12 +206,31 @@ export function StepPanel({
   )
 }
 
+/** the trigger fields that usually hold the phone / the email (picked for you when Match by changes) */
+const PHONE_KEYS = ['phone', 'mobile', 'phone_number', 'mobile_number', 'whatsapp', 'whatsapp_number', 'contact', 'contact_number']
+const EMAIL_KEYS = ['email', 'email_address', 'email_id', 'mail']
+
 /** Get lead details: match the lead's phone / email with a field from the trigger or an earlier step */
-function LeadLookupFields({ d, set, disabled, fieldKeys }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; hookOnly?: boolean; fieldKeys: string[] }) {
+function LeadLookupFields({
+  d,
+  set,
+  put,
+  disabled,
+  fieldKeys,
+}: {
+  d: Record<string, unknown>
+  set: (k: string, v: unknown) => void
+  put: (patch: Record<string, unknown>) => void
+  disabled: boolean
+  hookOnly?: boolean
+  fieldKeys: string[]
+}) {
   const by = d.match === 'email' ? 'email' : d.match === 'any' ? 'any' : 'phone'
   const groups = [
     { label: 'Step 1: Trigger', items: [...new Set(fieldKeys.map(varKey))].filter(Boolean).map((k) => [k, k] as [string, string]) },
   ].filter((g) => g.items.length)
+  const keys = [...new Set(fieldKeys.map(varKey))].filter(Boolean)
+  const guess = (names: string[]) => names.find((n) => keys.includes(n)) ?? ''
   const pick = (id: string, label: string, key: string, fallback = '') => {
     const v = String(d[key] ?? fallback)
     return (
@@ -231,7 +250,24 @@ function LeadLookupFields({ d, set, disabled, fieldKeys }: { d: Record<string, u
     <>
       <div>
         <Label htmlFor="cb-ll-by">Match by</Label>
-        <Select id="cb-ll-by" value={by} onChange={(e) => set('match', e.target.value)} disabled={disabled}>
+        <Select
+          id="cb-ll-by"
+          value={by}
+          onChange={(e) => {
+            const m = e.target.value
+            // the trigger's phone / email field is picked for you (when it has one)
+            const phone = guess(PHONE_KEYS)
+            const email = guess(EMAIL_KEYS)
+            const cur = String(d.value_var ?? '')
+            if (m === 'any') put({ match: m, phone_var: d.phone_var || phone || 'phone', email_var: d.email_var || email || 'email' })
+            else {
+              const want = m === 'email' ? email : phone
+              const other = m === 'email' ? phone : email
+              put({ match: m, value_var: !cur || cur === other ? want : cur })
+            }
+          }}
+          disabled={disabled}
+        >
           <option value="phone">Phone</option>
           <option value="email">Email</option>
           <option value="any">Phone or email (either one)</option>
