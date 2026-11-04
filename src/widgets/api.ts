@@ -119,12 +119,8 @@ export const BOOKING_FIELDS: Record<string, string> = {
   meeting_date: '2026-11-04',
   meeting_time: '15:00',
   meeting_end_time: '15:30',
-  member_id: '',
-  member_name: 'Team member',
   member_email: 'member@example.com',
-  member_phone: '9876543210',
   widget: '',
-  booking_id: '',
 }
 
 /**
@@ -153,7 +149,7 @@ export async function createBookingWorkflow(tenantId: string, memberId: string |
       start_var: 'meeting_start',
       end_var: 'meeting_end',
       meet_mode: 'webhook',
-      meet_var: 'member_id',
+      meet_var: 'member_email',
     },
   }
   const { error } = await db()
