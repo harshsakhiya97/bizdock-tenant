@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Check, Copy, FlaskConical, RefreshCw } from 'lucide-react'
+import { Check, Code2, Copy, FlaskConical, RefreshCw } from 'lucide-react'
 import { Hint, TextInput } from '@/components/Field'
 import { webhookUrl } from '@/funnels/api'
+import { curlSnippet, htmlSnippet, jsSnippet } from '@/funnels/snippets'
+import { cn } from '@/lib/cn'
 import { ensureWorkflowHook, getWorkflowHook, listenWorkflowHook, regenerateWorkflowHook, saveWorkflowHookFields } from './api'
 import { varKey, type WorkflowHook } from './types'
 import { db } from '@/lib/supabase'
@@ -112,6 +114,9 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
     setSaving(false)
   }
 
+  // How to connect: the snippet shown (HTML form / JavaScript / cURL)
+  const [snippet, setSnippet] = useState<'html' | 'js' | 'curl' | null>(null)
+  const [snipCopied, setSnipCopied] = useState(false)
   const fields = useMemo(() => Object.entries(hook?.sample ?? {}), [hook?.sample])
   const shown = fields.filter(([k, v]) => !search.trim() || `${k} ${show(v)}`.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 150)
   const dirty = JSON.stringify(picked) !== JSON.stringify(hook?.field_map ?? {})
@@ -121,6 +126,8 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
   if (!hook) return <div className="muted small">Getting the webhook URL…</div>
 
   const url = webhookUrl(hook.webhook_key)
+  const asHook = { webhook_key: hook.webhook_key, sample: hook.sample ?? null, field_map: {}, action: 'workflow', match_by: null } as unknown as Parameters<typeof htmlSnippet>[0]
+  const snippetText = snippet === 'html' ? htmlSnippet(asHook) : snippet === 'curl' ? curlSnippet(asHook) : snippet === 'js' ? jsSnippet(asHook) : ''
   return (
     <div className="stack">
       <div>
@@ -145,6 +152,38 @@ export function HookTrigger({ workflowId, disabled }: { workflowId?: string; dis
           )}
         </div>
         <Hint>Send a POST (JSON or form) here. Each post starts this workflow while it’s on. Not tied to a funnel: nothing is saved on leads.</Hint>
+      </div>
+
+      {/* the same "How to connect" as a funnel's webhooks: a form, a JavaScript call or cURL, with this workflow's fields */}
+      <div className="stack" style={{ gap: 8 }}>
+        <div className="row">
+          <span className="lp-label" style={{ marginRight: 4 }}>
+            <Code2 size={13} /> How to connect
+          </span>
+          <div className="seg seg-sm">
+            {(['html', 'js', 'curl'] as const).map((k) => (
+              <button key={k} type="button" className={cn(snippet === k && 'is-active')} onClick={() => setSnippet((x) => (x === k ? null : k))}>
+                {k === 'html' ? 'HTML form' : k === 'js' ? 'JavaScript' : 'cURL'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {snippet && (
+          <div className="snippet">
+            <button
+              type="button"
+              className="btn btn-outline btn-sm snippet-copy"
+              onClick={() => {
+                void navigator.clipboard.writeText(snippetText)
+                setSnipCopied(true)
+                window.setTimeout(() => setSnipCopied(false), 1500)
+              }}
+            >
+              {snipCopied ? <Check size={14} /> : <Copy size={14} />} {snipCopied ? 'Copied' : 'Copy'}
+            </button>
+            <pre>{snippetText}</pre>
+          </div>
+        )}
       </div>
 
       {!widget && (

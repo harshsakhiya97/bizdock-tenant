@@ -30,7 +30,9 @@ const targetOf = (h: Hook, k: string) => (h.field_map ?? {})[k] ?? guessTarget(k
 
 /** the reply the webhook sends back */
 function replyOf(h: Hook) {
-  switch (h.action) {
+  switch (h.action as string) {
+    case 'workflow':
+      return '{"ok":true,"status":"started","run_id":"…"}  (the workflow is off → nothing runs)'
     case 'update_lead':
       return '{"ok":true,"status":"updated","lead_id":"…"}  (no lead with this phone / email → "no_match")'
     case 'create_meeting':
