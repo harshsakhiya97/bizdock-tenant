@@ -1,9 +1,55 @@
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, Lock, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Lock, Plus, Trash2, X } from 'lucide-react'
 import { FormSection, Hint, Select, TextInput } from '@/components/Field'
 import { ConfirmModal } from '@/components/ui'
 import { varKey } from '@/workflows/types'
 import { FIELD_TYPES, type ProfileField, type ProfileFieldType } from './api'
+
+/** a dropdown's / multi-select's options as chips: type one, then Enter, Tab or Add option (an option may have commas) */
+function OptionsEditor({ label, options, onChange }: { label: string; options: string[]; onChange: (o: string[]) => void }) {
+  const [draft, setDraft] = useState('')
+  const add = () => {
+    const v = draft.trim()
+    if (!v) return false
+    if (!options.some((o) => o.toLowerCase() === v.toLowerCase())) onChange([...options, v])
+    setDraft('')
+    return true
+  }
+  return (
+    <div className="pf-options">
+      {options.length > 0 && (
+        <div className="pf-chips">
+          {options.map((o) => (
+            <span key={o} className="pf-chip">
+              {o}
+              <button type="button" aria-label={`Remove ${o}`} title="Remove" onClick={() => onChange(options.filter((x) => x !== o))}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="pf-option-add">
+        <TextInput
+          aria-label={`${label || 'Field'}: new option`}
+          placeholder="Type an option, then Enter or Tab"
+          value={draft}
+          maxLength={120}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey && draft.trim())) {
+              e.preventDefault()
+              add()
+            }
+          }}
+        />
+        <button type="button" className="btn btn-outline btn-sm" onClick={add} disabled={!draft.trim()}>
+          <Plus size={14} /> Add option
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /** always asked (they find or add the lead) */
 const FIXED: [string, string, string][] = [
@@ -75,14 +121,7 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
               </span>
             </div>
             {(f.type === 'select' || f.type === 'multiselect') && (
-              <div className="pf-options">
-                <TextInput
-                  aria-label={`${f.label || 'Field'} options`}
-                  placeholder="Options, separated by commas (e.g. Coach, Entrepreneur, Creator)"
-                  value={(f.options ?? []).join(', ')}
-                  onChange={(e) => put(i, { options: e.target.value.split(',').map((o) => o.trimStart()) })}
-                />
-              </div>
+              <OptionsEditor label={f.label} options={f.options ?? []} onChange={(options) => put(i, { options })} />
             )}
           </div>
         ))}
