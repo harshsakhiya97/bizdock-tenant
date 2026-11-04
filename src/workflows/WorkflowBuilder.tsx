@@ -370,10 +370,10 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     touch()
   }
 
-  async function save(nextActive = active, leave = false) {
+  async function save(nextActive = active, leave = false): Promise<boolean> {
     if (nextActive && issues.size) {
       setNotice({ error: 'Fix the steps marked with ! before turning the workflow on.' })
-      return
+      return false
     }
     setBusy(true)
     try {
@@ -384,11 +384,18 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       setSavedAt(new Date().toISOString())
       setNotice({ ok: nextActive !== active ? (nextActive ? 'Workflow turned on and saved.' : 'Workflow turned off and saved.') : 'Workflow saved.' })
       if (leave && back.afterSave) navigate(back.to)
+      return true
     } catch (e) {
       setNotice({ error: (e as Error).message })
+      return false
     } finally {
       setBusy(false)
     }
+  }
+  /** Go to workflow → "Save & open workflow": this one is saved, then the next opens (its Back comes here) */
+  async function openWorkflow(id: string) {
+    if (dirty && !(await save())) return
+    navigate(`/workflows/${id}`, { state: { back: { to: `/workflows/${workflow.id}`, label: `Back to ${name || 'the workflow'}` } } })
   }
 
   return (
@@ -575,6 +582,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
               onDelete={deleteSelected}
               onClose={() => setSelectedId(null)}
               onSave={() => void save()}
+              onOpenWorkflow={(id) => void openWorkflow(id)}
               saving={busy}
               dirty={dirty && loaded}
             />
