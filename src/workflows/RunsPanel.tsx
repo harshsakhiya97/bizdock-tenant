@@ -298,14 +298,13 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                       <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
-                          className="btn btn-ghost btn-icon"
+                          className="btn btn-outline btn-sm"
                           title="Refresh this run"
-                          aria-label="Refresh this run"
                           disabled={refreshing === r.id}
                           onClick={() => void refreshRun(r)}
                           style={{ marginRight: 6 }}
                         >
-                          <RefreshCw size={14} className={refreshing === r.id ? 'spin' : undefined} />
+                          <RefreshCw size={13} className={refreshing === r.id ? 'spin' : undefined} /> Refresh
                         </button>
                       {canRun && (
                         <>
