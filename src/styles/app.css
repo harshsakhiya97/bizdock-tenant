@@ -1249,7 +1249,5 @@ a.db-card:hover { border-color: var(--brand); }
 }
 
 /* workflow canvas: + / zoom level / − */
-.react-flow .react-flow__controls.cb-zoom { border-radius: 8px; overflow: hidden; }
-.react-flow .react-flow__controls.cb-zoom .react-flow__controls-button { width: 48px; height: 36px; padding: 0; }
 .react-flow .react-flow__controls.cb-zoom .react-flow__controls-button svg { fill: none; max-width: 16px; max-height: 16px; }
 .react-flow .react-flow__controls.cb-zoom .cb-zoom-level { font-size: 12px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
