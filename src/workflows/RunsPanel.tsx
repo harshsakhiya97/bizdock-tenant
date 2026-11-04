@@ -117,15 +117,18 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
   const [filter, setFilter] = useState<Filter>('all')
   const [cancelRun, setCancelRun] = useState<Run | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [confirmRerun, setConfirmRerun] = useState<Run | null>(null)
+  const [refreshing, setRefreshing] = useState<string | null>(null)
   const { can } = useAuth()
   const canRun = can('workflows', 'edit')
   const path = stepPath(workflow)
 
+  const RUN_COLS = 'id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, is_test, test_data, payload, leads(first_name, last_name, phone)'
   const load = useCallback(() => {
     setLoading(true)
     void db()
       .from('workflow_runs')
-      .select('id, status, node_id, next_at, error, log, created_at, updated_at, lead_id, is_test, test_data, payload, leads(first_name, last_name, phone)')
+      .select(RUN_COLS)
       .eq('workflow_id', workflow.id)
       .order('created_at', { ascending: false })
       .limit(100)
@@ -142,6 +145,15 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
     const t = setTimeout(load, 4000)
     return () => clearTimeout(t)
   }, [busy, runs, load])
+
+  // one run's latest status and steps (the rest of the list stays as it is)
+  async function refreshRun(r: Run) {
+    setRefreshing(r.id)
+    const { data, error } = await db().from('workflow_runs').select(RUN_COLS).eq('id', r.id).maybeSingle()
+    setRefreshing(null)
+    if (error) return setMsg({ error: error.message })
+    if (data) setRuns((list) => (list ?? []).map((x) => (x.id === r.id ? (data as unknown as Run) : x)))
+  }
 
   // run the workflow again from its first step, for the same lead (or the same test details)
   async function rerun(r: Run) {
@@ -224,7 +236,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                 <th>Lead</th>
                 <th>Status</th>
                 <th>Steps</th>
-                {canRun && <th />}
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -283,14 +295,26 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                         </div>
                         {r.error && <div className="small text-danger" style={{ marginTop: 4 }}>{r.error}</div>}
                       </td>
+                      <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-icon"
+                          title="Refresh this run"
+                          aria-label="Refresh this run"
+                          disabled={refreshing === r.id}
+                          onClick={() => void refreshRun(r)}
+                          style={{ marginRight: 6 }}
+                        >
+                          <RefreshCw size={14} className={refreshing === r.id ? 'spin' : undefined} />
+                        </button>
                       {canRun && (
-                        <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        <>
                           <button
                             type="button"
                             className="btn btn-outline btn-sm"
                             title="Run the workflow again from the start for this lead"
                             disabled={rerunning === r.id || (!r.lead_id && !r.is_test && !r.payload)}
-                            onClick={() => void rerun(r)}
+                            onClick={() => setConfirmRerun(r)}
                           >
                             <RotateCcw size={13} className={rerunning === r.id ? 'spin' : undefined} /> Re-run
                           </button>
@@ -306,12 +330,13 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                               <Ban size={13} /> Cancel
                             </button>
                           )}
-                        </td>
+                        </>
                       )}
+                      </td>
                     </tr>
                     {open === r.id && (
                       <tr className="run-detail">
-                        <td colSpan={canRun ? 5 : 4}>
+                        <td colSpan={5}>
                           {r.log.length ? (
                             <ol className="run-log">
                               {r.log.map((l, i) => (
@@ -335,6 +360,24 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
 )}
 </Paged>
       )}
+      <ConfirmModal
+        open={!!confirmRerun}
+        icon={RotateCcw}
+        title="Re-run this workflow?"
+        message={
+          confirmRerun
+            ? `It starts again from the first step for ${who(confirmRerun)}: every message and step runs again (they may get the same messages twice).${isOpen(confirmRerun) ? ' This run is still going and keeps going too; cancel it first if you only want the new one.' : ''}`
+            : ''
+        }
+        confirmLabel={rerunning ? 'Starting…' : 'Re-run'}
+        busy={!!rerunning}
+        onCancel={() => setConfirmRerun(null)}
+        onConfirm={() => {
+          const r = confirmRerun
+          setConfirmRerun(null)
+          if (r) void rerun(r)
+        }}
+      />
       <ConfirmModal
         open={!!cancelRun}
         icon={Ban}
