@@ -99,7 +99,7 @@ export function BookingCalendarDrawer({ id, onClose, onSaved }: { id: string; on
       if (RESERVED_KEYS.includes(f.key)) return `“${f.label}”: the booking already sends ${f.key}; give it another name.`
       if (seen.has(f.key)) return `Two fields are called “${f.label}”; give each its own name.`
       seen.add(f.key)
-      if (f.type === 'select' && !(f.options ?? []).filter((o) => o.trim()).length) return `“${f.label}”: add the dropdown’s options.`
+      if ((f.type === 'select' || f.type === 'multiselect') && !(f.options ?? []).filter((o) => o.trim()).length) return `“${f.label}”: add its options.`
     }
     return null
   }
@@ -127,7 +127,7 @@ export function BookingCalendarDrawer({ id, onClose, onSaved }: { id: string; on
       // its fields show the team member's real email (member_email)
       await setBookingSample(wf, name, cfg.members[0], cfg.fields ?? []).catch(() => undefined)
       const webhook: BookingConfig['webhook'] = { type: 'workflow', workflow_id: wf }
-      const config: BookingConfig = { ...cfg, fields: (cfg.fields ?? []).map((f) => ({ ...f, label: f.label.trim(), options: f.type === 'select' ? (f.options ?? []).map((o) => o.trim()).filter(Boolean) : undefined })), webhook, redirect_url: '', thank_you: cfg.thank_you.trim() }
+      const config: BookingConfig = { ...cfg, fields: (cfg.fields ?? []).map((f) => ({ ...f, label: f.label.trim(), options: f.type === 'select' || f.type === 'multiselect' ? (f.options ?? []).map((o) => o.trim()).filter(Boolean) : undefined })), webhook, redirect_url: '', thank_you: cfg.thank_you.trim() }
       if (isNew) {
         const w = await createWidget(tenant.id, membership?.id, name, config)
         setBusy(false)
