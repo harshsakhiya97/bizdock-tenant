@@ -147,11 +147,16 @@ export const DATE_PARTS = [
 /** after each date field: its date / time / date & time versions */
 function withDateParts(groups: VarGroup[], dates: string[]): VarGroup[] {
   if (!dates.length) return groups
+  // a meeting starts and ends on the same day: meeting_end's date is meeting_start's (one "date" for both)
+  const sameDay = (k: string, x: string) => x === '_date' && k === 'meeting_end' && dates.includes('meeting_start')
   return groups.map((g) => ({
     ...g,
     items: g.items.flatMap(([k, l]) =>
       dates.includes(k)
-        ? [[k, l] as [string, string], ...DATE_PARTS.map(([x, w, eg]) => [`${k}${x}`, `${l === k ? k : l} – ${w} (${eg})`] as [string, string])]
+        ? [
+            [k, l] as [string, string],
+            ...DATE_PARTS.filter(([x]) => !sameDay(k, x)).map(([x, w, eg]) => [`${k}${x}`, `${l === k ? k : l} – ${w} (${eg})`] as [string, string]),
+          ]
         : [[k, l] as [string, string]],
     ),
   }))
