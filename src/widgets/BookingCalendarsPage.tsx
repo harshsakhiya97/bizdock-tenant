@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, CalendarDays, Code2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { ConfirmModal, Empty, PageHead, Paged } from '@/components/ui'
@@ -9,6 +9,7 @@ import type { MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { archiveWorkflow, listWorkflows } from '@/workflows/api'
 import { archiveWidget, countBookings, DAYS, INTERVALS, listWidgets, updateWidget, type WidgetRow } from './api'
+import { BookingCalendarDrawer } from './BookingCalendarDrawer'
 import { EmbedModal } from './EmbedModal'
 
 const intervalText = (n: number) => INTERVALS.find(([v]) => v === n)?.[1] ?? `${n} minutes`
@@ -26,6 +27,8 @@ export function BookingCalendarsPage() {
   const tenant = useTenant()
   const { can } = useAuth()
   const navigate = useNavigate()
+  // /widgets/booking-calendar/new or /:id: the add / edit drawer is open (a workflow's "Back" comes here too)
+  const { id: openId } = useParams()
   const [rows, setRows] = useState<WidgetRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [flows, setFlows] = useState<Map<string, string>>(new Map())
@@ -167,6 +170,19 @@ export function BookingCalendarsPage() {
         </div>
       )}
 
+      {openId && (
+        <BookingCalendarDrawer
+          key={openId}
+          id={openId}
+          onClose={() => navigate('/widgets/booking-calendar')}
+          onSaved={(w, isNew) => {
+            navigate('/widgets/booking-calendar')
+            load()
+            setNotice({ ok: isNew ? `Created “${w.name}”. Copy its embed code and paste it on your page.` : `Saved “${w.name}”. The embed shows the changes straight away.` })
+            if (isNew) setEmbed(w)
+          }}
+        />
+      )}
       {embed && <EmbedModal widget={embed} onClose={() => setEmbed(null)} />}
       <ConfirmModal
         open={!!deleting}
