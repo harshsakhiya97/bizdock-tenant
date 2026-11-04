@@ -8,6 +8,7 @@ export type FollowUpLead = {
   phone: string
   whatsapp: string | null
   business_id: string
+  sub_business_id: string | null
   funnel_id: string
   stage_id: string
   owner_id: string | null
