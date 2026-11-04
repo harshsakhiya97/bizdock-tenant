@@ -40,7 +40,6 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
           <div key={k} className="pf-row is-fixed">
             <span className="pf-fixed-name">
               <Lock size={13} /> {l}
-              <code className="muted small">{`{{${k}}}`}</code>
             </span>
             <span className="muted">{t}</span>
             <span className="muted small">Always</span>
@@ -52,7 +51,6 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
             <div className="pf-row">
               <span>
                 <TextInput aria-label={`Field ${i + 4} name`} value={f.label} placeholder="e.g. Company name" maxLength={60} onChange={(e) => put(i, { label: e.target.value, key: varKey(e.target.value) })} />
-                {f.key && <code className="muted small pf-key">{`{{${f.key}}}`}</code>}
               </span>
               <Select aria-label={`Field ${i + 4} type`} value={f.type} onChange={(e) => put(i, { type: e.target.value as ProfileFieldType })}>
                 {FIELD_TYPES.map(([v, l]) => (
