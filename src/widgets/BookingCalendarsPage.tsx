@@ -128,7 +128,7 @@ export function BookingCalendarsPage() {
                   </thead>
                   <tbody>
                     {paged.map((w) => (
-                      <tr key={w.id}>
+                      <tr key={w.id} className={can('widgets', 'edit') ? 'is-clickable' : undefined} onClick={() => can('widgets', 'edit') && navigate(`/widgets/booking-calendar/${w.id}`)}>
                         <td>
                           <span className="row" style={{ gap: 8 }}>
                             <span style={{ width: 10, height: 10, borderRadius: 3, background: w.config.color || tenant.primary_color, flexShrink: 0 }} />
@@ -141,7 +141,7 @@ export function BookingCalendarsPage() {
                         <td>{w.config.members?.length ? w.config.members.map(memberName).join(', ') : <span className="muted">No one (always open)</span>}</td>
                         <td className="nowrap">{hookText(w)}</td>
                         <td>{booked[w.id] ?? 0}</td>
-                        <td>
+                        <td onClick={(e) => e.stopPropagation()}>
                           {can('widgets', 'edit') ? (
                             <label className={cn('tgl', w.is_active && 'is-on')} title={w.is_active ? 'Turn off' : 'Turn on'}>
                               <input type="checkbox" role="switch" checked={w.is_active} onChange={() => void toggle(w)} aria-label={`${w.name} active`} />
@@ -154,7 +154,7 @@ export function BookingCalendarsPage() {
                             <span className={cn('badge', w.is_active ? 'badge-success' : 'badge-muted')}>{w.is_active ? 'On' : 'Off'}</span>
                           )}
                         </td>
-                        <td className="nowrap" style={{ textAlign: 'right' }}>
+                        <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                           <button type="button" className="btn btn-outline btn-sm" onClick={() => setEmbed(w)}>
                             <Code2 size={14} /> Embed code
                           </button>

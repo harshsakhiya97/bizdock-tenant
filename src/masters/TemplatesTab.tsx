@@ -107,7 +107,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
             </thead>
             <tbody>
               {paged.map((t) => (
-                <tr key={t.id}>
+                <tr key={t.id} className={canEdit ? 'is-clickable' : undefined} onClick={() => canEdit && (setError(null), setEdit(t))}>
                   <td className="nowrap">{CATEGORY_LABEL[t.category]}</td>
                   <td className="nowrap">
                     <b>{t.title}</b>
@@ -116,7 +116,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
                     <div className="tpl-body-cell">{t.body}</div>
                   </td>
                   <td>{t.is_active ? 'Yes' : 'No'}</td>
-                  <td className="num nowrap">
+                  <td className="num nowrap" onClick={(e) => e.stopPropagation()}>
                     {canEdit && (
                       <>
                         <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Edit" onClick={() => { setError(null); setEdit(t) }}>
