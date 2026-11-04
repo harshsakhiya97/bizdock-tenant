@@ -1231,8 +1231,9 @@ a.db-card:hover { border-color: var(--brand); }
 .bk-form { display: grid; gap: 14px; max-width: 460px; align-content: start; }
 .bk-form label span { line-height: 1.3; }
 .bk-form label { display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; }
-.bk-form input { height: 42px; padding: 0 12px; border: 1px solid var(--bk-line); border-radius: 8px; font: inherit; font-weight: 400; }
-.bk-form input:focus { outline: 2px solid color-mix(in srgb, var(--bk) 35%, transparent); border-color: var(--bk); }
+.bk-form input, .bk-form select, .bk-form textarea { height: 42px; padding: 0 12px; border: 1px solid var(--bk-line); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; color: inherit; }
+.bk-form textarea { height: auto; padding: 10px 12px; resize: vertical; }
+.bk-form input:focus, .bk-form select:focus, .bk-form textarea:focus { outline: 2px solid color-mix(in srgb, var(--bk) 35%, transparent); border-color: var(--bk); }
 .bk-done { flex: 1; display: grid; place-items: center; align-content: center; gap: 10px; padding: 40px; text-align: center; }
 .bk-done b { font-size: 20px; }
 .bk-done p { margin: 0; max-width: 420px; color: var(--bk-muted); line-height: 1.55; }
@@ -1251,3 +1252,15 @@ a.db-card:hover { border-color: var(--brand); }
 /* workflow canvas: + / zoom level / − */
 .react-flow .react-flow__controls.cb-zoom .react-flow__controls-button svg { fill: none; max-width: 16px; max-height: 16px; }
 .react-flow .react-flow__controls.cb-zoom .cb-zoom-level { font-size: 12px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Booking Calendar → User profile fields */
+.pf-list { display: flex; flex-direction: column; gap: 8px; }
+.pf-row { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 100px 108px; gap: 10px; align-items: center; }
+.pf-headrow { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.pf-row.is-fixed { padding: 10px 12px; border: 1px dashed var(--line); border-radius: var(--radius); background: var(--surface-muted, transparent); }
+.pf-fixed-name { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.pf-fixed-name code { margin-left: 4px; }
+.pf-row-wrap { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.pf-key { display: block; margin-top: 4px; }
+.pf-req { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.pf-actions { display: inline-flex; justify-content: flex-end; gap: 2px; }

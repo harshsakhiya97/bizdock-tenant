@@ -65,6 +65,9 @@ export function EmbedPage() {
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
+  // the widget's own fields (after name / phone / email)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const extra = w?.fields ?? []
 
   // a page for an iframe: no app background
   useEffect(() => {
@@ -72,7 +75,11 @@ export function EmbedPage() {
     return () => document.documentElement.classList.remove('embed-mode')
   }, [])
   useEffect(() => {
-    publicWidget(code).then(setW, () => setW(null))
+    publicWidget(code).then((x) => {
+      setW(x)
+      // a required field of its own still to fill: start at Your Details
+      if (x?.fields?.some((f) => f.required)) setStep((s) => (s === 2 ? 1 : s))
+    }, () => setW(null))
   }, [code])
 
   // the months people can book in
@@ -154,6 +161,14 @@ export function EmbedPage() {
     if (!who.name.trim()) return 'Please enter your name.'
     if (who.phone.replace(/\D/g, '').length < 10) return 'Please enter a valid phone number.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim())) return 'Please enter a valid email.'
+    for (const f of extra) {
+      const v = (answers[f.key] ?? '').trim()
+      if (f.required && !v) return `Please fill in ${f.label}.`
+      if (!v) continue
+      if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `Please enter a valid ${f.label}.`
+      if (f.type === 'phone' && v.replace(/\D/g, '').length < 10) return `Please enter a valid ${f.label}.`
+      if (f.type === 'number' && Number.isNaN(Number(v))) return `${f.label} must be a number.`
+    }
     return null
   }
 
@@ -167,7 +182,12 @@ export function EmbedPage() {
     }
     setBusy(true)
     try {
-      const r = await bookSlot(code, slot.starts_at, { name: who.name.trim(), phone: who.phone.trim(), email: who.email.trim() })
+      const r = await bookSlot(
+        code,
+        slot.starts_at,
+        { name: who.name.trim(), phone: who.phone.trim(), email: who.email.trim() },
+        Object.fromEntries(extra.map((f) => [f.key, (answers[f.key] ?? '').trim()])),
+      )
       if (r.redirect_url) {
         // leave the iframe for the thank-you page
         try {
@@ -349,6 +369,36 @@ export function EmbedPage() {
                   <span>Email *</span>
                   <input type="email" value={who.email} onChange={(e) => setWho({ ...who, email: e.target.value })} autoComplete="email" />
                 </label>
+                {extra.map((f) => {
+                  const v = answers[f.key] ?? ''
+                  const put = (x: string) => setAnswers((a) => ({ ...a, [f.key]: x }))
+                  return (
+                    <label key={f.key}>
+                      <span>
+                        {f.label}
+                        {f.required ? ' *' : ''}
+                      </span>
+                      {f.type === 'textarea' ? (
+                        <textarea rows={3} value={v} onChange={(e) => put(e.target.value)} />
+                      ) : f.type === 'select' ? (
+                        <select value={v} onChange={(e) => put(e.target.value)}>
+                          <option value="">Select…</option>
+                          {(f.options ?? []).map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={f.type === 'number' ? 'number' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'date' ? 'date' : 'text'}
+                          value={v}
+                          onChange={(e) => put(e.target.value)}
+                        />
+                      )}
+                    </label>
+                  )
+                })}
                 {error && <div className="bk-error">{error}</div>}
               </div>
               <div className="bk-foot">
