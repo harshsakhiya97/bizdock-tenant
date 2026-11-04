@@ -169,6 +169,23 @@ export async function createBookingWorkflow(tenantId: string, memberId: string |
   return id
 }
 
+/**
+ * The widget's workflow's sample (its fields in the builder and How to connect): the booking fields, with the widget's name
+ * and the email of its (first) team member as member_email
+ */
+export async function setBookingSample(workflowId: string, name: string, memberId: string | undefined) {
+  let email = BOOKING_FIELDS.member_email
+  if (memberId) {
+    const { data } = await db().rpc('widget_member_email', { p_member: memberId })
+    if (data) email = String(data)
+  }
+  const hook = await ensureWorkflowHook(workflowId)
+  await db()
+    .from('workflow_hooks')
+    .update({ sample: { ...BOOKING_FIELDS, widget: name.trim(), member_email: email }, sample_at: new Date().toISOString() })
+    .eq('id', hook.id)
+}
+
 /** the widget's workflow follows the widget's funnel ("Used in funnel": where Get lead details looks for the lead) */
 export async function setWorkflowFunnel(workflowId: string, funnelId: string) {
   // on the row and on its trigger ("Used in funnel"), so saving the workflow keeps it
