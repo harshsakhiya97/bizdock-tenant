@@ -7,7 +7,7 @@ import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
 import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
-import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates } from './WhatsAppFields'
+import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates, watiVars } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
 import { shortBase } from './api'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, listValues, needsValue, normalize, opsFor } from './conditions'
@@ -431,8 +431,8 @@ function BulkFields({
             </thead>
             <tbody>
               {rows.map((r, i) => {
-                const vars = templateVars(r as unknown as Record<string, unknown>)
                 const picked = findTemplate(list, r as unknown as Record<string, unknown>)
+                const vars = templateVars(r as unknown as Record<string, unknown>, picked)
                 const missing = vars.filter((v) => !String(r.params?.[v] ?? '').trim()).length
                 return (
                   <Fragment key={r.id}>
@@ -503,7 +503,7 @@ function BulkFields({
                             onChange={(v) => {
                               if (v === '__missing') return
                               const t = v ? pickTemplate(list, v, r.params ?? {}, extraFields) : null
-                              setRow(r.id, t ? { template: t.template, template_language: t.template_language, template_body: t.template_body, params: t.params } : { template: '', template_language: '', template_body: '', params: {} })
+                              setRow(r.id, t ? { template: t.template, template_language: t.template_language, template_body: t.template_body, template_vars: t.template_vars, params: t.params } : { template: '', template_language: '', template_body: '', template_vars: [], params: {} })
                               if (t && Object.keys(t.params).length) setOpen(r.id)
                             }}
                             disabled={disabled || !list}
@@ -575,7 +575,7 @@ function BulkFields({
                       <tr className="bulk-vars" {...dropProps(r.id)}>
                         <td />
                         <td colSpan={4}>
-                          <TemplateParams vars={vars} params={r.params ?? {}} onChange={(p) => setRow(r.id, { params: p })} disabled={disabled} extraFields={extraFields} />
+                          <TemplateParams vars={vars} where={picked ? watiVars(picked).where : {}} params={r.params ?? {}} onChange={(p) => setRow(r.id, { params: p })} disabled={disabled} extraFields={extraFields} />
                         </td>
                       </tr>
                     )}

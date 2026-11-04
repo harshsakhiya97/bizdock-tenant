@@ -35,18 +35,32 @@ export function useWatiTemplates(): { list: WatiTemplate[] | null; error: string
   return { list, error, loading, reload: () => load(true) }
 }
 
+/** every variable of a template: its message, header and button links (e.g. a "Watch video" button's {{link}}) */
+export function watiVars(t: WatiTemplate) {
+  const body = varsIn(t.bodyOriginal || t.body || '')
+  const header = varsIn(t.header?.text ?? '')
+  const buttons = varsIn((t.buttons ?? []).map((b) => b.parameter?.url ?? '').join('\n'))
+  const all = [...new Set([...body, ...header, ...buttons, ...(t.customParams ?? []).map((p) => p.paramName).filter(Boolean)])]
+  const where: Record<string, string> = {}
+  for (const v of all) if (!body.includes(v)) where[v] = buttons.includes(v) ? 'in the button link' : header.includes(v) ? 'in the header' : ''
+  return { vars: all, where }
+}
+
 /** the template picked in a list ("name|language"): name, language, body and its variables (filled from the lead where they match) */
 export function pickTemplate(list: WatiTemplate[] | null, key: string, oldParams: Record<string, string>, extraFields: string[]) {
   const t = list?.find((x) => `${x.elementName}|${x.language?.value ?? ''}` === key)
   if (!t) return null
   const b = t.bodyOriginal || t.body || ''
   const params: Record<string, string> = {}
-  for (const v of varsIn(b)) params[v] = oldParams[v] ?? (LEAD_VARS.has(v) || extraFields.includes(v) ? `{{${v}}}` : v === 'name' ? '{{first_name}}' : '')
-  return { template: t.elementName, template_language: t.language?.value ?? '', template_body: b, params, message: b }
+  const { vars } = watiVars(t)
+  for (const v of vars) params[v] = oldParams[v] ?? (LEAD_VARS.has(v) || extraFields.includes(v) ? `{{${v}}}` : v === 'name' ? '{{first_name}}' : '')
+  return { template: t.elementName, template_language: t.language?.value ?? '', template_body: b, template_vars: vars, params, message: b }
 }
 export const findTemplate = (list: WatiTemplate[] | null, d: Record<string, unknown>) =>
   list?.find((t) => t.elementName === d.template && (!d.template_language || t.language?.value === d.template_language)) ?? null
-export const templateVars = (d: Record<string, unknown>) => (d.template ? varsIn(String(d.template_body ?? '')) : [])
+/** the step's template variables (from the template itself when it's in the list; else as saved) */
+export const templateVars = (d: Record<string, unknown>, picked?: WatiTemplate | null) =>
+  !d.template ? [] : picked ? watiVars(picked).vars : Array.isArray(d.template_vars) ? (d.template_vars as string[]) : varsIn(String(d.template_body ?? ''))
 
 /** the templates as search-dropdown options ("name|language"), with an empty choice first */
 export function templateOptions(list: WatiTemplate[] | null, missing: string | null, none: string): SearchOption[] {
@@ -67,8 +81,11 @@ export function TemplateParams({
   onChange,
   disabled,
   extraFields = [],
+  where = {},
 }: {
   vars: string[]
+  /** where a variable sits when not in the message ("in the button link") */
+  where?: Record<string, string>
   params: Record<string, string>
   onChange: (p: Record<string, string>) => void
   disabled: boolean
@@ -80,7 +97,10 @@ export function TemplateParams({
       <span className="field-label">Fill the template’s variables</span>
       {vars.map((v) => (
         <div key={v} className="cb-param">
-          <span className="wa-var">{`{{${v}}}`}</span>
+          <span className="wa-var" title={where[v] || undefined}>
+            {`{{${v}}}`}
+            {where[v] && <small className="muted"> · {where[v]}</small>}
+          </span>
           <TextInput value={params[v] ?? ''} placeholder="Text or a lead field" onChange={(e) => onChange({ ...params, [v]: e.target.value })} disabled={disabled} />
           <select className="input input-sm" aria-label="Lead field" value="" onChange={(e) => e.target.value && onChange({ ...params, [v]: `{{${e.target.value}}}` })} disabled={disabled}>
             <option value="">Variable…</option>
@@ -114,10 +134,11 @@ export function WhatsAppFields({
   const picked = findTemplate(list, d)
   const body = picked ? picked.bodyOriginal || picked.body || '' : String(d.template_body ?? '')
   const params = (d.params ?? {}) as Record<string, string>
-  const vars = name ? varsIn(body) : []
+  const vars = name ? templateVars(d, picked) : []
+  const where = picked ? watiVars(picked).where : {}
 
   function pick(key: string) {
-    if (!key) return onChange({ ...d, template: '', template_language: '', template_body: '', params: {} })
+    if (!key) return onChange({ ...d, template: '', template_language: '', template_body: '', template_vars: [], params: {} })
     const t = pickTemplate(list, key, params, extraFields)
     if (t) onChange({ ...d, ...t })
   }
@@ -153,7 +174,7 @@ export function WhatsAppFields({
 
       {name ? (
         <>
-          {vars.length > 0 && <TemplateParams vars={vars} params={params} onChange={(p) => set('params', p)} disabled={disabled} extraFields={extraFields} />}
+          {vars.length > 0 && <TemplateParams vars={vars} where={where} params={params} onChange={(p) => set('params', p)} disabled={disabled} extraFields={extraFields} />}
           {picked && (
             <div className="wa-phone">
               <WaBubble
