@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import { shortBase } from './api'
 import { VARIABLES, type UpstreamStep } from './types'
 
 /** variables made by earlier steps, by name */
@@ -59,6 +60,28 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
   ].filter((g) => g.items.length)
 }
 
+/** what a step's value looks like (shown after its name in the lists) */
+const ZOOM_EXAMPLE: Record<string, string> = {
+  zoom_link: 'https://us06web.zoom.us/j/81234567890?pwd=Ab12Cd34',
+  zoom_date: '2026-10-29',
+  zoom_time: '17:00',
+  zoom_meeting_id: '81234567890',
+  zoom_password: 'Ab12Cd34',
+  zoom_short_link_code: 'UCTPZW46',
+  member_phone: '9876543210',
+}
+function stepExample(st: UpstreamStep, k: string): string {
+  if (st.type === 'generate_link') {
+    const base = st.keys[0]
+    if (k === base) return `${shortBase()}/T7P46LXK`
+    if (k === `${base}_code`) return 'T7P46LXK'
+    if (k === `${base}_full_url`) return 'https://your-site.com/page?fname=Harsh&phone=9876543210'
+    if (k === `${base}_parameters`) return 'fname=Harsh&phone=9876543210'
+  }
+  if (k === 'zoom_short_link') return `${shortBase()}/UCTPZW46`
+  return ZOOM_EXAMPLE[k] ?? ''
+}
+
 /** the open step's earlier steps in order (Step 1 = the trigger): field lists are grouped by them */
 export const StepOrderContext = createContext<UpstreamStep[] | null>(null)
 
@@ -89,7 +112,14 @@ export function orderedGroups(
     } else if (st.type === 'lead_lookup') {
       // the found lead (a webhook-call workflow; a lead workflow has its lead from the trigger)
       if (o.hook) out.push({ label: `Step ${st.n}: ${st.label}`, items: [...leadItems, ...fieldItems] })
-    } else if (st.keys.length) out.push({ label: `Step ${st.n}: ${st.label}`, items: st.keys.map((k) => [k, label(k)] as [string, string]) })
+    } else if (st.keys.length)
+      out.push({
+        label: `Step ${st.n}: ${st.label}`,
+        items: st.keys.map((k) => {
+          const eg = stepExample(st, k)
+          return [k, eg ? `${label(k)} (${eg})` : label(k)] as [string, string]
+        }),
+      })
   }
   return out.filter((g) => g.items.length)
 }
