@@ -243,7 +243,7 @@ export async function widgetSlots(code: string, from: string, to: string): Promi
   return (data ?? []) as Slot[]
 }
 
-export async function bookSlot(code: string, start: string, who: { name: string; phone: string; email: string }, answers: Record<string, string> = {}) {
+export async function bookSlot(code: string, start: string, who: { name: string; phone: string; email: string }, answers: Record<string, string | string[]> = {}) {
   const { data, error } = await db().functions.invoke('widget-book', { body: { code, start, ...who, answers } })
   if (error) {
     const ctx = (error as { context?: Response }).context

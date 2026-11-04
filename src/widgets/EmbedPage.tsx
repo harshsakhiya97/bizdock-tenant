@@ -66,7 +66,8 @@ export function EmbedPage() {
   const [done, setDone] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
   // the widget's own fields (after name / phone / email)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  // a multi-select's picks as a list (an option may have commas)
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({})
   const extra = w?.fields ?? []
 
   // a page for an iframe: no app background
@@ -162,7 +163,12 @@ export function EmbedPage() {
     if (who.phone.replace(/\D/g, '').length < 10) return 'Please enter a valid phone number.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(who.email.trim())) return 'Please enter a valid email.'
     for (const f of extra) {
-      const v = (answers[f.key] ?? '').trim()
+      const a = answers[f.key]
+      if (Array.isArray(a)) {
+        if (f.required && !a.length) return `Please pick ${f.label}.`
+        continue
+      }
+      const v = (a ?? '').trim()
       if (f.required && !v) return `Please fill in ${f.label}.`
       if (!v) continue
       if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return `Please enter a valid ${f.label}.`
@@ -186,7 +192,7 @@ export function EmbedPage() {
         code,
         slot.starts_at,
         { name: who.name.trim(), phone: who.phone.trim(), email: who.email.trim() },
-        Object.fromEntries(extra.map((f) => [f.key, (answers[f.key] ?? '').trim()])),
+        Object.fromEntries(extra.map((f) => { const a = answers[f.key]; return [f.key, Array.isArray(a) ? a : (a ?? '').trim()] })),
       )
       if (r.redirect_url) {
         // leave the iframe for the thank-you page
@@ -370,8 +376,10 @@ export function EmbedPage() {
                   <input type="email" value={who.email} onChange={(e) => setWho({ ...who, email: e.target.value })} autoComplete="email" />
                 </label>
                 {extra.map((f) => {
-                  const v = answers[f.key] ?? ''
-                  const put = (x: string) => setAnswers((a) => ({ ...a, [f.key]: x }))
+                  const raw = answers[f.key]
+                  const v = typeof raw === 'string' ? raw : ''
+                  const picked = Array.isArray(raw) ? raw : []
+                  const put = (x: string | string[]) => setAnswers((a) => ({ ...a, [f.key]: x }))
                   // a multi-select's tick boxes are labels themselves: its title is not one
                   const Wrap = f.type === 'multiselect' ? 'div' : 'label'
                   return (
@@ -383,14 +391,13 @@ export function EmbedPage() {
                       {f.type === 'textarea' ? (
                         <textarea rows={3} value={v} onChange={(e) => put(e.target.value)} />
                       ) : f.type === 'multiselect' ? (
-                        // several picks: sent as one text, "Coach, Creator"
+                        // several picks (sent as a list; the workflow gets them as one text, "Coach, Creator")
                         <div className="bk-multi">
                           {(f.options ?? []).map((o) => {
-                            const picked = v ? v.split(', ') : []
                             const on = picked.includes(o)
                             return (
                               <label key={o} className="bk-check">
-                                <input type="checkbox" checked={on} onChange={() => put((f.options ?? []).filter((x) => (x === o ? !on : picked.includes(x))).join(', '))} />
+                                <input type="checkbox" checked={on} onChange={() => put((f.options ?? []).filter((x) => (x === o ? !on : picked.includes(x))))} />
                                 <span>{o}</span>
                               </label>
                             )
