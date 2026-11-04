@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import { VARIABLES } from './types'
+import { VARIABLES, type UpstreamStep } from './types'
 
 /** variables made by earlier steps, by name */
 export const STEP_VAR_LABEL: Record<string, string> = {
@@ -57,6 +57,41 @@ export function varGroups(extra: string[], lead: readonly (readonly [string, str
   ].filter((g) => g.items.length)
 }
 
+/** the open step's earlier steps in order (Step 1 = the trigger): field lists are grouped by them */
+export const StepOrderContext = createContext<UpstreamStep[] | null>(null)
+
+/** the extra keys that are earlier steps' values (Zoom, a Generate link's), and the rest (form / webhook / lead fields) */
+function splitStepVars(rest: string[]) {
+  const base = (k: string) => ['_code', '_full_url', '_parameters'].map((x) => (k.endsWith(x) ? k.slice(0, -x.length) : '')).find((b) => b && rest.includes(`${b}_code`))
+  const steps = rest.filter((k) => STEP_VAR_LABEL[k] || rest.includes(`${k}_code`) || !!base(k))
+  return { steps, fields: rest.filter((k) => !steps.includes(k)) }
+}
+
+/**
+ * Field lists by step, in workflow order: "Step 1: Trigger" (the webhook's fields, or the lead's and the form's),
+ * then each earlier step that gives values — "Step 2: Get lead details" (the found lead's fields and extra fields),
+ * "Step 3: Generate link" (its link), "Step 4: Create Zoom meeting" (the meeting's)…
+ */
+export function orderedGroups(
+  order: UpstreamStep[],
+  o: { hook: string[] | null; lead: readonly (readonly [string, string])[]; fields: string[]; label?: (k: string) => string },
+): VarGroup[] {
+  const label = o.label ?? ((k: string) => STEP_VAR_LABEL[k] ?? pretty(k))
+  const leadItems = o.lead.map(([k, l]) => [k, l] as [string, string])
+  const fieldItems = o.fields.map((k) => [k, pretty(k)] as [string, string])
+  const out: VarGroup[] = []
+  for (const st of order) {
+    if (st.type === 'trigger') {
+      const items = o.hook ? o.hook.map((k) => [k, k] as [string, string]) : [...leadItems, ...fieldItems]
+      out.push({ label: `Step ${st.n}: Trigger`, items: [...items, ...st.keys.filter((k) => !items.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
+    } else if (st.type === 'lead_lookup') {
+      // the found lead (a webhook-call workflow; a lead workflow has its lead from the trigger)
+      if (o.hook) out.push({ label: `Step ${st.n}: ${st.label}`, items: [...leadItems, ...fieldItems] })
+    } else if (st.keys.length) out.push({ label: `Step ${st.n}: ${st.label}`, items: st.keys.map((k) => [k, label(k)] as [string, string]) })
+  }
+  return out.filter((g) => g.items.length)
+}
+
 /** "On webhook call" workflows: the webhook's fields (the only fields there are; no lead) */
 export const HookVarsContext = createContext<string[] | null>(null)
 
@@ -72,7 +107,15 @@ export function useVarGroups(extra: string[], leadVars: readonly (readonly [stri
   const dates = useContext(DateVarsContext)
   const hasEvent = useContext(HasEventContext)
   const lookup = useContext(LeadLookupContext)
+  const order = useContext(StepOrderContext)
   const lead = hasEvent ? leadVars : leadVars.filter(([k]) => !k.startsWith('event_'))
+  // by step: Step 1: Trigger, Step 2: Get lead details, Step 3: Generate link…
+  if (order?.length) {
+    const known = new Set(lead.map(([k]) => k))
+    const rest = [...new Set(extra)].filter((k) => k && !known.has(k) && !(hook ?? []).includes(k))
+    const { fields } = splitStepVars(rest)
+    return withDateParts(orderedGroups(order, { hook, lead, fields }), dates)
+  }
   if (!hook) return withDateParts(varGroups(extra, lead), dates)
   // webhook fields, then the found lead's fields (Lead, Extra fields) and the earlier steps'
   if (lookup) {

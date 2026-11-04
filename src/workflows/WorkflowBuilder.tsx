@@ -26,7 +26,7 @@ import { AddCtx } from './addCtx'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { useCopiedStep } from './stepClipboard'
-import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem } from './steps'
+import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -238,6 +238,8 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
   }
 
   const selected = nodes.find((n) => n.id === selectedId) ?? null
+  // the open step's earlier steps (its field lists show them as Step 1: Trigger, Step 2: …)
+  const panelCtx = useMemo(() => (selected ? { ...ctx, upstream: upstreamOf(selected.id, nodes, edges) } : ctx), [ctx, selected, nodes, edges])
   // "+" under an exit: pick the next step for it
   const addCtx = useMemo(
     () => ({
@@ -545,7 +547,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
           {selected && !adding && (
             <StepPanel
               node={selected}
-              ctx={ctx}
+              ctx={panelCtx}
               canEdit={canEdit}
               onChange={updateData}
               onDelete={deleteSelected}

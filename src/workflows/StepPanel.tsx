@@ -5,7 +5,7 @@ import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } fro
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
-import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, stepGroups, VarOptions, useVarGroups } from './varGroups'
+import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, StepOrderContext, orderedGroups, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates, watiVars } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, problem, rowsOf } from './steps'
@@ -58,6 +58,7 @@ export function StepPanel({
     <DateVarsContext.Provider value={ctx.dateVars ?? []}>
     <HasEventContext.Provider value={!!ctx.event}>
     <LeadLookupContext.Provider value={!!ctx.leadLookup}>
+    <StepOrderContext.Provider value={ctx.upstream ?? null}>
     <aside className={kind === 'bulk_whatsapp' ? 'cb-panel is-wide' : 'cb-panel'}>
       <div className="cb-panel-head">
         <span className="cb-icon" style={{ ['--c' as string]: meta.color }}>
@@ -197,6 +198,7 @@ export function StepPanel({
         </div>
       )}
     </aside>
+    </StepOrderContext.Provider>
     </LeadLookupContext.Provider>
     </HasEventContext.Provider>
     </DateVarsContext.Provider>
@@ -205,10 +207,10 @@ export function StepPanel({
 }
 
 /** Get lead details: match the lead's phone / email with a field from the trigger or an earlier step */
-function LeadLookupFields({ d, set, disabled, hookOnly, fieldKeys }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; hookOnly: boolean; fieldKeys: string[] }) {
+function LeadLookupFields({ d, set, disabled, fieldKeys }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean; hookOnly?: boolean; fieldKeys: string[] }) {
   const by = d.match === 'email' ? 'email' : d.match === 'any' ? 'any' : 'phone'
   const groups = [
-    { label: hookOnly ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(fieldKeys.map(varKey))].filter(Boolean).map((k) => [k, k] as [string, string]) },
+    { label: 'Step 1: Trigger', items: [...new Set(fieldKeys.map(varKey))].filter(Boolean).map((k) => [k, k] as [string, string]) },
   ].filter((g) => g.items.length)
   const pick = (id: string, label: string, key: string, fallback = '') => {
     const v = String(d[key] ?? fallback)
@@ -306,6 +308,7 @@ function RecipientField({ d, ctx, set, disabled, custom }: { d: Record<string, u
 /** Bulk WhatsApp: a table of templates, each sent a set time after the workflow started; one optional stop condition. */
 /** fields a time can come from: only the trigger's webhook / form fields and earlier steps' values (e.g. the Zoom meeting's start) */
 function dateFieldGroups(ctx: FlowContext) {
+  if (ctx.upstream?.length) return orderedGroups(ctx.upstream, { hook: [...new Set(ctx.fieldKeys.map(varKey))].filter(Boolean), lead: [], fields: [] })
   const fromSteps = [...new Set(ctx.linkVars)]
   return [
     { label: ctx.triggerEvent === 'webhook_call' ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(ctx.fieldKeys.map(varKey))].filter((k) => k && !fromSteps.includes(k)).map((k) => [k, k] as [string, string]) },
@@ -1031,6 +1034,43 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           <Label htmlFor={`${id}-f`}>If</Label>
           <Select id={`${id}-f`} value={hookValue} disabled={disabled} onChange={(e) => e.target.value && pickField(e.target.value)}>
             <option value="">— pick a field —</option>
+            {ctx.upstream?.length ? (
+              // by step: Step 1: Trigger, Step 2: Get lead details, Step 3: Generate link…
+              ctx.upstream.map((st) =>
+                st.type === 'trigger' ? (
+                  <optgroup key={st.id} label={`Step ${st.n}: Trigger`}>
+                    {[...hookFields, ...st.keys.filter((k) => !hookFields.includes(k))].map((k) => (
+                      <option key={k} value={`v:${k}`}>
+                        {STEP_VAR_LABEL[k] ?? k}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : st.type === 'lead_lookup' ? (
+                  <optgroup key={st.id} label={`Step ${st.n}: ${st.label}`}>
+                    {LEAD_FIELDS.map((f) => (
+                      <option key={f.value} value={f.value}>
+                        {f.label}
+                      </option>
+                    ))}
+                    {lookupExtras.map((k) => (
+                      <option key={k} value={`x:${k}`}>
+                        {k.replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                    <option value="x:">Other field (type its name)…</option>
+                  </optgroup>
+                ) : st.keys.length ? (
+                  <optgroup key={st.id} label={`Step ${st.n}: ${st.label}`}>
+                    {st.keys.map((k) => (
+                      <option key={k} value={`v:${k}`}>
+                        {STEP_VAR_LABEL[k] ?? k.replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                  </optgroup>
+                ) : null,
+              )
+            ) : (
+              <>
             {hookFields.length > 0 && (
               <optgroup label="Webhook fields">
                 {hookFields.map((k) => (
@@ -1073,6 +1113,8 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                   ))}
                   <option value="x:">Other field (type its name)…</option>
                 </optgroup>
+              </>
+            )}
               </>
             )}
           </Select>
