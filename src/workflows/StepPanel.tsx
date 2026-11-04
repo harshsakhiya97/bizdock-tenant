@@ -143,7 +143,7 @@ export function StepPanel({
                 disabled={ro}
                 extra={
                   kind === 'wait_event' && (
-                    <Select aria-label="Before or after" value={String(d.when)} onChange={(e) => set('when', e.target.value)} disabled={ro}>
+                    <Select aria-label="Before or after" value={d.when === 'after' ? 'after' : 'before'} onChange={(e) => set('when', e.target.value)} disabled={ro}>
                       <option value="before">before</option>
                       <option value="after">after</option>
                     </Select>
@@ -151,13 +151,7 @@ export function StepPanel({
                 }
               />
             </div>
-            {kind === 'wait_event' && (
-              <Hint>
-                {ctx.event
-                  ? `${ctx.event.title} · ${new Date(`${ctx.event.date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}${ctx.event.time ? `, ${ctx.event.time.slice(0, 5)}` : ''}. Leads who arrive after this moment skip the wait.`
-                  : 'This workflow has no webinar / event: use a webinar trigger, or link one to the trigger’s funnel.'}
-              </Hint>
-            )}
+            {kind === 'wait_event' && <WaitEventFrom d={d} ctx={ctx} onChange={onChange} disabled={ro} />}
           </>
         )}
 
@@ -315,6 +309,59 @@ function RecipientField({ d, ctx, set, disabled, custom }: { d: Record<string, u
 }
 
 /** Bulk WhatsApp: a table of templates, each sent a set time after the workflow started; one optional stop condition. */
+/** fields a time can come from: only the trigger's webhook / form fields and earlier steps' values (e.g. the Zoom meeting's start) */
+function dateFieldGroups(ctx: FlowContext) {
+  const fromSteps = [...new Set(ctx.linkVars)]
+  return [
+    { label: ctx.triggerEvent === 'webhook_call' ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(ctx.fieldKeys.map(varKey))].filter((k) => k && !fromSteps.includes(k)).map((k) => [k, k] as [string, string]) },
+    ...stepGroups(fromSteps, (k) => STEP_VAR_LABEL[k] ?? k),
+  ].filter((g) => g.items.length)
+}
+
+/** Wait for event: the date-time it counts from (a field such as the Zoom meeting's start, or the workflow's webinar / event) */
+function WaitEventFrom({ d, ctx, onChange, disabled }: { d: Record<string, unknown>; ctx: FlowContext; onChange: (d: Record<string, unknown>) => void; disabled: boolean }) {
+  const groups = dateFieldGroups(ctx)
+  const value = d.anchor === 'var' ? `v:${String(d.anchor_var ?? '')}` : ctx.event ? 'event' : ''
+  return (
+    <div>
+      <Label htmlFor="cb-we-from">Of</Label>
+      <Select
+        id="cb-we-from"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => {
+          const v = e.target.value
+          if (!v) return
+          onChange(v === 'event' ? { ...d, anchor: 'event', anchor_var: '' } : { ...d, anchor: 'var', anchor_var: v.slice(2) })
+        }}
+      >
+        {!value && <option value="">— pick a date-time —</option>}
+        {d.anchor === 'var' && !d.anchor_var && <option value="v:">— pick a date-time —</option>}
+        {ctx.event && (
+          <optgroup label="Webinar / event">
+            <option value="event">{ctx.event.title}</option>
+          </optgroup>
+        )}
+        {groups.map((g) => (
+          <optgroup key={g.label} label={g.label}>
+            {g.items.map(([k, l]) => (
+              <option key={k} value={`v:${k}`}>
+                {l}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </Select>
+      <Hint>
+        {d.anchor !== 'var' && ctx.event
+          ? `${ctx.event.title} · ${new Date(`${ctx.event.date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}${ctx.event.time ? `, ${ctx.event.time.slice(0, 5)}` : ''}. `
+          : 'A date-time such as the Zoom meeting’s start or a webhook field (e.g. 2026-11-02 16:00, India time). '}
+        The workflow waits until that moment, then carries on. If it has already passed, it carries on right away.
+      </Hint>
+    </div>
+  )
+}
+
 function BulkFields({
   d,
   ctx,
@@ -342,12 +389,7 @@ function BulkFields({
   const anchor = bulkAnchor(d)
   // messages go in time order (a "before" one ahead of an "after" one)
   const outOfOrder = rows.some((r, i) => i > 0 && rowOffset(r, d) < rowOffset(rows[i - 1], d))
-  // fields a time can come from: only the trigger's webhook / form fields and earlier steps' values (e.g. the Zoom meeting's start)
-  const fromSteps = [...new Set(ctx.linkVars)]
-  const dateGroups = [
-    { label: ctx.triggerEvent === 'webhook_call' ? 'Webhook (trigger)' : 'Form fields (trigger)', items: [...new Set(ctx.fieldKeys.map(varKey))].filter((k) => k && !fromSteps.includes(k)).map((k) => [k, k] as [string, string]) },
-    ...stepGroups(fromSteps, (k) => STEP_VAR_LABEL[k] ?? k),
-  ].filter((g) => g.items.length)
+  const dateGroups = dateFieldGroups(ctx)
   const label = (k: string) => STEP_VAR_LABEL[k] ?? dateGroups.flatMap((g) => g.items).find(([v]) => v === k)?.[1] ?? k
   const anchorName = anchorText(d, ctx, label)
 
