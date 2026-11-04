@@ -1,6 +1,6 @@
 import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
-import { looksLikeWhen, namedLikeWhen } from './varGroups'
+import { STEP_VAR_LABEL, looksLikeWhen, namedLikeWhen } from './varGroups'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
@@ -13,7 +13,7 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   email: { label: 'Email', hint: 'Send an email', icon: Mail, color: '#2563eb' },
   call: { label: 'Call', hint: 'One-way voice call (recorded message)', icon: PhoneCall, color: '#7c3aed' },
   wait: { label: 'Wait', hint: 'Wait some time, then continue', icon: Hourglass, color: '#d97706' },
-  wait_event: { label: 'Wait for event', hint: 'Wait until before / after the webinar or event', icon: Clock, color: '#ea580c' },
+  wait_event: { label: 'Wait for event', hint: 'Wait until some time before / after a date-time (the Zoom meeting, a webhook field, the webinar)', icon: Clock, color: '#ea580c' },
   condition: { label: 'Condition', hint: 'Go Yes or No depending on the lead', icon: Split, color: '#475569' },
   switch: { label: 'Switch', hint: 'Different paths for different leads (several conditions)', icon: GitFork, color: '#475569' },
   goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
@@ -34,7 +34,8 @@ export const TRIGGERS = ALL_TRIGGERS.filter((t) => t.value !== 'stage_changed' &
 export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((t) => t.value === e)?.label ?? 'Trigger'
 
 /** the steps that can be dragged onto the canvas */
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'lead_lookup', 'email', 'call', 'wait', 'wait_event', 'switch', 'goto']
+// Email and Call are hidden for now (steps already made with them still show and can be edited)
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'lead_lookup', 'wait', 'wait_event', 'switch', 'goto']
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -168,6 +169,11 @@ export const rowDir = (r: Pick<BulkRow, 'dir'>, d: Record<string, unknown>): 'be
   bulkAnchor(d) === 'start' ? 'after' : (r.dir ?? (bulkBefore(d) ? 'before' : 'after'))
 /** minutes from the moment the times count from: negative = before it */
 export const rowOffset = (r: BulkRow, d: Record<string, unknown>) => (rowDir(r, d) === 'before' ? -1 : 1) * rowMinutes(r)
+/** what a Wait for event counts from: a date-time field ("Zoom meeting start") or (older steps) the webinar / event */
+export function waitEventFrom(d: Record<string, unknown>, ctx: FlowContext) {
+  if (d.anchor === 'var') return d.anchor_var ? (STEP_VAR_LABEL[String(d.anchor_var)] ?? String(d.anchor_var)) : 'a date-time (pick one)'
+  return ctx.event ? ctx.event.title : 'a date-time (pick one)'
+}
 /** "the start" / the picked field ("Zoom meeting start") */
 export function anchorText(d: Record<string, unknown>, _ctx: FlowContext, label?: (k: string) => string) {
   const a = bulkAnchor(d)
@@ -263,8 +269,7 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'wait':
       return `Wait ${unitText(Number(d.amount) || 0, d.unit as Unit)}`
     case 'wait_event':
-      if (!ctx.event) return 'No webinar / event for this workflow'
-      return `${unitText(Number(d.amount) || 0, d.unit as Unit)} ${d.when} ${ctx.event.title}`
+      return `${unitText(Number(d.amount) || 0, d.unit as Unit)} ${d.when === 'after' ? 'after' : 'before'} ${waitEventFrom(d, ctx)}`
     case 'condition':
       return conditionText(d as unknown as ConditionData, ctx)
     case 'switch': {
@@ -338,9 +343,11 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'call':
       return !String(d.script ?? '').trim() ? 'Write what the call says' : null
     case 'wait':
-    case 'wait_event':
-      if (kind === 'wait_event' && !ctx.event) return 'This workflow has no webinar / event (trigger or funnel)'
       return !(Number(d.amount) > 0) ? 'Set how long to wait' : null
+    case 'wait_event':
+      if (d.anchor === 'var' && !d.anchor_var) return 'Pick the date-time to count from'
+      if (d.anchor !== 'var' && !ctx.event) return 'Pick the date-time to count from'
+      return !(Number(d.amount) >= 0) ? 'Set the time' : null
     case 'condition':
       return conditionProblem(d as unknown as ConditionData) ? 'Finish the condition' : null
     case 'switch':
