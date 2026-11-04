@@ -76,10 +76,10 @@ export function ProfileFieldsEditor({ fields, onChange }: { fields: ProfileField
                 </button>
               </span>
             </div>
-            {f.type === 'select' && (
+            {(f.type === 'select' || f.type === 'multiselect') && (
               <div className="pf-options">
                 <TextInput
-                  aria-label={`${f.label || 'Dropdown'} options`}
+                  aria-label={`${f.label || 'Field'} options`}
                   placeholder="Options, separated by commas (e.g. Coach, Entrepreneur, Creator)"
                   value={(f.options ?? []).join(', ')}
                   onChange={(e) => put(i, { options: e.target.value.split(',').map((o) => o.trimStart()) })}

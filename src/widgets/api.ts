@@ -15,7 +15,7 @@ export const DAYS: { key: DayKey; label: string; short: string }[] = [
 export type DayHours = { on: boolean; start: string; end: string }
 
 /** a field the visitor fills in besides name, phone and email (sent to the webhook as its key) */
-export type ProfileFieldType = 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select'
+export type ProfileFieldType = 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select' | 'multiselect'
 export type ProfileField = { key: string; label: string; type: ProfileFieldType; required: boolean; options?: string[] }
 export const FIELD_TYPES: [ProfileFieldType, string][] = [
   ['text', 'Text'],
@@ -25,12 +25,13 @@ export const FIELD_TYPES: [ProfileFieldType, string][] = [
   ['phone', 'Phone'],
   ['date', 'Date'],
   ['select', 'Dropdown'],
+  ['multiselect', 'Multi-select'],
 ]
 /** names the booking already sends (a custom field can't use them) */
 export const RESERVED_KEYS = ['name', 'phone', 'email', 'meeting_start', 'meeting_end', 'member_email', 'widget', 'first_name', 'last_name']
 /** an example answer, for the workflow's fields */
 export const fieldExample = (f: ProfileField) =>
-  f.type === 'number' ? '10' : f.type === 'email' ? 'name@example.com' : f.type === 'phone' ? '9876543210' : f.type === 'date' ? '2026-11-04' : f.type === 'select' ? (f.options?.[0] ?? 'Option') : f.label
+  f.type === 'number' ? '10' : f.type === 'email' ? 'name@example.com' : f.type === 'phone' ? '9876543210' : f.type === 'date' ? '2026-11-04' : f.type === 'select' ? (f.options?.[0] ?? 'Option') : f.type === 'multiselect' ? (f.options ?? ['Option']).slice(0, 2).join(', ') : f.label
 
 /** a Booking Calendar widget's settings (widgets.config) */
 export type BookingConfig = {

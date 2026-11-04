@@ -1264,3 +1264,7 @@ a.db-card:hover { border-color: var(--brand); }
 .pf-key { display: block; margin-top: 4px; }
 .pf-req { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .pf-actions { display: inline-flex; justify-content: flex-end; gap: 2px; }
+.bk-multi { display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 2px; }
+.bk-form .bk-check { display: inline-flex; align-items: center; gap: 8px; font-weight: 400; cursor: pointer; }
+.bk-form .bk-check input { height: 16px; width: 16px; padding: 0; accent-color: var(--bk); }
+.bk-form .bk-group { display: grid; gap: 6px; font-size: 13.5px; font-weight: 600; }

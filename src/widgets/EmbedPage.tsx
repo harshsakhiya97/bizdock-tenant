@@ -372,14 +372,30 @@ export function EmbedPage() {
                 {extra.map((f) => {
                   const v = answers[f.key] ?? ''
                   const put = (x: string) => setAnswers((a) => ({ ...a, [f.key]: x }))
+                  // a multi-select's tick boxes are labels themselves: its title is not one
+                  const Wrap = f.type === 'multiselect' ? 'div' : 'label'
                   return (
-                    <label key={f.key}>
+                    <Wrap key={f.key} className={f.type === 'multiselect' ? 'bk-group' : undefined}>
                       <span>
                         {f.label}
                         {f.required ? ' *' : ''}
                       </span>
                       {f.type === 'textarea' ? (
                         <textarea rows={3} value={v} onChange={(e) => put(e.target.value)} />
+                      ) : f.type === 'multiselect' ? (
+                        // several picks: sent as one text, "Coach, Creator"
+                        <div className="bk-multi">
+                          {(f.options ?? []).map((o) => {
+                            const picked = v ? v.split(', ') : []
+                            const on = picked.includes(o)
+                            return (
+                              <label key={o} className="bk-check">
+                                <input type="checkbox" checked={on} onChange={() => put((f.options ?? []).filter((x) => (x === o ? !on : picked.includes(x))).join(', '))} />
+                                <span>{o}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
                       ) : f.type === 'select' ? (
                         <select value={v} onChange={(e) => put(e.target.value)}>
                           <option value="">Select…</option>
@@ -396,7 +412,7 @@ export function EmbedPage() {
                           onChange={(e) => put(e.target.value)}
                         />
                       )}
-                    </label>
+                    </Wrap>
                   )
                 })}
                 {error && <div className="bk-error">{error}</div>}
