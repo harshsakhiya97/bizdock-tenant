@@ -1,7 +1,7 @@
 import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
 import { STEP_VAR_LABEL, looksLikeWhen, namedLikeWhen } from './varGroups'
-import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit } from './types'
+import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit, UpstreamStep } from './types'
 
 export const STEP_META: Record<StepKind, { label: string; hint: string; icon: LucideIcon; color: string }> = {
   trigger: { label: 'Trigger', hint: 'What starts this workflow', icon: Zap, color: '#16a34a' },
@@ -152,6 +152,48 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
 export { conditionText }
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
 /** the variable a Generate link step fills ("generated_link" unless named) */
+/** the values a step makes for later steps (Generate link: its link; Create Zoom meeting: the meeting's) */
+export function stepVarKeys(n: StepNode): string[] {
+  if (n.type === 'trigger') return ['submitted_at']
+  if (n.type === 'generate_link') {
+    const k = linkVarOf(n.data)
+    return [k, `${k}_code`, `${k}_full_url`, `${k}_parameters`]
+  }
+  if (n.type === 'zoom_meeting')
+    return ['zoom_start', 'zoom_date_time', 'zoom_date', 'zoom_time', 'zoom_link', ...(n.data.short_link ? ['zoom_short_link', 'zoom_short_link_code'] : []), 'zoom_meeting_id', 'zoom_password']
+  return []
+}
+
+/**
+ * The steps before `id`, in workflow order: Step 1 is the trigger, then each step by how far it is from the trigger
+ * (only the steps on the way to this one: other paths of a Switch are left out).
+ */
+export function upstreamOf(id: string, nodes: StepNode[], edges: { source: string; target: string }[]): UpstreamStep[] {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  // how far each step is from the trigger
+  const dist = new Map<string, number>([['trigger', 0]])
+  const queue = ['trigger']
+  while (queue.length) {
+    const cur = queue.shift()!
+    for (const e of edges) if (e.source === cur && !dist.has(e.target)) (dist.set(e.target, dist.get(cur)! + 1), queue.push(e.target))
+  }
+  // the steps that lead to this one
+  const before = new Set<string>()
+  const back = [id]
+  while (back.length) {
+    const cur = back.shift()!
+    for (const e of edges) if (e.target === cur && !before.has(e.source) && e.source !== id) (before.add(e.source), back.push(e.source))
+  }
+  if (!before.size && id !== 'trigger') before.add('trigger')
+  return [...before]
+    .filter((x) => byId.has(x) && dist.has(x))
+    .sort((a, b) => dist.get(a)! - dist.get(b)!)
+    .map((x, i) => {
+      const n = byId.get(x)!
+      return { n: i + 1, id: x, type: n.type as StepKind, label: STEP_META[n.type as StepKind]?.label ?? n.type, keys: stepVarKeys(n) }
+    })
+}
+
 export const linkVarOf = (d: Record<string, unknown>) =>
   String(d.var ?? '')
     .trim()

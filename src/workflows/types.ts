@@ -136,7 +136,10 @@ export type FlowContext = RefData & {
   lookupExtraKeys?: string[]
   /** the stages of that sub-business's funnels */
   lookupStages?: { id: string; name: string }[]
+  /** the open step's earlier steps, in order (Step 1 = the trigger): their numbers and the values they make */
+  upstream?: UpstreamStep[]
 }
+export type UpstreamStep = { n: number; id: string; type: StepKind; label: string; keys: string[] }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
   whatsapp: { to: 'lead', member_id: '', template: '', message: 'Hi {{first_name}}, thanks for registering!' },
