@@ -5,7 +5,7 @@ import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } fro
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
-import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, StepOrderContext, orderedGroups, stepGroups, VarOptions, useVarGroups } from './varGroups'
+import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, StepOrderContext, fieldLabel, orderedGroups, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates, watiVars } from './WhatsAppFields'
 import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, problem, rowsOf } from './steps'
@@ -380,7 +380,7 @@ function WaitEventFrom({ d, ctx, onChange, disabled }: { d: Record<string, unkno
           <optgroup key={g.label} label={g.label}>
             {g.items.map(([k, l]) => (
               <option key={k} value={`v:${k}`}>
-                {l}
+                {fieldLabel(l)}
               </option>
             ))}
           </optgroup>
@@ -489,7 +489,7 @@ function BulkFields({
               <optgroup key={g.label} label={g.label}>
                 {g.items.map(([k, l]) => (
                   <option key={k} value={`v:${k}`}>
-                    {l}
+                    {fieldLabel(l)}
                   </option>
                 ))}
               </optgroup>
@@ -813,7 +813,7 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
             <Select id="cb-zm-sv" value={String(d.start_var || 'meeting_start')} onChange={(e) => set('start_var', e.target.value)} disabled={disabled}>
               {fieldOpts.map(([k, l]) => (
                 <option key={k} value={k}>
-                  {l}
+                  {fieldLabel(l)}
                 </option>
               ))}
             </Select>
@@ -823,7 +823,7 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
             <Select id="cb-zm-ev" value={String(d.end_var ?? 'meeting_end')} onChange={(e) => set('end_var', e.target.value)} disabled={disabled}>
               {fieldOpts.map(([k, l]) => (
                 <option key={k} value={k}>
-                  {l}
+                  {fieldLabel(l)}
                 </option>
               ))}
             </Select>
@@ -1063,7 +1063,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                   <optgroup key={st.id} label={`Step ${st.n}: Trigger`}>
                     {[...hookFields, ...st.keys.filter((k) => !hookFields.includes(k))].map((k) => (
                       <option key={k} value={`v:${k}`}>
-                        {STEP_VAR_LABEL[k] ?? k}
+                        {fieldLabel(STEP_VAR_LABEL[k] ?? k)}
                       </option>
                     ))}
                   </optgroup>
@@ -1071,12 +1071,12 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                   <optgroup key={st.id} label={`Step ${st.n}: ${st.label}`}>
                     {LEAD_FIELDS.map((f) => (
                       <option key={f.value} value={f.value}>
-                        {f.label}
+                        {fieldLabel(f.label)}
                       </option>
                     ))}
                     {lookupExtras.map((k) => (
                       <option key={k} value={`x:${k}`}>
-                        {k.replace(/_/g, ' ')}
+                        {fieldLabel(k)}
                       </option>
                     ))}
                     <option value="x:">Other field (type its name)…</option>
@@ -1085,7 +1085,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                   <optgroup key={st.id} label={`Step ${st.n}: ${st.label}`}>
                     {st.keys.map((k) => (
                       <option key={k} value={`v:${k}`}>
-                        {STEP_VAR_LABEL[k] ?? k.replace(/_/g, ' ')}
+                        {fieldLabel(STEP_VAR_LABEL[k] ?? k)}
                       </option>
                     ))}
                   </optgroup>
@@ -1097,7 +1097,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
               <optgroup label="Webhook fields">
                 {hookFields.map((k) => (
                   <option key={k} value={`v:${k}`}>
-                    {k}
+                    {fieldLabel(k)}
                   </option>
                 ))}
               </optgroup>
@@ -1106,7 +1106,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
               <optgroup key={g.label} label={g.label}>
                 {g.items.map(([k, l]) => (
                   <option key={k} value={`v:${k}`}>
-                    {l}
+                    {fieldLabel(l)}
                   </option>
                 ))}
               </optgroup>
@@ -1116,21 +1116,21 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                 <optgroup label="Lead (from Get lead details)">
                   {LEAD_FIELDS.filter((f) => f.group === 'Lead').map((f) => (
                     <option key={f.value} value={f.value}>
-                      {f.label}
+                      {fieldLabel(f.label)}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label="Lead activity">
                   {LEAD_FIELDS.filter((f) => f.group === 'Activity').map((f) => (
                     <option key={f.value} value={f.value}>
-                      {f.label}
+                      {fieldLabel(f.label)}
                     </option>
                   ))}
                 </optgroup>
                 <optgroup label="Lead extra fields">
                   {lookupExtras.map((k) => (
                     <option key={k} value={`x:${k}`}>
-                      {k.replace(/_/g, ' ')}
+                      {fieldLabel(k)}
                     </option>
                   ))}
                   <option value="x:">Other field (type its name)…</option>
@@ -1152,14 +1152,14 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           <optgroup label="Lead">
             {LEAD_FIELDS.filter((f) => f.group === 'Lead').map((f) => (
               <option key={f.value} value={f.value}>
-                {f.label}
+                {fieldLabel(f.label)}
               </option>
             ))}
           </optgroup>
           <optgroup label="Activity">
             {LEAD_FIELDS.filter((f) => f.group === 'Activity').map((f) => (
               <option key={f.value} value={f.value}>
-                {f.label}
+                {fieldLabel(f.label)}
               </option>
             ))}
             {c.field === 'attendance' && <option value="attendance">Webinar / event attendance</option>}
@@ -1167,7 +1167,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           <optgroup label="Extra fields (form / sheet)">
             {extras.map((k) => (
               <option key={k} value={`x:${k}`}>
-                {k.replace(/_/g, ' ')}
+                {fieldLabel(k)}
               </option>
             ))}
             <option value="x:">Other field (type its name)…</option>
