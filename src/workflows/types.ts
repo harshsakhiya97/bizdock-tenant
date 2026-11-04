@@ -132,6 +132,8 @@ export type FlowContext = RefData & {
   leadLookup?: boolean
   /** extra fields saved on the leads of the workflow's sub-business (what Get lead details gives) */
   lookupExtraKeys?: string[]
+  /** the stages of that sub-business's funnels */
+  lookupStages?: { id: string; name: string }[]
 }
 
 export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, unknown>> = {
