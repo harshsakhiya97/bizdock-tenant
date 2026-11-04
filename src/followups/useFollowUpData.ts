@@ -8,10 +8,10 @@ import { useTenant } from '@/tenant/useTenant'
 import { listFollowUps, listOutcomes } from './api'
 import type { FollowUpRow } from './types'
 
-/** Everything the Follow-ups and My Day pages read, filtered to the business picked in the top bar. */
+/** Everything the Follow-ups and My Day pages read, filtered to the business (and sub-business) picked in the top bar. */
 export function useFollowUpData() {
   const tenant = useTenant()
-  const { selected } = useBusiness()
+  const { inScope } = useBusiness()
   const [followUps, setFollowUps] = useState<FollowUpRow[] | null>(null)
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [funnels, setFunnels] = useState<FunnelRow[]>([])
@@ -38,15 +38,13 @@ export function useFollowUpData() {
     return m
   }, [funnels])
 
-  const inBusiness = useCallback((businessId: string | undefined) => !selected || businessId === selected.id, [selected])
-
   return {
     loading: followUps === null,
     error,
     reload: load,
-    followUps: (followUps ?? []).filter((f) => inBusiness(f.leads?.business_id)),
-    leads: leads.filter((l) => !l.is_archived && inBusiness(l.business_id)),
-    funnels: funnels.filter((f) => inBusiness(f.business_id)),
+    followUps: (followUps ?? []).filter((f) => inScope(f.leads?.business_id, f.leads?.sub_business_id)),
+    leads: leads.filter((l) => !l.is_archived && inScope(l.business_id, l.sub_business_id)),
+    funnels: funnels.filter((f) => inScope(f.business_id, f.sub_business_id)),
     members,
     outcomes,
     stageById,
