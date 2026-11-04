@@ -72,7 +72,15 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     {
       const c = workflow
       {
-        setNodes(c.nodes)
+        // "Used in funnel" lives on the trigger: a workflow whose funnel was only set on the row shows it there too
+        // (else saving the trigger would clear it)
+        setNodes(
+          c.nodes.map((n) =>
+            n.type === 'trigger' && (n.data as Record<string, unknown>).event === 'webhook_call' && (n.data as Record<string, unknown>).funnel_id === undefined && c.funnel_id
+              ? { ...n, data: { ...n.data, funnel_id: c.funnel_id } }
+              : n,
+          ),
+        )
         setEdges(c.edges.map(withLook))
         setName(c.name)
         setActive(c.is_active)
@@ -106,7 +114,10 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
     window.addEventListener(HOOK_EVENT, on)
     return () => window.removeEventListener(HOOK_EVENT, on)
   }, [])
-  const ctx = useMemo(() => flowContext({ ...refData, hooks, selfId: workflow.id, selfFunnelId: workflow.funnel_id }, nodes), [refData, hooks, nodes, workflow.id, workflow.funnel_id])
+  // the funnel as picked now in the trigger ("Used in funnel"), not as it was when the page opened
+  const trig = nodes.find((n) => n.type === 'trigger')?.data as Record<string, unknown> | undefined
+  const liveFunnelId = trig && trig.event === 'webhook_call' && trig.funnel_id !== undefined ? (String(trig.funnel_id || '') || null) : workflow.funnel_id
+  const ctx = useMemo(() => flowContext({ ...refData, hooks, selfId: workflow.id, selfFunnelId: liveFunnelId }, nodes), [refData, hooks, nodes, workflow.id, liveFunnelId])
   // lines out of a Switch show their path's name
   const shownEdges = useMemo(() => {
     const sw = new Map(nodes.filter((n) => n.type === 'switch').map((n) => [n.id, n]))

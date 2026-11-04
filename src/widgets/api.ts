@@ -133,7 +133,7 @@ export const BOOKING_FIELDS: Record<string, string> = {
  */
 export async function createBookingWorkflow(tenantId: string, memberId: string | undefined, name: string, funnelId: string) {
   const id = await createWorkflow(tenantId, memberId, `${name.trim()} – bookings`, 'webhook_call')
-  const trigger = { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'webhook_call' } }
+  const trigger = { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'webhook_call', funnel_id: funnelId || '' } }
   // the visitor's lead (they've filled the lead form before booking): by phone or email, whichever matches
   const lookup = {
     id: `lead_${crypto.randomUUID().slice(0, 8)}`,
@@ -178,7 +178,13 @@ export async function createBookingWorkflow(tenantId: string, memberId: string |
 
 /** the widget's workflow follows the widget's funnel ("Used in funnel": where Get lead details looks for the lead) */
 export async function setWorkflowFunnel(workflowId: string, funnelId: string) {
-  const { error } = await db().from('workflows').update({ funnel_id: funnelId || null }).eq('id', workflowId)
+  // on the row and on its trigger ("Used in funnel"), so saving the workflow keeps it
+  const { data: w, error: e1 } = await db().from('workflows').select('nodes').eq('id', workflowId).maybeSingle()
+  if (e1) throw new Error(e1.message)
+  const nodes = ((w?.nodes ?? []) as { type: string; data: Record<string, unknown> }[]).map((n) =>
+    n.type === 'trigger' ? { ...n, data: { ...n.data, funnel_id: funnelId || '' } } : n,
+  )
+  const { error } = await db().from('workflows').update({ funnel_id: funnelId || null, ...(w ? { nodes } : {}) }).eq('id', workflowId)
   if (error) throw new Error(error.message)
 }
 
