@@ -828,21 +828,7 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
         </Select>
         {(d.meet_mode ?? 'owner') === 'owner' && <Hint>The meeting goes to whoever owns the lead (none if the lead is unassigned).</Hint>}
       </div>
-      {d.meet_mode === 'webhook' && (
-        <div>
-          <Label htmlFor="cb-zm-mvar" required>
-            Field with the team member’s email
-          </Label>
-          <Select id="cb-zm-mvar" value={String(d.meet_var || 'member_email')} onChange={(e) => set('meet_var', e.target.value)} disabled={disabled}>
-            {[...new Set([String(d.meet_var || 'member_email'), ...(ctx.hookVars ?? []).map(([k]) => k)])].map((k) => (
-              <option key={k} value={k}>
-                {`{{${k}}}`}
-              </option>
-            ))}
-          </Select>
-          <Hint>The team member the webhook sends, found by their email (e.g. the one a Booking Calendar booking went to). Later steps also get {'{{member_name}}'} and {'{{member_phone}}'}.</Hint>
-        </div>
-      )}
+      {/* the team member comes from the webhook's member_email (found by email); nothing to pick */}
       {d.meet_mode === 'single' && (
         <div>
           <Label htmlFor="cb-zm-one" required>
