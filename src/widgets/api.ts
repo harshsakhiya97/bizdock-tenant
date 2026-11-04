@@ -14,6 +14,24 @@ export const DAYS: { key: DayKey; label: string; short: string }[] = [
 ]
 export type DayHours = { on: boolean; start: string; end: string }
 
+/** a field the visitor fills in besides name, phone and email (sent to the webhook as its key) */
+export type ProfileFieldType = 'text' | 'textarea' | 'number' | 'email' | 'phone' | 'date' | 'select'
+export type ProfileField = { key: string; label: string; type: ProfileFieldType; required: boolean; options?: string[] }
+export const FIELD_TYPES: [ProfileFieldType, string][] = [
+  ['text', 'Text'],
+  ['textarea', 'Long text'],
+  ['number', 'Number'],
+  ['email', 'Email'],
+  ['phone', 'Phone'],
+  ['date', 'Date'],
+  ['select', 'Dropdown'],
+]
+/** names the booking already sends (a custom field can't use them) */
+export const RESERVED_KEYS = ['name', 'phone', 'email', 'meeting_start', 'meeting_end', 'member_email', 'widget', 'first_name', 'last_name']
+/** an example answer, for the workflow's fields */
+export const fieldExample = (f: ProfileField) =>
+  f.type === 'number' ? '10' : f.type === 'email' ? 'name@example.com' : f.type === 'phone' ? '9876543210' : f.type === 'date' ? '2026-11-04' : f.type === 'select' ? (f.options?.[0] ?? 'Option') : f.label
+
 /** a Booking Calendar widget's settings (widgets.config) */
 export type BookingConfig = {
   /** slot length, minutes */
@@ -33,6 +51,8 @@ export type BookingConfig = {
   thank_you: string
   /** or send them to this page */
   redirect_url: string
+  /** the visitor's extra fields (Your Details, after name / phone / email) */
+  fields?: ProfileField[]
 }
 
 export type WidgetRow = {
@@ -173,7 +193,7 @@ export async function createBookingWorkflow(tenantId: string, memberId: string |
  * The widget's workflow's sample (its fields in the builder and How to connect): the booking fields, with the widget's name
  * and the email of its (first) team member as member_email
  */
-export async function setBookingSample(workflowId: string, name: string, memberId: string | undefined) {
+export async function setBookingSample(workflowId: string, name: string, memberId: string | undefined, fields: ProfileField[] = []) {
   let email = BOOKING_FIELDS.member_email
   if (memberId) {
     const { data } = await db().rpc('widget_member_email', { p_member: memberId })
@@ -182,7 +202,10 @@ export async function setBookingSample(workflowId: string, name: string, memberI
   const hook = await ensureWorkflowHook(workflowId)
   await db()
     .from('workflow_hooks')
-    .update({ sample: { ...BOOKING_FIELDS, widget: name.trim(), member_email: email }, sample_at: new Date().toISOString() })
+    .update({
+      sample: { ...BOOKING_FIELDS, widget: name.trim(), member_email: email, ...Object.fromEntries(fields.map((f) => [f.key, fieldExample(f)])) },
+      sample_at: new Date().toISOString(),
+    })
     .eq('id', hook.id)
 }
 
@@ -204,7 +227,7 @@ export const embedCode = (url: string, name: string) =>
   `<iframe src="${url}" title="${name.replace(/"/g, '&quot;')}" referrerpolicy="unsafe-url" style="width:100%;max-width:980px;height:720px;border:0;"></iframe>`
 
 // ---- public (the embed page, no login) ----
-export type PublicWidget = { name: string; kind: string; color: string | null; interval: number | null; days: Record<DayKey, DayHours> | null; days_ahead: number | null; team: number }
+export type PublicWidget = { name: string; kind: string; color: string | null; interval: number | null; days: Record<DayKey, DayHours> | null; days_ahead: number | null; team: number; fields?: ProfileField[] }
 export type Slot = { starts_at: string; ends_at: string; free: number; total: number }
 
 export async function publicWidget(code: string): Promise<PublicWidget | null> {
@@ -219,8 +242,8 @@ export async function widgetSlots(code: string, from: string, to: string): Promi
   return (data ?? []) as Slot[]
 }
 
-export async function bookSlot(code: string, start: string, who: { name: string; phone: string; email: string }) {
-  const { data, error } = await db().functions.invoke('widget-book', { body: { code, start, ...who } })
+export async function bookSlot(code: string, start: string, who: { name: string; phone: string; email: string }, answers: Record<string, string> = {}) {
+  const { data, error } = await db().functions.invoke('widget-book', { body: { code, start, ...who, answers } })
   if (error) {
     const ctx = (error as { context?: Response }).context
     const payload = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null
