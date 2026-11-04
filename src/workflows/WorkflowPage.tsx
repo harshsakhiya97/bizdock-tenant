@@ -23,6 +23,8 @@ export function WorkflowPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    // another workflow (e.g. opened from a Go to workflow step): start fresh
+    setWf(undefined)
     Promise.all([getWorkflow(id), loadRefData(tenant.id)])
       .then(([w, r]) => {
         setWf(w)
@@ -50,11 +52,11 @@ export function WorkflowPage() {
       <div className="panel">
         <div className="panel-body">
           <Suspense fallback={<div className="empty">Loading the builder…</div>}>
-            <WorkflowBuilder workflow={wf} refData={refData} canEdit={can('workflows', 'edit')} />
+            <WorkflowBuilder key={wf.id} workflow={wf} refData={refData} canEdit={can('workflows', 'edit')} />
           </Suspense>
         </div>
       </div>
-      <RunsPanel workflow={wf} />
+      <RunsPanel key={wf.id} workflow={wf} />
     </>
   )
 }

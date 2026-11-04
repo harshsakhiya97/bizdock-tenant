@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { ArrowUp, Braces, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } from 'lucide-react'
+import { ArrowUp, Braces, ExternalLink, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
 import { WaBubble } from '@/integrations/WaBubble'
@@ -23,6 +23,7 @@ export function StepPanel({
   onDelete,
   onClose,
   onSave,
+  onOpenWorkflow,
   saving = false,
   dirty = false,
 }: {
@@ -33,6 +34,8 @@ export function StepPanel({
   onDelete: () => void
   onClose: () => void
   onSave?: () => void
+  /** Go to workflow: save this one and open the picked workflow */
+  onOpenWorkflow?: (id: string) => void
   saving?: boolean
   dirty?: boolean
 }) {
@@ -174,6 +177,11 @@ export function StepPanel({
                 ))}
             </Select>
             <Hint>The lead leaves this workflow here and starts the chosen one from its first step (its trigger is skipped).</Hint>
+            {!!d.workflow_id && onOpenWorkflow && (
+              <button type="button" className="btn btn-outline btn-sm" style={{ marginTop: 8 }} disabled={saving} onClick={() => onOpenWorkflow(String(d.workflow_id))}>
+                <ExternalLink size={14} /> {canEdit && dirty ? 'Save & open workflow' : 'Open workflow'}
+              </button>
+            )}
           </div>
         )}
         {kind === 'goto' && (
