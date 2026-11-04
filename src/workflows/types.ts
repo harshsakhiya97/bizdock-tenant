@@ -39,6 +39,8 @@ export type BulkRow = {
   template: string
   template_language: string
   template_body: string
+  /** all its variables (message, header, button links) */
+  template_vars?: string[]
   params: Record<string, string>
   amount: number
   unit: Unit
