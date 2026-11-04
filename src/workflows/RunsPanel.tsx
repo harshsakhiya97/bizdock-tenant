@@ -9,10 +9,10 @@ import { db } from '@/lib/supabase'
 import { STEP_META, unitText } from './steps'
 import type { StepKind, StepNode, Unit, WorkflowRow } from './types'
 
-/** times in a step's note ("2026-10-30T15:11:41.005Z") as "30 Oct 2026, 8:41 pm" */
+/** times in a step's note ("2026-10-30T15:11:41.005Z") as "30 Oct 2026, 8:41:41 pm" */
 const readable = (s: string) =>
   s.replace(/\b\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})\b/g, (iso) =>
-    new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' }),
+    new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit' }),
   )
 type LogLine = { at: string; node_id: string; kind: string; status: string; detail: string }
 export type Run = {
@@ -58,6 +58,8 @@ const isOpen = (r: Run) => r.status === 'queued' || r.status === 'waiting' || r.
 
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 const time = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+/** a wait's end, to the second */
+const timeSec = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', second: '2-digit' })
 
 /** the steps in order, following the main line from the trigger (stops at a Switch / Yes-No box) */
 export function stepPath(w: Pick<WorkflowRow, 'nodes' | 'edges'>): StepNode[] {
@@ -253,7 +255,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                       </td>
                       <td className="nowrap">
                         <span className={cn('badge', st.tone)}>{st.label}</span>
-                        {r.status === 'waiting' && <div className="muted small">until {time(r.next_at)}</div>}
+                        {r.status === 'waiting' && <div className="muted small">until {timeSec(r.next_at)}</div>}
                       </td>
                       <td>
                         <div className="run-track">
