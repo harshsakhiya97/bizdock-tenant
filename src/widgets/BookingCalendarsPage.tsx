@@ -6,6 +6,7 @@ import { ConfirmModal, Empty, PageHead, Paged } from '@/components/ui'
 import { Flash } from '@/components/Flash'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
+import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { archiveWorkflow, listWorkflows } from '@/workflows/api'
 import { archiveWidget, countBookings, DAYS, INTERVALS, listWidgets, updateWidget, type WidgetRow } from './api'
@@ -141,9 +142,17 @@ export function BookingCalendarsPage() {
                         <td className="nowrap">{hookText(w)}</td>
                         <td>{booked[w.id] ?? 0}</td>
                         <td>
-                          <label className="switch" title={w.is_active ? 'Turn off' : 'Turn on'}>
-                            <input type="checkbox" checked={w.is_active} disabled={!can('widgets', 'edit')} onChange={() => void toggle(w)} />
-                          </label>
+                          {can('widgets', 'edit') ? (
+                            <label className={cn('tgl', w.is_active && 'is-on')} title={w.is_active ? 'Turn off' : 'Turn on'}>
+                              <input type="checkbox" role="switch" checked={w.is_active} onChange={() => void toggle(w)} aria-label={`${w.name} active`} />
+                              <span className="tgl-track" aria-hidden="true">
+                                <span className="tgl-knob" />
+                              </span>
+                              {w.is_active ? 'Active' : 'Inactive'}
+                            </label>
+                          ) : (
+                            <span className={cn('badge', w.is_active ? 'badge-success' : 'badge-muted')}>{w.is_active ? 'On' : 'Off'}</span>
+                          )}
                         </td>
                         <td className="nowrap" style={{ textAlign: 'right' }}>
                           <button type="button" className="btn btn-outline btn-sm" onClick={() => setEmbed(w)}>
