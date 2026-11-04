@@ -39,8 +39,12 @@ export function useWatiTemplates(): { list: WatiTemplate[] | null; error: string
 export function watiVars(t: WatiTemplate) {
   const body = varsIn(t.bodyOriginal || t.body || '')
   const header = varsIn(t.header?.text ?? '')
-  const buttons = varsIn((t.buttons ?? []).map((b) => b.parameter?.url ?? '').join('\n'))
-  const all = [...new Set([...body, ...header, ...buttons, ...(t.customParams ?? []).map((p) => p.paramName).filter(Boolean)])]
+  // WATI gives a button link in WhatsApp's numbered form (…/{{1}}); its name is in the template's variables (e.g. link)
+  const named = (t.customParams ?? []).map((p) => p.paramName).filter(Boolean)
+  const rawButtons = varsIn((t.buttons ?? []).map((b) => b.parameter?.url ?? '').join('\n'))
+  const buttonNamed = named.filter((v) => !body.includes(v) && !header.includes(v))
+  const buttons = [...rawButtons.filter((v) => !/^\d+$/.test(v) || !buttonNamed.length), ...(rawButtons.length ? buttonNamed : [])]
+  const all = [...new Set([...body, ...header, ...buttons, ...named])]
   const where: Record<string, string> = {}
   for (const v of all) if (!body.includes(v)) where[v] = buttons.includes(v) ? 'in the button link' : header.includes(v) ? 'in the header' : ''
   return { vars: all, where }
