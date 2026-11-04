@@ -38,6 +38,7 @@ export const releases: Release[] = [
       'Get lead details: Match by picks the trigger’s phone / email field for you.',
       'Create Zoom meeting: the webhook’s team member is always taken from member_email (no field to pick).',
       'Go to workflow: Save & open workflow (its Back returns here).',
+      'Booking Calendar fields are filled from the page address too: each field by its own name (?company_name=…) and any names you add; name / phone / email show the names they read. Options and page-address names are separate blocks.',
     ],
     fixed: [
       'Bulk WhatsApp messages a minute apart went out two at a time: due runs are now picked up every 10 seconds.',
