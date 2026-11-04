@@ -13,6 +13,34 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.11',
+    date: '2026-11-04',
+    title: 'Booking Calendar fields, workflow builder upgrades',
+    summary: 'Booking calendars get their own visitor fields and a side drawer; the workflow builder gets copy & paste, step-by-step field lists, a working Wait for event and faster timing.',
+    new: [
+      'Booking Calendar: User profile fields tab — name, phone and email always asked, plus your own fields (Text, Long text, Number, Email, Phone, Date, Dropdown, Multi-select) with Required, order and options as chips; the embed asks them in Your Details and each booking sends them to the workflow.',
+      'Workflow builder: copy any step and paste it from + in this or another workflow (Paste shows only after a copy).',
+      'Wait for event runs: waits until a set time before (default) or after a date-time — the Zoom meeting’s start, a webhook field or the webinar.',
+      'Workflow runs: Refresh on a waiting run, an automatic refresh just after its wait ends, and a confirmation before Re-run.',
+      'On webhook call: How to connect (HTML form, JavaScript, cURL) under the webhook URL.',
+      'Switch and Stop sending when… can check the lead found by Get lead details (its fields, extra fields, meeting, payment).',
+    ],
+    improved: [
+      'Every field dropdown in a workflow is grouped by step: Step 1: Trigger, Step 2: Get lead details, Step 3: Generate link… (earlier steps only).',
+      'Booking Calendar add / edit opens in the side drawer (Configuration / User profile fields tabs); rows open it on click; Active is a toggle; the embed popup shows only the embed code; after booking always shows a message.',
+      'Booking Calendar bookings send only name, phone, email, meeting start / end, the team member’s email and the widget; the Zoom step finds the team member by email ({{member_name}}, {{member_phone}} for later steps).',
+      'Follow-ups and My Day follow the selected sub-business.',
+      'WhatsApp steps show a template’s button-link and header variables too.',
+      'Wait-until and step times show seconds; workflow canvas zoom as + / zoom level (click: 100%) / −.',
+      'Email and Call steps hidden from the step list for now; Generate link / Zoom variable lists and Get lead details texts removed (pick them from the dropdowns).',
+      'Masters → Messages rows open on click.',
+    ],
+    fixed: [
+      'Bulk WhatsApp messages a minute apart went out two at a time: due runs are now picked up every 10 seconds.',
+      '“Link this workflow to a funnel” stayed after picking Used in funnel; saving a booking calendar’s workflow no longer clears its funnel.',
+    ],
+  },
+  {
     version: '0.10',
     date: '2026-11-03',
     title: 'Widgets: Booking Calendar',
