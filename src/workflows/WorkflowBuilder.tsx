@@ -52,19 +52,21 @@ export function WorkflowBuilder(props: Props) {
   )
 }
 
+/** each zoom button: wide enough for "100%" */
+const ZOOM_BTN = { width: 48, height: 36, padding: 0 } as const
 /** bottom-left: zoom in, the zoom level (click: back to 100%), zoom out */
 function ZoomControls() {
   const flow = useReactFlow()
   const { zoom } = useViewport()
   return (
     <Panel position="bottom-left" className="react-flow__controls cb-zoom">
-      <button type="button" className="react-flow__controls-button" title="Zoom in" aria-label="Zoom in" onClick={() => void flow.zoomIn({ duration: 150 })}>
+      <button type="button" className="react-flow__controls-button" style={ZOOM_BTN} title="Zoom in" aria-label="Zoom in" onClick={() => void flow.zoomIn({ duration: 150 })}>
         <Plus size={14} />
       </button>
-      <button type="button" className="react-flow__controls-button cb-zoom-level" title="Back to 100%" aria-label="Zoom level, click for 100%" onClick={() => void flow.zoomTo(1, { duration: 150 })}>
+      <button type="button" className="react-flow__controls-button cb-zoom-level" style={ZOOM_BTN} title="Back to 100%" aria-label="Zoom level, click for 100%" onClick={() => void flow.zoomTo(1, { duration: 150 })}>
         {Math.round(zoom * 100)}%
       </button>
-      <button type="button" className="react-flow__controls-button" title="Zoom out" aria-label="Zoom out" onClick={() => void flow.zoomOut({ duration: 150 })}>
+      <button type="button" className="react-flow__controls-button" style={ZOOM_BTN} title="Zoom out" aria-label="Zoom out" onClick={() => void flow.zoomOut({ duration: 150 })}>
         <Minus size={14} />
       </button>
     </Panel>
