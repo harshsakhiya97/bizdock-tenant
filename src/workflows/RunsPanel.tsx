@@ -309,6 +309,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                         {r.error && <div className="small text-danger" style={{ marginTop: 4 }}>{r.error}</div>}
                       </td>
                       <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        {r.status === 'waiting' && (
                         <button
                           type="button"
                           className="btn btn-outline btn-sm"
@@ -319,6 +320,7 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
                         >
                           <RefreshCw size={13} className={refreshing === r.id ? 'spin' : undefined} /> Refresh
                         </button>
+                        )}
                       {canRun && (
                         <>
                           <button
