@@ -34,6 +34,10 @@ export const releases: Release[] = [
       'Wait-until and step times show seconds; workflow canvas zoom as + / zoom level (click: 100%) / −.',
       'Email and Call steps hidden from the step list for now; Generate link / Zoom variable lists and Get lead details texts removed (pick them from the dropdowns).',
       'Masters → Messages rows open on click.',
+      'Field dropdowns: names in Title Case (Meeting End, Company Name), no {{keyword}} shown, date fields only as Date / Time / Date & Time (no meeting_end date: same as the start’s), and examples for Generate link and Zoom values.',
+      'Get lead details: Match by picks the trigger’s phone / email field for you.',
+      'Create Zoom meeting: the webhook’s team member is always taken from member_email (no field to pick).',
+      'Go to workflow: Save & open workflow (its Back returns here).',
     ],
     fixed: [
       'Bulk WhatsApp messages a minute apart went out two at a time: due runs are now picked up every 10 seconds.',
