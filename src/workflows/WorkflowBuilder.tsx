@@ -16,7 +16,7 @@ import {
   type IsValidConnection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { AlertTriangle, ClipboardPaste, Info, Minus, Plus, Save, Search, X } from 'lucide-react'
+import { AlertTriangle, ClipboardPaste, Minus, Plus, Save, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useBackTo } from './backTo'
 import { HOOK_EVENT } from './HookTrigger'
@@ -435,9 +435,6 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             </button>
           </div>
         )}
-      </div>
-      <div className="alert alert-info small cb-note">
-        <Info size={15} /> WhatsApp, Bulk WhatsApp, Generate link, Create Zoom meeting, Get lead details, Wait, Wait for event, Switch and Go to workflow steps run now.
       </div>
       {notice.error && <div className="alert alert-error">{notice.error}</div>}
       {!dirty && <Flash msg={notice.ok} dep={notice} />}
