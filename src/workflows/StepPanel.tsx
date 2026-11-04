@@ -221,8 +221,8 @@ function LeadLookupFields({ d, set, disabled, fieldKeys }: { d: Record<string, u
         </Label>
         <Select id={id} value={v} onChange={(e) => set(key, e.target.value)} disabled={disabled}>
           <option value="">— select —</option>
-          <VarOptions groups={groups} show={(k) => `{{${k}}}`} />
-          {!!v && !groups.some((g) => g.items.some(([k]) => k === v)) && <option value={v}>{`{{${v}}}`}</option>}
+          <VarOptions groups={groups} />
+          {!!v && !groups.some((g) => g.items.some(([k]) => k === v)) && <option value={v}>{v}</option>}
         </Select>
       </div>
     )
@@ -909,7 +909,7 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
         {!disabled && (
           <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
             <option value="">Insert a field…</option>
-            <VarOptions groups={linkGroups} show={(k, l) => `${l} {${k}}`} />
+            <VarOptions groups={linkGroups} />
           </select>
         )}
         <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
@@ -965,7 +965,7 @@ function MessageField({
       {!disabled && (
         <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
           <option value="">Insert a field…</option>
-          <VarOptions groups={groups} show={(k, l) => `${l} {{${k}}}`} />
+          <VarOptions groups={groups} />
         </select>
       )}
       {hint && <Hint>{hint}</Hint>}
