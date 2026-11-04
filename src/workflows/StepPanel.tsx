@@ -8,8 +8,7 @@ import { WaBubble } from '@/integrations/WaBubble'
 import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates, watiVars } from './WhatsAppFields'
-import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, linkVarOf, problem, rowsOf } from './steps'
-import { shortBase } from './api'
+import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, problem, rowsOf } from './steps'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, listValues, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
@@ -650,9 +649,6 @@ function BulkFields({
 }
 
 /** Generate link: a long URL with the lead's fields as {field} → <app>/<code> (new code for every lead), used later as {{generated_link}}. */
-const SHORT_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
-/** a sample code like the real ones (8 characters, no look-alikes) */
-const sampleCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => SHORT_ABC[b % SHORT_ABC.length]).join('')
 
 /** Create Zoom meeting: also make a short link of the Zoom link ({{zoom_short_link}}, {{zoom_short_link_code}}) */
 type PassField = { id: string; name: string; value: string }
@@ -720,25 +716,7 @@ function GotoFields({ d, set, disabled, extras }: { d: Record<string, unknown>; 
   )
 }
 
-/** "Use it in later steps": each variable, an example, then what it holds (Generate link, Zoom) */
-function VarList({ items }: { items: (readonly [string, string, string])[] }) {
-  return (
-    <ul className="gl-vars gl-vars-list">
-      {items.map(([v, eg, what]) => (
-        <li key={v}>
-          <code className="code-chip">{v}</code>
-          <span className="gl-eg">
-            e.g. <code>{eg}</code>
-          </span>
-          <span className="gl-what">{what}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: (k: string, v: unknown) => void; disabled: boolean }) {
-  const [code] = useState(sampleCode)
   return (
     <>
       <Checkbox
@@ -748,26 +726,6 @@ function ZoomShortLink({ d, set, disabled }: { d: Record<string, unknown>; set: 
         label="Convert the Zoom link to a short link"
         description="A new code for each lead on your CRM address; it opens the Zoom meeting. Clicks are counted."
       />
-      <div>
-        <span className="field-label">Use it in later steps as</span>
-        <VarList
-          items={[
-            ...(d.short_link
-              ? ([
-                  ['{{zoom_short_link}}', `${shortBase()}/${code}`, 'the short link: opens the Zoom meeting with its passcode (a new code for every lead; clicks are counted)'],
-                  ['{{zoom_short_link_code}}', code, 'the code only (for a template whose button already has your domain)'],
-                ] as const)
-              : []),
-            ['{{zoom_link}}', 'https://us06web.zoom.us/j/81234567890?pwd=Ab12Cd34', 'the Zoom meeting link, with its passcode'],
-            ['{{zoom_date_time}}', '29 Oct 2026 5pm-8pm', 'the meeting’s date and time'],
-            ['{{zoom_date}}', '2026-10-29', 'the meeting’s date'],
-            ['{{zoom_time}}', '17:00', 'the start time'],
-            ['{{zoom_start}}', '2026-10-29 17:00', 'date and start time together (also as {{zoom_start_date}}, {{zoom_start_time}}, {{zoom_start_datetime}})'],
-            ['{{zoom_password}}', 'Ab12Cd34', 'the meeting passcode'],
-            ['{{zoom_meeting_id}}', '81234567890', 'the Zoom meeting ID'],
-          ]}
-        />
-      </div>
     </>
   )
 }
@@ -923,7 +881,6 @@ function ZoomFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx
 function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const url = String(d.url ?? '')
-  const name = linkVarOf(d)
   const fields = [
     ['full_name', 'Full name'] as const,
     ...VARIABLES.filter(([k]) => k !== 'name').map(([k, l]) => [k, l] as const),
@@ -944,20 +901,6 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
     })
   }
   const linkGroups = useVarGroups(fields.slice(VARIABLES.length).map(([k]) => k), fields.slice(0, VARIABLES.length))
-  // what a lead would get (a sample code: every lead gets a new one)
-  // what each variable would hold for a sample lead (every lead gets its own code)
-  const code = 'T7P46LXK'
-  const SAMPLE: Record<string, string> = { full_name: 'Harsh', name: 'Harsh', fname: 'Harsh', first_name: 'Harsh', phone: '9867333582', email: 'harsh@gmail.com', city: 'Mumbai' }
-  const filled = url.trim()
-    ? url.trim().replace(/\{\{?\s*([a-zA-Z0-9_]+)\s*\}\}?/g, (_m, k: string, at: number) => (at === 0 ? `{${k}}` : encodeURIComponent(SAMPLE[k] ?? k)))
-    : 'https://your-site.com/page?fname=Harsh&phone=9867333582'
-  const q = filled.indexOf('?')
-  const examples = {
-    link: `${shortBase()}/${code}`,
-    code,
-    full: filled,
-    params: q < 0 ? '(nothing: your URL has no “?”)' : filled.slice(q + 1),
-  }
   return (
     <>
       <div>
@@ -985,14 +928,6 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
       <div>
         <Label htmlFor="cb-gl-var">Use it in later steps as</Label>
         <TextInput id="cb-gl-var" placeholder="generated_link" value={String(d.var ?? '')} onChange={(e) => set('var', e.target.value)} disabled={disabled} />
-        <VarList
-          items={[
-            [`{{${name}}}`, examples.link, 'the short link (a new code for every lead; clicks are counted)'],
-            [`{{${name}_code}}`, examples.code, 'the code only (for a template whose button already has your domain)'],
-            [`{{${name}_full_url}}`, examples.full, 'your URL as filled in, in full'],
-            [`{{${name}_parameters}}`, examples.params, 'only the part after “?”'],
-          ]}
-        />
       </div>
     </>
   )
