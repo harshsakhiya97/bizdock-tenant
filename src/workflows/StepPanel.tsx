@@ -1043,6 +1043,10 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
   const hookOnly = ctx.triggerEvent === 'webhook_call'
   const hookFields = [...new Set(ctx.fieldKeys)]
   const stepVars = [...new Set(ctx.linkVars)].filter((k) => !hookFields.includes(k))
+  // with a Get lead details step the run has a lead: its fields can be checked too
+  const withLead = hookOnly && !!ctx.leadLookup
+  const lookupExtras = withLead ? [...new Set(ctx.lookupExtraKeys ?? [])].filter((k) => k && !LEAD_FIELDS.some((f) => f.value === k)).sort((a, b) => a.localeCompare(b)) : []
+  const hookValue = c.field.startsWith('v:') ? c.field : withLead && raw.field ? (c.field.startsWith('x:') && !lookupExtras.includes(c.field.slice(2)) ? 'x:' : c.field) : ''
   function pickField(f: string) {
     const k = fieldDef(f).kind
     put({ field: f, op: opsFor(k, f)[0], value: '' })
@@ -1052,7 +1056,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
       {hookOnly ? (
         <div>
           <Label htmlFor={`${id}-f`}>If</Label>
-          <Select id={`${id}-f`} value={c.field.startsWith('v:') ? c.field : ''} disabled={disabled} onChange={(e) => e.target.value && pickField(e.target.value)}>
+          <Select id={`${id}-f`} value={hookValue} disabled={disabled} onChange={(e) => e.target.value && pickField(e.target.value)}>
             <option value="">— pick a field —</option>
             {hookFields.length > 0 && (
               <optgroup label="Webhook fields">
@@ -1072,8 +1076,37 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
                 ))}
               </optgroup>
             ))}
+            {withLead && (
+              <>
+                <optgroup label="Lead (from Get lead details)">
+                  {LEAD_FIELDS.filter((f) => f.group === 'Lead').map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Lead activity">
+                  {LEAD_FIELDS.filter((f) => f.group === 'Activity').map((f) => (
+                    <option key={f.value} value={f.value}>
+                      {f.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Lead extra fields">
+                  {lookupExtras.map((k) => (
+                    <option key={k} value={`x:${k}`}>
+                      {k.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                  <option value="x:">Other field (type its name)…</option>
+                </optgroup>
+              </>
+            )}
           </Select>
-          {!hookFields.length && <Hint>Send a test post to the trigger’s webhook to pick its fields here.</Hint>}
+          {withLead && c.field.startsWith('x:') && !lookupExtras.includes(c.field.slice(2)) && (
+            <TextInput aria-label="Field name" placeholder="e.g. annual_revenue" value={c.field.slice(2)} onChange={(e) => put({ field: `x:${e.target.value.trim()}` })} disabled={disabled} style={{ marginTop: 6 }} />
+          )}
+          {!hookFields.length && !withLead && <Hint>Send a test post to the trigger’s webhook to pick its fields here.</Hint>}
         </div>
       ) : (
       <div>

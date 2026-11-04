@@ -96,10 +96,14 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
   const home = ref.funnels.find((f) => f.id === ref.selfFunnelId) ?? funnel
   const subFunnels = home ? ref.funnels.filter((f) => (home.sub_business_id ? f.sub_business_id === home.sub_business_id : f.business_id === home.business_id)).map((f) => f.id) : []
   const lookupExtraKeys = leadLookup ? [...new Set(subFunnels.flatMap((id) => ref.extraKeysByFunnel?.[id] ?? []))] : []
+  // the stages of that sub-business's funnels (conditions on the found lead's stage)
+  const homeFunnels = ref.funnels.filter((f) => subFunnels.includes(f.id))
+  const lookupStages = leadLookup ? homeFunnels.flatMap((f) => f.stages.map((st) => ({ id: st.id, name: homeFunnels.length > 1 ? `${f.name} · ${st.name}` : st.name }))) : []
   return {
     ...ref,
     leadLookup,
     lookupExtraKeys,
+    lookupStages,
     funnel: hook ? null : funnel,
     event,
     pages: hook || t.event === 'webhook_call' ? [] : pages,

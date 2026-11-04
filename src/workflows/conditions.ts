@@ -107,7 +107,7 @@ export const needsValue = (op: CondOp) => !['empty', 'not_empty', 'exists', 'not
 
 /** the choices of a select field */
 export function choicesFor(field: string, ctx: FlowContext): { value: string; label: string }[] | null {
-  if (field === 'stage') return (ctx.stages.length ? ctx.stages : ctx.funnels.flatMap((f) => f.stages)).map((s) => ({ value: s.id, label: s.name }))
+  if (field === 'stage') return (ctx.stages.length ? ctx.stages : ctx.lookupStages?.length ? ctx.lookupStages : ctx.funnels.flatMap((f) => f.stages)).map((s) => ({ value: s.id, label: s.name }))
   if (field === 'source') return (ctx.sources ?? []).map((s) => ({ value: s.id, label: s.name }))
   if (field === 'owner') return ctx.members.map((m) => ({ value: m.id, label: m.name }))
   if (field === 'temperature') return TEMPERATURES
