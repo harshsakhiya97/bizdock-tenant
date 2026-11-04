@@ -160,7 +160,13 @@ export function stepVarKeys(n: StepNode): string[] {
     return [k, `${k}_code`, `${k}_full_url`, `${k}_parameters`]
   }
   if (n.type === 'zoom_meeting')
-    return ['zoom_start', 'zoom_date_time', 'zoom_date', 'zoom_time', 'zoom_link', ...(n.data.short_link ? ['zoom_short_link', 'zoom_short_link_code'] : []), 'zoom_meeting_id', 'zoom_password']
+    return [
+      'zoom_start', 'zoom_date_time', 'zoom_date', 'zoom_time', 'zoom_link',
+      ...(n.data.short_link ? ['zoom_short_link', 'zoom_short_link_code'] : []),
+      'zoom_meeting_id', 'zoom_password',
+      // the team member found from the webhook
+      ...(n.data.meet_mode === 'webhook' ? ['member_name', 'member_phone'] : []),
+    ]
   return []
 }
 

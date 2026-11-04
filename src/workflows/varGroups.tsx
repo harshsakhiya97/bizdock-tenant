@@ -14,6 +14,8 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   zoom_date: 'Zoom meeting date',
   zoom_time: 'Zoom meeting time',
   zoom_start: 'Zoom meeting start',
+  member_name: 'Team member name',
+  member_phone: 'Team member phone',
   generated_link: 'Generated link',
   generated_link_code: 'Generated link code',
   generated_link_full_url: 'Generated link – full URL',
