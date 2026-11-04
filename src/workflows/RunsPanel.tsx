@@ -147,13 +147,26 @@ export function RunsList({ workflow }: { workflow: WorkflowRow }) {
   }, [busy, runs, load])
 
   // one run's latest status and steps (the rest of the list stays as it is)
-  async function refreshRun(r: Run) {
-    setRefreshing(r.id)
+  async function refreshRun(r: Run, quiet = false) {
+    if (!quiet) setRefreshing(r.id)
     const { data, error } = await db().from('workflow_runs').select(RUN_COLS).eq('id', r.id).maybeSingle()
-    setRefreshing(null)
-    if (error) return setMsg({ error: error.message })
+    if (!quiet) setRefreshing(null)
+    if (error) return quiet ? undefined : setMsg({ error: error.message })
     if (data) setRuns((list) => (list ?? []).map((x) => (x.id === r.id ? (data as unknown as Run) : x)))
   }
+
+  // a waiting run: refreshed by itself ~2 s after its "until" time, then every few seconds until it moves on
+  // (the runner picks it up within ~10 s; given up 45 s after the time, e.g. when the workflow is off)
+  useEffect(() => {
+    const now = Date.now()
+    const next = (runs ?? [])
+      .filter((r) => r.status === 'waiting' && r.next_at && new Date(r.next_at).getTime() > now - 45_000)
+      .sort((a, b) => a.next_at!.localeCompare(b.next_at!))[0]
+    if (!next) return
+    const at = new Date(next.next_at!).getTime()
+    const t = setTimeout(() => void refreshRun(next, true), Math.max(at + 2000 - now, 3000))
+    return () => clearTimeout(t)
+  }, [runs]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // run the workflow again from its first step, for the same lead (or the same test details)
   async function rerun(r: Run) {
