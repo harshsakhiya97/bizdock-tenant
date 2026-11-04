@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import {
   Background,
   BackgroundVariant,
-  Controls,
+  Panel,
   MarkerType,
   ReactFlow,
   ReactFlowProvider,
@@ -11,11 +11,12 @@ import {
   useEdgesState,
   useNodesState,
   useReactFlow,
+  useViewport,
   type Connection,
   type IsValidConnection,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { AlertTriangle, ClipboardPaste, Info, Plus, Save, Search, X } from 'lucide-react'
+import { AlertTriangle, ClipboardPaste, Info, Minus, Plus, Save, Search, X } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { useBackTo } from './backTo'
 import { HOOK_EVENT } from './HookTrigger'
@@ -48,6 +49,25 @@ export function WorkflowBuilder(props: Props) {
     <ReactFlowProvider>
       <Builder {...props} />
     </ReactFlowProvider>
+  )
+}
+
+/** bottom-left: zoom in, the zoom level (click: back to 100%), zoom out */
+function ZoomControls() {
+  const flow = useReactFlow()
+  const { zoom } = useViewport()
+  return (
+    <Panel position="bottom-left" className="react-flow__controls cb-zoom">
+      <button type="button" className="react-flow__controls-button" title="Zoom in" aria-label="Zoom in" onClick={() => void flow.zoomIn({ duration: 150 })}>
+        <Plus size={14} />
+      </button>
+      <button type="button" className="react-flow__controls-button cb-zoom-level" title="Back to 100%" aria-label="Zoom level, click for 100%" onClick={() => void flow.zoomTo(1, { duration: 150 })}>
+        {Math.round(zoom * 100)}%
+      </button>
+      <button type="button" className="react-flow__controls-button" title="Zoom out" aria-label="Zoom out" onClick={() => void flow.zoomOut({ duration: 150 })}>
+        <Minus size={14} />
+      </button>
+    </Panel>
   )
 }
 
@@ -456,7 +476,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
             maxZoom={1.5}
           >
             <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} />
-            <Controls showInteractive={false} />
+            <ZoomControls />
           </ReactFlow>
           {canEdit && !adding && (
             <button type="button" className="cb-add-fab" onClick={() => (setFrom(null), setAdding(true), setFind(''))} title="Add a step" aria-label="Add a step">
