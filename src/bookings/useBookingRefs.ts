@@ -15,10 +15,13 @@ export function useBookingRefs() {
   const [sources, setSources] = useState<Option[]>([])
   const [funnels, setFunnels] = useState<FunnelRow[]>([])
   const [products, setProducts] = useState<ProductRow[]>([])
+  // Masters → Products (what webinar leads buy)
+  const [goods, setGoods] = useState<ProductRow[]>([])
   useEffect(() => {
     void Promise.all([listBillingCompanies(tenant.id), listSimple('payment_modes', tenant.id), listSources(tenant.id), listFunnels(tenant.id), listProducts(tenant.id)]).then(
       ([c, m, s, f, p]) => {
-        setProducts(p)
+        setProducts(p.filter((x) => x.kind !== 'product'))
+        setGoods(p.filter((x) => x.kind === 'product'))
         setCompanies(c.filter((x) => x.is_active))
         setModes(m.filter((x) => x.is_active))
         setSources(s)
@@ -32,6 +35,7 @@ export function useBookingRefs() {
     sources,
     funnels,
     products,
+    goods,
     companyName: (id: string | null) => companies.find((c) => c.id === id)?.name,
     modeName: (id: string | null) => modes.find((m) => m.id === id)?.name,
   }

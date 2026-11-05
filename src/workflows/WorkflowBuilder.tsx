@@ -27,7 +27,7 @@ import { AddCtx } from './addCtx'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { useCopiedStep } from './stepClipboard'
-import { PALETTE, STEP_META, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
+import { PALETTE, STEP_META, WEBINAR_STEPS, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -536,6 +536,8 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
                 )}
                 <div className="stack" style={{ gap: 6 }}>
                   {PALETTE.filter((k) => {
+                    // webinar steps: only with webinars (Webinar businesses)
+                    if (WEBINAR_STEPS.includes(k) && !ctx.webinars?.length) return false
                     const q = find.trim().toLowerCase()
                     return !q || STEP_META[k].label.toLowerCase().includes(q) || STEP_META[k].hint.toLowerCase().includes(q)
                   }).map((k) => {

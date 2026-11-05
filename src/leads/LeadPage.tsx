@@ -26,8 +26,11 @@ import { MeetingDrawer } from '@/meetings/MeetingDrawer'
 import { MeetingsTab } from '@/meetings/MeetingsTab'
 import type { MeetingRow } from '@/meetings/types'
 import { makesCustomer, podcastCheck } from './customers'
+import { listPurchases, type Purchase } from '@/webinars/api'
+import { LeadWebinarsTab, PurchasesTab } from '@/webinars/LeadWebinarTabs'
+import { PurchaseDrawer } from '@/webinars/PurchaseDrawer'
 
-type Tab = 'details' | 'followups' | 'meetings' | 'bookings'
+type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -46,12 +49,14 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' || t === 'meetings' ? t : 'details'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
   const [meetings, setMeetings] = useState<MeetingRow[] | null>(null)
   const [mt, setMt] = useState<{ meeting: MeetingRow | null } | null>(null)
+  const [purchases, setPurchases] = useState<Purchase[] | null>(null)
+  const [pu, setPu] = useState<{ purchase: Purchase | null } | null>(null)
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -67,6 +72,9 @@ export function LeadPage() {
     listBookings(tenant.id, { leadId: id })
       .then(setBookings)
       .catch(() => setBookings([]))
+    listPurchases({ leadId: id })
+      .then(setPurchases)
+      .catch(() => setPurchases([]))
     if (can('meetings', 'view'))
       listMeetings(tenant.id, { leadId: id })
         .then(setMeetings)
@@ -113,15 +121,20 @@ export function LeadPage() {
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
   // Paid Podcast lead: Meetings and Podcasts tabs instead of Bookings
-  const isPodcast = (lead.sub_business_id ? bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.type : !bizRow?.subs.length ? bizRow?.type : null) === BT.PAID_PODCAST
+  const leadType = lead.sub_business_id ? bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.type : !bizRow?.subs.length ? bizRow?.type : null
+  const isPodcast = leadType === BT.PAID_PODCAST
+  // Webinar lead: Webinars and Purchases tabs
+  const isWebinar = leadType === BT.WEBINAR
   // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
   const podcastBk = podcastCheck(businesses)
   const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))
-  const isCustomer = won.length > 0
-  const billed = won.reduce((n, b) => n + Number(b.total_amount), 0)
-  const received = won.reduce((n, b) => n + Number(b.paid_amount), 0)
+  // …or a purchase with a paid part
+  const bought = (purchases ?? []).filter((p) => p.status === 'active' && Number(p.paid_amount) > 0)
+  const isCustomer = won.length > 0 || bought.length > 0
+  const billed = won.reduce((n, b) => n + Number(b.total_amount), 0) + bought.reduce((n, p) => n + Number(p.total_amount), 0)
+  const received = won.reduce((n, b) => n + Number(b.paid_amount), 0) + bought.reduce((n, p) => n + Number(p.paid_amount), 0)
   const today = new Date().toISOString().slice(0, 10)
-  const overdue = won.flatMap((b) => b.booking_payments).filter((p) => p.status !== 'paid' && p.due_on && p.due_on < today)
+  const overdue = [...won.flatMap((b) => b.booking_payments), ...bought.flatMap((p) => p.purchase_payments)].filter((p) => p.status !== 'paid' && p.due_on && p.due_on < today)
   const sourceName = refs.sources.find((s) => s.id === lead.source_id)?.name
 
   const vars = {
@@ -162,7 +175,14 @@ export function LeadPage() {
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
     ...(isPodcast && can('meetings', 'view') ? [{ id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).filter((m) => m.status !== 'cancelled').length }] : []),
-    ...(can('bookings', 'view') ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }] : []),
+    ...(isWebinar
+      ? [
+          { id: 'webinars' as Tab, label: 'Webinars' },
+          { id: 'purchases' as Tab, label: 'Purchases', count: (purchases ?? []).filter((p) => p.status === 'active').length },
+        ]
+      : can('bookings', 'view')
+        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
+        : []),
   ]
 
   return (
@@ -221,7 +241,11 @@ export function LeadPage() {
 
       {isCustomer && (
         <div className="stat-grid">
-          <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? "Podcasts" : "Bookings"} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
+          {isWebinar ? (
+            <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} />
+          ) : (
+            <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
+          )}
           <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" />
           <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" />
           <StatCard
@@ -273,7 +297,11 @@ export function LeadPage() {
         {tab === 'meetings' && isPodcast && (
           <MeetingsTab meetings={meetings} members={members} canAdd={can('meetings', 'add')} onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
-        {tab === 'bookings' && <BookingsTab bookings={bookings} podcast={isPodcast} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
+        {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
+        {tab === 'purchases' && isWebinar && (
+          <PurchasesTab purchases={purchases} canAdd={canEdit} onAdd={() => setPu({ purchase: null })} onOpen={(p) => setPu({ purchase: p })} onChanged={done} />
+        )}
+        {tab === 'bookings' && !isWebinar && <BookingsTab bookings={bookings} podcast={isPodcast} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
       </section>
 
       {editing && (
@@ -318,6 +346,19 @@ export function LeadPage() {
             setMt(null)
             setTab('bookings')
             setBk({ booking: null })
+          }}
+        />
+      )}
+      {pu && (
+        <PurchaseDrawer
+          key={pu.purchase?.id ?? 'new'}
+          purchase={pu.purchase}
+          lead={{ id: lead.id, name, business_id: lead.business_id }}
+          refs={refs}
+          onClose={() => setPu(null)}
+          onSaved={(msg) => {
+            setPu(null)
+            done(msg)
           }}
         />
       )}

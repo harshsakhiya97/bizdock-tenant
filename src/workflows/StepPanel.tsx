@@ -96,6 +96,20 @@ export function StepPanel({
         )}
         {kind === 'lead_lookup' && <LeadLookupFields d={d} set={set} put={(p) => onChange({ ...d, ...p })} disabled={ro} hookOnly={hookOnly} fieldKeys={ctx.fieldKeys} />}
         {kind === 'generate_link' && <GenerateLinkFields d={d} ctx={ctx} set={set} disabled={ro} />}
+        {kind === 'register_webinar' && <RegisterWebinarFields d={d} ctx={ctx} set={set} disabled={ro} />}
+        {kind === 'wait_zoom' && (
+          <Hint>
+            After the webinar date ends, Zoom’s report (who joined and for how long, Q&amp;A, chat, polls) is fetched 5 minutes later and tried again every 5
+            minutes. This step waits until it’s in, then carries on. If Zoom has nothing 2 hours after the end, it carries on without it.
+          </Hint>
+        )}
+        {kind === 'webinar_analytics' && (
+          <Hint>
+            The lead’s minutes in the webinar (and % of it), their questions, chat messages and poll answers, and their category: Super Hot, Hot, Warm or
+            Cold (kept on the lead’s Webinars tab). Later steps (e.g. a Switch on “Webinar category”) use them. For now: didn’t join → Cold; stayed 75%+ and
+            asked / chatted / answered a poll → Super Hot; stayed 50%+ → Hot; else Warm (to be replaced by your rules).
+          </Hint>
+        )}
         {kind === 'zoom_meeting' && (
           <>
             <ZoomFields d={d} ctx={ctx} set={set} disabled={ro} />
@@ -679,11 +693,17 @@ function BulkFields({
           {anchor === 'start'
             ? 'Each message goes this long after the workflow started for the lead (0 = right away).'
             : 'Each message goes this long before or after (set on each row) the date-time in the picked field (e.g. 2026-11-02 16:00, India time).'}{' '}
-          If a time has already passed, it goes right away. After the last one the workflow carries on to the next step.
+          {d.skip_past ? 'A time already passed is skipped.' : 'If a time has already passed, it goes right away.'} After the last one the workflow carries on to the next step.
         </Hint>
         {outOfOrder && <Hint>The list order is only for you: each message goes at its own time.</Hint>}
       </div>
 
+      {anchor !== 'start' && (
+        <label className="check-inline">
+          <input type="checkbox" checked={!!d.skip_past} onChange={(e) => onChange({ ...d, skip_past: e.target.checked })} disabled={disabled} /> Skip messages whose time has
+          already passed when the lead reaches this step (e.g. “1 day before” for someone who registers an hour before)
+        </label>
+      )}
       <div className="stack" style={{ gap: 10 }}>
         <label className="check-inline">
           <input type="checkbox" checked={!!d.stop_on} onChange={(e) => onChange({ ...d, stop_on: e.target.checked, stop })} disabled={disabled} /> Stop sending when…
@@ -1199,7 +1219,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
         >
           {ops.map((o) => (
             <option key={o} value={o}>
-              {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : 'hasn’t paid') : OP_LABEL[o]}
+              {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : c.field === 'customer' ? 'is a customer (bought / paid)' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : c.field === 'customer' ? 'is not a customer' : 'hasn’t paid') : OP_LABEL[o]}
             </option>
           ))}
         </Select>
@@ -1374,6 +1394,37 @@ function TimeRow({
 }
 
 /** what starts the workflow, and its settings */
+/** Register for webinar: which webinar, and a short link of the lead's joining link */
+function RegisterWebinarFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
+  const list = ctx.webinars ?? []
+  return (
+    <>
+      <div>
+        <Label htmlFor="cb-rw" required>
+          Webinar
+        </Label>
+        <Select id="cb-rw" value={String(d.webinar_id ?? '')} disabled={disabled} onChange={(e) => set('webinar_id', e.target.value)}>
+          <option value="">{ctx.webinar ? `The funnel’s webinar (${ctx.webinar.title})` : '— select —'}</option>
+          {list.map((w) => (
+            <option key={w.id} value={w.id}>
+              {w.title}
+            </option>
+          ))}
+        </Select>
+        {!list.length && <Hint>No webinars yet: create one on the Webinar Calendar.</Hint>}
+      </div>
+      <label className="check-inline">
+        <input type="checkbox" checked={d.short_link !== false} disabled={disabled} onChange={(e) => set('short_link', e.target.checked)} /> Also make a short link of the joining link
+      </label>
+      <Hint>
+        The lead is registered on Zoom for the webinar’s coming date (if one is on right now, the one after), with their own joining link; it needs the
+        lead’s email. Someone registering again for the same date gets the same link. Later steps use Webinar joining short link, Webinar start, Webinar
+        date &amp; time…
+      </Hint>
+    </>
+  )
+}
+
 function TriggerFields({
   t,
   ctx,
@@ -1532,17 +1583,31 @@ function TriggerFields({
         <>
           <div>
             <Label htmlFor="tr-ev" required>
-              Webinar / event
+              Webinar
             </Label>
-            <Select id="tr-ev" value={t.event_id ?? ''} disabled={disabled} onChange={(e) => set({ event_id: e.target.value })}>
+            <Select
+              id="tr-ev"
+              value={t.webinar_id ? `w:${t.webinar_id}` : t.event_id ? `e:${t.event_id}` : ''}
+              disabled={disabled}
+              onChange={(e) => {
+                const v = e.target.value
+                set(v.startsWith('w:') ? { webinar_id: v.slice(2), event_id: '' } : v.startsWith('e:') ? { event_id: v.slice(2), webinar_id: '' } : { webinar_id: '', event_id: '' })
+              }}
+            >
               <option value="">— select —</option>
-              {ctx.events.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.title} · {new Date(`${e.date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  {e.time ? `, ${e.time.slice(0, 5)}` : ''}
+              {(ctx.webinars ?? []).map((w) => (
+                <option key={w.id} value={`w:${w.id}`}>
+                  {w.title}
                 </option>
               ))}
+              {/* older workflows: one calendar event */}
+              {t.event_id && ev && (
+                <option value={`e:${ev.id}`}>
+                  {ev.title} · {new Date(`${ev.date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                </option>
+              )}
             </Select>
+            {!(ctx.webinars ?? []).length && <Hint>No webinars yet: create one on the Webinar Calendar.</Hint>}
           </div>
           <div>
             <span className="field-label">{t.event === 'before_event' ? 'How long before it starts' : 'How long after it ends'}</span>
@@ -1554,7 +1619,13 @@ function TriggerFields({
               disabled={disabled}
             />
           </div>
-          {ev && (
+          {t.webinar_id && (
+            <Hint>
+              Runs for every date of the webinar, for each lead registered for that date (Register for webinar), {t.event === 'before_event' ? 'this long before it starts (someone who registers later still gets it, until it starts)' : 'this long after it ends'}.
+              Later steps have the date’s values (Webinar start, the lead’s joining link…).
+            </Hint>
+          )}
+          {!t.webinar_id && ev && (
             <Hint>
               {linkedFunnels.length
                 ? `Runs for the leads of ${linkedFunnels.map((f) => f.name).join(', ')} (the funnel${linkedFunnels.length > 1 ? 's' : ''} linked to this ${'event'}).`
