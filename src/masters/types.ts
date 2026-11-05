@@ -23,6 +23,8 @@ export type ProductRow = {
   validity_months: number | null
   is_active: boolean
   sort_order: number
+  /** Masters → Services ('service', picked on bookings) or Masters → Products ('product', bought by webinar leads) */
+  kind: 'service' | 'product'
 }
 
 export type BillingCompanyRow = {

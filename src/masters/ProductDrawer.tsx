@@ -16,6 +16,7 @@ const slug = (s: string) =>
 
 export function ProductDrawer({
   product,
+  kind = 'service',
   businesses,
   defaultBusinessId,
   nextOrder,
@@ -23,6 +24,8 @@ export function ProductDrawer({
   onSaved,
 }: {
   product: ProductRow | null
+  /** a service (bookings) or a product (bought by webinar leads) */
+  kind?: ProductRow['kind']
   businesses: { id: string; name: string }[]
   defaultBusinessId: string | null
   nextOrder: number
@@ -49,13 +52,15 @@ export function ProductDrawer({
   const [busy, setBusy] = useState(false)
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((d) => ({ ...d, [k]: v }))
 
+  const word = (product?.kind ?? kind) === 'product' ? 'product' : 'service'
+  const Word = word === 'product' ? 'Product' : 'Service'
   const price = Number(f.price) || 0
   const gst = f.gst_applicable ? Math.round(price * Number(f.gst_rate)) / 100 : 0
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!f.business_id) return setError('Pick a business.')
-    if (!f.name.trim()) return setError('Enter the service name.')
+    if (!f.name.trim()) return setError(`Enter the ${word} name.`)
     if (f.price.trim() === '' || Number.isNaN(Number(f.price)) || Number(f.price) < 0) return setError('Enter a valid price.')
     const rate = Number(f.gst_rate)
     if (f.gst_applicable && (f.gst_rate.trim() === '' || Number.isNaN(rate) || rate < 0 || rate > 100)) return setError('Enter a GST rate between 0 and 100.')
@@ -76,6 +81,7 @@ export function ProductDrawer({
       validity_months: f.lifetime || !f.validity_months ? null : Number(f.validity_months),
       is_active: f.is_active,
       sort_order: Number(f.sort_order) || 0,
+      kind: product?.kind ?? kind,
     }
     try {
       await saveProduct(tenant.id, product?.id ?? null, input)
@@ -91,7 +97,7 @@ export function ProductDrawer({
       open
       width={640}
       onClose={onClose}
-      title={product ? 'Edit service' : 'Add service'}
+      title={product ? `Edit ${word}` : `Add ${word}`}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
@@ -100,14 +106,14 @@ export function ProductDrawer({
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             <Button type="submit" form="product-form" disabled={busy}>
-              {busy ? 'Saving…' : product ? 'Save changes' : 'Add service'}
+              {busy ? 'Saving…' : product ? 'Save changes' : `Add ${word}`}
             </Button>
           </div>
         </>
       }
     >
       <form id="product-form" onSubmit={submit} className="stack">
-        <FormSection title="Service">
+        <FormSection title={Word}>
           <div className="form-grid">
             <div>
               <Label htmlFor="p-biz" required>
@@ -136,7 +142,7 @@ export function ProductDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Price & GST" description="The default price; it can be changed on each booking.">
+        <FormSection title="Price & GST" description={word === 'product' ? 'The default price; it can be changed on each purchase.' : 'The default price; it can be changed on each booking.'}>
           <div className="form-grid">
             <div>
               <Label htmlFor="p-price" required>
@@ -158,7 +164,7 @@ export function ProductDrawer({
         </FormSection>
 
         <div className="check-box">
-          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description="Inactive services can’t be picked on a new booking." />
+          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description={word === 'product' ? 'Inactive products can’t be picked on a new purchase.' : 'Inactive services can’t be picked on a new booking.'} />
         </div>
       </form>
     </Drawer>

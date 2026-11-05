@@ -16,9 +16,17 @@ import { invoiceHref } from './BookingsTab'
 import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
+import { BT } from '@/auth/auth-context'
+import { WebinarCalendarPage } from '@/webinars/WebinarCalendarPage'
+
+/** /bookings: a Webinar business's Webinar Calendar, else the Booking (Podcast) Calendar */
+export function BookingCalendarPage() {
+  const { selected, sub } = useBusiness()
+  return activeType(selected, sub) === BT.WEBINAR ? <WebinarCalendarPage /> : <BookingsCalendar />
+}
 
 /** Booking calendar: day / week / month; drag over free time to book it. */
-export function BookingCalendarPage() {
+function BookingsCalendar() {
   const tenant = useTenant()
   const { can } = useAuth()
   const { inScope, selected, sub } = useBusiness()

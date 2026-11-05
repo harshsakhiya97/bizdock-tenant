@@ -10,13 +10,15 @@ import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
 import { listProducts } from './api'
 import { BusinessTypesTab } from './BusinessTypesTab'
+import { WebinarHostsTab } from './WebinarHostsTab'
+import { BT } from '@/auth/auth-context'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
 import { TemplatesTab } from './TemplatesTab'
 import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'business_types' | 'products' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
@@ -31,15 +33,21 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'payment_modes', label: 'Payment modes' },
   { id: 'lead_sources', label: 'Lead sources' },
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
+  { id: 'goods', label: 'Products' },
+  { id: 'webinar_hosts', label: 'Webinar hosts' },
   { id: 'whatsapp', label: 'WhatsApp messages' },
 ]
+/** only with a Webinar business */
+const WEBINAR_TABS: Tab[] = ['goods', 'webinar_hosts']
 
 /** Masters: the editable lists every module picks from. */
 export function MastersPage() {
-  const { can } = useAuth()
+  const { can, businesses } = useAuth()
   const canEdit = can('masters', 'edit')
   const [params, setParams] = useSearchParams()
-  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
+  const webinar = businesses.some((b) => b.type === BT.WEBINAR || b.subs.some((x) => x.type === BT.WEBINAR))
+  const tabs = TABS.filter((t) => webinar || !WEBINAR_TABS.includes(t.id))
+  const tab = (tabs.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const go = (t: Tab) => {
     setNotice({})
@@ -56,16 +64,18 @@ export function MastersPage() {
       <div className="panel">
         <div className="panel-tabs">
           <div className="tabs">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <button key={t.id} type="button" className={cn('tab', tab === t.id && 'is-active')} onClick={() => go(t.id)}>
                 {t.label}
               </button>
             ))}
           </div>
         </div>
-        {tab === 'overview' && <Overview go={go} />}
+        {tab === 'overview' && <Overview go={go} webinar={webinar} />}
         {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
-        {tab === 'products' && <ProductsTab canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'products' && <ProductsTab key="services" canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'goods' && <ProductsTab key="goods" kind="product" canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'webinar_hosts' && <WebinarHostsTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
           <SimpleList
@@ -82,26 +92,34 @@ export function MastersPage() {
   )
 }
 
-function Overview({ go }: { go: (t: Tab) => void }) {
+function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   useEffect(() => {
-    const tables = ['business_types', 'products', ...Object.keys(SIMPLE)]
+    const tables = ['business_types', 'products', 'goods', 'webinar_hosts', ...Object.keys(SIMPLE)]
     void Promise.all(
-      tables.map((t) =>
-        db()
-          .from(t)
+      tables.map((t) => {
+        let q = db()
+          .from(t === 'goods' ? 'products' : t)
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenant.id)
           .eq('is_active', true)
-          .then(({ count }) => [t, count ?? 0] as const),
-      ),
+        if (t === 'products') q = q.neq('kind', 'product')
+        if (t === 'goods') q = q.eq('kind', 'product')
+        return q.then(({ count }) => [t, count ?? 0] as const)
+      }),
     ).then((r) => setCounts(Object.fromEntries(r)))
   }, [tenant.id])
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
     { tab: 'business_types', label: 'Business types', table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
     { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
+    ...(webinar
+      ? [
+          { tab: 'goods' as Tab, label: 'Products', table: 'goods', purpose: 'What webinar leads buy (entered by hand on the lead): price and GST, per business.' },
+          { tab: 'webinar_hosts' as Tab, label: 'Webinar hosts', table: 'webinar_hosts', purpose: 'Who hosts a webinar: name, email and phone.' },
+        ]
+      : []),
     ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t]!.title, table: t, purpose: SIMPLE[t]!.purpose })),
   ]
   return (
@@ -145,7 +163,9 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   )
 }
 
-function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void }) {
+function ProductsTab({ canEdit, onNotice, kind = 'service' }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void; kind?: ProductRow['kind'] }) {
+  const word = kind === 'product' ? 'product' : 'service'
+  const Words = kind === 'product' ? 'Products' : 'Services'
   const tenant = useTenant()
   const { businesses } = useAuth()
   const { selected, sub } = useBusiness()
@@ -162,6 +182,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
 
   const bizName = useMemo(() => new Map(businesses.map((b) => [b.id, b.name])), [businesses])
   const visible = (rows ?? [])
+    .filter((p) => (kind === 'product' ? p.kind === 'product' : p.kind !== 'product'))
     .filter((p) => (selected ? p.business_id === selected.id : bizName.has(p.business_id)))
     .filter((p) => !sub || !p.sub_business_id || p.sub_business_id === sub.id)
     .filter((p) => showOff || p.is_active)
@@ -170,9 +191,9 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
     <>
       <div className="panel-bar">
         <div>
-          <b>Services</b>
+          <b>{Words}</b>
           <div className="muted small">
-            {selected ? `Services of ${selected.name}${sub ? ` · ${sub.name}` : ''}.` : 'Services of every business.'} Pick the business in the top bar to narrow the list.
+            {selected ? `${Words} of ${selected.name}${sub ? ` · ${sub.name}` : ''}.` : `${Words} of every business.`} Pick the business in the top bar to narrow the list.
           </div>
         </div>
         <div className="row">
@@ -181,7 +202,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
           </label>
           {canEdit && (
             <button type="button" className="btn btn-primary" onClick={() => setDrawer({ product: null })} disabled={!businesses.length}>
-              <Plus size={16} /> Add service
+              <Plus size={16} /> Add {word}
             </button>
           )}
         </div>
@@ -189,7 +210,11 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
       {!rows ? (
         <div className="empty">Loading…</div>
       ) : visible.length === 0 ? (
-        <Empty icon={Package}>No services yet. Add the services you offer (studio, editing, host…) so they can be picked on a booking.</Empty>
+        <Empty icon={Package}>
+          {kind === 'product'
+            ? 'No products yet. Add what webinar leads buy (courses, digital products…) so a purchase can be entered on the lead.'
+            : 'No services yet. Add the services you offer (studio, editing, host…) so they can be picked on a booking.'}
+        </Empty>
       ) : (
         <Paged rows={visible}>
 {(paged) => (
@@ -197,7 +222,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
           <table className="table">
             <thead>
               <tr>
-                <th>Service</th>
+                <th>{kind === 'product' ? 'Product' : 'Service'}</th>
                 {!selected && <th>Business</th>}
                 <th className="right">Price</th>
                 <th>GST</th>
@@ -241,6 +266,7 @@ function ProductsTab({ canEdit, onNotice }: { canEdit: boolean; onNotice: (n: { 
       {drawer && (
         <ProductDrawer
           product={drawer.product}
+          kind={kind}
           businesses={businesses}
           defaultBusinessId={selected?.id ?? null}
           nextOrder={Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1}

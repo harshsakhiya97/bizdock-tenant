@@ -1,5 +1,6 @@
 import { BT, type Business } from '@/auth/auth-context'
 import { db } from '@/lib/supabase'
+import { purchaseTotals } from '@/webinars/api'
 
 type Bk = { status: string; paid_amount: number | string; business_id: string; sub_business_id: string | null }
 
@@ -41,6 +42,12 @@ export async function listCustomerRevenue(tenantId: string, businesses: Business
     r.paid += Number(b.paid_amount)
     if (b.booking_date > r.last) r.last = b.booking_date
     m.set(b.lead_id, r)
+  }
+  // a lead who paid (part of) a purchase is a customer too (Webinar businesses)
+  const bought = await purchaseTotals(tenantId).catch(() => new Map<string, Revenue>())
+  for (const [lead, p] of bought) {
+    const r = m.get(lead) ?? { count: 0, billed: 0, paid: 0, last: '' }
+    m.set(lead, { count: r.count + p.count, billed: r.billed + p.billed, paid: r.paid + p.paid, last: p.last > r.last ? p.last : r.last })
   }
   return m
 }

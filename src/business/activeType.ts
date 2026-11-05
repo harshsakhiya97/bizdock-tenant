@@ -8,7 +8,7 @@ export function activeType(selected: Business | null, sub: SubBusiness | null): 
 }
 
 /** Paid Podcast: the booking calendar is the shoot calendar */
-export const calendarName = (t: SubBusinessType | null) => (t === BT.PAID_PODCAST ? 'Podcast Calendar' : 'Booking Calendar')
+export const calendarName = (t: SubBusinessType | null) => (t === BT.PAID_PODCAST ? 'Podcast Calendar' : t === BT.WEBINAR ? 'Webinar Calendar' : 'Booking Calendar')
 
 /** Studio Rental and Paid Podcast share one studio */
 export const isStudioType = (t: SubBusinessType | null | undefined) => t === BT.STUDIO_RENTAL || t === BT.PAID_PODCAST

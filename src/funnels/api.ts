@@ -57,6 +57,7 @@ export async function saveFunnel(tenantId: string, existing: FunnelRow | null, i
       : await db().from('funnel_stages').insert({ ...values, tenant_id: tenantId, funnel_id: funnelId })
     if (error) throw error
   }
+  return funnelId!
 }
 
 /** "Delete" in the app: the funnel is archived and kept. */

@@ -18,7 +18,9 @@ export type TriggerData = {
   tag?: string
   /** lead_added: how the lead came in */
   source?: 'any' | 'manual' | 'import' | 'form'
-  /** before_event / after_event */
+  /** before_event / after_event: the webinar (every date of it, for the leads registered on each) */
+  webinar_id?: string
+  /** before_event / after_event (older workflows): one calendar event */
   event_id?: string
   amount?: number
   unit?: Unit
@@ -64,7 +66,10 @@ export const newBulkRow = (amount = 0, unit: Unit = 'minutes'): BulkRow => ({
 export type Recipient = 'lead' | 'team' | 'custom'
 
 /** 'condition' (Yes / No) is kept for older workflows; new ones use 'switch' */
-export type StepKind = 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'zoom_meeting' | 'lead_lookup' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
+export type StepKind =
+  | 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'zoom_meeting' | 'lead_lookup' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
+  // Webinar businesses
+  | 'register_webinar' | 'wait_zoom' | 'webinar_analytics'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -109,12 +114,16 @@ export type RefData = {
   hooks?: WorkflowHook[]
   /** Zoom accounts (Create Zoom meeting) */
   zoomAccounts?: { id: string; name: string; is_default: boolean }[]
+  /** webinars of Webinar businesses (Register for webinar, Before / After webinar) */
+  webinars?: { id: string; title: string; business_id: string; funnel_id: string | null }[]
 }
 
 /** what the workflow is about, worked out from its trigger */
 export type FlowContext = RefData & {
   funnel: RefData['funnels'][number] | null
   event: RefData['events'][number] | null
+  /** the webinar the workflow is about (its Before / After webinar trigger, or its Register for webinar step) */
+  webinar?: NonNullable<RefData['webinars']>[number] | null
   /** the funnel's webhook forms / stages (or all, when the trigger has no funnel) */
   pages: RefData['pages']
   stages: { id: string; name: string }[]
@@ -167,6 +176,9 @@ export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, 
   condition: { field: 'stage', op: 'is', value: '' },
   switch: { cases: [{ id: 'c1', label: '', field: 'stage', op: 'is', value: '' }] },
   goto: { workflow_id: '' },
+  register_webinar: { webinar_id: '', short_link: true },
+  wait_zoom: {},
+  webinar_analytics: {},
 }
 
 export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {
@@ -174,8 +186,8 @@ export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {
   lead_added: { event: 'lead_added', funnel_id: '', source: 'any' },
   stage_changed: { event: 'stage_changed', funnel_id: '', stage_id: '' },
   tag_added: { event: 'tag_added', tag: '' },
-  before_event: { event: 'before_event', event_id: '', amount: 1, unit: 'days' },
-  after_event: { event: 'after_event', event_id: '', amount: 1, unit: 'hours' },
+  before_event: { event: 'before_event', webinar_id: '', event_id: '', amount: 1, unit: 'days' },
+  after_event: { event: 'after_event', webinar_id: '', event_id: '', amount: 0, unit: 'minutes' },
   webhook_call: { event: 'webhook_call' },
 }
 

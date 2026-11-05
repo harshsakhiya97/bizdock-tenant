@@ -21,6 +21,25 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   generated_link_code: 'Generated link code',
   generated_link_full_url: 'Generated link – full URL',
   generated_link_parameters: 'Generated link – parameters only',
+  // a webinar date (Register for webinar / Before / After webinar)
+  webinar_title: 'Webinar title',
+  webinar_start: 'Webinar start',
+  webinar_end: 'Webinar end',
+  webinar_date_time: 'Webinar date & time (29 Oct 2026 7pm-8:30pm)',
+  webinar_date: 'Webinar date',
+  webinar_time: 'Webinar time',
+  webinar_short_link: 'Webinar joining short link',
+  webinar_short_link_code: 'Webinar joining short link code',
+  webinar_join_link: 'Webinar joining link (Zoom)',
+  // Get webinar analytics
+  webinar_category: 'Webinar category (Super Hot / Hot / Warm / Cold)',
+  webinar_attended: 'Attended the webinar (Yes / No)',
+  webinar_minutes: 'Minutes attended',
+  webinar_attended_percent: 'Attended (% of the webinar)',
+  webinar_questions: 'Questions asked (Q&A)',
+  webinar_chats: 'Chat messages',
+  webinar_polls: 'Poll answers',
+  webinar_joined_at: 'Joined at',
 }
 
 const pretty = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
@@ -69,6 +88,14 @@ const ZOOM_EXAMPLE: Record<string, string> = {
   zoom_password: 'Ab12Cd34',
   zoom_short_link_code: 'UCTPZW46',
   member_phone: '9876543210',
+  webinar_join_link: 'https://us06web.zoom.us/w/81234567890?tk=…',
+  webinar_date: '2026-10-29',
+  webinar_time: '19:00',
+  webinar_short_link_code: 'K7M2QX9P',
+  webinar_category: 'Hot',
+  webinar_attended: 'Yes',
+  webinar_minutes: '52',
+  webinar_attended_percent: '58',
 }
 function stepExample(st: UpstreamStep, k: string): string {
   if (st.type === 'generate_link') {
@@ -79,6 +106,7 @@ function stepExample(st: UpstreamStep, k: string): string {
     if (k === `${base}_parameters`) return 'fname=Harsh&phone=9876543210'
   }
   if (k === 'zoom_short_link') return `${shortBase()}/UCTPZW46`
+  if (k === 'webinar_short_link') return `${shortBase()}/K7M2QX9P`
   return ZOOM_EXAMPLE[k] ?? ''
 }
 

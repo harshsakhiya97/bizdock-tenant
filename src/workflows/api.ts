@@ -108,9 +108,13 @@ export async function saveWorkflow(
       is_active: w.is_active,
       trigger_type: t.event ?? 'form_submitted',
       funnel_id: !eventTrigger && t.funnel_id ? t.funnel_id : null,
-      event_id: eventTrigger && t.event_id ? t.event_id : null,
+      event_id: eventTrigger && t.event_id && !t.webinar_id ? t.event_id : null,
+      // the webinar it's about: a Before / After webinar trigger's, else a Register for webinar step's
+      webinar_id: (eventTrigger ? t.webinar_id : String(w.nodes.find((n) => n.type === 'register_webinar')?.data.webinar_id ?? '')) || null,
       // generated links open on this app's address (e.g. https://pride.viralsakhiya.com/pride/T7P46LXK)
-      nodes: slimNodes(w.nodes).map((n) => (n.type === 'generate_link' || n.type === 'zoom_meeting' ? { ...n, data: { ...n.data, base_url: shortBase() } } : n)),
+      nodes: slimNodes(w.nodes).map((n) =>
+        n.type === 'generate_link' || n.type === 'zoom_meeting' || n.type === 'register_webinar' ? { ...n, data: { ...n.data, base_url: shortBase() } } : n,
+      ),
       edges: slimEdges(w.edges),
       updated_by: memberId ?? null,
     })
@@ -144,7 +148,7 @@ export async function archiveWorkflow(id: string) {
 
 /** funnels, webhook forms and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
-  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts, hooks] = await Promise.all([
+  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts, hooks, webinars] = await Promise.all([
     listFunnels(tenantId),
     db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample, action').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
@@ -158,6 +162,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
     listZoomOptions(tenantId).catch(() => []),
     db().from('workflow_hooks').select('*').eq('tenant_id', tenantId),
+    db().from('webinars').select('id, title, business_id, funnel_id').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false }),
   ])
   const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
   return {
@@ -198,6 +203,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     sources: (sources.data ?? []) as { id: string; name: string }[],
     zoomAccounts: zoomAccounts.map((z) => ({ id: z.id, name: z.name, is_default: z.is_default })),
     hooks: (hooks.data ?? []) as WorkflowHook[],
+    webinars: (webinars.data ?? []) as { id: string; title: string; business_id: string; funnel_id: string | null }[],
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
     // extra fields saved on each funnel's leads (a workflow only offers its own funnel's)
     extraKeysByFunnel: ((leadExtras.data ?? []) as { funnel_id: string | null; extra: Record<string, unknown> | null }[]).reduce<Record<string, string[]>>((m, l) => {

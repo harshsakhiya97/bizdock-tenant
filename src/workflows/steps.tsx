@@ -1,4 +1,4 @@
-import { Clock, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarPlus, Clock, CloudDownload, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
 import { STEP_VAR_LABEL, looksLikeWhen, namedLikeWhen } from './varGroups'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit, UpstreamStep } from './types'
@@ -17,6 +17,9 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   condition: { label: 'Condition', hint: 'Go Yes or No depending on the lead', icon: Split, color: '#475569' },
   switch: { label: 'Switch', hint: 'Different paths for different leads (several conditions)', icon: GitFork, color: '#475569' },
   goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
+  register_webinar: { label: 'Register for webinar', hint: 'Registers the lead on Zoom for the webinar’s coming date; later messages use their joining link', icon: CalendarPlus, color: '#7c3aed' },
+  wait_zoom: { label: 'Wait until Zoom data is in', hint: 'After the webinar ends: waits until its attendance, Q&A, chat and polls are fetched from Zoom', icon: CloudDownload, color: '#0b5cff' },
+  webinar_analytics: { label: 'Get webinar analytics', hint: 'How long the lead attended, their questions / chat / polls, and their category (Super Hot / Hot / Warm / Cold)', icon: BarChart3, color: '#db2777' },
 }
 
 /** every trigger, including ones no longer offered (older workflows still use them) */
@@ -25,8 +28,8 @@ export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[
   { value: 'lead_added', label: 'Lead added', hint: 'A lead is added by hand, by import or by a form' },
   { value: 'stage_changed', label: 'Lead moved to a stage', hint: 'A lead enters a stage of a funnel' },
   { value: 'tag_added', label: 'Tag added', hint: 'A tag is added to a lead' },
-  { value: 'before_event', label: 'Before a webinar / event starts', hint: 'Some time before it starts, for its funnel’s leads' },
-  { value: 'after_event', label: 'After a webinar / event ends', hint: 'Some time after it ends, for its funnel’s leads' },
+  { value: 'before_event', label: 'Before a webinar starts', hint: 'Some time before each date of the webinar starts, for the leads registered for that date' },
+  { value: 'after_event', label: 'After a webinar ends', hint: 'Some time after each date of the webinar ends, for the leads registered for that date' },
   { value: 'webhook_call', label: 'On webhook call', hint: 'A post to this workflow’s own webhook URL; not tied to a funnel, nothing is saved on leads' },
 ]
 /** triggers offered for new workflows */
@@ -35,7 +38,14 @@ export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((
 
 /** the steps that can be dragged onto the canvas */
 // Email and Call are hidden for now (steps already made with them still show and can be edited)
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'lead_lookup', 'wait', 'wait_event', 'switch', 'goto']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'lead_lookup', 'register_webinar', 'wait_zoom', 'webinar_analytics', 'wait', 'wait_event', 'switch', 'goto']
+/** only offered when the workspace has webinars (Webinar businesses) */
+export const WEBINAR_STEPS: StepKind[] = ['register_webinar', 'wait_zoom', 'webinar_analytics']
+/** what Register for webinar / a Before / After webinar trigger give later steps */
+export const WEBINAR_VARS = ['webinar_start', 'webinar_end', 'webinar_date_time', 'webinar_title', 'webinar_date', 'webinar_time', 'webinar_short_link', 'webinar_short_link_code', 'webinar_join_link']
+/** what Get webinar analytics gives */
+export const ANALYTICS_VARS = ['webinar_category', 'webinar_attended', 'webinar_minutes', 'webinar_attended_percent', 'webinar_questions', 'webinar_chats', 'webinar_polls', 'webinar_joined_at']
+const webinarTrigger = (t: { event?: string }) => t.event === 'before_event' || t.event === 'after_event'
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`
 const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
@@ -51,6 +61,12 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     (eventTrigger ? (ref.funnels.find((f) => f.event_id && f.event_id === t.event_id) ?? null) : null)
   const eventId = eventTrigger ? t.event_id : funnel?.event_id
   const event = ref.events.find((e) => e.id === eventId) ?? null
+  // the webinar: the trigger's (Before / After webinar), a Register for webinar step's, or the funnel's
+  const regNode = nodes.find((n) => n.type === 'register_webinar')
+  const webinar =
+    (ref.webinars ?? []).find((w) => w.id === (eventTrigger ? t.webinar_id : String(regNode?.data.webinar_id ?? ''))) ??
+    (regNode && funnel ? ((ref.webinars ?? []).find((w) => w.funnel_id === funnel.id) ?? null) : null)
+  const hasWebinarVars = (eventTrigger && !!t.webinar_id) || !!regNode
   // only this workflow's funnel(s): its webhooks' fields and the extra fields saved on its leads (none from other funnels / businesses)
   const scope = funnel ? [funnel.id] : eventTrigger ? ref.funnels.filter((f) => f.event_id && f.event_id === t.event_id).map((f) => f.id) : []
   const pages = ref.pages.filter((p) => scope.includes(p.funnel_id))
@@ -69,6 +85,8 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
       }),
     ...(nodes.some((n) => n.type === 'zoom_meeting' && n.data.short_link) ? ['zoom_short_link', 'zoom_short_link_code'] : []),
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ZOOM_VARS : []),
+    ...(hasWebinarVars ? WEBINAR_VARS : []),
+    ...(nodes.some((n) => n.type === 'webinar_analytics') ? ANALYTICS_VARS : []),
   ]
   // "On webhook call": the picked fields under their names (none picked: every field of the test post)
   const hook = t.event === 'webhook_call' ? (ref.hooks ?? []).find((h) => h.workflow_id === ref.selfId) : undefined
@@ -91,6 +109,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     }),
     'submitted_at',
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ['zoom_start'] : []),
+    ...(hasWebinarVars ? ['webinar_start', 'webinar_end', 'webinar_joined_at'] : []),
   ]
   // Get lead details: the extra fields of the leads of the workflow's sub-business (its funnel's; else the trigger's)
   const leadLookup = nodes.some((n) => n.type === 'lead_lookup')
@@ -107,6 +126,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     lookupStages,
     funnel: hook ? null : funnel,
     event,
+    webinar,
     pages: hook || t.event === 'webhook_call' ? [] : pages,
     stages,
     tags,
@@ -140,10 +160,13 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
     case 'webhook_call':
       return 'Own webhook URL · not tied to a funnel'
     case 'before_event':
-    case 'after_event':
+    case 'after_event': {
+      const w = (ctx.webinars ?? []).find((x) => x.id === t.webinar_id)
+      if (w) return `${unitText(Number(t.amount) || 0, t.unit ?? 'hours')} ${t.event === 'before_event' ? 'before' : 'after'} ${w.title} ${t.event === 'before_event' ? 'starts' : 'ends'} (each date)`
       return ev
         ? `${unitText(Number(t.amount) || 0, t.unit ?? 'hours')} ${t.event === 'before_event' ? 'before' : 'after'} ${ev.title} (${day(ev.date)})`
-        : 'Pick the webinar / event'
+        : 'Pick the webinar'
+    }
     default:
       return 'Pick what starts the workflow'
   }
@@ -154,7 +177,9 @@ export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as Switc
 /** the variable a Generate link step fills ("generated_link" unless named) */
 /** the values a step makes for later steps (Generate link: its link; Create Zoom meeting: the meeting's) */
 export function stepVarKeys(n: StepNode): string[] {
-  if (n.type === 'trigger') return ['submitted_at']
+  if (n.type === 'trigger') return webinarTrigger(n.data as { event?: string }) ? ['submitted_at', ...WEBINAR_VARS] : ['submitted_at']
+  if (n.type === 'register_webinar') return n.data.short_link === false ? WEBINAR_VARS.filter((k) => !k.startsWith('webinar_short_link')) : WEBINAR_VARS
+  if (n.type === 'webinar_analytics') return ANALYTICS_VARS
   if (n.type === 'generate_link') {
     const k = linkVarOf(n.data)
     return [k, `${k}_code`, `${k}_full_url`, `${k}_parameters`]
@@ -324,6 +349,14 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       const n = casesOf(d).length
       return `${n} path${n === 1 ? '' : 's'}`
     }
+    case 'register_webinar': {
+      const w = (ctx.webinars ?? []).find((x) => x.id === d.webinar_id) ?? ctx.webinar
+      return `${w ? w.title : 'Pick the webinar'} · the coming date${d.short_link === false ? '' : ' · short link'}`
+    }
+    case 'wait_zoom':
+      return 'Until the webinar’s Zoom data is fetched (at most 2 hours after it ends)'
+    case 'webinar_analytics':
+      return 'Attendance, Q&A, chat, polls → Super Hot / Hot / Warm / Cold'
     case 'goto': {
       const name = ctx.workflows.find((w) => w.id === d.workflow_id)?.name ?? 'Pick the workflow'
       const n = ((d.fields ?? []) as { name: string }[]).filter((f) => f.name?.trim()).length
@@ -341,7 +374,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       if ((t.event === 'form_submitted' || t.event === 'stage_changed') && !t.funnel_id) return 'Pick the funnel'
       if (t.event === 'stage_changed' && !t.stage_id) return 'Pick the stage'
       if (t.event === 'tag_added' && !String(t.tag ?? '').trim()) return 'Pick the tag'
-      if ((t.event === 'before_event' || t.event === 'after_event') && !t.event_id) return 'Pick the webinar / event'
+      if ((t.event === 'before_event' || t.event === 'after_event') && !t.webinar_id && !t.event_id) return 'Pick the webinar'
       if ((t.event === 'before_event' || t.event === 'after_event') && !(Number(t.amount) >= 0)) return 'Set the time'
       return null
     }
@@ -400,6 +433,11 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
       return conditionProblem(d as unknown as ConditionData) ? 'Finish the condition' : null
     case 'switch':
       return casesOf(d).some((c) => conditionProblem(c)) ? 'Finish every path’s condition' : null
+    case 'register_webinar':
+      return d.webinar_id || ctx.webinar ? null : 'Pick the webinar'
+    case 'wait_zoom':
+    case 'webinar_analytics':
+      return null
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
       if (d.workflow_id === ctx.selfId) return 'Pick another workflow'
