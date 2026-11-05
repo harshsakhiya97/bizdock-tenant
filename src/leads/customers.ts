@@ -1,12 +1,12 @@
-import type { Business } from '@/auth/auth-context'
+import { BT, type Business } from '@/auth/auth-context'
 import { db } from '@/lib/supabase'
 
 type Bk = { status: string; paid_amount: number | string; business_id: string; sub_business_id: string | null }
 
 /** true for bookings of a Paid Podcast (sub-)business */
 export function podcastCheck(businesses: Business[]) {
-  const subs = new Set(businesses.flatMap((b) => b.subs.filter((x) => x.type === 'podcast').map((x) => x.id)))
-  const whole = new Set(businesses.filter((b) => !b.subs.length && b.type === 'podcast').map((b) => b.id))
+  const subs = new Set(businesses.flatMap((b) => b.subs.filter((x) => x.type === BT.PAID_PODCAST).map((x) => x.id)))
+  const whole = new Set(businesses.filter((b) => !b.subs.length && b.type === BT.PAID_PODCAST).map((b) => b.id))
   return (b: Pick<Bk, 'business_id' | 'sub_business_id'>) => (b.sub_business_id ? subs.has(b.sub_business_id) : whole.has(b.business_id))
 }
 

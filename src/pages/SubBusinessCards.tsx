@@ -1,6 +1,6 @@
 import { ArrowRight, LayoutGrid, TrendingDown, TrendingUp, Trophy } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { SUB_BUSINESS_TYPES, type Business } from '@/auth/auth-context'
+import { BT, type Business } from '@/auth/auth-context'
 import { useBusiness } from '@/business/useBusiness'
 import type { BookingRow } from '@/bookings/types'
 import type { FollowUpRow } from '@/followups/types'
@@ -33,7 +33,7 @@ export function SubBusinessCards({
   fus: FollowUpRow[]
   sources: { id: string; name: string }[]
 }) {
-  const { businesses } = useAuth()
+  const { businesses, typeName } = useAuth()
   const { select } = useBusiness()
   const isPodcast = podcastCheck(businesses)
   const prev = prevMonth(month)
@@ -63,7 +63,7 @@ export function SubBusinessCards({
     return {
       s,
       color: COLORS[i % COLORS.length],
-      type: SUB_BUSINESS_TYPES.find((t) => t.id === s.type)?.label ?? '',
+      type: typeName(s.type),
       enquiries: monthLeads.length,
       customers,
       bookings: mb.length,
@@ -114,7 +114,7 @@ export function SubBusinessCards({
               <b className="tone-info">{c.customers}</b>
             </div>
             <div>
-              <small>{c.s.type === 'podcast' ? 'Podcasts' : 'Bookings'}</small>
+              <small>{c.s.type === BT.PAID_PODCAST ? 'Podcasts' : 'Bookings'}</small>
               <b>{c.bookings}</b>
             </div>
             <div>

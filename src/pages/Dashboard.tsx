@@ -1,3 +1,4 @@
+import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ChevronLeft, ChevronRight, Phone, Plus, SquarePen } from 'lucide-react'
@@ -34,7 +35,7 @@ const hoursOf = (b: BookingRow) => {
 /** Paid Podcast has its own dashboard; everything else gets the month dashboard below. */
 export function DashboardPage() {
   const { selected, sub } = useBusiness()
-  return activeType(selected, sub) === 'podcast' ? <PodcastDashboard /> : <MonthDashboard />
+  return activeType(selected, sub) === BT.PAID_PODCAST ? <PodcastDashboard /> : <MonthDashboard />
 }
 
 /** Month dashboard: enquiries, action required, follow-ups, bookings, money collected and enquiry sources. */

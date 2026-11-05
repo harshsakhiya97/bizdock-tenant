@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { ImageUp, Plus, Trash2, X } from 'lucide-react'
-import { SUB_BUSINESS_TYPES } from '@/auth/auth-context'
+import { BT, typeCode } from '@/auth/auth-context'
+import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { AddressFields } from '@/components/AddressFields'
@@ -21,7 +22,7 @@ const emptyInput: BusinessInput = {
   gst_number: '',
   legal_name: '',
   has_sub_businesses: false,
-  type: 'studio_rental',
+  type: BT.STUDIO_RENTAL,
 }
 /** Create or edit a business, Nothing is saved until "Save". */
 export function BusinessDrawer({
@@ -35,6 +36,9 @@ export function BusinessDrawer({
   onSaved: () => void
 }) {
   const tenant = useTenant()
+  const { businessTypes } = useAuth()
+  // the active types, plus the one already set (even if it's switched off since)
+  const typeOptions = (current: string | null | undefined) => businessTypes.filter((t) => t.is_active || t.code === current)
   const [input, setInput] = useState<BusinessInput>(() =>
     business
       ? {
@@ -48,7 +52,7 @@ export function BusinessDrawer({
           gst_number: business.gst_number ?? '',
           legal_name: business.legal_name ?? '',
           has_sub_businesses: business.has_sub_businesses,
-          type: business.type ?? 'studio_rental',
+          type: typeCode(business.type) ?? BT.STUDIO_RENTAL,
         }
       : emptyInput,
   )
@@ -164,7 +168,7 @@ export function BusinessDrawer({
               checked={input.has_sub_businesses}
               onChange={(v) => {
                 setInput((d) => ({ ...d, has_sub_businesses: v }))
-                if (v && !subs.length) setSubs([{ name: '', type: 'editing' }])
+                if (v && !subs.length) setSubs([{ name: '', type: BT.EDITING }])
               }}
               label="Does this business contain multiple sub-businesses?"
               description="Tick it to split the business (e.g. Editing service, Podcast, Podcast studio rental), each with its own type. Leave it off when the business does one thing."
@@ -176,9 +180,9 @@ export function BusinessDrawer({
                 Type
               </Label>
               <Select id="bz-type" value={input.type ?? ''} onChange={(e) => setInput((d) => ({ ...d, type: e.target.value }))}>
-                {SUB_BUSINESS_TYPES.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
+                {typeOptions(input.type).map((t) => (
+                  <option key={t.code} value={t.code}>
+                    {t.name}
                   </option>
                 ))}
               </Select>
@@ -195,9 +199,9 @@ export function BusinessDrawer({
                 <div key={s.id ?? `new-${i}`} className="sub-biz-row">
                   <TextInput aria-label="Sub-business name" placeholder="e.g. Podcast Studio Rental" value={s.name} onChange={(e) => setSub(i, { name: e.target.value })} />
                   <Select aria-label="Type" value={s.type} onChange={(e) => setSub(i, { type: e.target.value as SubBusinessDraft['type'] })}>
-                    {SUB_BUSINESS_TYPES.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.label}
+                    {typeOptions(s.type).map((t) => (
+                      <option key={t.code} value={t.code}>
+                        {t.name}
                       </option>
                     ))}
                   </Select>
@@ -217,7 +221,7 @@ export function BusinessDrawer({
             </div>
           )}
           <div>
-            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: 'editing' }])}>
+            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: BT.EDITING }])}>
               <Plus /> Add sub-business
             </Button>
           </div>

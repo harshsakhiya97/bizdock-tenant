@@ -9,13 +9,14 @@ import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
 import { listProducts } from './api'
+import { BusinessTypesTab } from './BusinessTypesTab'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
 import { TemplatesTab } from './TemplatesTab'
 import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'products' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'business_types' | 'products' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
@@ -25,6 +26,7 @@ const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> =
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'business_types', label: 'Business types' },
   { id: 'products', label: 'Services' },
   { id: 'payment_modes', label: 'Payment modes' },
   { id: 'lead_sources', label: 'Lead sources' },
@@ -62,6 +64,7 @@ export function MastersPage() {
           </div>
         </div>
         {tab === 'overview' && <Overview go={go} />}
+        {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'products' && <ProductsTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
@@ -83,7 +86,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   useEffect(() => {
-    const tables = ['products', ...Object.keys(SIMPLE)]
+    const tables = ['business_types', 'products', ...Object.keys(SIMPLE)]
     void Promise.all(
       tables.map((t) =>
         db()
@@ -97,6 +100,7 @@ function Overview({ go }: { go: (t: Tab) => void }) {
   }, [tenant.id])
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
+    { tab: 'business_types', label: 'Business types', table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
     { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
     ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t]!.title, table: t, purpose: SIMPLE[t]!.purpose })),
   ]

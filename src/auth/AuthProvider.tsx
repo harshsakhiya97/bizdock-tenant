@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import type { Session } from '@supabase/supabase-js'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { AuthContext, type Business, type Membership, type PermissionAction, type Profile, type SubBusiness } from './auth-context'
+import { AuthContext, type Business, type BusinessType, type Membership, type PermissionAction, type Profile, type SubBusiness, typeCode } from './auth-context'
 
 type MemberRow = {
   id: string
@@ -18,6 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [membership, setMembership] = useState<Membership | null>(null)
   const [businesses, setBusinesses] = useState<Business[]>([])
+  const [businessTypes, setBusinessTypes] = useState<BusinessType[]>([])
   const [loading, setLoading] = useState(true)
   const [accessError, setAccessError] = useState<string | null>(null)
 
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null)
     setMembership(null)
     setBusinesses([])
+    setBusinessTypes([])
   }, [])
 
   /** Loads profile, membership and businesses. Signs out anyone who isn't a member of this tenant. */
@@ -48,25 +50,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return clear()
       }
 
-      const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: subRows }] = await Promise.all([
+      const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: subRows }, { data: typeRows }] = await Promise.all([
         db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
         db().from('businesses').select('id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
           : db().from('member_businesses').select('business_id, sub_business_ids').eq('member_id', member.id),
         db().from('sub_businesses').select('id, business_id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
+        db().from('business_types').select('id, code, name, is_system, is_active, sort_order').eq('tenant_id', tenant.id).order('sort_order').order('name'),
       ])
 
       // business → allowed sub-business ids (null = all of them)
       const allowedMap = allowed
         ? new Map((allowed as { business_id: string; sub_business_ids: string[] | null }[]).map((r) => [r.business_id, r.sub_business_ids?.length ? r.sub_business_ids : null]))
         : null
-      const subs = (subRows ?? []) as SubBusiness[]
+      // types stored before the codes (podcast, …) read as their code (PAID-PODCAST, …)
+      const subs = ((subRows ?? []) as SubBusiness[]).map((x) => ({ ...x, type: typeCode(x.type) }))
       const list: Business[] = ((bizRows ?? []) as { id: string; name: string; type: SubBusiness['type'] | null }[])
         .filter((b) => !allowedMap || allowedMap.has(b.id))
         .map((b) => {
           const only = allowedMap?.get(b.id)
-          return { ...b, subs: subs.filter((s) => s.business_id === b.id && (!only || only.includes(s.id))) }
+          return { ...b, type: typeCode(b.type), subs: subs.filter((s) => s.business_id === b.id && (!only || only.includes(s.id))) }
         })
 
       setAccessError(null)
@@ -79,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: member.roles,
       })
       setBusinesses(list)
+      setBusinessTypes((typeRows ?? []) as BusinessType[])
       setSession(next)
     },
     [tenant.id, tenant.app_name, clear],
@@ -124,6 +129,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [membership],
   )
 
+  const typeName = useCallback((code: string | null | undefined) => (code ? businessTypes.find((t) => t.code === typeCode(code))?.name ?? code : ''), [businessTypes])
+
   const value = useMemo(
     () => ({
       session,
@@ -131,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile,
       membership,
       businesses,
+      businessTypes,
+      typeName,
       loading,
       accessError,
       refreshProfile: () => loadUser(session),
@@ -141,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await db().auth.signOut()
       },
     }),
-    [session, profile, membership, businesses, loading, accessError, loadUser, can, scope],
+    [session, profile, membership, businesses, businessTypes, typeName, loading, accessError, loadUser, can, scope],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
