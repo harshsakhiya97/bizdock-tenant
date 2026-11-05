@@ -12,7 +12,7 @@ import { HostDrawer } from '@/masters/WebinarHostsTab'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { listHosts, saveWebinar, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
-import { createWebinarWorkflows } from './workflows'
+import { createWebinarWorkflows, setWebinarWorkflowsFunnel } from './workflows'
 
 const NEW_FUNNEL = '__new'
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -112,7 +112,11 @@ export function WebinarDrawer({
       }
       const input = { ...f, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
-      if (webinar) return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
+      if (webinar) {
+        // another funnel: its three workflows move with it
+        if ((webinar.funnel_id ?? null) !== funnelId) await setWebinarWorkflowsFunnel(webinar.id, funnelId)
+        return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
+      }
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
       let wfError = ''
       try {

@@ -33,7 +33,7 @@ async function insertWorkflow(
  *  2. Reminders: 1 day before it starts → Bulk WhatsApp 1 day / 1 hour / 10 minutes before (ones already past are skipped)
  *  3. After the webinar: when it ends → Wait until Zoom data is in → Get webinar analytics → Switch on the category →
  *     a Bulk WhatsApp per category (Super Hot / Hot / Warm / Cold), stopping once the lead becomes a customer
- * They run for every date of the webinar (one-time, several dates or weekly).
+ * They run for every date of the webinar (one-time, several dates or weekly), and all three are linked to the webinar's funnel.
  */
 export async function createWebinarWorkflows(tenantId: string, memberId: string | undefined, w: { id: string; title: string; funnel_id: string | null }) {
   const title = w.title.trim() || 'Webinar'
@@ -59,10 +59,10 @@ export async function createWebinarWorkflows(tenantId: string, memberId: string 
   await insertWorkflow(tenantId, memberId, {
     name: `${title} – reminders`,
     trigger: 'before_event',
-    funnelId: null,
+    funnelId: w.funnel_id,
     webinarId: w.id,
     nodes: [
-      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'before_event', webinar_id: w.id, event_id: '', amount: 1, unit: 'days' } },
+      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'before_event', webinar_id: w.id, funnel_id: w.funnel_id ?? '', event_id: '', amount: 1, unit: 'days' } },
       {
         id: bulk,
         type: 'bulk_whatsapp',
@@ -103,10 +103,10 @@ export async function createWebinarWorkflows(tenantId: string, memberId: string 
   await insertWorkflow(tenantId, memberId, {
     name: `${title} – after webinar`,
     trigger: 'after_event',
-    funnelId: null,
+    funnelId: w.funnel_id,
     webinarId: w.id,
     nodes: [
-      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'after_event', webinar_id: w.id, event_id: '', amount: 0, unit: 'minutes' } },
+      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'after_event', webinar_id: w.id, funnel_id: w.funnel_id ?? '', event_id: '', amount: 0, unit: 'minutes' } },
       { id: wait, type: 'wait_zoom', position: { x: 0, y: 170 }, data: {} },
       { id: stats, type: 'webinar_analytics', position: { x: 0, y: 340 }, data: {} },
       { id: sw, type: 'switch', position: { x: 0, y: 510 }, data: { name: 'Category', cases } },
@@ -114,4 +114,15 @@ export async function createWebinarWorkflows(tenantId: string, memberId: string 
     ],
     edges: [edge('trigger', wait), edge(wait, stats), edge(stats, sw), ...msgs.map((m, i) => edge(sw, m.id, cases[i].id))],
   })
+}
+
+/** the webinar's funnel changed: its workflows follow (on the row and on their trigger) */
+export async function setWebinarWorkflowsFunnel(webinarId: string, funnelId: string | null) {
+  const { data, error } = await db().from('workflows').select('id, nodes').eq('webinar_id', webinarId).is('archived_at', null)
+  if (error) throw new Error(error.message)
+  for (const w of (data ?? []) as { id: string; nodes: { id: string; data: Record<string, unknown> }[] }[]) {
+    const nodes = (w.nodes ?? []).map((n) => (n.id === 'trigger' ? { ...n, data: { ...n.data, funnel_id: funnelId ?? '' } } : n))
+    const { error: e } = await db().from('workflows').update({ funnel_id: funnelId, nodes }).eq('id', w.id)
+    if (e) throw new Error(e.message)
+  }
 }

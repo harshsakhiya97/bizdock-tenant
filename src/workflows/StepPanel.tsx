@@ -1591,7 +1591,15 @@ function TriggerFields({
               disabled={disabled}
               onChange={(e) => {
                 const v = e.target.value
-                set(v.startsWith('w:') ? { webinar_id: v.slice(2), event_id: '' } : v.startsWith('e:') ? { event_id: v.slice(2), webinar_id: '' } : { webinar_id: '', event_id: '' })
+                // a webinar: the workflow is linked to its funnel too
+                const w = (ctx.webinars ?? []).find((x) => x.id === v.slice(2))
+                set(
+                  v.startsWith('w:')
+                    ? { webinar_id: v.slice(2), event_id: '', funnel_id: w?.funnel_id ?? '' }
+                    : v.startsWith('e:')
+                      ? { event_id: v.slice(2), webinar_id: '', funnel_id: '' }
+                      : { webinar_id: '', event_id: '', funnel_id: '' },
+                )
               }}
             >
               <option value="">— select —</option>
