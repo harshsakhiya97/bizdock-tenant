@@ -20,13 +20,16 @@ export type Membership = {
   role: { name: string; permissions: Permissions; is_system: boolean; level: number }
 }
 
-export type SubBusinessType = 'editing' | 'podcast' | 'studio_rental'
+/** a business type's code (Masters → Business types): set once, never changed; the app's rules go by it */
+export type SubBusinessType = string
 export type SubBusiness = { id: string; business_id: string; name: string; type: SubBusinessType }
-export const SUB_BUSINESS_TYPES: { id: SubBusinessType; label: string }[] = [
-  { id: 'editing', label: 'Editing service' },
-  { id: 'podcast', label: 'Podcast' },
-  { id: 'studio_rental', label: 'Podcast studio rental' },
-]
+/** the built-in codes the app works by */
+export const BT = { EDITING: 'EDITING', PAID_PODCAST: 'PAID-PODCAST', STUDIO_RENTAL: 'STUDIO-RENTAL' } as const
+/** a type stored before the codes (editing / podcast / studio_rental) → its code */
+const LEGACY: Record<string, string> = { editing: BT.EDITING, podcast: BT.PAID_PODCAST, studio_rental: BT.STUDIO_RENTAL }
+export const typeCode = <T extends string | null | undefined>(t: T): T => (t ? LEGACY[t] ?? t : t) as T
+/** Masters → Business types: name (shown everywhere, editable) and code (fixed) */
+export type BusinessType = { id: string; code: string; name: string; is_system: boolean; is_active: boolean; sort_order: number }
 /** a business and its active sub-businesses */
 export type Business = { id: string; name: string; subs: SubBusiness[]; /** its own type when it has no sub-businesses */ type: SubBusinessType | null }
 
@@ -39,6 +42,10 @@ export type AuthState = {
   membership: Membership | null
   /** businesses this user can work with in this tenant */
   businesses: Business[]
+  /** Masters → Business types (active and not) */
+  businessTypes: BusinessType[]
+  /** a type's name by its code */
+  typeName: (code: string | null | undefined) => string
   loading: boolean
   /** set when someone who isn't a member of this tenant tried to log in */
   accessError: string | null

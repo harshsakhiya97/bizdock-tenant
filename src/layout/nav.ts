@@ -1,5 +1,5 @@
 import { Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
-import type { SubBusinessType } from '@/auth/auth-context'
+import { BT, type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -27,7 +27,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/customers', label: 'Customers', icon: Contact, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
-      { to: '/meetings', label: 'Meetings', icon: Handshake, module: 'meetings', onlyType: 'podcast' },
+      { to: '/meetings', label: 'Meetings', icon: Handshake, module: 'meetings', onlyType: BT.PAID_PODCAST },
       { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },

@@ -1,3 +1,4 @@
+import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, Receipt, Star, Trash2, Wallet } from 'lucide-react'
@@ -112,7 +113,7 @@ export function LeadPage() {
     .filter((b) => b.status !== 'cancelled' && b.booking_date >= new Date().toISOString().slice(0, 10))
     .sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))[0]
   // Paid Podcast lead: Meetings and Podcasts tabs instead of Bookings
-  const isPodcast = (lead.sub_business_id ? bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.type : !bizRow?.subs.length ? bizRow?.type : null) === 'podcast'
+  const isPodcast = (lead.sub_business_id ? bizRow?.subs.find((x) => x.id === lead.sub_business_id)?.type : !bizRow?.subs.length ? bizRow?.type : null) === BT.PAID_PODCAST
   // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
   const podcastBk = podcastCheck(businesses)
   const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))

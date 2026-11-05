@@ -1,5 +1,5 @@
 import { db } from '@/lib/supabase'
-import type { SubBusiness, SubBusinessType } from '@/auth/auth-context'
+import { typeCode, type SubBusiness, type SubBusinessType } from '@/auth/auth-context'
 import type { BusinessInput, BusinessListRow, BusinessRow } from './types'
 
 const BUCKET = 'business-logos'
@@ -113,7 +113,7 @@ export async function listSubBusinesses(businessId: string) {
     .order('sort_order')
     .order('created_at')
   fail(error)
-  return (data ?? []) as SubBusiness[]
+  return ((data ?? []) as SubBusiness[]).map((x) => ({ ...x, type: typeCode(x.type) }))
 }
 
 /** Saves the sub-business list of a business: updates, adds and removes (records keep their business). */

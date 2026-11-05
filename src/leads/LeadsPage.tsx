@@ -1,3 +1,4 @@
+import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { scheduleFollowUp } from '@/followups/api'
@@ -59,7 +60,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const { selected, sub, inScope } = useBusiness()
   const me = membership?.id
   // Studio Rental: Purpose, Time, Describes and the lead date (with time) instead of Temp / Funnel / Value
-  const studio = activeType(selected, sub) === 'studio_rental'
+  const studio = activeType(selected, sub) === BT.STUDIO_RENTAL
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
