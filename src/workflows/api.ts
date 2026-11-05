@@ -107,7 +107,8 @@ export async function saveWorkflow(
       name: w.name.trim() || 'Workflow',
       is_active: w.is_active,
       trigger_type: t.event ?? 'form_submitted',
-      funnel_id: !eventTrigger && t.funnel_id ? t.funnel_id : null,
+      // a Before / After webinar workflow keeps its webinar's funnel
+      funnel_id: t.funnel_id || null,
       event_id: eventTrigger && t.event_id && !t.webinar_id ? t.event_id : null,
       // the webinar it's about: a Before / After webinar trigger's, else a Register for webinar step's
       webinar_id: (eventTrigger ? t.webinar_id : String(w.nodes.find((n) => n.type === 'register_webinar')?.data.webinar_id ?? '')) || null,
