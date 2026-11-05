@@ -32,7 +32,7 @@ export const releases: Release[] = [
       'Follow-ups and My Day follow the selected sub-business.',
       'WhatsApp steps show a template’s button-link and header variables too.',
       'Wait-until and step times show seconds; workflow canvas zoom as + / zoom level (click: 100%) / −.',
-      'Email and Call steps hidden from the step list for now; Generate link / Zoom variable lists and Get lead details texts removed (pick them from the dropdowns).',
+      'Email and Call steps hidden from the step list for now; Generate link / Zoom variable lists, Get lead details texts and the builder’s “steps run now” note removed.',
       'Masters → Messages rows open on click.',
       'Field dropdowns: names in Title Case (Meeting End, Company Name), no {{keyword}} shown, date fields only as Date / Time / Date & Time (no meeting_end date: same as the start’s), and examples for Generate link and Zoom values.',
       'Get lead details: Match by picks the trigger’s phone / email field for you.',
