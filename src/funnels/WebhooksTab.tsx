@@ -249,7 +249,7 @@ export function WebhooksTab({
                       match_by: hookMatch,
                     }
                     void run(
-                      () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w)),
+                      () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w).then(() => undefined)),
                       n.hook ? 'Webhook saved.' : `Webhook ${hookName.trim()} added. Copy its URL into that form.`,
                     )
                   }}

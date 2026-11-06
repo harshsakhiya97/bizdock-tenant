@@ -140,8 +140,9 @@ export async function listWebhooks(funnelId: string): Promise<FunnelWebhook[]> {
 
 /** another webhook URL on the funnel (e.g. a form on any page, a popup) */
 export async function addWebhook(tenantId: string, funnelId: string, w: WebhookInput) {
-  const { error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, ...w, name: w.name.trim() || 'Form' })
+  const { data, error } = await db().from('funnel_webhooks').insert({ tenant_id: tenantId, funnel_id: funnelId, ...w, name: w.name.trim() || 'Form' }).select('id').single()
   if (error) throw error
+  return String(data.id)
 }
 
 export async function updateWebhook(id: string, w: WebhookInput) {
