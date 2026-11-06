@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
@@ -6,13 +6,12 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { saveFunnel } from '@/funnels/api'
 import { templateStages } from '@/funnels/templates'
-import type { FunnelRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { HostDrawer } from '@/masters/WebinarHostsTab'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { listHosts, saveWebinar, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
-import { createWebinarWorkflows, setWebinarWorkflowsFunnel } from './workflows'
+import { createWebinarWorkflows } from './workflows'
 
 const NEW_FUNNEL = '__new'
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -27,7 +26,6 @@ export function WebinarDrawer({
   webinar,
   businesses,
   defaultBusinessId,
-  funnels,
   defaults,
   onClose,
   onSaved,
@@ -36,7 +34,6 @@ export function WebinarDrawer({
   /** the Webinar businesses this person can use */
   businesses: { id: string; name: string }[]
   defaultBusinessId: string | null
-  funnels: FunnelRow[]
   /** a new one from the calendar: the day / time dragged over */
   defaults?: { date?: string; start?: string; end?: string }
   onClose: () => void
@@ -82,7 +79,6 @@ export function WebinarDrawer({
     )
   }, [tenant.id, webinar])
 
-  const bizFunnels = useMemo(() => funnels.filter((x) => x.business_id === f.business_id), [funnels, f.business_id])
 
   async function save() {
     if (!f.business_id) return setError('Pick the business.')
@@ -101,7 +97,7 @@ export function WebinarDrawer({
     setError(null)
     try {
       let funnelId = f.funnel_id
-      // a funnel for its leads (Webinar stages), named after the webinar
+      // a new webinar always gets its own funnel (Webinar stages), named after it; its leads come in through its webhook
       if (!funnelId || funnelId === NEW_FUNNEL) {
         funnelId = await saveFunnel(
           tenant.id,
@@ -112,11 +108,7 @@ export function WebinarDrawer({
       }
       const input = { ...f, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
-      if (webinar) {
-        // another funnel: its three workflows move with it
-        if ((webinar.funnel_id ?? null) !== funnelId) await setWebinarWorkflowsFunnel(webinar.id, funnelId)
-        return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
-      }
+      if (webinar) return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
       let wfError = ''
       try {
@@ -172,7 +164,7 @@ export function WebinarDrawer({
                   <Label htmlFor="wb-biz" required>
                     Business
                   </Label>
-                  <Select id="wb-biz" value={f.business_id} disabled={!canEdit || !!webinar} onChange={(e) => setF((d) => ({ ...d, business_id: e.target.value, funnel_id: NEW_FUNNEL }))}>
+                  <Select id="wb-biz" value={f.business_id} disabled={!canEdit || !!webinar} onChange={(e) => set('business_id', e.target.value)}>
                     <option value="">— select —</option>
                     {businesses.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -227,20 +219,6 @@ export function WebinarDrawer({
               <div className="span-2">
                 <Label htmlFor="wb-desc">Description</Label>
                 <TextArea id="wb-desc" rows={3} value={f.description ?? ''} disabled={!canEdit} onChange={(e) => set('description', e.target.value)} />
-              </div>
-              <div className="span-2">
-                <Label htmlFor="wb-funnel" required>
-                  Funnel
-                </Label>
-                <Select id="wb-funnel" value={f.funnel_id ?? NEW_FUNNEL} disabled={!canEdit} onChange={(e) => set('funnel_id', e.target.value)}>
-                  <option value={NEW_FUNNEL}>+ A new funnel for this webinar</option>
-                  {bizFunnels.map((x) => (
-                    <option key={x.id} value={x.id}>
-                      {x.name}
-                    </option>
-                  ))}
-                </Select>
-                <Hint>Leads come in through this funnel’s webhook and are registered for the coming date. Someone who registers again is registered for the next date (no new lead).</Hint>
               </div>
             </div>
           </FormSection>

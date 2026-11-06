@@ -6,8 +6,6 @@ import { useBusiness } from '@/business/useBusiness'
 import { Flash } from '@/components/Flash'
 import { SlotCalendar, clock, fmtDay, isoDay } from '@/components/SlotCalendar'
 import { ConfirmModal, Empty, PageHead, Paged, StatCard } from '@/components/ui'
-import { listFunnels } from '@/funnels/api'
-import type { FunnelRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
@@ -27,7 +25,6 @@ export function WebinarCalendarPage() {
   const [webinars, setWebinars] = useState<WebinarRow[] | null>(null)
   const [dates, setDates] = useState<WebinarDate[] | null>(null)
   const [hosts, setHosts] = useState<WebinarHost[]>([])
-  const [funnels, setFunnels] = useState<FunnelRow[]>([])
   const [regCount, setRegCount] = useState<Record<string, number>>({})
   const [drawer, setDrawer] = useState<{ webinar: WebinarRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [opened, setOpened] = useState<WebinarDate | null>(null)
@@ -54,7 +51,6 @@ export function WebinarCalendarPage() {
   useEffect(load, [load])
   useEffect(() => {
     void listHosts(tenant.id).then(setHosts, () => setHosts([]))
-    void listFunnels(tenant.id).then(setFunnels, () => setFunnels([]))
   }, [tenant.id])
 
   const mine = useMemo(() => (webinars ?? []).filter((w) => !selected || w.business_id === selected.id), [webinars, selected])
@@ -239,14 +235,12 @@ export function WebinarCalendarPage() {
           webinar={drawer.webinar}
           businesses={webinarBiz.map((b) => ({ id: b.id, name: b.name }))}
           defaultBusinessId={selected && webinarBiz.some((b) => b.id === selected.id) ? selected.id : null}
-          funnels={funnels}
           defaults={drawer.webinar ? undefined : { date: drawer.date, start: drawer.start, end: drawer.end }}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {
             setDrawer(null)
             setNotice({ ok: msg })
             load()
-            void listFunnels(tenant.id).then(setFunnels)
           }}
         />
       )}
