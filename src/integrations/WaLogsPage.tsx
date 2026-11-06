@@ -286,7 +286,10 @@ function Conversation({ tenantId, phone, onSent }: { tenantId: string; phone: st
     listChat(tenantId, phone).then(setMsgs, (e: Error) => setError(e.message))
   }, [tenantId, phone])
   useEffect(load, [load])
-  useEffect(() => end.current?.scrollIntoView({ block: 'end' }), [msgs])
+  // (newer browsers return a promise from scrollIntoView: an effect must not return it)
+  useEffect(() => {
+    end.current?.scrollIntoView({ block: 'end' })
+  }, [msgs])
 
   const name = msgs?.map(leadName).find(Boolean) ?? ''
   const leadId = msgs?.map((m) => m.lead_id).filter(Boolean).at(-1) ?? null
