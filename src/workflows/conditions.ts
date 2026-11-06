@@ -38,7 +38,6 @@ export const LEAD_FIELDS: FieldDef[] = [
   { value: 'utm_content', label: 'UTM content', kind: 'text', group: 'Lead' },
   { value: 'meeting', label: 'Meeting (Paid Podcast)', kind: 'presence', group: 'Activity' },
   { value: 'payment', label: 'Payment / purchase', kind: 'presence', group: 'Activity' },
-  { value: 'customer', label: 'Customer', kind: 'presence', group: 'Activity' },
 ]
 
 export const TEMPERATURES = [
@@ -68,7 +67,6 @@ const SHORT_OP: Record<CondOp, string> = { eq: '=', neq: '≠', empty: 'is empty
 const PRESENCE_LABEL: Record<string, [string, string]> = {
   meeting: ['Has a meeting', 'Has no meeting'],
   payment: ['Has paid / purchased', 'Hasn’t paid'],
-  customer: ['Is a customer', 'Is not a customer'],
 }
 
 /** the field's definition (extra fields: "x:<key>", compared as text or number) */

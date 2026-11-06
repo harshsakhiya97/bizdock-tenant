@@ -97,7 +97,7 @@ export async function createWebinarWorkflows(tenantId: string, memberId: string 
       anchor_var: '',
       rows: [newBulkRow(0, 'minutes')],
       stop_on: true,
-      stop: { field: 'customer', op: 'exists', value: '' },
+      stop: { field: 'payment', op: 'exists', value: '' },
     },
   }))
   await insertWorkflow(tenantId, memberId, {
