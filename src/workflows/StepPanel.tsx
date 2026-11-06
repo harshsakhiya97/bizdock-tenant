@@ -1219,7 +1219,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
         >
           {ops.map((o) => (
             <option key={o} value={o}>
-              {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : c.field === 'customer' ? 'is a customer (bought / paid)' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : c.field === 'customer' ? 'is not a customer' : 'hasn’t paid') : OP_LABEL[o]}
+              {def.kind === 'tag' && o === 'eq' ? 'has' : def.kind === 'tag' && o === 'neq' ? 'doesn’t have' : def.kind === 'tag' && o === 'empty' ? 'has no tags' : def.kind === 'tag' && o === 'not_empty' ? 'has any tag' : def.kind === 'presence' ? (o === 'exists' ? (c.field === 'meeting' ? 'has a meeting' : 'has paid / purchased') : c.field === 'meeting' ? 'has no meeting' : 'hasn’t paid') : OP_LABEL[o]}
             </option>
           ))}
         </Select>
@@ -1276,7 +1276,7 @@ function CondEditor({ id, c: raw, ctx, disabled, onChange }: { id: string; c: Co
           ))}
       </div>
       {c.field === 'meeting' && <Hint>Any meeting of the lead that isn’t cancelled (Meetings, Paid Podcast).</Hint>}
-      {c.field === 'payment' && <Hint>A payment received on any of the lead’s bookings, or a purchase logged by a webhook.</Hint>}
+      {c.field === 'payment' && <Hint>A payment received on any of the lead’s bookings, a paid part of a purchase (Purchases tab), or a purchase logged by a webhook.</Hint>}
       {isExtra && <Hint>Text is compared without case; with &gt; / &lt; the value must be a number.</Hint>}
     </>
   )
