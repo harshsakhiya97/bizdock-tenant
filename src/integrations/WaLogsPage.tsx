@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { ArrowLeft, Check, CheckCheck, Copy, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
+import { ArrowLeft, Check, CheckCheck, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
 import { Hint, Label, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { templateOptions, useWatiTemplates, watiVars } from '@/workflows/WhatsAppFields'
-import { at, leadName, listChat, listWaLogs, nicePhone, sendWaTemplate, STATUS_META, waHook, waHookUrl, type WaLog, type WaLogStatus } from './waLogs'
+import { at, leadName, listChat, listWaLogs, nicePhone, sendWaTemplate, STATUS_META, type WaLog, type WaLogStatus } from './waLogs'
 
 const day = (d: Date) => d.toLocaleDateString('en-CA')
 const ago = (n: number) => {
@@ -29,17 +29,12 @@ export function WaLogsPage() {
   const [to, setTo] = useState(day(new Date()))
   const [rows, setRows] = useState<WaLog[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [hook, setHook] = useState<{ key: string; last_event_at: string | null } | null>(null)
-  const [copied, setCopied] = useState(false)
 
   const load = useCallback(() => {
     setError(null)
     listWaLogs(tenant.id, from, to).then(setRows, (e: Error) => setError(e.message))
   }, [tenant.id, from, to])
   useEffect(load, [load])
-  useEffect(() => {
-    void waHook(tenant.id).then(setHook, () => setHook(null))
-  }, [tenant.id])
 
   const go = (t: 'logs' | 'chats', phone?: string) => setParams(t === 'logs' ? {} : { tab: 'chats', ...(phone ? { phone } : {}) }, { replace: true })
 
@@ -54,29 +49,6 @@ export function WaLogsPage() {
           </Link>
         }
       />
-      {hook && (
-        <div className="card card-pad stack" style={{ gap: 6, marginBottom: 14 }}>
-          <span className="field-label">WATI webhook (for delivered / read times and replies)</span>
-          <div className="hook-url">
-            <code>{waHookUrl(hook.key)}</code>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => {
-                void navigator.clipboard.writeText(waHookUrl(hook.key))
-                setCopied(true)
-                window.setTimeout(() => setCopied(false), 1500)
-              }}
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy'}
-            </button>
-          </div>
-          <Hint>
-            In WATI → Webhooks, add this URL once and tick the message events (message received, template message sent, delivered, read, failed).{' '}
-            {hook.last_event_at ? `Last event from WATI: ${at(hook.last_event_at)}.` : 'Nothing received from WATI yet.'}
-          </Hint>
-        </div>
-      )}
       <div className="tabs" role="tablist" style={{ marginBottom: 12 }}>
         <button type="button" role="tab" className={cn('tab', tab === 'logs' && 'is-active')} onClick={() => go('logs')}>
           Message logs

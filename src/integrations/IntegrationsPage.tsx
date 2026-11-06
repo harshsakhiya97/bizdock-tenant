@@ -11,6 +11,7 @@ import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
+import { WaWebhookBox } from './WaWebhookBox'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
@@ -403,6 +404,7 @@ function ConnectDrawer({
             {f.hint && <Hint>{f.hint}</Hint>}
           </div>
         ))}
+        {existing && provider.id === 'whatsapp' && vendor === 'wati' && <WaWebhookBox />}
         {existing && (
           <div className="muted small row" style={{ gap: 6 }}>
             <CheckCircle2 size={14} /> Last updated {ago(existing.updated_at)}
