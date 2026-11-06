@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { ArrowLeft, Check, CheckCheck, Copy, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
-import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -132,33 +132,47 @@ function LogsTab({
 
   return (
     <section className="panel">
-      <div className="panel-bar" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <SearchInput placeholder="Search name, number, template…" value={q} onChange={setQ} />
-        <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as '' | WaLogStatus)} style={{ width: 150 }}>
+      <div className="panel-filters">
+        <SearchInput placeholder="Name, number or template" value={q} onChange={setQ} width={240} />
+        <select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as '' | WaLogStatus)}>
           <option value="">All statuses</option>
           {(Object.keys(STATUS_META) as WaLogStatus[]).map((k) => (
             <option key={k} value={k}>
               {STATUS_META[k].label} ({count(k)})
             </option>
           ))}
-        </Select>
-        <Select aria-label="From" value={source} onChange={(e) => setSource(e.target.value)} style={{ width: 150 }}>
+        </select>
+        <select className="input input-sm filter-select" aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="">All sources</option>
           <option value="workflow">Workflows</option>
           <option value="app">Sent here</option>
           <option value="reply">Replies</option>
-        </Select>
-        <Select aria-label="Template" value={template} onChange={(e) => setTemplate(e.target.value)} style={{ width: 200 }}>
+        </select>
+        <select className="input input-sm filter-select" aria-label="Template" value={template} onChange={(e) => setTemplate(e.target.value)}>
           <option value="">All templates</option>
           {templates.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
-        </Select>
-        <TextInput aria-label="From date" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} style={{ width: 150 }} />
-        <TextInput aria-label="To date" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} style={{ width: 150 }} />
-        <button type="button" className="btn btn-outline btn-sm" onClick={reload} title="Refresh">
+        </select>
+        <input className="input input-sm filter-select" aria-label="From date" title="From date" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+        <input className="input input-sm filter-select" aria-label="To date" title="To date" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        {(q || status || source || template) && (
+          <button
+            type="button"
+            className="clear-btn"
+            onClick={() => {
+              setQ('')
+              setStatus('')
+              setSource('')
+              setTemplate('')
+            }}
+          >
+            Reset
+          </button>
+        )}
+        <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={reload} title="Refresh" aria-label="Refresh" style={{ marginLeft: 'auto' }}>
           <RefreshCw size={14} />
         </button>
       </div>
