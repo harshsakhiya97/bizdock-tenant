@@ -1309,3 +1309,7 @@ a.db-card:hover { border-color: var(--brand); }
 .wa-chat-foot { border-top: 1px solid var(--line); padding: 12px 14px; max-height: 45%; overflow-y: auto; }
 .wa-tpl-preview { white-space: pre-line; padding: 8px 10px; border-radius: var(--radius); background: var(--surface-muted); }
 @media (max-width: 800px) { .wa-chats { grid-template-columns: 1fr; height: auto; } .wa-chat-list { max-height: 260px; border-right: 0; border-bottom: 1px solid var(--line); } }
+
+/* a choice inside a confirm popup (e.g. delete only this date / the whole webinar) */
+.radio-row { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
+.radio-row input { margin-top: 4px; flex: none; accent-color: var(--danger); }

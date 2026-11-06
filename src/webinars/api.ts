@@ -43,8 +43,10 @@ export type WebinarRow = {
   end_time: string
   is_active: boolean
   created_at: string
+  /** dates deleted on their own (not made again) */
+  skipped_dates?: string[]
 }
-export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at'>
+export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates'>
 
 /** one date of a webinar (a calendar event with its own Zoom webinar) */
 export type WebinarDate = {
@@ -106,10 +108,29 @@ export async function saveWebinar(tenantId: string, memberId: string | undefined
   return String(data.id)
 }
 
-/** "Delete" in the app: archived; its coming dates are called off (and removed from Zoom) */
-export async function archiveWebinar(id: string) {
-  const { error } = await db().from('webinars').update({ archived_at: new Date().toISOString(), is_active: false }).eq('id', id)
+/**
+ * "Delete" the whole webinar: archived (kept), its coming dates are called off (and removed from Zoom),
+ * and its workflows and funnel are archived too.
+ */
+export async function archiveWebinar(w: Pick<WebinarRow, 'id' | 'funnel_id'>) {
+  const now = new Date().toISOString()
+  const { error } = await db().from('webinars').update({ archived_at: now, is_active: false }).eq('id', w.id)
   if (error) throw error
+  const { error: e1 } = await db().from('workflows').update({ is_active: false, archived_at: now }).eq('webinar_id', w.id).is('archived_at', null)
+  if (e1) throw e1
+  if (w.funnel_id) {
+    const { error: e2 } = await db().from('funnels').update({ is_active: false, archived_at: now }).eq('id', w.funnel_id).is('archived_at', null)
+    if (e2) throw e2
+  }
+}
+
+/** "Delete" only this date: called off (and removed from Zoom), not made again; the webinar's next date follows */
+export async function deleteWebinarDate(date: Pick<WebinarDate, 'id' | 'event_date'>, w: Pick<WebinarRow, 'id' | 'skipped_dates'>) {
+  const { error } = await db().from('events').update({ is_cancelled: true }).eq('id', date.id)
+  if (error) throw error
+  const skipped = [...new Set([...(w.skipped_dates ?? []), date.event_date])].sort()
+  const { error: e } = await db().from('webinars').update({ skipped_dates: skipped }).eq('id', w.id)
+  if (e) throw e
 }
 
 // ---------------- registrations & Zoom data ----------------

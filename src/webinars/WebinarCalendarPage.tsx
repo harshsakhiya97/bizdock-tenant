@@ -255,6 +255,11 @@ export function WebinarCalendarPage() {
             setOpened(null)
             if (w) setDrawer({ webinar: w })
           }}
+          onDeleted={(msg) => {
+            setOpened(null)
+            setNotice({ ok: msg })
+            load()
+          }}
         />
       )}
       <ConfirmModal
@@ -262,7 +267,7 @@ export function WebinarCalendarPage() {
         icon={Trash2}
         danger
         title="Delete this webinar?"
-        message={removing ? `“${removing.title}”: its coming dates are called off (and removed from Zoom). Past dates, registrations and Zoom data stay on the leads.` : ''}
+        message={removing ? `“${removing.title}”: its coming dates are called off (and removed from Zoom), and its 3 workflows and its funnel are deleted too. Past dates, registrations and Zoom data stay on the leads.` : ''}
         confirmLabel="Delete"
         onCancel={() => setRemoving(null)}
         onConfirm={async () => {
@@ -270,7 +275,7 @@ export function WebinarCalendarPage() {
           setRemoving(null)
           if (!w) return
           try {
-            await archiveWebinar(w.id)
+            await archiveWebinar(w)
             setNotice({ ok: `${w.title} deleted.` })
             load()
           } catch (e) {
