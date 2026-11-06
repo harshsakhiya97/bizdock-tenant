@@ -1617,6 +1617,8 @@ function TriggerFields({
             </Select>
             {!(ctx.webinars ?? []).length && <Hint>No webinars yet: create one on the Webinar Calendar.</Hint>}
           </div>
+          {/* Before a webinar starts: from registration (the messages' own times are on the Bulk WhatsApp step) */}
+          {!(t.event === 'before_event' && t.webinar_id) && (
           <div>
             <span className="field-label">{t.event === 'before_event' ? 'How long before it starts' : 'How long after it ends'}</span>
             <TimeRow
@@ -1627,9 +1629,10 @@ function TriggerFields({
               disabled={disabled}
             />
           </div>
+          )}
           {t.webinar_id && (
             <Hint>
-              Runs for every date of the webinar, for each lead registered for that date (Register for webinar), {t.event === 'before_event' ? 'this long before it starts (someone who registers later still gets it, until it starts)' : 'this long after it ends'}.
+              Runs for every date of the webinar, for each lead registered for that date (Register for webinar), {t.event === 'before_event' ? 'from the moment they’re registered until it starts (set each message’s time on the next step, e.g. 1 day before Webinar start)' : 'this long after it ends'}.
               Later steps have the date’s values (Webinar start, the lead’s joining link…).
             </Hint>
           )}
