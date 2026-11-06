@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
-import { Lock, Mail } from 'lucide-react'
+import { Lock, Mail, User } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Label, PasswordInput, TextInput } from '@/components/Field'
 import { DevelopedBy } from '@/components/DevelopedBy'
@@ -38,8 +38,24 @@ export function LoginPage() {
     setNotice(null)
 
     if (mode === 'login') {
+      // email or mobile number: a mobile number (with the right password) gives the account's email to log in with
+      let login = email.trim()
+      if (!login.includes('@')) {
+        if (login.replace(/\D/g, '').length < 10) {
+          setError('Enter your email ID or 10-digit mobile number.')
+          setBusy(false)
+          return
+        }
+        const { data, error: e } = await db().rpc('login_email_for_phone', { p_tenant: tenant.id, p_phone: login, p_password: password })
+        if (e || !data) {
+          setError(e?.message ?? 'Invalid login credentials')
+          setBusy(false)
+          return
+        }
+        login = String(data)
+      }
       // on success the auth provider checks membership, then <Navigate> above redirects
-      const { error } = await db().auth.signInWithPassword({ email: email.trim(), password })
+      const { error } = await db().auth.signInWithPassword({ email: login, password })
       if (error) setError(error.message)
     } else {
       const { error } = await db().auth.resetPasswordForEmail(email.trim(), {
@@ -78,14 +94,14 @@ export function LoginPage() {
 
           <div>
             <Label htmlFor="email" required>
-              Email ID
+              {mode === 'login' ? 'Email ID or Mobile No.' : 'Email ID'}
             </Label>
             <TextInput
               id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="Enter Email ID"
-              icon={<Mail />}
+              type={mode === 'login' ? 'text' : 'email'}
+              autoComplete="username"
+              placeholder={mode === 'login' ? 'Enter Email ID or Mobile No.' : 'Enter Email ID'}
+              icon={mode === 'login' ? <User /> : <Mail />}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoFocus
