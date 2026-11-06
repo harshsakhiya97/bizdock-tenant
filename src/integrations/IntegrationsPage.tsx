@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { CheckCircle2, CircleAlert, MessageSquareText, PlugZap } from 'lucide-react'
+import { CheckCircle2, CircleAlert, MessageSquareText, PlugZap, ScrollText } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -190,6 +190,11 @@ export function IntegrationsPage() {
                   {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
                     <Link to="/integrations/whatsapp/templates" className="btn btn-outline btn-sm">
                       <MessageSquareText size={14} /> Templates
+                    </Link>
+                  )}
+                  {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
+                    <Link to="/integrations/whatsapp/logs" className="btn btn-outline btn-sm">
+                      <ScrollText size={14} /> Logs
                     </Link>
                   )}
                   {p.multiple && !off && (
