@@ -29,13 +29,13 @@ async function insertWorkflow(
 
 /**
  * A new webinar's three workflows (off until their WhatsApp templates are picked and they're switched on):
- *  1. Registration: the funnel's form → Register for webinar → WhatsApp with the joining (short) link
+ *  1. Registration: the webinar's registration form (its funnel webhook) → Register for webinar → WhatsApp with the joining (short) link
  *  2. Reminders: when the lead is registered (until it starts) → Bulk WhatsApp 1 day / 1 hour / 10 minutes before Webinar start (ones already past are skipped)
  *  3. After the webinar: when it ends → Wait until Zoom data is in → Get webinar analytics → Switch on the category →
  *     a Bulk WhatsApp per category (Super Hot / Hot / Warm / Cold), stopping once the lead becomes a customer
  * They run for every date of the webinar (one-time, several dates or weekly), and all three are linked to the webinar's funnel.
  */
-export async function createWebinarWorkflows(tenantId: string, memberId: string | undefined, w: { id: string; title: string; funnel_id: string | null }) {
+export async function createWebinarWorkflows(tenantId: string, memberId: string | undefined, w: { id: string; title: string; funnel_id: string | null; webhook_id?: string | null }) {
   const title = w.title.trim() || 'Webinar'
   // 1. registration
   const reg = nid('register')
@@ -46,7 +46,7 @@ export async function createWebinarWorkflows(tenantId: string, memberId: string 
     funnelId: w.funnel_id,
     webinarId: w.id,
     nodes: [
-      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'form_submitted', funnel_id: w.funnel_id ?? '', pages: [] } },
+      { id: 'trigger', type: 'trigger', position: { x: 0, y: 0 }, data: { event: 'form_submitted', funnel_id: w.funnel_id ?? '', pages: w.webhook_id ? [w.webhook_id] : [] } },
       { id: reg, type: 'register_webinar', position: { x: 0, y: 170 }, data: { webinar_id: w.id, short_link: true } },
       { id: wa, type: 'whatsapp', position: { x: 0, y: 340 }, data: { name: 'Joining link', to: 'lead', member_id: '', template: '', message: '' } },
     ],

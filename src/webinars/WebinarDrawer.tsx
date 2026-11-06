@@ -4,7 +4,7 @@ import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
-import { saveFunnel } from '@/funnels/api'
+import { addWebhook, saveFunnel } from '@/funnels/api'
 import { templateStages } from '@/funnels/templates'
 import { cn } from '@/lib/cn'
 import { HostDrawer } from '@/masters/WebinarHostsTab'
@@ -97,6 +97,7 @@ export function WebinarDrawer({
     setError(null)
     try {
       let funnelId = f.funnel_id
+      let webhookId: string | null = null
       // a new webinar always gets its own funnel (Webinar stages), named after it; its leads come in through its webhook
       if (!funnelId || funnelId === NEW_FUNNEL) {
         funnelId = await saveFunnel(
@@ -105,6 +106,8 @@ export function WebinarDrawer({
           { business_id: f.business_id, sub_business_id: '', name: f.title.trim(), type: 'webinar', description: '', tags: [], event_id: '', assign_mode: 'none', assign_members: [] },
           templateStages('webinar'),
         )
+        // and the registration form's webhook in it: each post adds the lead, and the registration workflow starts from it
+        webhookId = await addWebhook(tenant.id, funnelId, { name: `${f.title.trim()} – registration form`, action: 'create_lead', match_by: 'phone' })
       }
       const input = { ...f, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
@@ -112,7 +115,7 @@ export function WebinarDrawer({
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
       let wfError = ''
       try {
-        await createWebinarWorkflows(tenant.id, membership?.id, { id, title: input.title, funnel_id: funnelId })
+        await createWebinarWorkflows(tenant.id, membership?.id, { id, title: input.title, funnel_id: funnelId, webhook_id: webhookId })
       } catch (e) {
         wfError = (e as Error).message
       }
