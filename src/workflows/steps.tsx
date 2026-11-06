@@ -162,7 +162,7 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
     case 'before_event':
     case 'after_event': {
       const w = (ctx.webinars ?? []).find((x) => x.id === t.webinar_id)
-      if (w) return `${unitText(Number(t.amount) || 0, t.unit ?? 'hours')} ${t.event === 'before_event' ? 'before' : 'after'} ${w.title} ${t.event === 'before_event' ? 'starts' : 'ends'} (each date)`
+      if (w) return t.event === 'before_event' ? `Leads registered for ${w.title}, until it starts (each date)` : `${unitText(Number(t.amount) || 0, t.unit ?? 'hours')} after ${w.title} ends (each date)`
       return ev
         ? `${unitText(Number(t.amount) || 0, t.unit ?? 'hours')} ${t.event === 'before_event' ? 'before' : 'after'} ${ev.title} (${day(ev.date)})`
         : 'Pick the webinar'
