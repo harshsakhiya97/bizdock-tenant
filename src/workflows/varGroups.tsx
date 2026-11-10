@@ -32,6 +32,13 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   webinar_short_link_code: 'Webinar joining short link code',
   webinar_join_link: 'Webinar joining link (Zoom)',
   webinar_group_link: 'WhatsApp group joining link',
+  // the webinar's next date (Before / After webinar workflows)
+  next_webinar_title: 'Next webinar title',
+  next_webinar_start: 'Next webinar start',
+  next_webinar_end: 'Next webinar end',
+  next_webinar_date_time: 'Next webinar date & time (5 Nov 2026 7pm-8:30pm)',
+  next_webinar_date: 'Next webinar date',
+  next_webinar_time: 'Next webinar time',
   // Get webinar analytics
   webinar_category: 'Webinar category',
   webinar_attended: 'Attended the webinar (Yes / No)',
@@ -142,7 +149,7 @@ export function orderedGroups(
       const web = st.keys.filter((k) => k.startsWith('webinar_')).map((k) => [k, label(k)] as [string, string])
       const lead = [...leadItems, ...fieldItems]
       out.push({ label: 'Webinar fields', items: web })
-      out.push({ label: 'Lead fields', items: [...lead, ...st.keys.filter((k) => !k.startsWith('webinar_') && !lead.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
+      out.push({ label: 'Lead fields', items: [...lead, ...st.keys.filter((k) => !k.startsWith('webinar_') && !k.startsWith('next_webinar_') && !lead.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
     } else if (st.type === 'trigger') {
       const items = o.hook ? o.hook.map((k) => [k, k] as [string, string]) : [...leadItems, ...fieldItems]
       out.push({ label: `Step ${st.n}: Trigger`, items: [...items, ...st.keys.filter((k) => !items.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
@@ -157,6 +164,11 @@ export function orderedGroups(
           return [k, eg ? `${label(k)} (${eg})` : label(k)] as [string, string]
         }),
       })
+  }
+  // last: the webinar's next date
+  if (webinarFlow) {
+    const next = order.find((st) => st.type === 'trigger')?.keys.filter((k) => k.startsWith('next_webinar_')) ?? []
+    out.push({ label: 'Next webinar', items: next.map((k) => [k, label(k)] as [string, string]) })
   }
   const groups = out.filter((g) => g.items.length)
   return webinarFlow ? groups.map((g, i) => ({ ...g, label: `Step ${i + 1}: ${g.label}` })) : groups
@@ -217,7 +229,7 @@ function withDateParts(groups: VarGroup[], dates: string[]): VarGroup[] {
   if (!dates.length) return groups
   // a meeting starts and ends on the same day: meeting_end's date is meeting_start's (one "date" for both)
   // a webinar's start / end: its date is Webinar date (no separate start / end date)
-  const sameDay = (k: string, x: string) => x === '_date' && ((k === 'meeting_end' && dates.includes('meeting_start')) || k === 'webinar_start' || k === 'webinar_end')
+  const sameDay = (k: string, x: string) => x === '_date' && ((k === 'meeting_end' && dates.includes('meeting_start')) || k === 'webinar_start' || k === 'webinar_end' || k === 'next_webinar_start' || k === 'next_webinar_end')
   return groups.map((g) => ({
     ...g,
     items: g.items.flatMap(([k, l]) =>

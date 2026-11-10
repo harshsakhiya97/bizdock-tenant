@@ -43,6 +43,8 @@ export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsa
 export const WEBINAR_STEPS: StepKind[] = ['register_webinar', 'wait_zoom', 'webinar_analytics']
 /** what Register for webinar / a Before / After webinar trigger give later steps */
 export const WEBINAR_VARS = ['webinar_start', 'webinar_end', 'webinar_date_time', 'webinar_title', 'webinar_date', 'webinar_time', 'webinar_short_link', 'webinar_short_link_code', 'webinar_join_link', 'webinar_group_link']
+/** a Before / After webinar workflow: the webinar's next date after this one ("Next webinar") */
+export const NEXT_WEBINAR_VARS = ['next_webinar_start', 'next_webinar_end', 'next_webinar_date_time', 'next_webinar_title', 'next_webinar_date', 'next_webinar_time']
 /** what Get webinar analytics gives */
 export const ANALYTICS_VARS = ['webinar_category', 'webinar_attended', 'webinar_minutes', 'webinar_attended_percent', 'webinar_questions', 'webinar_chats', 'webinar_polls', 'webinar_joined_at']
 const webinarTrigger = (t: { event?: string }) => t.event === 'before_event' || t.event === 'after_event'
@@ -109,7 +111,7 @@ export function flowContext(ref: RefData, nodes: StepNode[]): FlowContext {
     }),
     'submitted_at',
     ...(nodes.some((n) => n.type === 'zoom_meeting') ? ['zoom_start'] : []),
-    ...(hasWebinarVars ? ['webinar_start', 'webinar_end', 'webinar_joined_at'] : []),
+    ...(hasWebinarVars ? ['webinar_start', 'webinar_end', 'webinar_joined_at', 'next_webinar_start', 'next_webinar_end'] : []),
   ]
   // Get lead details: the extra fields of the leads of the workflow's sub-business (its funnel's; else the trigger's)
   const leadLookup = nodes.some((n) => n.type === 'lead_lookup')
@@ -177,7 +179,7 @@ export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as Switc
 /** the variable a Generate link step fills ("generated_link" unless named) */
 /** the values a step makes for later steps (Generate link: its link; Create Zoom meeting: the meeting's) */
 export function stepVarKeys(n: StepNode): string[] {
-  if (n.type === 'trigger') return webinarTrigger(n.data as { event?: string }) ? ['submitted_at', ...WEBINAR_VARS] : ['submitted_at']
+  if (n.type === 'trigger') return webinarTrigger(n.data as { event?: string }) ? ['submitted_at', ...WEBINAR_VARS, ...NEXT_WEBINAR_VARS] : ['submitted_at']
   if (n.type === 'register_webinar') return n.data.short_link === false ? WEBINAR_VARS.filter((k) => !k.startsWith('webinar_short_link')) : WEBINAR_VARS
   if (n.type === 'webinar_analytics') return ANALYTICS_VARS
   if (n.type === 'generate_link') {
