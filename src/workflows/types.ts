@@ -115,7 +115,7 @@ export type RefData = {
   /** Zoom accounts (Create Zoom meeting) */
   zoomAccounts?: { id: string; name: string; is_default: boolean }[]
   /** webinars of Webinar businesses (Register for webinar, Before / After webinar) */
-  webinars?: { id: string; title: string; business_id: string; funnel_id: string | null }[]
+  webinars?: { id: string; title: string; business_id: string; funnel_id: string | null; categories?: { key: string; name: string; min: number | null }[] }[]
 }
 
 /** what the workflow is about, worked out from its trigger */

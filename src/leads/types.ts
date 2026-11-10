@@ -17,6 +17,8 @@ export type LeadRow = {
   source_id: string | null
   referred_by: string | null
   temperature: Temperature | null
+  /** its latest webinar category (Webinar businesses), by name */
+  webinar_category?: string | null
   estimated_amount: number | null
   owner_id: string | null
   tags: string[]

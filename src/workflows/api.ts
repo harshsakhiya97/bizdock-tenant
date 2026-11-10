@@ -163,7 +163,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
     listZoomOptions(tenantId).catch(() => []),
     db().from('workflow_hooks').select('*').eq('tenant_id', tenantId),
-    db().from('webinars').select('id, title, business_id, funnel_id').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false }),
+    db().from('webinars').select('id, title, business_id, funnel_id, categories').eq('tenant_id', tenantId).is('archived_at', null).order('created_at', { ascending: false }),
   ])
   const ok = new Set(types.filter((t) => t.kind === 'webinar' || t.kind === 'event').map((t) => t.id))
   return {
@@ -204,7 +204,7 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     sources: (sources.data ?? []) as { id: string; name: string }[],
     zoomAccounts: zoomAccounts.map((z) => ({ id: z.id, name: z.name, is_default: z.is_default })),
     hooks: (hooks.data ?? []) as WorkflowHook[],
-    webinars: (webinars.data ?? []) as { id: string; title: string; business_id: string; funnel_id: string | null }[],
+    webinars: (webinars.data ?? []) as NonNullable<RefData['webinars']>,
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
     // extra fields saved on each funnel's leads (a workflow only offers its own funnel's)
     extraKeysByFunnel: ((leadExtras.data ?? []) as { funnel_id: string | null; extra: Record<string, unknown> | null }[]).reduce<Record<string, string[]>>((m, l) => {

@@ -154,6 +154,7 @@ export function LeadPage() {
     ['City', lead.city || '—'],
     ['Source', sourceName ?? '—'],
     ['Purpose', lead.purpose || '—'],
+    ...(lead.webinar_category ? ([['Webinar category', lead.webinar_category]] as [string, React.ReactNode][]) : []),
     [
       'Tags',
       lead.tags.length ? (
