@@ -13,6 +13,7 @@ import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
 import { createWebinarWorkflows } from './workflows'
 import { WebinarGroupsSection } from './WebinarGroupsSection'
+import { useLinkCheck, type LinkCheck } from './useLinkCheck'
 
 const NEW_FUNNEL = '__new'
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -70,6 +71,9 @@ export function WebinarDrawer({
   const [waTyped, setWaTyped] = useState(!!webinar?.wa_slug)
   const waSlug = waTyped ? f.wa_slug ?? '' : slug ? `${slugify(slug)}-wa` : ''
   const [tab, setTab] = useState<'details' | 'wa'>('details')
+  // typed links: checked as you type (already used by another webinar → try another)
+  const joinCheck = useLinkCheck(tenant.id, slug, webinar?.slug, webinar?.id ?? null, waSlug)
+  const waCheck = useLinkCheck(tenant.id, waSlug, webinar?.wa_slug, webinar?.id ?? null, slug)
   const saveGroupsRef = useRef<((webinarId: string) => Promise<void>) | null>(null)
   const copy = (k: 'join' | 'wa', url: string) => {
     void navigator.clipboard.writeText(url)
@@ -100,6 +104,12 @@ export function WebinarDrawer({
   async function save() {
     if (!f.business_id) return setError('Pick the business.')
     if (!f.title.trim()) return setError('Enter the webinar’s title.')
+    if (joinCheck === 'taken' || joinCheck === 'short') return setError('Pick another join link: this one is already used or too short.')
+    if (waCheck === 'taken' || waCheck === 'short') {
+      setTab('wa')
+      return setError('Pick another WhatsApp group link: this one is already used or too short.')
+    }
+    if (joinCheck === 'checking' || waCheck === 'checking') return setError('Checking the link… try again in a moment.')
     if (!f.host_id) return setError('Pick the host (or add one).')
     if (!f.zoom_account_id) return setError('Pick the Zoom account the webinars are made on.')
     if (!/^\d{2}:\d{2}$/.test(f.start_time) || !/^\d{2}:\d{2}$/.test(f.end_time) || f.end_time <= f.start_time) return setError('The end time must be after the start time.')
@@ -193,7 +203,7 @@ export function WebinarDrawer({
           <FormSection title="WhatsApp group link">
             <div>
               <Label htmlFor="wb-wa-slug">Short link</Label>
-              <div className="wb-link">
+              <div className={cn('wb-link', (waCheck === 'taken' || waCheck === 'short') && 'is-bad')}>
                 <span className="wb-link-base">{joinLink('')}</span>
                 <input
                   id="wb-wa-slug"
@@ -212,6 +222,7 @@ export function WebinarDrawer({
                   {copied === 'wa' ? <Check size={15} /> : <Copy size={15} />}
                 </button>
               </div>
+              <LinkStatus state={waCheck} />
               <Hint>Opens the WhatsApp group of the date that’s on now, else the next one (the groups are added below).</Hint>
             </div>
           </FormSection>
@@ -247,7 +258,7 @@ export function WebinarDrawer({
               </div>
               <div className="span-2">
                 <Label htmlFor="wb-slug">Join link</Label>
-                <div className="wb-link">
+                <div className={cn('wb-link', (joinCheck === 'taken' || joinCheck === 'short') && 'is-bad')}>
                   <span className="wb-link-base">{joinLink('')}</span>
                   <input
                     id="wb-slug"
@@ -272,6 +283,7 @@ export function WebinarDrawer({
                     {copied === 'join' ? <Check size={15} /> : <Copy size={15} />}
                   </button>
                 </div>
+                <LinkStatus state={joinCheck} />
                 <Hint>One link for every date: it opens the Zoom meeting of the date that’s on now, else the next one, and moves to each new date by itself.</Hint>
               </div>
               <div>
@@ -458,5 +470,21 @@ export function WebinarDrawer({
         />
       )}
     </>
+  )
+}
+
+/** under a link being typed: Checking… / Available / already used */
+function LinkStatus({ state }: { state: LinkCheck }) {
+  if (state === 'idle') return null
+  return (
+    <div className={cn('link-status', state === 'ok' && 'is-ok', (state === 'taken' || state === 'short') && 'is-bad')}>
+      {state === 'checking'
+        ? 'Checking…'
+        : state === 'ok'
+          ? '✓ Available'
+          : state === 'short'
+            ? 'Too short: use at least 3 letters or numbers.'
+            : '✗ This link is already used. Try something else.'}
+    </div>
   )
 }
