@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Check, Copy, Plus, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -10,7 +10,7 @@ import { cn } from '@/lib/cn'
 import { HostDrawer } from '@/masters/WebinarHostsTab'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
-import { listHosts, saveWebinar, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
+import { joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
 import { createWebinarWorkflows } from './workflows'
 
 const NEW_FUNNEL = '__new'
@@ -45,6 +45,7 @@ export function WebinarDrawer({
   const [f, setF] = useState<WebinarInput>(() => ({
     business_id: webinar?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
     title: webinar?.title ?? '',
+    slug: webinar?.slug ?? null,
     description: webinar?.description ?? '',
     host_id: webinar?.host_id ?? '',
     zoom_account_id: webinar?.zoom_account_id ?? '',
@@ -59,6 +60,10 @@ export function WebinarDrawer({
     is_active: webinar?.is_active ?? true,
   }))
   const set = <K extends keyof WebinarInput>(k: K, v: WebinarInput[K]) => setF((d) => ({ ...d, [k]: v }))
+  // the join link follows the title until it's typed in (a saved webinar keeps its link)
+  const [slugTyped, setSlugTyped] = useState(!!webinar?.slug)
+  const slug = slugTyped ? f.slug ?? '' : slugify(f.title)
+  const [copied, setCopied] = useState(false)
   const [stops, setStops] = useState<'never' | 'on'>(webinar?.stop_date ? 'on' : 'never')
   const [newDate, setNewDate] = useState('')
   const [hosts, setHosts] = useState<WebinarHost[]>([])
@@ -109,7 +114,7 @@ export function WebinarDrawer({
         // and the registration form's webhook in it: each post adds the lead, and the registration workflow starts from it
         webhookId = await addWebhook(tenant.id, funnelId, { name: `${f.title.trim()} – registration form`, action: 'create_lead', match_by: 'phone' })
       }
-      const input = { ...f, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
+      const input = { ...f, slug: slugify(slug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
       if (webinar) return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
@@ -182,6 +187,39 @@ export function WebinarDrawer({
                   Title
                 </Label>
                 <TextInput id="wb-title" value={f.title} maxLength={200} autoFocus={!webinar} disabled={!canEdit} placeholder="e.g. AI Income Masterclass" onChange={(e) => set('title', e.target.value)} />
+              </div>
+              <div className="span-2">
+                <Label htmlFor="wb-slug">Join link</Label>
+                <div className="wb-link">
+                  <span className="wb-link-base">{joinLink('')}</span>
+                  <input
+                    id="wb-slug"
+                    className="wb-link-slug"
+                    value={slug}
+                    maxLength={60}
+                    disabled={!canEdit}
+                    placeholder="ai-income-mastery"
+                    onChange={(e) => {
+                      setSlugTyped(true)
+                      set('slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
+                    }}
+                    onBlur={() => slugTyped && set('slug', slugify(f.slug ?? ''))}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon btn-sm"
+                    title="Copy link"
+                    disabled={!slug}
+                    onClick={() => {
+                      void navigator.clipboard.writeText(joinLink(slugify(slug)))
+                      setCopied(true)
+                      window.setTimeout(() => setCopied(false), 1500)
+                    }}
+                  >
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                  </button>
+                </div>
+                <Hint>One link for every date: it opens the Zoom meeting of the date that’s on now, else the next one, and moves to each new date by itself.</Hint>
               </div>
               <div>
                 <Label htmlFor="wb-host" required>

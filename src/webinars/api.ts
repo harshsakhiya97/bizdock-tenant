@@ -45,6 +45,8 @@ export type WebinarRow = {
   created_at: string
   /** dates deleted on their own (not made again) */
   skipped_dates?: string[]
+  /** the common join link: <app>/<slug> opens the Zoom meeting of the current date */
+  slug: string | null
 }
 export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates'>
 
@@ -88,6 +90,7 @@ export async function saveWebinar(tenantId: string, memberId: string | undefined
   const row = {
     ...input,
     title: input.title.trim(),
+    slug: slugify(input.slug ?? '') || null,
     description: input.description?.trim() || null,
     dates: input.repeat === 'dates' ? [...new Set(input.dates)].sort() : [],
     weekdays: input.repeat === 'weekly' ? [...new Set(input.weekdays)].sort() : [],
@@ -369,3 +372,15 @@ export async function deletePlanned(w: WebinarRow, date: string, scope: 'one' | 
   const { error } = await db().from('webinars').update({ stop_date: dayAdd(date, -1) }).eq('id', w.id)
   if (error) throw error
 }
+
+/** "AI Income Mastery!" → ai-income-mastery (as the database makes it) */
+export const slugify = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+/** the app's own address: https://pride.viralsakhiya.com/pride */
+export const appBase = () => `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}`
+/** the webinar's common join link */
+export const joinLink = (slug: string) => `${appBase()}/${slug}`
