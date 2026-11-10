@@ -32,6 +32,8 @@ export const releases: Release[] = [
       'WhatsApp logs (System Connections → WhatsApp → Logs): every message with sent / delivered / read times and filters, and Chats to see a conversation and send a template. The WATI webhook URL is in the WhatsApp settings panel.',
       'Login with email or mobile number.',
       'Workflow message fields for webinars: Step 1 Webinar fields, Step 2 Lead fields, Step 3 Zoom’s analytics, Step 4 Next webinar (title, date, time of the date after this one), and the WhatsApp group joining link.',
+      'Reschedule a webinar date (a made or a scheduled one) to a new date and time between the dates around it; a weekly webinar asks: only this webinar, or this and all future webinars. The Zoom meeting moves (registrants keep their links), and the WhatsApp group, reminders, join link and date widget follow; optionally a WhatsApp to the registered leads.',
+      'Deleting a date with registered leads asks whether to move them to the next webinar: the registration workflow registers each one there (new links, confirmation and reminders), with an optional cancel message first; their old registration shows Moved to …',
     ],
     improved: [
       'Bulk WhatsApp can skip messages whose time has already passed when the step starts.',
