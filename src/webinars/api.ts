@@ -54,8 +54,11 @@ export type WebinarRow = {
   reg_close_minutes: number
   /** lead categories by minutes attended (Lead categories tab); min null = Not joined */
   categories: WebinarCategory[]
+  /** dates moved on their own (Reschedule → only this date): made on their own date and time (from: the date it replaced) */
+  moved_dates?: MovedDate[]
 }
-export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates'>
+export type MovedDate = { from: string | null; date: string; start: string; end: string }
+export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates' | 'moved_dates'>
 
 /** one date of a webinar (a calendar event with its own Zoom webinar) */
 export type WebinarDate = {
@@ -136,13 +139,45 @@ export async function archiveWebinar(w: Pick<WebinarRow, 'id' | 'funnel_id'>) {
   }
 }
 
-/** "Delete" only this date: called off (and removed from Zoom), not made again; the webinar's next date follows */
-export async function deleteWebinarDate(date: Pick<WebinarDate, 'id' | 'event_date'>, w: Pick<WebinarRow, 'id' | 'skipped_dates'>) {
-  const { error } = await db().from('events').update({ is_cancelled: true }).eq('id', date.id)
+/** a WhatsApp to a date's registrants (rescheduled / cancelled): an approved template and its variables */
+export type DateNotice = { template: string; template_body: string; params: Record<string, string> }
+
+/**
+ * "Delete" only this date: called off (and removed from Zoom), not made again; the webinar's next date follows.
+ * move: its registered leads go to the next date (the registration workflow runs for each: registered there, with its
+ * confirmation and reminders); notice: first a WhatsApp to them.
+ */
+export async function deleteWebinarDate(date: Pick<WebinarDate, 'id'>, opts: { move?: boolean; notice?: DateNotice | null; memberId?: string } = {}) {
+  const { data, error } = await db().rpc('webinar_delete_date', { p_event: date.id, p_move: !!opts.move, p_notice: opts.notice ?? null, p_member: opts.memberId ?? null })
   if (error) throw error
-  const skipped = [...new Set([...(w.skipped_dates ?? []), date.event_date])].sort()
-  const { error: e } = await db().from('webinars').update({ skipped_dates: skipped }).eq('id', w.id)
-  if (e) throw e
+  return data as { moved: number; messages: number; next_date: string | null }
+}
+
+/**
+ * Reschedule a date (made or scheduled) to a new date and time, between the dates before and after it. scope 'one': only
+ * this date; 'future' (weekly): from this date on the webinar repeats on the new day and time. notice: a WhatsApp to its
+ * registrants (with the new date).
+ */
+export async function rescheduleWebinarDate(
+  w: Pick<WebinarRow, 'id'>,
+  from: string,
+  to: { date: string; start: string; end: string },
+  scope: 'one' | 'future',
+  notice: DateNotice | null,
+  memberId?: string,
+) {
+  const { data, error } = await db().rpc('webinar_reschedule', {
+    p_webinar: w.id,
+    p_from: from,
+    p_date: to.date,
+    p_start: to.start,
+    p_end: to.end,
+    p_scope: scope,
+    p_notice: notice,
+    p_member: memberId ?? null,
+  })
+  if (error) throw error
+  return data as { event_id: string | null; messages: number }
 }
 
 // ---------------- registrations & Zoom data ----------------
@@ -173,6 +208,9 @@ export type Registration = {
   attended_minutes: number | null
   categorized_at: string | null
   created_at: string
+  /** its date was deleted and the lead moved to this date */
+  moved_to_event: string | null
+  moved_to_date: string | null
   leads?: { first_name: string; last_name: string | null; phone: string; email: string | null } | null
   events?: { title: string; event_date: string; start_time: string; end_time: string | null } | null
 }
@@ -180,7 +218,7 @@ export type Registration = {
 export async function listRegistrations(filter: { eventId?: string; leadId?: string }): Promise<Registration[]> {
   let q = db()
     .from('webinar_registrations')
-    .select('id, webinar_id, event_id, lead_id, join_url, short_link, category, category_name, attended_minutes, categorized_at, created_at, leads(first_name, last_name, phone, email), events(title, event_date, start_time, end_time)')
+    .select('id, webinar_id, event_id, lead_id, join_url, short_link, category, category_name, attended_minutes, categorized_at, created_at, moved_to_event, moved_to_date, leads(first_name, last_name, phone, email), events(title, event_date, start_time, end_time)')
   if (filter.eventId) q = q.eq('event_id', filter.eventId)
   if (filter.leadId) q = q.eq('lead_id', filter.leadId)
   const { data, error } = await q.order('created_at', { ascending: false })
@@ -354,39 +392,60 @@ const dayAdd = (d: string, n: number) => {
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
 }
 
+/** a scheduled date (not made yet) with its times; moved: it was rescheduled on its own (from: the date it replaced) */
+export type PlannedSlot = { date: string; start: string; end: string; moved: boolean; from: string | null }
+
 /**
  * A webinar's coming dates that aren't made yet (each one is made, with its Zoom meeting, when the date before it ends):
  * from its repeat (weekly days / its dates) after its latest made date, up to the stop date or (never stops) a year from
- * today, without the dates deleted. Shown on the calendar as scheduled.
+ * today, without the dates deleted, plus the dates rescheduled on their own (with their own times). Shown on the calendar as scheduled.
  */
-export function plannedDates(w: WebinarRow, madeDates: string[], today: string): string[] {
+export function plannedSlots(w: WebinarRow, madeDates: string[], today: string): PlannedSlot[] {
   if (!w.is_active || w.repeat === 'once') return []
   const skip = new Set(w.skipped_dates ?? [])
   const made = new Set(madeDates)
   const after = madeDates.filter((d) => d >= today).sort().pop() ?? null
   const now = Date.now()
-  const ok = (d: string) => !skip.has(d) && !made.has(d) && (!after || d > after) && Date.parse(`${d}T${w.start_time.slice(0, 5)}:00+05:30`) > now
-  if (w.repeat === 'dates') return [...w.dates].sort().filter(ok)
-  if (!w.weekdays.length) return []
+  const future = (d: string, t: string) => Date.parse(`${d}T${t.slice(0, 5)}:00+05:30`) > now
+  const ok = (d: string) => !skip.has(d) && !made.has(d) && (!after || d > after) && future(d, w.start_time)
+  const st = w.start_time.slice(0, 5)
+  const et = w.end_time.slice(0, 5)
   const until = w.stop_date ?? dayAdd(today, 365)
-  const out: string[] = []
-  for (let d = w.first_date > today ? w.first_date : today; d <= until; d = dayAdd(d, 1)) {
-    if (w.weekdays.includes(new Date(`${d}T00:00:00`).getDay()) && ok(d)) out.push(d)
+  const out: PlannedSlot[] = []
+  if (w.repeat === 'dates') {
+    for (const d of [...w.dates].sort()) if (ok(d)) out.push({ date: d, start: st, end: et, moved: false, from: null })
+  } else if (w.weekdays.length) {
+    for (let d = w.first_date > today ? w.first_date : today; d <= until; d = dayAdd(d, 1)) {
+      if (w.weekdays.includes(new Date(`${d}T00:00:00`).getDay()) && ok(d)) out.push({ date: d, start: st, end: et, moved: false, from: null })
+    }
   }
-  return out
+  for (const m of w.moved_dates ?? []) {
+    if (made.has(m.date) || (after && m.date <= after) || !future(m.date, m.start) || (w.repeat === 'weekly' && w.stop_date && m.date > w.stop_date)) continue
+    out.push({ date: m.date, start: m.start.slice(0, 5), end: m.end.slice(0, 5), moved: true, from: m.from })
+  }
+  return out.sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`))
+}
+export const plannedDates = (w: WebinarRow, madeDates: string[], today: string) => plannedSlots(w, madeDates, today).map((s) => s.date)
+
+/** the dates (made or scheduled) right before and right after a date of the webinar: a rescheduled date must stay between them */
+export function dateNeighbours(w: WebinarRow, madeDates: string[], date: string, today: string) {
+  const all = [...new Set([...madeDates, ...plannedDates(w, madeDates, today)])].filter((d) => d !== date).sort()
+  return { prev: all.filter((d) => d < date).pop() ?? null, next: all.find((d) => d > date) ?? null }
 }
 
 /** delete a scheduled date: only it (not made later), or it and every scheduled date after it */
 export async function deletePlanned(w: WebinarRow, date: string, scope: 'one' | 'after') {
+  // a rescheduled date (or, with "after", every one from this date) goes too
+  const moved = (w.moved_dates ?? []).filter((m) => (scope === 'one' ? m.date !== date : m.date < date))
   if (scope === 'one' || w.repeat === 'dates') {
     const extra = scope === 'one' ? [date] : w.dates.filter((d) => d >= date)
     const skipped = [...new Set([...(w.skipped_dates ?? []), ...extra])].sort()
-    const { error } = await db().from('webinars').update({ skipped_dates: skipped }).eq('id', w.id)
+    const { error } = await db().from('webinars').update({ skipped_dates: skipped, moved_dates: moved }).eq('id', w.id)
     if (error) throw error
     return
   }
   // weekly: the webinar now stops the day before
-  const { error } = await db().from('webinars').update({ stop_date: dayAdd(date, -1) }).eq('id', w.id)
+  const { error } = await db().from('webinars').update({ stop_date: dayAdd(date, -1), moved_dates: moved }).eq('id', w.id)
   if (error) throw error
 }
 
