@@ -1327,3 +1327,10 @@ a.db-card:hover { border-color: var(--brand); }
 .wb-link-slug { flex: 1; min-width: 60px; border: 0; outline: 0; background: transparent; font: inherit; font-size: 13px; padding: 8px 4px; color: var(--text); }
 .wb-link-url { flex: 1; min-width: 0; font-size: 13px; padding: 8px 4px 8px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .info-grid .info-full { grid-column: 1 / -1; }
+
+/* webinar form: a WhatsApp group per coming date */
+.wb-groups { display: flex; flex-direction: column; gap: 6px; }
+.wb-group-row { display: grid; grid-template-columns: 210px 1fr; gap: 10px; align-items: center; }
+.wb-group-date { font-size: 13px; white-space: nowrap; }
+.input.is-invalid { border-color: var(--danger); }
+@media (max-width: 640px) { .wb-group-row { grid-template-columns: 1fr; gap: 4px; } }

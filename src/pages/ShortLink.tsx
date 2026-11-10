@@ -26,7 +26,7 @@ export function ShortLinkPage() {
         if (isSlug) {
           const { data } = await db().rpc('webinar_link_open', { p_tenant: tenant.id, p_slug: code })
           if (go(data)) return
-          setMissing('There’s no coming date for this webinar yet. Please check again later.')
+          setMissing('This link isn’t ready yet. Please check again a little later.')
           return
         }
         setMissing('This link doesn’t exist or has expired.')
