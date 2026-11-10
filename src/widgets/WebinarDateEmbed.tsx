@@ -88,7 +88,7 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
         </Hint>
         <div className="wd-code">
           <pre className="embed-code">{code}</pre>
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => copy('code', code)}>
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => copy('code', code)}>
             {copied === 'code' ? <Check size={14} /> : <Copy size={14} />} {copied === 'code' ? 'Copied' : 'Copy'}
           </button>
         </div>
