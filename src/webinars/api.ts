@@ -1,4 +1,5 @@
 import { db } from '@/lib/supabase'
+import { shortBase } from '@/workflows/api'
 
 // ---------------- Masters → Webinar hosts ----------------
 export type WebinarHost = { id: string; name: string; email: string | null; phone: string | null; is_active: boolean; sort_order: number }
@@ -380,7 +381,5 @@ export const slugify = (t: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60)
-/** the app's own address: https://pride.viralsakhiya.com/pride */
-export const appBase = () => `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}`
-/** the webinar's common join link */
-export const joinLink = (slug: string) => `${appBase()}/${slug}`
+/** the webinar's common join link: the workspace's address (its primary domain + folder from the tenant, also on localhost) /<slug> */
+export const joinLink = (slug: string) => `${shortBase()}/${slug}`
