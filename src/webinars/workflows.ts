@@ -121,11 +121,11 @@ export async function setWebinarWorkflowsFunnel(webinarId: string, funnelId: str
 }
 
 // ---------------- the after-webinar workflow follows the webinar's lead categories ----------------
-type Case = { id: string; label: string; field: string; op: string; value: string }
+type Case = { id: string; label: string; field: string; op: string; value: string; cat_key?: string }
 type WfNode = { id: string; type: string; position: { x: number; y: number }; data: Record<string, unknown> }
 type WfEdge = { id: string; source: string; target: string; sourceHandle?: string | null }
-/** a Switch path for a category (by its key, so a rename keeps the path) */
-const caseOf = (c: WebinarCategory): Case => ({ id: `cat_${c.key}`, label: c.name, field: 'v:webinar_category_key', op: 'eq', value: c.key })
+/** a Switch path for a category: "Webinar category equals Super Hot" (the lead's), with its key kept so a rename keeps the path */
+const caseOf = (c: WebinarCategory): Case => ({ id: `cat_${c.key}`, label: c.name, field: 'webinar_category', op: 'eq', value: c.name, cat_key: c.key })
 /** a category's message: Bulk WhatsApp (template to pick), stopping once the lead has paid */
 const messageNode = (c: WebinarCategory, x: number): WfNode => ({
   id: nid('bulk'),
@@ -134,8 +134,11 @@ const messageNode = (c: WebinarCategory, x: number): WfNode => ({
   data: { name: `${c.name} message`, anchor: 'start', anchor_var: '', rows: [newBulkRow(0, 'minutes')], stop_on: true, stop: { field: 'payment', op: 'exists', value: '' } },
 })
 /** older paths compared the name ("Super Hot"): their category key */
-const LEGACY: Record<string, string> = { 'Super Hot': 'super_hot', Hot: 'hot', Warm: 'warm', Cold: 'cold' }
-const keyOfCase = (c: Case) => (c.field === 'v:webinar_category_key' ? c.value : (LEGACY[c.value] ?? null))
+const LEGACY: Record<string, string> = { 'Super Hot': 'super_hot', Hot: 'hot', Warm: 'warm', Cold: 'cold', 'Not joined': 'not_joined' }
+const keyOfCase = (c: Case) =>
+  c.cat_key ?? (c.id.startsWith('cat_') ? c.id.slice(4) : c.field === 'v:webinar_category_key' ? c.value : (LEGACY[c.value] ?? null))
+const isCategorySwitch = (n: WfNode) =>
+  n.type === 'switch' && ((n.data.cases ?? []) as Case[]).some((c) => c.cat_key || c.field === 'webinar_category' || String(c.field).startsWith('v:webinar_category'))
 
 /**
  * The webinar's lead categories changed: its after-webinar workflow's Switch gets one path per category (same order).
@@ -148,7 +151,7 @@ export async function syncCategoryPaths(webinarId: string, cats: WebinarCategory
   for (const wf of (data ?? []) as { id: string; nodes: WfNode[]; edges: WfEdge[] }[]) {
     const nodes = [...(wf.nodes ?? [])]
     let edges = [...(wf.edges ?? [])]
-    const sw = nodes.find((n) => n.type === 'switch' && ((n.data.cases ?? []) as Case[]).some((c) => String(c.field).startsWith('v:webinar_category')))
+    const sw = nodes.find(isCategorySwitch)
     if (!sw) continue
     const old = (sw.data.cases ?? []) as Case[]
     const msgOf = (caseId: string) => {
@@ -162,7 +165,7 @@ export async function syncCategoryPaths(webinarId: string, cats: WebinarCategory
         // renamed: the path and (if still its default name) its message follow
         const m = msgOf(prev.id)
         if (m && m.data.name === `${prev.label} message`) m.data = { ...m.data, name: `${c.name} message` }
-        cases.push({ ...prev, label: c.name, field: 'v:webinar_category_key', op: 'eq', value: c.key })
+        cases.push({ ...prev, label: c.name, field: 'webinar_category', op: 'eq', value: c.name, cat_key: c.key })
         return
       }
       const add = caseOf(c)

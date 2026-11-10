@@ -25,6 +25,7 @@ export const LEAD_FIELDS: FieldDef[] = [
   { value: 'source', label: 'Source', kind: 'select', group: 'Lead' },
   { value: 'owner', label: 'Owner', kind: 'select', group: 'Lead' },
   { value: 'temperature', label: 'Temperature', kind: 'select', group: 'Lead' },
+  { value: 'webinar_category', label: 'Webinar category', kind: 'select', group: 'Lead' },
   { value: 'tag', label: 'Tags', kind: 'tag', group: 'Lead' },
   { value: 'landing_page', label: 'Form (webhook)', kind: 'select', group: 'Lead' },
   { value: 'estimated_amount', label: 'Estimated amount', kind: 'number', group: 'Lead' },
@@ -111,6 +112,12 @@ export function choicesFor(field: string, ctx: FlowContext): { value: string; la
   if (field === 'source') return (ctx.sources ?? []).map((s) => ({ value: s.id, label: s.name }))
   if (field === 'owner') return ctx.members.map((m) => ({ value: m.id, label: m.name }))
   if (field === 'temperature') return TEMPERATURES
+  // the webinar's lead categories (by name), else every webinar's
+  if (field === 'webinar_category') {
+    const cats = ctx.webinar?.categories ?? (ctx.webinars ?? []).flatMap((w) => w.categories ?? [])
+    const names = [...new Set((cats.length ? cats : [{ name: 'Super Hot' }, { name: 'Hot' }, { name: 'Warm' }, { name: 'Cold' }, { name: 'Not joined' }]).map((c) => c.name))]
+    return names.map((n) => ({ value: n, label: n }))
+  }
   if (field === 'landing_page') return ctx.pages.map((p) => ({ value: p.id, label: p.name }))
   if (field === 'attendance') return ['Registered', 'Attended', 'Partially attended', 'Not attended'].map((a) => ({ value: a, label: a }))
   return null
