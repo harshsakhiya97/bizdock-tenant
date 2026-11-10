@@ -44,7 +44,7 @@ export const WEBINAR_STEPS: StepKind[] = ['register_webinar', 'wait_zoom', 'webi
 /** what Register for webinar / a Before / After webinar trigger give later steps */
 export const WEBINAR_VARS = ['webinar_start', 'webinar_end', 'webinar_date_time', 'webinar_title', 'webinar_date', 'webinar_time', 'webinar_short_link', 'webinar_short_link_code', 'webinar_join_link']
 /** what Get webinar analytics gives */
-export const ANALYTICS_VARS = ['webinar_category', 'webinar_attended', 'webinar_minutes', 'webinar_attended_percent', 'webinar_questions', 'webinar_chats', 'webinar_polls', 'webinar_joined_at']
+export const ANALYTICS_VARS = ['webinar_category', 'webinar_category_key', 'webinar_attended', 'webinar_minutes', 'webinar_attended_percent', 'webinar_questions', 'webinar_chats', 'webinar_polls', 'webinar_joined_at']
 const webinarTrigger = (t: { event?: string }) => t.event === 'before_event' || t.event === 'after_event'
 
 export const unitText = (n: number, u: Unit) => `${n} ${n === 1 ? u.replace(/s$/, '') : u}`

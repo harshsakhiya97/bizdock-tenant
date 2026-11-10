@@ -50,6 +50,8 @@ export type WebinarRow = {
   slug: string | null
   /** the WhatsApp group link: <app>/<wa_slug> opens the WhatsApp group of the current date */
   wa_slug: string | null
+  /** lead categories by minutes attended (Lead categories tab); min null = Not joined */
+  categories: WebinarCategory[]
 }
 export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates'>
 
@@ -141,13 +143,20 @@ export async function deleteWebinarDate(date: Pick<WebinarDate, 'id' | 'event_da
 }
 
 // ---------------- registrations & Zoom data ----------------
-export type Category = 'super_hot' | 'hot' | 'warm' | 'cold'
-export const CATEGORY_META: Record<Category, { label: string; color: string }> = {
-  super_hot: { label: 'Super Hot', color: '#dc2626' },
-  hot: { label: 'Hot', color: '#ea580c' },
-  warm: { label: 'Warm', color: '#d97706' },
-  cold: { label: 'Cold', color: '#64748b' },
-}
+/** a lead category of a webinar: the lead gets the highest one whose minimum minutes they attended; min null = Not joined */
+export type WebinarCategory = { key: string; name: string; min: number | null }
+export const DEFAULT_CATEGORIES: WebinarCategory[] = [
+  { key: 'super_hot', name: 'Super Hot', min: 90 },
+  { key: 'hot', name: 'Hot', min: 60 },
+  { key: 'warm', name: 'Warm', min: 30 },
+  { key: 'cold', name: 'Cold', min: 1 },
+  { key: 'not_joined', name: 'Not joined', min: null },
+]
+const CATEGORY_COLORS: Record<string, string> = { super_hot: '#dc2626', hot: '#ea580c', warm: '#d97706', cold: '#64748b', not_joined: '#94a3b8' }
+const LEGACY_NAMES: Record<string, string> = { super_hot: 'Super Hot', hot: 'Hot', warm: 'Warm', cold: 'Cold', not_joined: 'Not joined' }
+/** a registration's category as shown: its name then, and a colour */
+export const categoryLook = (key: string | null, name?: string | null) =>
+  key ? { label: name || LEGACY_NAMES[key] || key, color: CATEGORY_COLORS[key] ?? '#8b5cf6' } : null
 
 export type Registration = {
   id: string
@@ -156,7 +165,8 @@ export type Registration = {
   lead_id: string
   join_url: string | null
   short_link: string | null
-  category: Category | null
+  category: string | null
+  category_name: string | null
   attended_minutes: number | null
   categorized_at: string | null
   created_at: string
@@ -167,7 +177,7 @@ export type Registration = {
 export async function listRegistrations(filter: { eventId?: string; leadId?: string }): Promise<Registration[]> {
   let q = db()
     .from('webinar_registrations')
-    .select('id, webinar_id, event_id, lead_id, join_url, short_link, category, attended_minutes, categorized_at, created_at, leads(first_name, last_name, phone, email), events(title, event_date, start_time, end_time)')
+    .select('id, webinar_id, event_id, lead_id, join_url, short_link, category, category_name, attended_minutes, categorized_at, created_at, leads(first_name, last_name, phone, email), events(title, event_date, start_time, end_time)')
   if (filter.eventId) q = q.eq('event_id', filter.eventId)
   if (filter.leadId) q = q.eq('lead_id', filter.leadId)
   const { data, error } = await q.order('created_at', { ascending: false })
