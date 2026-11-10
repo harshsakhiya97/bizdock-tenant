@@ -1352,3 +1352,9 @@ a.db-card:hover { border-color: var(--brand); }
 .wd-embed { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .wd-code { display: flex; gap: 8px; align-items: flex-start; }
 .wd-code .embed-code { flex: 1; margin: 0; white-space: pre-wrap; word-break: break-all; }
+/* the 4 things the embed can show: pick one (changes data-show in the code above) */
+.wd-shows { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.wd-show { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; }
+.wd-show:hover { border-color: color-mix(in srgb, var(--brand) 50%, var(--line)); }
+.wd-show.is-on { border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
+@media (max-width: 640px) { .wd-shows { grid-template-columns: 1fr; } }

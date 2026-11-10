@@ -53,6 +53,7 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
   const [dates, setDates] = useState<WebinarDate[]>([])
   const [now, setNow] = useState(Date.now())
   const [copied, setCopied] = useState('')
+  const [show, setShow] = useState<WebinarShow>('date')
   useEffect(() => {
     void listWebinarDates(tenant.id).then(setDates, () => setDates([]))
     const t = window.setInterval(() => setNow(Date.now()), 1000)
@@ -66,6 +67,7 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
     })
   }
   const script = `<script src="${webinarScriptUrl()}" async></script>`
+  const code = form === 'line' ? oneLine(widget.code, show) : tagOnly(widget.code, show)
 
   return (
     <Modal open onClose={onClose} title={`Embed · ${widget.name}`} width={720}>
@@ -80,33 +82,25 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
         </div>
         <Hint>
           {form === 'line'
-            ? 'Paste a line where the text should show (one line per thing). Each shows the webinar’s current date in India time: the one on now, else the next one.'
-            : 'For page builders that remove scripts from text: paste the tags where the text should show, and the script once anywhere on the page (e.g. the footer).'}
+            ? 'Pick what to show, then paste the line where the text should show (one line per thing). It shows the webinar’s current date in India time: the one on now, else the next one.'
+            : 'For page builders that remove scripts from text: pick what to show, paste the tag where the text should show, and the script once anywhere on the page (e.g. the footer).'}
           {widget.is_active ? '' : ' The widget is off: the tags stay empty until you turn it on.'}
         </Hint>
-        {WEBINAR_SHOWS.map((s) => {
-          const code = form === 'line' ? oneLine(widget.code, s.show) : tagOnly(widget.code, s.show)
-          const now_ = showText(cur, s.show, now)
-          return (
-            <div key={s.show} className="wd-embed">
-              <div className="row-between">
-                <span>
-                  <b>{s.label}</b> <code className="muted small">data-show=&quot;{s.show}&quot;</code>
-                </span>
-                <span className="muted small">
-                  Shows now: <b>{now_ || '— (no coming date)'}</b>
-                </span>
-              </div>
-              <div className="wd-code">
-                <pre className="embed-code">{code}</pre>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => copy(s.show, code)}>
-                  {copied === s.show ? <Check size={14} /> : <Copy size={14} />} {copied === s.show ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-              <div className="muted small">e.g. {s.example}</div>
-            </div>
-          )
-        })}
+        <div className="wd-code">
+          <pre className="embed-code">{code}</pre>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => copy('code', code)}>
+            {copied === 'code' ? <Check size={14} /> : <Copy size={14} />} {copied === 'code' ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+        <div className="wd-shows" role="radiogroup" aria-label="What it shows">
+          {WEBINAR_SHOWS.map((s) => (
+            <button key={s.show} type="button" role="radio" aria-checked={show === s.show} className={cn('wd-show', show === s.show && 'is-on')} onClick={() => setShow(s.show)}>
+              <b>{s.label}</b>
+              <code className="small">data-show=&quot;{s.show}&quot;</code>
+              <span className="muted small">Shows now: {showText(cur, s.show, now) || '— (no coming date)'}</span>
+            </button>
+          ))}
+        </div>
         {form === 'tag' && (
           <div className="wd-embed">
             <b>The script (once per page)</b>
