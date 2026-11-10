@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState, type MutableRefObject } from 'react'
-import { Button } from '@/components/Button'
-import { FormSection, TextArea } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
 import { listGroups, listWebinarDates, plannedDates, saveGroups, WA_GROUP_LINK, type WebinarGroup, type WebinarRow } from './api'
 
@@ -10,8 +8,7 @@ const todayIst = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(0
 const SHOWN = 15
 
 /**
- * A webinar's WhatsApp groups (made on the phone and added to the community): one per coming date. Paste several links at
- * once and they fill the dates without a group, in order. Saved with the webinar (saveRef).
+ * A webinar's WhatsApp groups (made on the phone and added to the community): one per coming date. Saved with the webinar (saveRef).
  */
 export function WebinarGroupsSection({
   webinar,
@@ -26,8 +23,6 @@ export function WebinarGroupsSection({
   const [made, setMade] = useState<string[] | null>(null)
   const [before, setBefore] = useState<WebinarGroup[]>([])
   const [links, setLinks] = useState<Record<string, string>>({})
-  const [paste, setPaste] = useState('')
-  const [note, setNote] = useState<string | null>(null)
   const today = todayIst()
 
   useEffect(() => {
@@ -58,35 +53,8 @@ export function WebinarGroupsSection({
     await saveGroups(tenant.id, webinarId, before.filter((g) => dates.includes(g.group_date)), shown)
   }
 
-  function fill() {
-    const found: string[] = paste.match(/https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+/gi) ?? []
-    const fresh = found.filter((l, i) => found.indexOf(l) === i && !Object.values(links).includes(l))
-    const empty = dates.filter((d) => !(links[d] ?? '').trim())
-    const n = Math.min(fresh.length, empty.length)
-    if (!found.length) return setNote('No WhatsApp group links found (https://chat.whatsapp.com/…).')
-    setLinks((x) => ({ ...x, ...Object.fromEntries(empty.slice(0, n).map((d, i) => [d, fresh[i]])) }))
-    setPaste('')
-    setNote(
-      `${n} group${n === 1 ? '' : 's'} added to the coming dates without one.` +
-        (fresh.length > n ? ` ${fresh.length - n} more than the dates shown were left out.` : '') +
-        (found.length > fresh.length ? ` ${found.length - fresh.length} already in use were skipped.` : '') +
-        ' Save to keep them.',
-    )
-  }
-
   return (
-    <FormSection title="WhatsApp groups" description="One group per date (make them on the phone and add them to the community). The WhatsApp group link opens the group of the date that’s on now, else the next one.">
-      {canEdit && (
-        <div className="stack" style={{ gap: 8 }}>
-          <TextArea rows={3} value={paste} placeholder={'Paste several group invite links (one per line):\nhttps://chat.whatsapp.com/…'} onChange={(e) => setPaste(e.target.value)} />
-          <div className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <Button variant="outline" size="sm" disabled={!paste.trim()} onClick={fill}>
-              Fill the coming dates
-            </Button>
-            {note && <span className="muted small">{note}</span>}
-          </div>
-        </div>
-      )}
+    <div className="stack" style={{ gap: 12 }}>
       {!made ? (
         <div className="muted small">Loading dates…</div>
       ) : !dates.length ? (
@@ -114,6 +82,6 @@ export function WebinarGroupsSection({
           })}
         </div>
       )}
-    </FormSection>
+    </div>
   )
 }
