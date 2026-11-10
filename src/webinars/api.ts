@@ -48,6 +48,8 @@ export type WebinarRow = {
   skipped_dates?: string[]
   /** the common join link: <app>/<slug> opens the Zoom meeting of the current date */
   slug: string | null
+  /** the WhatsApp group link: <app>/<wa_slug> opens the WhatsApp group of the current date */
+  wa_slug: string | null
 }
 export type WebinarInput = Omit<WebinarRow, 'id' | 'tenant_id' | 'created_at' | 'skipped_dates'>
 
@@ -92,6 +94,7 @@ export async function saveWebinar(tenantId: string, memberId: string | undefined
     ...input,
     title: input.title.trim(),
     slug: slugify(input.slug ?? '') || null,
+    wa_slug: slugify(input.wa_slug ?? '') || null,
     description: input.description?.trim() || null,
     dates: input.repeat === 'dates' ? [...new Set(input.dates)].sort() : [],
     weekdays: input.repeat === 'weekly' ? [...new Set(input.weekdays)].sort() : [],
@@ -383,3 +386,33 @@ export const slugify = (t: string) =>
     .slice(0, 60)
 /** the webinar's common join link: the workspace's address (its primary domain + folder from the tenant, also on localhost) /<slug> */
 export const joinLink = (slug: string) => `${shortBase()}/${slug}`
+
+// ---------------- WhatsApp groups (one per date) ----------------
+export type WebinarGroup = { id: string; webinar_id: string; group_date: string; invite_link: string }
+export const WA_GROUP_LINK = /^https:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+/i
+
+export async function listGroups(webinarId: string): Promise<WebinarGroup[]> {
+  const { data, error } = await db().from('webinar_groups').select('id, webinar_id, group_date, invite_link').eq('webinar_id', webinarId).order('group_date')
+  if (error) throw error
+  return (data ?? []) as WebinarGroup[]
+}
+
+/** the groups as they should be now (date → link): added / changed ones saved, cleared ones removed */
+export async function saveGroups(tenantId: string, webinarId: string, before: WebinarGroup[], links: Record<string, string>) {
+  const clean = Object.entries(links).map(([d, l]) => [d, l.trim()] as const)
+  const keep = clean.filter(([, l]) => l)
+  const bad = keep.find(([, l]) => !WA_GROUP_LINK.test(l))
+  if (bad) throw new Error(`Not a WhatsApp group invite link (https://chat.whatsapp.com/…): ${bad[1].slice(0, 60)}`)
+  const gone = before.filter((g) => !keep.some(([d]) => d === g.group_date))
+  if (gone.length) {
+    const { error } = await db().from('webinar_groups').delete().in('id', gone.map((g) => g.id))
+    if (error) throw error
+  }
+  const changed = keep.filter(([d, l]) => before.find((g) => g.group_date === d)?.invite_link !== l)
+  if (changed.length) {
+    const { error } = await db()
+      .from('webinar_groups')
+      .upsert(changed.map(([d, l]) => ({ tenant_id: tenantId, webinar_id: webinarId, group_date: d, invite_link: l })), { onConflict: 'webinar_id,group_date' })
+    if (error) throw error
+  }
+}

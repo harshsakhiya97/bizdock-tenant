@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check, Copy, Plus, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
@@ -12,6 +12,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
 import { joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
 import { createWebinarWorkflows } from './workflows'
+import { WebinarGroupsSection } from './WebinarGroupsSection'
 
 const NEW_FUNNEL = '__new'
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -46,6 +47,7 @@ export function WebinarDrawer({
     business_id: webinar?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
     title: webinar?.title ?? '',
     slug: webinar?.slug ?? null,
+    wa_slug: webinar?.wa_slug ?? null,
     description: webinar?.description ?? '',
     host_id: webinar?.host_id ?? '',
     zoom_account_id: webinar?.zoom_account_id ?? '',
@@ -63,7 +65,16 @@ export function WebinarDrawer({
   // the join link follows the title until it's typed in (a saved webinar keeps its link)
   const [slugTyped, setSlugTyped] = useState(!!webinar?.slug)
   const slug = slugTyped ? f.slug ?? '' : slugify(f.title)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'' | 'join' | 'wa'>('')
+  // the WhatsApp group link follows the join link (<join>-wa) until it's typed in
+  const [waTyped, setWaTyped] = useState(!!webinar?.wa_slug)
+  const waSlug = waTyped ? f.wa_slug ?? '' : slug ? `${slugify(slug)}-wa` : ''
+  const saveGroupsRef = useRef<((webinarId: string) => Promise<void>) | null>(null)
+  const copy = (k: 'join' | 'wa', url: string) => {
+    void navigator.clipboard.writeText(url)
+    setCopied(k)
+    window.setTimeout(() => setCopied(''), 1500)
+  }
   const [stops, setStops] = useState<'never' | 'on'>(webinar?.stop_date ? 'on' : 'never')
   const [newDate, setNewDate] = useState('')
   const [hosts, setHosts] = useState<WebinarHost[]>([])
@@ -114,8 +125,9 @@ export function WebinarDrawer({
         // and the registration form's webhook in it: each post adds the lead, and the registration workflow starts from it
         webhookId = await addWebhook(tenant.id, funnelId, { name: `${f.title.trim()} – registration form`, action: 'create_lead', match_by: 'phone' })
       }
-      const input = { ...f, slug: slugify(slug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
+      const input = { ...f, slug: slugify(slug) || null, wa_slug: slugify(waSlug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
+      if (webinar && saveGroupsRef.current) await saveGroupsRef.current(id)
       if (webinar) return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
       let wfError = ''
@@ -210,16 +222,35 @@ export function WebinarDrawer({
                     className="btn btn-ghost btn-icon btn-sm"
                     title="Copy link"
                     disabled={!slug}
-                    onClick={() => {
-                      void navigator.clipboard.writeText(joinLink(slugify(slug)))
-                      setCopied(true)
-                      window.setTimeout(() => setCopied(false), 1500)
-                    }}
+                    onClick={() => copy('join', joinLink(slugify(slug)))}
                   >
-                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                    {copied === 'join' ? <Check size={15} /> : <Copy size={15} />}
                   </button>
                 </div>
                 <Hint>One link for every date: it opens the Zoom meeting of the date that’s on now, else the next one, and moves to each new date by itself.</Hint>
+              </div>
+              <div className="span-2">
+                <Label htmlFor="wb-wa-slug">WhatsApp group link</Label>
+                <div className="wb-link">
+                  <span className="wb-link-base">{joinLink('')}</span>
+                  <input
+                    id="wb-wa-slug"
+                    className="wb-link-slug"
+                    value={waSlug}
+                    maxLength={60}
+                    disabled={!canEdit}
+                    placeholder="ai-income-wa"
+                    onChange={(e) => {
+                      setWaTyped(true)
+                      set('wa_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
+                    }}
+                    onBlur={() => waTyped && set('wa_slug', slugify(f.wa_slug ?? ''))}
+                  />
+                  <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Copy link" disabled={!waSlug} onClick={() => copy('wa', joinLink(slugify(waSlug)))}>
+                    {copied === 'wa' ? <Check size={15} /> : <Copy size={15} />}
+                  </button>
+                </div>
+                <Hint>Opens the WhatsApp group of the date that’s on now, else the next one (add the groups below, once the webinar is saved).</Hint>
               </div>
               <div>
                 <Label htmlFor="wb-host" required>
@@ -378,6 +409,8 @@ export function WebinarDrawer({
             </div>
             <Hint>India time. Every date has the same start and end time.</Hint>
           </FormSection>
+
+          {webinar && <WebinarGroupsSection webinar={webinar} canEdit={canEdit} saveRef={saveGroupsRef} />}
 
           {webinar && (
             <div className="check-box">
