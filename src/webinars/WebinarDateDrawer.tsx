@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { Check, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { FormSection } from '@/components/Field'
 import { ConfirmModal, Empty, Paged } from '@/components/ui'
-import { archiveWebinar, CATEGORY_META, deleteWebinarDate, listRegistrations, listZoomData, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
+import { archiveWebinar, CATEGORY_META, deleteWebinarDate, joinLink, listRegistrations, listZoomData, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
 
 const fmtDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (t: string | null) => (t ? new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
@@ -131,6 +131,22 @@ export function WebinarDateDrawer({
               <dt>Zoom data</dt>
               <dd>{date.zoom_pulled_at ? `Fetched ${at(date.zoom_pulled_at)}` : ended ? 'Not fetched yet (5 minutes after the end)' : 'After it ends'}</dd>
             </div>
+            {webinar?.slug && (
+              <div className="info-full">
+                <dt>Join link</dt>
+                <dd>
+                  <div className="wb-link">
+                    <a className="wb-link-url" href={joinLink(webinar.slug)} target="_blank" rel="noreferrer">
+                      {joinLink(webinar.slug)}
+                    </a>
+                    <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Copy link" onClick={() => copy('link', joinLink(webinar.slug!))}>
+                      {copied === 'link' ? <Check size={15} /> : <Copy size={15} />}
+                    </button>
+                  </div>
+                  <div className="muted small" style={{ marginTop: 4 }}>The same link for every date: it opens the Zoom meeting of the date that’s on now, else the next one.</div>
+                </dd>
+              </div>
+            )}
           </dl>
           {date.zoom_error && <div className="alert alert-error small">Zoom: {date.zoom_error}</div>}
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -138,11 +154,6 @@ export function WebinarDateDrawer({
               <a className="btn btn-primary btn-sm" href={date.zoom_start_url} target="_blank" rel="noreferrer">
                 Start as host
               </a>
-            )}
-            {date.meeting_link && (
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => copy('link', date.meeting_link!)}>
-                <Copy size={14} /> {copied === 'link' ? 'Copied' : 'Copy registration link'}
-              </button>
             )}
             {ended && date.zoom_webinar_id && (
               <button type="button" className="btn btn-outline btn-sm" disabled={busy} onClick={() => void fetchNow()}>
