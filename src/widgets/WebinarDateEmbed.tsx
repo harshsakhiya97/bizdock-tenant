@@ -4,7 +4,7 @@ import { Hint } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { listWebinarDates, type WebinarDate } from '@/webinars/api'
+import { listWebinarDates, listWebinars, type WebinarDate } from '@/webinars/api'
 import { shortBase } from '@/workflows/api'
 import { WEBINAR_SHOWS, type WebinarShow, type WebinarWidget } from './api'
 
@@ -41,25 +41,27 @@ export function showText(d: WebinarDate | null, show: WebinarShow, now = Date.no
   const dd = Math.floor(x / 86400)
   return `${dd ? `${dd}d ` : ''}${two(Math.floor((x % 86400) / 3600))}h ${two(Math.floor((x % 3600) / 60))}m ${two(x % 60)}s`
 }
-/** the webinar's current date: on now, else the next one */
-export const currentDate = (dates: WebinarDate[], webinarId: string, now = Date.now()) =>
+/** the webinar's date open for registration: the first whose start minus the cutoff is still ahead */
+export const currentDate = (dates: WebinarDate[], webinarId: string, now = Date.now(), closeMinutes = 15) =>
   dates
-    .filter((d) => d.webinar_id === webinarId && Date.parse(`${d.event_date}T${(d.end_time ?? d.start_time).slice(0, 5)}:00+05:30`) > now)
+    .filter((d) => d.webinar_id === webinarId && Date.parse(`${d.event_date}T${d.start_time.slice(0, 5)}:00+05:30`) - closeMinutes * 60_000 > now)
     .sort((a, b) => `${a.event_date}${a.start_time}`.localeCompare(`${b.event_date}${b.start_time}`))[0] ?? null
 
 /** the embed code (one line per thing to show), with what each shows now */
 export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; onClose: () => void }) {
   const tenant = useTenant()
   const [dates, setDates] = useState<WebinarDate[]>([])
+  const [close, setClose] = useState(15)
   const [now, setNow] = useState(Date.now())
   const [copied, setCopied] = useState('')
   const [show, setShow] = useState<WebinarShow>('date')
   useEffect(() => {
     void listWebinarDates(tenant.id).then(setDates, () => setDates([]))
+    void listWebinars(tenant.id).then((ws) => setClose(ws.find((w) => w.id === widget.config.webinar_id)?.reg_close_minutes ?? 15), () => undefined)
     const t = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(t)
-  }, [tenant.id])
-  const cur = currentDate(dates, widget.config.webinar_id, now)
+  }, [tenant.id, widget.config.webinar_id])
+  const cur = currentDate(dates, widget.config.webinar_id, now, close)
   const copy = (k: string, text: string) => {
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(k)
@@ -72,7 +74,7 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
     <Modal open onClose={onClose} title={`Embed · ${widget.name}`} width={720}>
       <div className="stack" style={{ gap: 14 }}>
         <Hint>
-          Pick what to show, then paste the line where the text should show (one line per thing). It shows the webinar’s current date in India time: the one on now, else the next one. It takes your page’s style; to style it on its own, use its span’s class (e.g. .webinar-{show}).
+          Pick what to show, then paste the line where the text should show (one line per thing). It shows the webinar’s date open for registration, in India time: it moves to the next date when registration closes. It takes your page’s style; to style it on its own, use its span’s class (e.g. .webinar-{show}).
           {widget.is_active ? '' : ' The widget is off: it stays empty until you turn it on.'}
         </Hint>
         <div className="wd-code">

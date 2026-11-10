@@ -50,6 +50,8 @@ export type WebinarRow = {
   slug: string | null
   /** the WhatsApp group link: <app>/<wa_slug> opens the WhatsApp group of the current date */
   wa_slug: string | null
+  /** registration closes this many minutes before a date starts: new leads, the date widget and the WhatsApp group link move to the next date */
+  reg_close_minutes: number
   /** lead categories by minutes attended (Lead categories tab); min null = Not joined */
   categories: WebinarCategory[]
 }
@@ -97,6 +99,7 @@ export async function saveWebinar(tenantId: string, memberId: string | undefined
     title: input.title.trim(),
     slug: slugify(input.slug ?? '') || null,
     wa_slug: slugify(input.wa_slug ?? '') || null,
+    reg_close_minutes: Math.max(0, Math.min(1440, Math.round(Number(input.reg_close_minutes) || 0))),
     description: input.description?.trim() || null,
     dates: input.repeat === 'dates' ? [...new Set(input.dates)].sort() : [],
     weekdays: input.repeat === 'weekly' ? [...new Set(input.weekdays)].sort() : [],

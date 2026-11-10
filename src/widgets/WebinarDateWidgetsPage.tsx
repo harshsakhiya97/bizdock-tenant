@@ -101,7 +101,7 @@ export function WebinarDateWidgetsPage() {
                   </thead>
                   <tbody>
                     {paged.map((w) => {
-                      const cur = currentDate(dates, w.config.webinar_id)
+                      const cur = currentDate(dates, w.config.webinar_id, Date.now(), webinars.find((x) => x.id === w.config.webinar_id)?.reg_close_minutes ?? 15)
                       return (
                         <tr key={w.id} className={can('widgets', 'edit') ? 'is-clickable' : undefined} onClick={() => can('widgets', 'edit') && navigate(`/widgets/webinar-date/${w.id}`)}>
                           <td>
@@ -241,7 +241,7 @@ function WidgetDrawer({
                 </option>
               ))}
             </Select>
-            <Hint>Its tags show this webinar’s current date (the one on now, else the next one), in India time.</Hint>
+            <Hint>It shows this webinar’s date open for registration, in India time: it moves to the next date when registration closes (set on the webinar, e.g. 15 minutes before the start).</Hint>
           </div>
           <div>
             <Label htmlFor="wd-name">Name</Label>
