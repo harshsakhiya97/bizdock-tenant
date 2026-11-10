@@ -1334,3 +1334,9 @@ a.db-card:hover { border-color: var(--brand); }
 .wb-group-date { font-size: 13px; white-space: nowrap; }
 .input.is-invalid { border-color: var(--danger); }
 @media (max-width: 640px) { .wb-group-row { grid-template-columns: 1fr; gap: 4px; } }
+
+/* a webinar link being typed: Checking… / Available / already used */
+.link-status { font-size: 12.5px; margin-top: 5px; color: var(--text-muted); }
+.link-status.is-ok { color: var(--success); }
+.link-status.is-bad { color: var(--danger); }
+.wb-link.is-bad, .wb-link.is-bad:focus-within { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent); }
