@@ -13,6 +13,32 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.12',
+    date: '2026-11-10',
+    title: 'Webinar business type, WhatsApp logs, Webinar date widget',
+    summary: 'Everything for running webinars: webinars with their own Zoom meetings and registrations, ready-made workflows with lead categories, join and WhatsApp group links, a webinar date widget for landing pages, plus WhatsApp message logs and chats.',
+    new: [
+      'Business types master (code fixed, name editable) and the Webinar type: Masters → Products and Webinar hosts for Webinar businesses.',
+      'Webinar Calendar (a Webinar business’s Booking Calendar): webinars that run once, on chosen dates or every week (with a stop date), one time for every date, a host and a Zoom account.',
+      'Each webinar date gets its own Zoom meeting with registration required (first name, last name, email and phone; Zoom’s own emails off); every lead gets their own joining link. Leads without an email are registered with <phone>@noemail.bizdock.in.',
+      'Creating a webinar also creates its funnel, its registration-form webhook and 3 workflows (registration, reminders 1 day / 1 hour / 10 minutes before, after webinar with a message per category), all off until their templates are picked.',
+      'Workflow steps for webinars: Register for webinar, Wait until Zoom data is in, Get webinar analytics (attendance, Q&A, chat, polls); triggers Before a webinar starts (from registration) and After a webinar ends.',
+      'Lead categories tab on the webinar: name + minimum minutes attended (add more), and Not joined; each lead gets the highest category reached, kept on the lead as Webinar category, and the after-webinar workflow’s paths follow the categories.',
+      'Join link (<app>/<link>) that opens the Zoom meeting of the date that’s on, else the next one; WhatsApp groups tab: a group per coming date and a WhatsApp group link that opens the right date’s group. Links are checked while typing (Checking… / Available / already used).',
+      'Registration closes before start (default 15 minutes): from then on new leads, the date widget and the WhatsApp group link move to the next date (made right away with its Zoom meeting); the join link stays until the date ends.',
+      'Webinar Calendar shows every coming date of a repeating webinar dotted as scheduled (up to the stop date or a year ahead); delete a webinar, one date, or a scheduled date and all after it.',
+      'Widgets → Webinar date & time: one line of code for any page showing the webinar’s date, time, time with IST or a live countdown (Live now), in the page’s own style.',
+      'Purchases on leads (products paid in parts); the first paid part makes the lead a customer. Lead page: Webinars and Purchases tabs.',
+      'WhatsApp logs (System Connections → WhatsApp → Logs): every message with sent / delivered / read times and filters, and Chats to see a conversation and send a template. The WATI webhook URL is in the WhatsApp settings panel.',
+      'Login with email or mobile number.',
+      'Workflow message fields for webinars: Step 1 Webinar fields, Step 2 Lead fields, Step 3 Zoom’s analytics, Step 4 Next webinar (title, date, time of the date after this one), and the WhatsApp group joining link.',
+    ],
+    improved: [
+      'Bulk WhatsApp can skip messages whose time has already passed when the step starts.',
+      'Example links in field lists are shown as they are (lower case).',
+    ],
+  },
+  {
     version: '0.11',
     date: '2026-11-04',
     title: 'Booking Calendar fields, workflow builder upgrades',
