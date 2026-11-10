@@ -63,6 +63,7 @@ export function WebinarDrawer({
     start_time: webinar?.start_time ?? defaults?.start ?? '19:00',
     end_time: webinar?.end_time ?? defaults?.end ?? '20:30',
     is_active: webinar?.is_active ?? true,
+    reg_close_minutes: webinar?.reg_close_minutes ?? 15,
   }))
   const set = <K extends keyof WebinarInput>(k: K, v: WebinarInput[K]) => setF((d) => ({ ...d, [k]: v }))
   // the join link follows the title until it's typed in (a saved webinar keeps its link)
@@ -233,7 +234,7 @@ export function WebinarDrawer({
                 </button>
               </div>
               <LinkStatus state={waCheck} />
-              <Hint>Opens the WhatsApp group of the date that’s on now, else the next one (the groups are added below).</Hint>
+              <Hint>Opens the WhatsApp group of the date open for registration: it moves to the next date when registration closes (the groups are added below).</Hint>
             </div>
           </FormSection>
           {webinar ? (
@@ -455,6 +456,23 @@ export function WebinarDrawer({
               </div>
             </div>
             <Hint>India time. Every date has the same start and end time.</Hint>
+            <div>
+              <Label htmlFor="wb-close">Registration closes before start</Label>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <TextInput
+                  id="wb-close"
+                  type="number"
+                  min={0}
+                  max={1440}
+                  style={{ width: 110 }}
+                  value={String(f.reg_close_minutes)}
+                  disabled={!canEdit}
+                  onChange={(e) => set('reg_close_minutes', e.target.value === '' ? 0 : Number(e.target.value))}
+                />
+                <span className="muted small">minutes</span>
+              </div>
+              <Hint>From then on, new leads are registered for the next date, and the date widget and the WhatsApp group link show the next date. The join link keeps opening the date that’s on until it ends.</Hint>
+            </div>
           </FormSection>
 
           {webinar && (

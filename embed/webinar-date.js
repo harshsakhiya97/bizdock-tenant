@@ -5,7 +5,7 @@
  * or tags anywhere + the script once:
  *   <span data-bizdock-webinar="CODE" data-show="countdown"></span>
  * data-show: date (Sun, 16 Nov 2026) · time (7:00 pm) · time-timezone (7:00 pm IST) · countdown (2d 04h 12m 33s / Live now)
- * Always the webinar's current date (on now, else the next one), in India time.
+ * The webinar's date open for registration (it moves to the next date at the cutoff, e.g. 15 minutes before the start), in India time.
  */
 (function () {
   var API = '__SUPABASE_URL__'
@@ -78,7 +78,7 @@
   function paint() {
     var ended = {}
     g.els.forEach(function (x) {
-      if (x.d && Date.now() >= Date.parse(x.d.end)) ended[x.code] = true
+      if (x.d && Date.now() >= Date.parse(x.d.switch || x.d.end)) ended[x.code] = true
       var t = text(x.d, x.show)
       if (x.el.textContent !== t) x.el.textContent = t
     })
