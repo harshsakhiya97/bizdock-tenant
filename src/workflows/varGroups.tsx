@@ -34,7 +34,6 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   webinar_group_link: 'WhatsApp group joining link',
   // Get webinar analytics
   webinar_category: 'Webinar category',
-  webinar_category_key: 'Webinar category key (used by the Category paths)',
   webinar_attended: 'Attended the webinar (Yes / No)',
   webinar_minutes: 'Minutes attended',
   webinar_attended_percent: 'Attended (% of the webinar)',
@@ -95,7 +94,6 @@ const ZOOM_EXAMPLE: Record<string, string> = {
   webinar_time: '19:00',
   webinar_short_link_code: 'K7M2QX9P',
   webinar_category: 'Hot',
-  webinar_category_key: 'hot',
   webinar_attended: 'Yes',
   webinar_minutes: '52',
   webinar_attended_percent: '58',
@@ -241,13 +239,13 @@ export const namedLikeWhen = (k: string) => /(date|time|_at$|^when)/i.test(k)
 
 /**
  * A field's name as shown in the lists, in Title Case with spaces: meeting_end → Meeting End,
- * "meeting_start – date (29 Oct 2026)" → "Meeting Start – Date (29 Oct 2026)" (examples in brackets kept as they are)
+ * "meeting_start – date (29 Oct 2026)" → "Meeting Start – Date (29 Oct 2026)" (examples in brackets — dates, links — kept as they are)
  */
 export function fieldLabel(label: string): string {
   return label
     .replace(/_/g, ' ')
     .split(/(\([^)]*\))/)
-    .map((part) => (part.startsWith('(') && /\d/.test(part) ? part : part.replace(/\b([a-z])([a-z]*)/gi, (_, a: string, b: string) => a.toUpperCase() + b)))
+    .map((part) => (part.startsWith('(') && (/\d/.test(part) || part.includes('://')) ? part : part.replace(/\b([a-z])([a-z]*)/gi, (_, a: string, b: string) => a.toUpperCase() + b)))
     .join('')
 }
 
