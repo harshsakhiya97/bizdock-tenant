@@ -17,6 +17,8 @@ export type SlotItem = {
   color: string
   /** drawn lighter (e.g. tentative) */
   faded?: boolean
+  /** scheduled but not made yet: drawn with a dotted outline */
+  planned?: boolean
   /** list view: right-hand side text and buttons */
   side?: ReactNode
   actions?: ReactNode
@@ -184,7 +186,7 @@ export function SlotCalendar({
                   {Number(day.slice(8))}
                 </button>
                 {list.slice(0, 3).map((b) => (
-                  <button key={b.id} type="button" className="cal-chip" style={{ ['--c' as string]: b.color }} onClick={() => onOpen(b.id)} title={`${b.title} · ${clock(b.start)} – ${clock(b.end)}`}>
+                  <button key={b.id} type="button" className={cn('cal-chip', b.planned && 'is-planned')} style={{ ['--c' as string]: b.color }} onClick={() => onOpen(b.id)} title={`${b.title} · ${clock(b.start)} – ${clock(b.end)}`}>
                     <span className="cal-time">{clock(b.start)}</span>
                     {b.title}
                   </button>
@@ -268,7 +270,7 @@ export function SlotCalendar({
                     <button
                       key={b.id}
                       type="button"
-                      className={cn('tg-event', short && 'is-short', b.faded && 'is-tentative')}
+                      className={cn('tg-event', short && 'is-short', b.faded && 'is-tentative', b.planned && 'is-planned')}
                       style={{
                         ['--c' as string]: b.color,
                         top: ((s - from * 60) / 60) * HOUR_PX,
@@ -324,7 +326,7 @@ export function SlotCalendar({
               {day === today ? ' · Today' : ''}
             </div>
             {(byDay.get(day) ?? []).map((b) => (
-              <div key={b.id} role="button" tabIndex={0} className="cal-item" style={{ ['--c' as string]: b.color }} onClick={() => onOpen(b.id)} onKeyDown={(e) => e.key === 'Enter' && onOpen(b.id)}>
+              <div key={b.id} role="button" tabIndex={0} className={cn('cal-item', b.planned && 'is-planned')} style={{ ['--c' as string]: b.color }} onClick={() => onOpen(b.id)} onKeyDown={(e) => e.key === 'Enter' && onOpen(b.id)}>
                 <span className="cal-bar" />
                 <span className="cal-item-main">
                   <b>{b.title}</b>

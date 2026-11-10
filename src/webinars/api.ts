@@ -326,3 +326,46 @@ export function repeatText(w: Pick<WebinarRow, 'repeat' | 'dates' | 'weekdays' |
   const days = [...w.weekdays].sort().map((d) => WEEKDAYS[d]).join(', ')
   return `Every ${days || '—'} from ${day(w.first_date)}${w.stop_date ? ` until ${day(w.stop_date)}` : ' · never stops'}`
 }
+
+// ---------------- scheduled (planned) dates ----------------
+const dayAdd = (d: string, n: number) => {
+  const x = new Date(`${d}T00:00:00`)
+  x.setDate(x.getDate() + n)
+  return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * A webinar's coming dates that aren't made yet (each one is made, with its Zoom meeting, when the date before it ends):
+ * from its repeat (weekly days / its dates) after its latest made date, up to the stop date or (never stops) a year from
+ * today, without the dates deleted. Shown on the calendar as scheduled.
+ */
+export function plannedDates(w: WebinarRow, madeDates: string[], today: string): string[] {
+  if (!w.is_active || w.repeat === 'once') return []
+  const skip = new Set(w.skipped_dates ?? [])
+  const made = new Set(madeDates)
+  const after = madeDates.filter((d) => d >= today).sort().pop() ?? null
+  const now = Date.now()
+  const ok = (d: string) => !skip.has(d) && !made.has(d) && (!after || d > after) && Date.parse(`${d}T${w.start_time.slice(0, 5)}:00+05:30`) > now
+  if (w.repeat === 'dates') return [...w.dates].sort().filter(ok)
+  if (!w.weekdays.length) return []
+  const until = w.stop_date ?? dayAdd(today, 365)
+  const out: string[] = []
+  for (let d = w.first_date > today ? w.first_date : today; d <= until; d = dayAdd(d, 1)) {
+    if (w.weekdays.includes(new Date(`${d}T00:00:00`).getDay()) && ok(d)) out.push(d)
+  }
+  return out
+}
+
+/** delete a scheduled date: only it (not made later), or it and every scheduled date after it */
+export async function deletePlanned(w: WebinarRow, date: string, scope: 'one' | 'after') {
+  if (scope === 'one' || w.repeat === 'dates') {
+    const extra = scope === 'one' ? [date] : w.dates.filter((d) => d >= date)
+    const skipped = [...new Set([...(w.skipped_dates ?? []), ...extra])].sort()
+    const { error } = await db().from('webinars').update({ skipped_dates: skipped }).eq('id', w.id)
+    if (error) throw error
+    return
+  }
+  // weekly: the webinar now stops the day before
+  const { error } = await db().from('webinars').update({ stop_date: dayAdd(date, -1) }).eq('id', w.id)
+  if (error) throw error
+}

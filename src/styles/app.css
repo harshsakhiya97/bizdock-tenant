@@ -1313,3 +1313,9 @@ a.db-card:hover { border-color: var(--brand); }
 /* a choice inside a confirm popup (e.g. delete only this date / the whole webinar) */
 .radio-row { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; line-height: 1.45; }
 .radio-row input { margin-top: 4px; flex: none; accent-color: var(--danger); }
+
+/* calendar: scheduled, not made yet (e.g. a webinar's coming dates) — dotted outline, no fill */
+.tg-event.is-planned { background: color-mix(in srgb, var(--c) 4%, var(--surface)); border: 2px dotted color-mix(in srgb, var(--c) 75%, transparent); box-shadow: none; }
+.tg-event.is-planned:hover { background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
+.cal-chip.is-planned { background: transparent; border-left: 0; outline: 1.5px dotted color-mix(in srgb, var(--c) 75%, transparent); outline-offset: -1.5px; }
+.cal-item.is-planned { border-style: dotted; border-width: 1.5px; border-color: color-mix(in srgb, var(--c) 55%, var(--line)); background: transparent; }
