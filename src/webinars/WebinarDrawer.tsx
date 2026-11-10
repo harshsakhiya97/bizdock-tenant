@@ -69,6 +69,7 @@ export function WebinarDrawer({
   // the WhatsApp group link follows the join link (<join>-wa) until it's typed in
   const [waTyped, setWaTyped] = useState(!!webinar?.wa_slug)
   const waSlug = waTyped ? f.wa_slug ?? '' : slug ? `${slugify(slug)}-wa` : ''
+  const [tab, setTab] = useState<'details' | 'wa'>('details')
   const saveGroupsRef = useRef<((webinarId: string) => Promise<void>) | null>(null)
   const copy = (k: 'join' | 'wa', url: string) => {
     void navigator.clipboard.writeText(url)
@@ -176,7 +177,51 @@ export function WebinarDrawer({
           </>
         }
       >
-        <div className="stack">
+        <div className="tabs" style={{ marginBottom: 16 }}>
+          {(
+            [
+              ['details', 'Details'],
+              ['wa', 'WhatsApp groups'],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" className={cn('tab', tab === k && 'is-active')} onClick={() => setTab(k)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="stack" style={{ display: tab === 'wa' ? 'flex' : 'none' }}>
+          <FormSection title="WhatsApp group link">
+            <div>
+              <Label htmlFor="wb-wa-slug">Short link</Label>
+              <div className="wb-link">
+                <span className="wb-link-base">{joinLink('')}</span>
+                <input
+                  id="wb-wa-slug"
+                  className="wb-link-slug"
+                  value={waSlug}
+                  maxLength={60}
+                  disabled={!canEdit}
+                  placeholder="ai-income-wa"
+                  onChange={(e) => {
+                    setWaTyped(true)
+                    set('wa_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
+                  }}
+                  onBlur={() => waTyped && set('wa_slug', slugify(f.wa_slug ?? ''))}
+                />
+                <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Copy link" disabled={!waSlug} onClick={() => copy('wa', joinLink(slugify(waSlug)))}>
+                  {copied === 'wa' ? <Check size={15} /> : <Copy size={15} />}
+                </button>
+              </div>
+              <Hint>Opens the WhatsApp group of the date that’s on now, else the next one (the groups are added below).</Hint>
+            </div>
+          </FormSection>
+          {webinar ? (
+            <WebinarGroupsSection webinar={webinar} canEdit={canEdit} saveRef={saveGroupsRef} />
+          ) : (
+            <div className="note">Add the WhatsApp groups of its dates once the webinar is created.</div>
+          )}
+        </div>
+        <div className="stack" style={{ display: tab === 'details' ? undefined : 'none' }}>
           <FormSection title="Webinar">
             <div className="form-grid">
               {businesses.length > 1 && (
@@ -228,29 +273,6 @@ export function WebinarDrawer({
                   </button>
                 </div>
                 <Hint>One link for every date: it opens the Zoom meeting of the date that’s on now, else the next one, and moves to each new date by itself.</Hint>
-              </div>
-              <div className="span-2">
-                <Label htmlFor="wb-wa-slug">WhatsApp group link</Label>
-                <div className="wb-link">
-                  <span className="wb-link-base">{joinLink('')}</span>
-                  <input
-                    id="wb-wa-slug"
-                    className="wb-link-slug"
-                    value={waSlug}
-                    maxLength={60}
-                    disabled={!canEdit}
-                    placeholder="ai-income-wa"
-                    onChange={(e) => {
-                      setWaTyped(true)
-                      set('wa_slug', e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
-                    }}
-                    onBlur={() => waTyped && set('wa_slug', slugify(f.wa_slug ?? ''))}
-                  />
-                  <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Copy link" disabled={!waSlug} onClick={() => copy('wa', joinLink(slugify(waSlug)))}>
-                    {copied === 'wa' ? <Check size={15} /> : <Copy size={15} />}
-                  </button>
-                </div>
-                <Hint>Opens the WhatsApp group of the date that’s on now, else the next one (add the groups below, once the webinar is saved).</Hint>
               </div>
               <div>
                 <Label htmlFor="wb-host" required>
@@ -409,8 +431,6 @@ export function WebinarDrawer({
             </div>
             <Hint>India time. Every date has the same start and end time.</Hint>
           </FormSection>
-
-          {webinar && <WebinarGroupsSection webinar={webinar} canEdit={canEdit} saveRef={saveGroupsRef} />}
 
           {webinar && (
             <div className="check-box">
