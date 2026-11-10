@@ -135,8 +135,15 @@ export function orderedGroups(
   const leadItems = o.lead.map(([k, l]) => [k, l] as [string, string])
   const fieldItems = o.fields.map((k) => [k, pretty(k)] as [string, string])
   const out: VarGroup[] = []
+  // a Before / After webinar workflow: Step 1 Webinar fields, Step 2 Lead fields, then the steps (numbered in this order)
+  const webinarFlow = order.some((st) => st.type === 'trigger' && st.keys.includes('webinar_title'))
   for (const st of order) {
-    if (st.type === 'trigger') {
+    if (st.type === 'trigger' && webinarFlow && !o.hook) {
+      const web = st.keys.filter((k) => k.startsWith('webinar_')).map((k) => [k, label(k)] as [string, string])
+      const lead = [...leadItems, ...fieldItems]
+      out.push({ label: 'Webinar fields', items: web })
+      out.push({ label: 'Lead fields', items: [...lead, ...st.keys.filter((k) => !k.startsWith('webinar_') && !lead.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
+    } else if (st.type === 'trigger') {
       const items = o.hook ? o.hook.map((k) => [k, k] as [string, string]) : [...leadItems, ...fieldItems]
       out.push({ label: `Step ${st.n}: Trigger`, items: [...items, ...st.keys.filter((k) => !items.some(([x]) => x === k)).map((k) => [k, label(k)] as [string, string])] })
     } else if (st.type === 'lead_lookup') {
@@ -144,14 +151,15 @@ export function orderedGroups(
       if (o.hook) out.push({ label: `Step ${st.n}: ${st.label}`, items: [...leadItems, ...fieldItems] })
     } else if (st.keys.length)
       out.push({
-        label: `Step ${st.n}: ${st.label}`,
+        label: webinarFlow ? (st.type === 'webinar_analytics' ? 'Zoom’s analytics' : st.label) : `Step ${st.n}: ${st.label}`,
         items: st.keys.map((k) => {
           const eg = stepExample(st, k)
           return [k, eg ? `${label(k)} (${eg})` : label(k)] as [string, string]
         }),
       })
   }
-  return out.filter((g) => g.items.length)
+  const groups = out.filter((g) => g.items.length)
+  return webinarFlow ? groups.map((g, i) => ({ ...g, label: `Step ${i + 1}: ${g.label}` })) : groups
 }
 
 /** "On webhook call" workflows: the webhook's fields (the only fields there are; no lead) */
