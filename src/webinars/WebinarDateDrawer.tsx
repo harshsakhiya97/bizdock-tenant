@@ -1,31 +1,42 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { Check, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { CalendarClock, Check, Copy, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { FormSection } from '@/components/Field'
+import { FormSection, Hint } from '@/components/Field'
 import { ConfirmModal, Empty, Paged } from '@/components/ui'
-import { archiveWebinar, categoryLook, deleteWebinarDate, joinLink, listRegistrations, listZoomData, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
+import { cn } from '@/lib/cn'
+import { archiveWebinar, categoryLook, dateNeighbours, deleteWebinarDate, joinLink, listRegistrations, listZoomData, plannedSlots, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
+import { EMPTY_NOTICE, NoticeFields, noticeOf, type NoticeDraft } from './NoticeFields'
+import { RescheduleDrawer } from './RescheduleDrawer'
 
 const fmtDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (t: string | null) => (t ? new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
 const at = (iso: string | null) => (iso ? new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', second: '2-digit' }) : '—')
 const leadName = (r: Registration) => [r.leads?.first_name, r.leads?.last_name].filter(Boolean).join(' ') || 'Lead'
+const todayIst = () => new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10)
 
 /** One date of a webinar: its Zoom webinar, who registered (and their category after it), attendance, Q&A, chat and polls. */
 export function WebinarDateDrawer({
   date,
   webinar,
+  siblings,
   onClose,
   onEdit,
   onDeleted,
 }: {
   date: WebinarDate
   webinar: WebinarRow | null
+  /** the webinar's made dates (not called off), for the date before / after it */
+  siblings: WebinarDate[]
   onClose: () => void
   onEdit: () => void
+  /** deleted or rescheduled */
   onDeleted: (msg: string) => void
 }) {
+  const { can, membership } = useAuth()
+  const canEdit = can('bookings', 'edit') || can('bookings', 'add')
   const [regs, setRegs] = useState<Registration[] | null>(null)
   const [zoom, setZoom] = useState<{ attendance: Attendance[]; comments: ZoomComment[] } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -35,6 +46,9 @@ export function WebinarDateDrawer({
   const [removing, setRemoving] = useState(false)
   const [scope, setScope] = useState<'date' | 'all'>('date')
   const oneDate = !webinar || webinar.repeat === 'once'
+  // a date with registered leads: its delete asks (in a drawer) whether to move them to the next date
+  const [deleting, setDeleting] = useState(false)
+  const [rescheduling, setRescheduling] = useState(false)
 
   const load = useCallback(() => {
     void listRegistrations({ eventId: date.id }).then(setRegs, () => setRegs([]))
@@ -43,6 +57,8 @@ export function WebinarDateDrawer({
   useEffect(load, [load])
 
   const ended = Date.parse(`${date.event_date}T${(date.end_time ?? date.start_time).slice(0, 5)}:00+05:30`) < Date.now()
+  const started = Date.parse(`${date.event_date}T${date.start_time.slice(0, 5)}:00+05:30`) <= Date.now()
+  const active = (regs ?? []).filter((r) => !r.moved_to_event)
   const attByLead = useMemo(() => {
     const m = new Map<string, Attendance>()
     for (const a of zoom?.attendance ?? []) if (a.lead_id) m.set(a.lead_id, a)
@@ -91,10 +107,16 @@ export function WebinarDateDrawer({
                 className="danger-text"
                 onClick={() => {
                   setScope(oneDate ? 'all' : 'date')
-                  setRemoving(true)
+                  if (!oneDate && !started && active.length) setDeleting(true)
+                  else setRemoving(true)
                 }}
               >
                 <Trash2 size={14} /> Delete
+              </Button>
+            )}
+            {webinar && canEdit && !started && (
+              <Button variant="outline" onClick={() => setRescheduling(true)}>
+                <CalendarClock size={14} /> Reschedule
               </Button>
             )}
             {webinar && (
@@ -193,6 +215,7 @@ export function WebinarDateDrawer({
                                 {leadName(r)}
                               </Link>
                               <div className="muted small">{r.leads?.phone}</div>
+                              {r.moved_to_date && <span className="badge badge-muted">Moved to {fmtDay(r.moved_to_date)}</span>}
                             </td>
                             <td className="nowrap">{at(r.created_at)}</td>
                             <td className="nowrap">{a ? `${a.minutes ?? 0} min · from ${at(a.join_time)}` : ended ? <span className="muted">Didn’t join</span> : '—'}</td>
@@ -236,6 +259,27 @@ export function WebinarDateDrawer({
           </FormSection>
         )}
       </div>
+      {webinar && rescheduling && (
+        <RescheduleDrawer
+          webinar={webinar}
+          from={{ date: date.event_date, start: date.start_time, end: date.end_time ?? date.start_time }}
+          madeDates={siblings.map((d) => d.event_date)}
+          registered={active.length}
+          onClose={() => setRescheduling(false)}
+          onDone={onDeleted}
+        />
+      )}
+      {webinar && deleting && (
+        <DeleteDateDrawer
+          date={date}
+          webinar={webinar}
+          siblings={siblings}
+          registered={active.length}
+          memberId={membership?.id}
+          onClose={() => setDeleting(false)}
+          onDeleted={onDeleted}
+        />
+      )}
       {webinar && (
         <ConfirmModal
           open={removing}
@@ -270,7 +314,7 @@ export function WebinarDateDrawer({
             setBusy(true)
             try {
               if (scope === 'date') {
-                await deleteWebinarDate(date, webinar)
+                await deleteWebinarDate(date)
                 onDeleted(`${webinar.title} · ${fmtDay(date.event_date)} deleted.`)
               } else {
                 await archiveWebinar(webinar)
@@ -284,6 +328,159 @@ export function WebinarDateDrawer({
           }}
         />
       )}
+    </Drawer>
+  )
+}
+
+/**
+ * Delete a date that has registered leads: only this date (its leads moved to the next date, or left on it, with an
+ * optional WhatsApp to them first) or the whole webinar.
+ */
+function DeleteDateDrawer({
+  date,
+  webinar,
+  siblings,
+  registered,
+  memberId,
+  onClose,
+  onDeleted,
+}: {
+  date: WebinarDate
+  webinar: WebinarRow
+  siblings: WebinarDate[]
+  registered: number
+  memberId?: string
+  onClose: () => void
+  onDeleted: (msg: string) => void
+}) {
+  const [scope, setScope] = useState<'date' | 'all'>('date')
+  const [move, setMove] = useState(true)
+  const [send, setSend] = useState(false)
+  const [notice, setNotice] = useState<NoticeDraft>(EMPTY_NOTICE)
+  const [confirming, setConfirming] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // the next date (made, else scheduled) and its time
+  const made = siblings.filter((d) => d.id !== date.id)
+  const { next } = dateNeighbours(webinar, siblings.map((d) => d.event_date), date.event_date, todayIst())
+  const nextMade = next ? made.find((d) => d.event_date === next) : null
+  const nextSlot = next && !nextMade ? plannedSlots(webinar, siblings.map((d) => d.event_date), todayIst()).find((x) => x.date === next) : null
+  const nextText = next ? `${fmtDay(next)}, ${clock(nextMade ? nextMade.start_time : nextSlot?.start ?? webinar.start_time)}` : ''
+  const moving = scope === 'date' && !!next && move
+  const plural = registered === 1 ? '' : 's'
+
+  function submit() {
+    if (scope === 'date' && send) {
+      const n = noticeOf(notice)
+      if (typeof n === 'string') return setError(n)
+    }
+    setError(null)
+    setConfirming(true)
+  }
+  async function run() {
+    setBusy(true)
+    try {
+      if (scope === 'all') {
+        await archiveWebinar(webinar)
+        onDeleted(`${webinar.title} deleted.`)
+        return
+      }
+      const n = send ? noticeOf(notice) : null
+      const r = await deleteWebinarDate(date, { move: moving, notice: typeof n === 'string' ? null : n, memberId })
+      onDeleted(
+        `${webinar.title} · ${fmtDay(date.event_date)} deleted.${r.moved ? ` ${r.moved} lead${r.moved === 1 ? '' : 's'} moved to ${r.next_date ? fmtDay(r.next_date) : 'the next date'}: the registration workflow registers them there.` : ''}${r.messages ? ` Sending the message to ${r.messages}.` : ''}`,
+      )
+    } catch (e) {
+      setConfirming(false)
+      setError((e as Error).message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Drawer
+      open
+      width={600}
+      onClose={onClose}
+      title={`Delete · ${webinar.title} · ${fmtDay(date.event_date)}`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button variant="danger" onClick={submit} disabled={busy}>
+              <Trash2 size={14} /> Delete
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <div className="stack">
+        <FormSection title="What to delete">
+          <label className="radio-row">
+            <input type="radio" checked={scope === 'date'} onChange={() => setScope('date')} />
+            <span>
+              <b>Only this date</b> ({fmtDay(date.event_date)}): removed from Zoom; the webinar’s next date follows.
+            </span>
+          </label>
+          <label className="radio-row">
+            <input type="radio" checked={scope === 'all'} onChange={() => setScope('all')} />
+            <span>
+              <b>The whole webinar</b>: all its coming dates, its 3 workflows and its funnel. Registrations and Zoom data stay on the leads.
+            </span>
+          </label>
+        </FormSection>
+
+        {scope === 'date' && (
+          <FormSection title={`${registered} lead${plural} registered for this date`}>
+            {next ? (
+              <>
+                <label className="radio-row">
+                  <input type="radio" checked={move} onChange={() => setMove(true)} />
+                  <span>
+                    <b>Move them to the next webinar</b> ({nextText}): the registration workflow registers each one there — new joining links, its confirmation and reminders.
+                  </span>
+                </label>
+                <label className="radio-row">
+                  <input type="radio" checked={!move} onChange={() => setMove(false)} />
+                  <span>
+                    <b>Don’t move them</b>: their registrations stay on this deleted date.
+                  </span>
+                </label>
+              </>
+            ) : (
+              <Hint>The webinar has no next date, so they can’t be moved: their registrations stay on this deleted date.</Hint>
+            )}
+            <label className={cn('tgl', send && 'is-on')}>
+              <input type="checkbox" role="switch" checked={send} onChange={() => setSend(!send)} aria-label="Send a cancel message" />
+              <span className="tgl-track" aria-hidden="true">
+                <span className="tgl-knob" />
+              </span>
+              Send a WhatsApp to the {registered} lead{plural} (e.g. this date is cancelled{moving ? `, see you on ${nextText}` : ''})
+            </label>
+            {send && <NoticeFields kind="cancel" value={notice} onChange={setNotice} />}
+          </FormSection>
+        )}
+      </div>
+
+      <ConfirmModal
+        open={confirming}
+        icon={Trash2}
+        danger
+        busy={busy}
+        title={scope === 'all' ? 'Delete webinar?' : `Delete ${fmtDay(date.event_date)}?`}
+        message={
+          scope === 'all'
+            ? `“${webinar.title}” is deleted, with all its coming dates, its 3 workflows and its funnel.`
+            : `${fmtDay(date.event_date)} is removed from Zoom and its reminders stop.${send ? ` The message goes to the ${registered} lead${plural}.` : ''}${moving ? ` Then they’re registered for ${nextText}.` : ''}`
+        }
+        confirmLabel={busy ? 'Deleting…' : 'Delete'}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => void run()}
+      />
     </Drawer>
   )
 }

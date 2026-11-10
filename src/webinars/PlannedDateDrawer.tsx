@@ -4,7 +4,8 @@ import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { FormSection } from '@/components/Field'
 import { ConfirmModal } from '@/components/ui'
-import { deletePlanned, repeatText, type WebinarRow } from './api'
+import { deletePlanned, repeatText, type PlannedSlot, type WebinarRow } from './api'
+import { RescheduleDrawer } from './RescheduleDrawer'
 
 const fmtDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (t: string) => new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
@@ -15,20 +16,26 @@ const clock = (t: string) => new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').m
  */
 export function PlannedDateDrawer({
   webinar,
-  date,
+  slot,
+  madeDates,
   canEdit,
   onClose,
   onEdit,
   onDeleted,
 }: {
   webinar: WebinarRow
-  date: string
+  slot: PlannedSlot
+  /** the webinar's made dates (not called off) */
+  madeDates: string[]
   canEdit: boolean
   onClose: () => void
   onEdit: () => void
+  /** deleted or rescheduled */
   onDeleted: (msg: string) => void
 }) {
+  const date = slot.date
   const [removing, setRemoving] = useState(false)
+  const [rescheduling, setRescheduling] = useState(false)
   const [scope, setScope] = useState<'one' | 'after'>('one')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +63,9 @@ export function PlannedDateDrawer({
               >
                 <Trash2 size={14} /> Delete
               </Button>
+              <Button variant="outline" onClick={() => setRescheduling(true)}>
+                <CalendarClock size={14} /> Reschedule
+              </Button>
               <Button variant="outline" onClick={onEdit}>
                 <Pencil size={14} /> Edit webinar
               </Button>
@@ -71,9 +81,15 @@ export function PlannedDateDrawer({
             <div>
               <dt>When</dt>
               <dd>
-                {fmtDay(date)}, {clock(webinar.start_time)} – {clock(webinar.end_time)}
+                {fmtDay(date)}, {clock(slot.start)} – {clock(slot.end)}
               </dd>
             </div>
+            {slot.moved && slot.from && slot.from !== date && (
+              <div>
+                <dt>Rescheduled</dt>
+                <dd>From {fmtDay(slot.from)}</dd>
+              </div>
+            )}
             <div>
               <dt>Repeats</dt>
               <dd>{repeatText(webinar)}</dd>
@@ -86,6 +102,16 @@ export function PlannedDateDrawer({
         </FormSection>
       </div>
 
+      {rescheduling && (
+        <RescheduleDrawer
+          webinar={webinar}
+          from={{ date, start: slot.start, end: slot.end }}
+          madeDates={madeDates}
+          registered={0}
+          onClose={() => setRescheduling(false)}
+          onDone={onDeleted}
+        />
+      )}
       <ConfirmModal
         open={removing}
         icon={Trash2}

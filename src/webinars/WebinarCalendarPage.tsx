@@ -9,7 +9,7 @@ import { ConfirmModal, Empty, PageHead, Paged, StatCard } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { archiveWebinar, listHosts, listWebinarDates, listWebinars, plannedDates, repeatText, type WebinarDate, type WebinarHost, type WebinarRow } from './api'
+import { archiveWebinar, listHosts, listWebinarDates, listWebinars, plannedSlots, repeatText, type PlannedSlot, type WebinarDate, type WebinarHost, type WebinarRow } from './api'
 import { PlannedDateDrawer } from './PlannedDateDrawer'
 import { WebinarDateDrawer } from './WebinarDateDrawer'
 import { WebinarDrawer } from './WebinarDrawer'
@@ -29,7 +29,7 @@ export function WebinarCalendarPage() {
   const [regCount, setRegCount] = useState<Record<string, number>>({})
   const [drawer, setDrawer] = useState<{ webinar: WebinarRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [opened, setOpened] = useState<WebinarDate | null>(null)
-  const [planned, setPlanned] = useState<{ webinar: WebinarRow; date: string } | null>(null)
+  const [planned, setPlanned] = useState<{ webinar: WebinarRow; slot: PlannedSlot } | null>(null)
   const [removing, setRemoving] = useState<WebinarRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
@@ -63,18 +63,18 @@ export function WebinarCalendarPage() {
   const plannedItems = useMemo(
     () =>
       mine.flatMap((w) =>
-        plannedDates(
+        plannedSlots(
           w,
           myDates.filter((d) => d.webinar_id === w.id).map((d) => d.event_date),
           today,
-        ).map((date) => ({
-          id: `planned:${w.id}:${date}`,
-          date,
-          start: w.start_time.slice(0, 5),
-          end: w.end_time.slice(0, 5),
+        ).map((s) => ({
+          id: `planned:${w.id}:${s.date}`,
+          date: s.date,
+          start: s.start,
+          end: s.end,
           title: w.title,
-          detail: 'Scheduled',
-          meta: `${clock(w.start_time.slice(0, 5))} – ${clock(w.end_time.slice(0, 5))} · Scheduled (made when the date before it ends)`,
+          detail: s.moved ? 'Scheduled · rescheduled' : 'Scheduled',
+          meta: `${clock(s.start)} – ${clock(s.end)} · Scheduled${s.moved ? ' · rescheduled' : ''} (made when the date before it ends)`,
           color: '#8b5cf6',
           planned: true,
         })),
@@ -162,7 +162,8 @@ export function WebinarCalendarPage() {
           if (id.startsWith('planned:')) {
             const [, wid, date] = id.split(':')
             const w = byId.get(wid)
-            if (w) setPlanned({ webinar: w, date })
+            const slot = w ? plannedSlots(w, myDates.filter((d) => d.webinar_id === w.id).map((d) => d.event_date), today).find((x) => x.date === date) : null
+            if (w && slot) setPlanned({ webinar: w, slot })
           } else setOpened(myDates.find((d) => d.id === id) ?? null)
         }}
       />
@@ -280,6 +281,7 @@ export function WebinarCalendarPage() {
           key={opened.id}
           date={opened}
           webinar={byId.get(opened.webinar_id) ?? null}
+          siblings={myDates.filter((d) => d.webinar_id === opened.webinar_id)}
           onClose={() => setOpened(null)}
           onEdit={() => {
             const w = byId.get(opened.webinar_id) ?? null
@@ -295,9 +297,10 @@ export function WebinarCalendarPage() {
       )}
       {planned && (
         <PlannedDateDrawer
-          key={`${planned.webinar.id}:${planned.date}`}
+          key={`${planned.webinar.id}:${planned.slot.date}`}
           webinar={planned.webinar}
-          date={planned.date}
+          slot={planned.slot}
+          madeDates={myDates.filter((d) => d.webinar_id === planned.webinar.id).map((d) => d.event_date)}
           canEdit={canEdit}
           onClose={() => setPlanned(null)}
           onEdit={() => {
