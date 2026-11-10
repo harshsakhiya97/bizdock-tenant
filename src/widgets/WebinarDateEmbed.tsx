@@ -10,8 +10,9 @@ import { WEBINAR_SHOWS, type WebinarShow, type WebinarWidget } from './api'
 
 /** the script on the workspace's own domain: <app>/webinar-date.js */
 export const webinarScriptUrl = () => `${shortBase()}/webinar-date.js`
-export const oneLine = (code: string, show: WebinarShow) => `<script src="${webinarScriptUrl()}" data-webinar="${code}" data-show="${show}" async></script>`
-export const tagOnly = (code: string, show: WebinarShow) => `<span data-bizdock-webinar="${code}" data-show="${show}"></span>`
+/** the line to paste: a <span> (to style it: class webinar-date / webinar-time / webinar-time-timezone / webinar-countdown) with the script in it */
+export const oneLine = (code: string, show: WebinarShow) =>
+  `<span class="webinar-${show}"><script src="${webinarScriptUrl()}" data-webinar="${code}" data-show="${show}" async></script></span>`
 
 // the same text the script shows (India time)
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -46,10 +47,9 @@ export const currentDate = (dates: WebinarDate[], webinarId: string, now = Date.
     .filter((d) => d.webinar_id === webinarId && Date.parse(`${d.event_date}T${(d.end_time ?? d.start_time).slice(0, 5)}:00+05:30`) > now)
     .sort((a, b) => `${a.event_date}${a.start_time}`.localeCompare(`${b.event_date}${b.start_time}`))[0] ?? null
 
-/** the embed codes (one line per thing to show, or tags + the script once), with what each shows now */
+/** the embed code (one line per thing to show), with what each shows now */
 export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; onClose: () => void }) {
   const tenant = useTenant()
-  const [form, setForm] = useState<'line' | 'tag'>('line')
   const [dates, setDates] = useState<WebinarDate[]>([])
   const [now, setNow] = useState(Date.now())
   const [copied, setCopied] = useState('')
@@ -66,25 +66,14 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
       window.setTimeout(() => setCopied(''), 1500)
     })
   }
-  const script = `<script src="${webinarScriptUrl()}" async></script>`
-  const code = form === 'line' ? oneLine(widget.code, show) : tagOnly(widget.code, show)
+  const code = oneLine(widget.code, show)
 
   return (
     <Modal open onClose={onClose} title={`Embed · ${widget.name}`} width={720}>
       <div className="stack" style={{ gap: 14 }}>
-        <div className="tabs">
-          <button type="button" className={cn('tab', form === 'line' && 'is-active')} onClick={() => setForm('line')}>
-            One line
-          </button>
-          <button type="button" className={cn('tab', form === 'tag' && 'is-active')} onClick={() => setForm('tag')}>
-            Tag + script
-          </button>
-        </div>
         <Hint>
-          {form === 'line'
-            ? 'Pick what to show, then paste the line where the text should show (one line per thing). It shows the webinar’s current date in India time: the one on now, else the next one.'
-            : 'For page builders that remove scripts from text: pick what to show, paste the tag where the text should show, and the script once anywhere on the page (e.g. the footer).'}
-          {widget.is_active ? '' : ' The widget is off: the tags stay empty until you turn it on.'}
+          Pick what to show, then paste the line where the text should show (one line per thing). It shows the webinar’s current date in India time: the one on now, else the next one. It takes your page’s style; to style it on its own, use its span’s class (e.g. .webinar-{show}).
+          {widget.is_active ? '' : ' The widget is off: it stays empty until you turn it on.'}
         </Hint>
         <div className="wd-code">
           <pre className="embed-code">{code}</pre>
@@ -101,17 +90,6 @@ export function WebinarDateEmbed({ widget, onClose }: { widget: WebinarWidget; o
             </button>
           ))}
         </div>
-        {form === 'tag' && (
-          <div className="wd-embed">
-            <b>The script (once per page)</b>
-            <div className="wd-code">
-              <pre className="embed-code">{script}</pre>
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => copy('script', script)}>
-                {copied === 'script' ? <Check size={14} /> : <Copy size={14} />} {copied === 'script' ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </Modal>
   )
