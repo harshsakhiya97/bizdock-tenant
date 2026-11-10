@@ -31,8 +31,9 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   webinar_short_link: 'Webinar joining short link',
   webinar_short_link_code: 'Webinar joining short link code',
   webinar_join_link: 'Webinar joining link (Zoom)',
+  webinar_group_link: 'WhatsApp group joining link',
   // Get webinar analytics
-  webinar_category: 'Webinar category (its name, from the webinar’s Lead categories)',
+  webinar_category: 'Webinar category',
   webinar_category_key: 'Webinar category key (used by the Category paths)',
   webinar_attended: 'Attended the webinar (Yes / No)',
   webinar_minutes: 'Minutes attended',
@@ -109,6 +110,7 @@ function stepExample(st: UpstreamStep, k: string): string {
   }
   if (k === 'zoom_short_link') return `${shortBase()}/UCTPZW46`
   if (k === 'webinar_short_link') return `${shortBase()}/K7M2QX9P`
+  if (k === 'webinar_group_link') return `${shortBase()}/ai-income-wa`
   return ZOOM_EXAMPLE[k] ?? ''
 }
 
@@ -216,7 +218,8 @@ export const DATE_PARTS = [
 function withDateParts(groups: VarGroup[], dates: string[]): VarGroup[] {
   if (!dates.length) return groups
   // a meeting starts and ends on the same day: meeting_end's date is meeting_start's (one "date" for both)
-  const sameDay = (k: string, x: string) => x === '_date' && k === 'meeting_end' && dates.includes('meeting_start')
+  // a webinar's start / end: its date is Webinar date (no separate start / end date)
+  const sameDay = (k: string, x: string) => x === '_date' && ((k === 'meeting_end' && dates.includes('meeting_start')) || k === 'webinar_start' || k === 'webinar_end')
   return groups.map((g) => ({
     ...g,
     items: g.items.flatMap(([k, l]) =>
