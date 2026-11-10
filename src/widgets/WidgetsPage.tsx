@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { CalendarDays } from 'lucide-react'
+import { CalendarDays, Clock } from 'lucide-react'
 import { PageHead } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { listWidgets, type WidgetRow } from './api'
@@ -15,6 +15,15 @@ const KINDS = [
     color: '#2563eb',
     description: 'A calendar of free slots to put on any page. Visitors pick a date and time and give their details; the booking runs its workflow.',
     usedFor: 'Call bookings on landing pages and websites',
+  },
+  {
+    kind: 'webinar_date' as const,
+    to: '/widgets/webinar-date',
+    name: 'Webinar date & time',
+    icon: Clock,
+    color: '#8b5cf6',
+    description: 'A webinar’s current date, time or a live countdown on any page, in India time. It moves to the next date by itself.',
+    usedFor: 'Webinar landing pages and registration pages',
   },
 ]
 

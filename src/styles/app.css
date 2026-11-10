@@ -1347,3 +1347,8 @@ a.db-card:hover { border-color: var(--brand); }
 .cat-head { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-muted); }
 .cat-min { display: flex; align-items: center; gap: 6px; }
 .cat-min .input { width: 100px; }
+
+/* Widgets → Webinar date & time: an embed line with its copy button */
+.wd-embed { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.wd-code { display: flex; gap: 8px; align-items: flex-start; }
+.wd-code .embed-code { flex: 1; margin: 0; white-space: pre-wrap; word-break: break-all; }

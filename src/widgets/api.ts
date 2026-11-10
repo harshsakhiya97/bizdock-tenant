@@ -67,7 +67,7 @@ export type BookingConfig = {
 export type WidgetRow = {
   id: string
   tenant_id: string
-  kind: 'booking_calendar'
+  kind: 'booking_calendar' | 'webinar_date'
   name: string
   code: string
   is_active: boolean
@@ -261,3 +261,31 @@ export async function bookSlot(code: string, start: string, who: { name: string;
   if (data?.error) throw new Error(data.error)
   return data as { ok: true; booking_id: string; thank_you: string; redirect_url: string | null }
 }
+
+// ---------------- Webinar date & time ----------------
+/** a Webinar date & time widget: its webinar (the script shows that webinar's current date) */
+export type WebinarWidget = Omit<WidgetRow, 'kind' | 'config'> & { kind: 'webinar_date'; config: { webinar_id: string } }
+
+export async function listWebinarWidgets(tenantId: string): Promise<WebinarWidget[]> {
+  const { data, error } = await db().from('widgets').select(COLS).eq('tenant_id', tenantId).eq('kind', 'webinar_date').is('archived_at', null).order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []) as unknown as WebinarWidget[]
+}
+
+export async function saveWebinarWidget(tenantId: string, memberId: string | undefined, id: string | null, w: { name: string; webinar_id: string }): Promise<WebinarWidget> {
+  const row = { name: w.name.trim(), config: { webinar_id: w.webinar_id } }
+  const { data, error } = id
+    ? await db().from('widgets').update({ ...row, updated_at: new Date().toISOString() }).eq('id', id).select(COLS).single()
+    : await db().from('widgets').insert({ ...row, tenant_id: tenantId, kind: 'webinar_date', created_by: memberId ?? null }).select(COLS).single()
+  if (error) throw new Error(error.message)
+  return data as unknown as WebinarWidget
+}
+
+/** what a tag can show (data-show) */
+export const WEBINAR_SHOWS = [
+  { show: 'date', label: 'Date', example: 'Sun, 16 Nov 2026' },
+  { show: 'time', label: 'Time', example: '7:00 pm' },
+  { show: 'time-timezone', label: 'Time with time zone', example: '7:00 pm IST' },
+  { show: 'countdown', label: 'Countdown', example: '2d 04h 12m 33s · Live now while it’s on' },
+] as const
+export type WebinarShow = (typeof WEBINAR_SHOWS)[number]['show']
