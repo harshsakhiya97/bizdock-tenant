@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ShoppingBag, Trash2 } from 'lucide-react'
 import { ConfirmModal, Empty, Paged } from '@/components/ui'
 import { money } from '@/leads/labels'
-import { CATEGORY_META, deletePurchase, listRegistrations, listZoomData, type Attendance, type Purchase, type Registration, type ZoomComment } from './api'
+import { categoryLook, deletePurchase, listRegistrations, listZoomData, type Attendance, type Purchase, type Registration, type ZoomComment } from './api'
 
 const fmtDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (t: string | null) => (t ? new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
@@ -32,7 +32,7 @@ export function LeadWebinarsTab({ leadId }: { leadId: string }) {
         const z = byEvent.get(r.event_id)
         const mins = (z?.att ?? []).reduce((n, a) => n + (Number(a.minutes) || 0), 0)
         const ended = ev ? Date.parse(`${ev.event_date}T${(ev.end_time ?? ev.start_time).slice(0, 5)}:00+05:30`) < Date.now() : false
-        const cat = r.category ? CATEGORY_META[r.category] : null
+        const cat = categoryLook(r.category, r.category_name)
         return (
           <section key={r.id} className="card card-pad stack" style={{ gap: 8 }}>
             <div className="row-between">

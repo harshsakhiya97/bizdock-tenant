@@ -10,8 +10,9 @@ import { cn } from '@/lib/cn'
 import { HostDrawer } from '@/masters/WebinarHostsTab'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
-import { joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
-import { createWebinarWorkflows } from './workflows'
+import { DEFAULT_CATEGORIES, joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
+import { createWebinarWorkflows, syncCategoryPaths } from './workflows'
+import { CategoriesEditor, cleanCategories } from './CategoriesEditor'
 import { WebinarGroupsSection } from './WebinarGroupsSection'
 import { useLinkCheck, type LinkCheck } from './useLinkCheck'
 
@@ -49,6 +50,7 @@ export function WebinarDrawer({
     title: webinar?.title ?? '',
     slug: webinar?.slug ?? null,
     wa_slug: webinar?.wa_slug ?? null,
+    categories: webinar?.categories?.length ? webinar.categories : DEFAULT_CATEGORIES,
     description: webinar?.description ?? '',
     host_id: webinar?.host_id ?? '',
     zoom_account_id: webinar?.zoom_account_id ?? '',
@@ -70,7 +72,7 @@ export function WebinarDrawer({
   // the WhatsApp group link follows the join link (<join>-wa) until it's typed in
   const [waTyped, setWaTyped] = useState(!!webinar?.wa_slug)
   const waSlug = waTyped ? f.wa_slug ?? '' : slug ? `${slugify(slug)}-wa` : ''
-  const [tab, setTab] = useState<'details' | 'wa'>('details')
+  const [tab, setTab] = useState<'details' | 'wa' | 'cats'>('details')
   // typed links: checked as you type (already used by another webinar → try another)
   const joinCheck = useLinkCheck(tenant.id, slug, webinar?.slug, webinar?.id ?? null, waSlug)
   const waCheck = useLinkCheck(tenant.id, waSlug, webinar?.wa_slug, webinar?.id ?? null, slug)
@@ -109,6 +111,11 @@ export function WebinarDrawer({
       setTab('wa')
       return setError('Pick another WhatsApp group link: this one is already used or too short.')
     }
+    const cats = cleanCategories(f.categories)
+    if (typeof cats === 'string') {
+      setTab('cats')
+      return setError(cats)
+    }
     if (joinCheck === 'checking' || waCheck === 'checking') return setError('Checking the link… try again in a moment.')
     if (!f.host_id) return setError('Pick the host (or add one).')
     if (!f.zoom_account_id) return setError('Pick the Zoom account the webinars are made on.')
@@ -136,14 +143,16 @@ export function WebinarDrawer({
         // and the registration form's webhook in it: each post adds the lead, and the registration workflow starts from it
         webhookId = await addWebhook(tenant.id, funnelId, { name: `${f.title.trim()} – registration form`, action: 'create_lead', match_by: 'phone' })
       }
-      const input = { ...f, slug: slugify(slug) || null, wa_slug: slugify(waSlug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
+      const input = { ...f, categories: cats, slug: slugify(slug) || null, wa_slug: slugify(waSlug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
       if (webinar && saveGroupsRef.current) await saveGroupsRef.current(id)
+      // the after-webinar workflow's paths follow the categories
+      if (webinar && JSON.stringify(cats) !== JSON.stringify(webinar.categories)) await syncCategoryPaths(id, cats)
       if (webinar) return onSaved(`${input.title.trim()} saved. Its coming date follows the changes.`)
       // the webinar is saved: a problem with its workflows is told, not retried (that would add the webinar twice)
       let wfError = ''
       try {
-        await createWebinarWorkflows(tenant.id, membership?.id, { id, title: input.title, funnel_id: funnelId, webhook_id: webhookId })
+        await createWebinarWorkflows(tenant.id, membership?.id, { id, title: input.title, funnel_id: funnelId, webhook_id: webhookId, categories: cats })
       } catch (e) {
         wfError = (e as Error).message
       }
@@ -192,6 +201,7 @@ export function WebinarDrawer({
             [
               ['details', 'Details'],
               ['wa', 'WhatsApp groups'],
+              ['cats', 'Lead categories'],
             ] as const
           ).map(([k, label]) => (
             <button key={k} type="button" className={cn('tab', tab === k && 'is-active')} onClick={() => setTab(k)}>
@@ -231,6 +241,9 @@ export function WebinarDrawer({
           ) : (
             <div className="note">Add the WhatsApp groups of its dates once the webinar is created.</div>
           )}
+        </div>
+        <div className="stack" style={{ display: tab === 'cats' ? 'flex' : 'none' }}>
+          <CategoriesEditor value={f.categories} canEdit={canEdit} onChange={(v) => set('categories', v)} />
         </div>
         <div className="stack" style={{ display: tab === 'details' ? undefined : 'none' }}>
           <FormSection title="Webinar">

@@ -32,7 +32,8 @@ export const STEP_VAR_LABEL: Record<string, string> = {
   webinar_short_link_code: 'Webinar joining short link code',
   webinar_join_link: 'Webinar joining link (Zoom)',
   // Get webinar analytics
-  webinar_category: 'Webinar category (Super Hot / Hot / Warm / Cold)',
+  webinar_category: 'Webinar category (its name, from the webinar’s Lead categories)',
+  webinar_category_key: 'Webinar category key (used by the Category paths)',
   webinar_attended: 'Attended the webinar (Yes / No)',
   webinar_minutes: 'Minutes attended',
   webinar_attended_percent: 'Attended (% of the webinar)',
@@ -93,6 +94,7 @@ const ZOOM_EXAMPLE: Record<string, string> = {
   webinar_time: '19:00',
   webinar_short_link_code: 'K7M2QX9P',
   webinar_category: 'Hot',
+  webinar_category_key: 'hot',
   webinar_attended: 'Yes',
   webinar_minutes: '52',
   webinar_attended_percent: '58',

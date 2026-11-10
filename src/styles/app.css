@@ -1340,3 +1340,10 @@ a.db-card:hover { border-color: var(--brand); }
 .link-status.is-ok { color: var(--success); }
 .link-status.is-bad { color: var(--danger); }
 .wb-link.is-bad, .wb-link.is-bad:focus-within { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent); }
+
+/* webinar form: lead categories (name + minimum minutes attended) */
+.cat-rows { display: flex; flex-direction: column; gap: 6px; }
+.cat-row { display: grid; grid-template-columns: 1fr 170px 34px; gap: 10px; align-items: center; }
+.cat-head { font-size: 11.5px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--text-muted); }
+.cat-min { display: flex; align-items: center; gap: 6px; }
+.cat-min .input { width: 100px; }

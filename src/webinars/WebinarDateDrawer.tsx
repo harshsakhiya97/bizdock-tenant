@@ -5,7 +5,7 @@ import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { FormSection } from '@/components/Field'
 import { ConfirmModal, Empty, Paged } from '@/components/ui'
-import { archiveWebinar, CATEGORY_META, deleteWebinarDate, joinLink, listRegistrations, listZoomData, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
+import { archiveWebinar, categoryLook, deleteWebinarDate, joinLink, listRegistrations, listZoomData, pullZoom, type Attendance, type Registration, type WebinarDate, type WebinarRow, type ZoomComment } from './api'
 
 const fmtDay = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const clock = (t: string | null) => (t ? new Date(2000, 0, 1, ...(t.slice(0, 5).split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
@@ -185,7 +185,7 @@ export function WebinarDateDrawer({
                     <tbody>
                       {paged.map((r) => {
                         const a = attByLead.get(r.lead_id)
-                        const cat = r.category ? CATEGORY_META[r.category] : null
+                        const cat = categoryLook(r.category, r.category_name)
                         return (
                           <tr key={r.id}>
                             <td>
