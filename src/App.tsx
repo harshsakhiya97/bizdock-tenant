@@ -30,6 +30,7 @@ import { WaLogsPage } from '@/integrations/WaLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
 import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
+import { WebinarDateWidgetsPage } from '@/widgets/WebinarDateWidgetsPage'
 import { EmbedPage } from '@/widgets/EmbedPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
 
@@ -163,6 +164,7 @@ export default function App() {
                 />
                 <Route path="/widgets" element={<RequirePermission module="widgets"><WidgetsPage /></RequirePermission>} />
                 <Route path="/widgets/booking-calendar/:id?" element={<RequirePermission module="widgets"><BookingCalendarsPage /></RequirePermission>} />
+                <Route path="/widgets/webinar-date/:id?" element={<RequirePermission module="widgets"><WebinarDateWidgetsPage /></RequirePermission>} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/whats-new" element={<WhatsNewPage />} />
               </Route>
