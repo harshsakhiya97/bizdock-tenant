@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { CheckCircle2, PhoneCall } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Hint, Label, TextInput } from '@/components/Field'
-import { Modal } from '@/components/Modal'
+import { Drawer } from '@/components/Drawer'
 import { useTenant } from '@/tenant/useTenant'
 import { connectCallyzer, testCallyzer } from './api'
 
 const STEPS = ['Get the key', 'Paste the key', 'Allow']
 
-/** Connect Callyzer: a 3-step popup — where to get the API key, paste it (checked), allow BizDock to read the call logs. */
+/** Connect Callyzer: a 3-step side panel — where to get the API key, paste it (checked), allow BizDock to read the call logs. */
 export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boolean; onClose: () => void; onDone: (msg: string) => void }) {
   const tenant = useTenant()
   const [step, setStep] = useState(0)
@@ -45,10 +45,10 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
   }
 
   return (
-    <Modal
+    <Drawer
       open
       onClose={onClose}
-      width={560}
+      width={520}
       title={reconnect ? 'Change Callyzer key' : 'Connect Callyzer'}
       footer={
         <>
@@ -73,6 +73,15 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
       }
     >
       <div className="stack">
+        <div className="int-top">
+          <div className="int-icon" style={{ ['--c' as string]: '#2563eb' }}>
+            <PhoneCall size={20} />
+          </div>
+          <div>
+            <b>Callyzer</b>
+            <div className="muted small">Call logs from your team’s phones, matched to leads by phone number.</div>
+          </div>
+        </div>
         <ol className="cz-steps">
           {STEPS.map((s, i) => (
             <li key={s} className={i === step ? 'is-now' : i < step ? 'is-done' : ''}>
@@ -131,6 +140,6 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
           </div>
         )}
       </div>
-    </Modal>
+    </Drawer>
   )
 }
