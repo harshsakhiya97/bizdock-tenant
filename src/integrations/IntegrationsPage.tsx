@@ -12,11 +12,11 @@ import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { WaWebhookBox } from './WaWebhookBox'
-import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, type IntegrationRow } from './api'
+import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
-import { connectZoom, testZoom } from '@/zoom/api'
+import { connectZoom } from '@/zoom/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -73,20 +73,15 @@ export function IntegrationsPage() {
       setNotice({ error: (e as Error).message })
     }
   }
-  // a connected-with-Zoom account's Settings: only its own options (no keys)
-  const oauthSettings = (p: Provider): Provider => ({ ...p, guide: undefined, fields: p.fields.filter((f) => f.key === 'cloud_record' || f.key === 'is_default') })
-
-  const [testing, setTesting] = useState<string | null>(null)
-  async function test(r: IntegrationRow) {
-    setTesting(r.id)
+  // the Zoom account picked first for new meetings and workflow steps (only one)
+  async function makeDefault(r: IntegrationRow) {
     try {
-      const u = await testZoom(r.id)
-      setNotice({ ok: `${r.label}: connected to Zoom as ${u.name || u.email}${u.email ? ` (${u.email})` : ''}.` })
+      await setZoomDefault(allOf('zoom'), r.id)
+      setNotice({ ok: `${r.label} is now the default Zoom account.` })
+      load()
     } catch (e) {
-      setNotice({ error: `${r.label}: ${(e as Error).message}` })
+      setNotice({ error: (e as Error).message })
     }
-    setTesting(null)
-    load()
   }
 
   async function toggle(r: IntegrationRow) {
@@ -189,13 +184,13 @@ export function IntegrationsPage() {
                           {a.config.auth === 'oauth' ? 'Reconnect' : 'Connect with Zoom'}
                         </button>
                       )}
-                      {!off && p.id === 'zoom' && (
-                        <button type="button" className="btn btn-ghost btn-sm" disabled={testing === a.id} onClick={() => void test(a)}>
-                          {testing === a.id ? 'Testing…' : 'Test'}
+                      {!off && p.id === 'zoom' && a.config.is_default !== 'Yes' && (
+                        <button type="button" className="btn btn-ghost btn-sm" title="Picked first for new meetings and workflow steps" onClick={() => void makeDefault(a)}>
+                          Make default
                         </button>
                       )}
-                      {!off && (
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p: p.id === 'zoom' && a.config.auth === 'oauth' ? oauthSettings(p) : p, row: a })}>
+                      {!off && p.id !== 'zoom' && (
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p, row: a })}>
                           Settings
                         </button>
                       )}
@@ -236,11 +231,6 @@ export function IntegrationsPage() {
                     <Link to="/integrations/whatsapp/logs" className="btn btn-outline btn-sm">
                       <ScrollText size={14} /> Logs
                     </Link>
-                  )}
-                  {p.id === 'zoom' && !off && (
-                    <button type="button" className="btn btn-ghost btn-sm" title="With your own Zoom Server-to-Server app’s keys" onClick={() => setOpen({ p, row: null })}>
-                      Add with keys
-                    </button>
                   )}
                   {p.id === 'zoom' && !off && (
                     <button type="button" className="btn btn-sm btn-primary" disabled={!!zoomWait} onClick={() => connect()}>
