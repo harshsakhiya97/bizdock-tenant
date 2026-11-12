@@ -85,7 +85,14 @@ export function connectZoom(tenantId: string, integrationId?: string | null) {
       window.clearInterval(timer)
       window.removeEventListener('message', onMsg)
       try {
-        if (!win.closed) win.close()
+        // a moment, so its own page can show how it went
+        window.setTimeout(() => {
+          try {
+            if (!win.closed) win.close()
+          } catch {
+            // already gone
+          }
+        }, r.ok ? 1500 : 0)
       } catch {
         // already gone
       }
@@ -98,7 +105,10 @@ export function connectZoom(tenantId: string, integrationId?: string | null) {
     stop = () => end({ ok: false, message: 'Cancelled.' })
     window.addEventListener('message', onMsg)
     db()
-      .functions.invoke('zoom-oauth', { body: { action: 'start', tenant_id: tenantId, integration_id: integrationId ?? null, origin: window.location.origin } })
+      .functions.invoke('zoom-oauth', {
+        // the popup ends on the app's own /zoom-connect page
+        body: { action: 'start', tenant_id: tenantId, integration_id: integrationId ?? null, back: `${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, '')}/zoom-connect` },
+      })
       .then(async ({ data, error }) => {
         if (error || data?.error) {
           const ctx = (error as { context?: Response } | null)?.context
@@ -107,10 +117,13 @@ export function connectZoom(tenantId: string, integrationId?: string | null) {
         }
         win.location.href = data.url
         const startedAt = Date.now()
+        // "Use a different Zoom account" starts a new try: follow it
+        let state = String(data.state)
         timer = window.setInterval(async () => {
-          const { data: r } = await db().rpc('zoom_oauth_result', { p_state: data.state })
-          const res = r as { ok?: boolean; message?: string } | null
-          if (res && typeof res.ok === 'boolean') end({ ok: res.ok, message: String(res.message ?? '') })
+          const { data: r } = await db().rpc('zoom_oauth_result', { p_state: state })
+          const res = r as { ok?: boolean; message?: string; retry?: string } | null
+          if (res?.retry) state = res.retry
+          else if (res && typeof res.ok === 'boolean') end({ ok: res.ok, message: String(res.message ?? '') })
           else if (Date.now() - startedAt > 15 * 60_000) end({ ok: false, message: 'This took too long: try again.' })
         }, 2000)
       })
