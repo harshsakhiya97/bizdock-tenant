@@ -9,6 +9,7 @@ import { DashboardPage } from '@/pages/Dashboard'
 import { LoginPage } from '@/pages/Login'
 import { ShortLinkPage } from '@/pages/ShortLink'
 import { ZoomConnectPage } from '@/pages/ZoomConnect'
+import { PrivacyPage, SupportPage, TermsPage } from '@/pages/Legal'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
@@ -46,6 +47,9 @@ export default function App() {
             {/* widgets embedded on other sites (no login): <app>/embed/<code> */}
             <Route path="/embed/:code" element={<EmbedPage />} />
             <Route path="/zoom-connect" element={<ZoomConnectPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/support" element={<SupportPage />} />
             <Route path="/:code" element={<ShortLinkPage />} />
             <Route element={<RequireAuth />}>
               <Route
