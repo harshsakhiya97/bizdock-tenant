@@ -20,10 +20,15 @@ export const releases: Release[] = [
     new: [
       'System Connections → Zoom → Connect with Zoom: a popup opens Zoom’s login, you press Allow, and the account is added with its Zoom name and email. Zoom’s login is kept fresh by itself; if BizDock is removed on Zoom, the account shows Reconnect.',
       'A Zoom login that’s already connected shows “Already connected”, with Use a different Zoom account (signs Zoom out, then its login page) or Done.',
-      'Make default on a Zoom account in the list: the one picked first for new meetings and workflow steps.',
-      'Public Privacy Policy, Terms of Use and Support pages (<app>/privacy-policy, /terms, /support), no login needed.',
+      'Default Zoom account picked with a radio button in the list: the one used first for new meetings and workflow steps.',
+      'Add with keys (a Zoom Server-to-Server app, for Zoom accounts that can’t use Connect with Zoom yet): a ready prompt for Claude in Chrome makes the app with every permission BizDock needs; the keys are checked as soon as you connect.',
+      'Public Privacy Policy (with your data protection rights), Terms of Use and Support pages (<app>/privacy-policy, /terms, /support), no login needed.',
     ],
-    removed: ['Zoom accounts: Add with keys, Test and Settings (cloud recording stays on).'],
+    improved: [
+      'Zoom meetings for webinar dates now require last name and phone on Zoom’s registration form (with Connect with Zoom or keys made with the new prompt).',
+      'A Zoom account added with keys can switch to Connect with Zoom with one click, keeping its webinars and meetings linked.',
+    ],
+    removed: ['Zoom accounts: Test button, the on/off switch and Settings for accounts connected with Zoom (cloud recording stays on).'],
   },
   {
     version: '0.12',
