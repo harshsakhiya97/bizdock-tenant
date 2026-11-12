@@ -16,7 +16,7 @@ import { disconnectIntegration, listIntegrations, saveIntegration, setIntegratio
 import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
-import { testZoom } from '@/zoom/api'
+import { connectZoom, testZoom } from '@/zoom/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -55,6 +55,26 @@ export function IntegrationsPage() {
   const byProvider = new Map((rows ?? []).map((r) => [r.provider, r]))
   const allOf = (id: string) => (rows ?? []).filter((r) => r.provider === id)
   const connected = new Set((rows ?? []).filter((r) => r.is_enabled && r.status === 'connected').map((r) => r.provider)).size
+
+  // Connect with Zoom: the popup is open (Cancel stops waiting)
+  const [zoomWait, setZoomWait] = useState<{ cancel: () => void } | null>(null)
+  function connect(integrationId?: string) {
+    try {
+      const c = connectZoom(tenant.id, integrationId)
+      setZoomWait({ cancel: c.cancel })
+      c.done
+        .then((r) => setNotice(r.ok ? { ok: r.message } : r.message === 'Cancelled.' ? {} : { error: r.message }))
+        .catch((e: Error) => setNotice({ error: e.message }))
+        .finally(() => {
+          setZoomWait(null)
+          load()
+        })
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    }
+  }
+  // a connected-with-Zoom account's Settings: only its own options (no keys)
+  const oauthSettings = (p: Provider): Provider => ({ ...p, guide: undefined, fields: p.fields.filter((f) => f.key === 'cloud_record' || f.key === 'is_default') })
 
   const [testing, setTesting] = useState<string | null>(null)
   async function test(r: IntegrationRow) {
@@ -153,18 +173,29 @@ export function IntegrationsPage() {
                           {p.id === 'zoom' && a.config.is_default === 'Yes' && <span className="badge badge-muted" style={{ marginLeft: 6 }}>Default</span>}
                         </b>
                         <span className="muted small">
-                          {p.id === 'zoom' ? a.config.host_email || 'App owner' : a.config.ad_account_id}
+                          {p.id === 'zoom' ? (a.config.auth === 'oauth' ? `${a.config.zoom_email || 'Zoom user'} · Connected with Zoom` : a.config.host_email || 'App owner') : a.config.ad_account_id}
                           {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                         </span>
                       </div>
                       <div className="int-account-actions">
+                      {!off && p.id === 'zoom' && (a.config.auth !== 'oauth' || a.status === 'error') && (
+                        <button
+                          type="button"
+                          className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')}
+                          disabled={!!zoomWait}
+                          title={a.config.auth === 'oauth' ? 'Log in to Zoom again' : 'Replace this account’s keys with Connect with Zoom (same account, its meetings stay linked)'}
+                          onClick={() => connect(a.id)}
+                        >
+                          {a.config.auth === 'oauth' ? 'Reconnect' : 'Connect with Zoom'}
+                        </button>
+                      )}
                       {!off && p.id === 'zoom' && (
                         <button type="button" className="btn btn-ghost btn-sm" disabled={testing === a.id} onClick={() => void test(a)}>
                           {testing === a.id ? 'Testing…' : 'Test'}
                         </button>
                       )}
                       {!off && (
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p, row: a })}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p: p.id === 'zoom' && a.config.auth === 'oauth' ? oauthSettings(p) : p, row: a })}>
                           Settings
                         </button>
                       )}
@@ -174,6 +205,14 @@ export function IntegrationsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              {p.id === 'zoom' && zoomWait && (
+                <div className="int-note row-between">
+                  <span>Waiting for Zoom… log in and press Allow in the Zoom window.</span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={zoomWait.cancel}>
+                    Cancel
+                  </button>
                 </div>
               )}
               {off && allow && <div className="int-note">BizDock has turned {p.name} off for your workspace. Disconnect to remove the saved keys.</div>}
@@ -198,7 +237,17 @@ export function IntegrationsPage() {
                       <ScrollText size={14} /> Logs
                     </Link>
                   )}
-                  {p.multiple && !off && (
+                  {p.id === 'zoom' && !off && (
+                    <button type="button" className="btn btn-ghost btn-sm" title="With your own Zoom Server-to-Server app’s keys" onClick={() => setOpen({ p, row: null })}>
+                      Add with keys
+                    </button>
+                  )}
+                  {p.id === 'zoom' && !off && (
+                    <button type="button" className="btn btn-sm btn-primary" disabled={!!zoomWait} onClick={() => connect()}>
+                      <PlugZap size={14} /> {zoomWait ? 'Waiting for Zoom…' : 'Connect with Zoom'}
+                    </button>
+                  )}
+                  {p.multiple && p.id !== 'zoom' && !off && (
                     <button type="button" className={cn('btn btn-sm', accounts.length ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p, row: null })}>
                       <PlugZap size={14} /> {accounts.length ? 'Add account' : 'Connect'}
                     </button>
