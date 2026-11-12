@@ -66,16 +66,25 @@ export async function completeFollowUp(
   result: { outcome_id: string; outcome_name: string; note: string },
   next: ScheduleInput | null,
 ) {
-  const { error } = await db()
-    .from('follow_ups')
-    .update({
-      status: 'done',
-      outcome_id: result.outcome_id,
-      result_note: result.note.trim() || null,
-      completed_at: new Date().toISOString(),
-      completed_by: memberId ?? null,
-    })
-    .eq('id', f.id)
+  const done = {
+    status: 'done' as const,
+    outcome_id: result.outcome_id,
+    result_note: result.note.trim() || null,
+    completed_at: new Date().toISOString(),
+    completed_by: memberId ?? null,
+  }
+  // no follow-up was pending (a call made from the list): recorded as one done now
+  const { error } = f.id
+    ? await db().from('follow_ups').update(done).eq('id', f.id)
+    : await db().from('follow_ups').insert({
+        tenant_id: tenantId,
+        lead_id: f.lead_id,
+        due_at: done.completed_at,
+        mode: f.mode,
+        assigned_to: f.assigned_to || memberId || null,
+        created_by: memberId ?? null,
+        ...done,
+      })
   if (error) throw error
   await logActivity(tenantId, memberId, [f.lead_id], {
     kind: 'note',
@@ -93,4 +102,9 @@ export async function cancelFollowUp(id: string) {
 export async function clearLeadFollowUps(leadId: string) {
   const { error } = await db().from('follow_ups').update({ status: 'cancelled' }).eq('lead_id', leadId).eq('status', 'pending')
   if (error) throw error
+}
+
+export async function getFollowUp(id: string): Promise<FollowUpRow | null> {
+  const { data } = await db().from('follow_ups').select(COLS).eq('id', id).maybeSingle()
+  return (data ?? null) as unknown as FollowUpRow | null
 }

@@ -1,8 +1,11 @@
 import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { scheduleFollowUp } from '@/followups/api'
-import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { getFollowUp, listOutcomes, scheduleFollowUp } from '@/followups/api'
+import { CompleteModal } from '@/followups/CompleteModal'
+import type { FollowUpRow } from '@/followups/types'
+import { MeetingDrawer } from '@/meetings/MeetingDrawer'
+import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Link2, Phone, X, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
@@ -11,7 +14,7 @@ import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteLeads, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads } from './api'
+import { deleteLeads, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
@@ -53,6 +56,21 @@ const leadDate = (l: LeadRow) => {
   return new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
+/** "12 Nov" (with the year when not this year): when the form was sent, else when the lead was added */
+const receivedOn = (l: LeadRow) => {
+  const sent = ['submitted', 'submitted_at', 'submitted_at_utc', 'submitted_on', 'timestamp'].map((k) => extraOf(l, k)).find(Boolean)
+  const d = new Date(sent && !Number.isNaN(Date.parse(sent)) ? Date.parse(sent) : Date.parse(l.created_at))
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) })
+}
+/** Paid Podcast's call booking: the latest meeting, else "Form filled" when the call-booking form was sent */
+const MEETING_LABEL: Record<string, { label: string; tone: string }> = {
+  scheduled: { label: 'Scheduled', tone: 'badge-brand' },
+  qualified: { label: 'Done', tone: 'badge-success' },
+  not_qualified: { label: 'Done', tone: 'badge-success' },
+  no_show: { label: 'No-show', tone: 'badge-danger' },
+  cancelled: { label: 'Cancelled', tone: 'badge-muted' },
+}
+
 /** Leads, or (customers) leads with a confirmed / completed booking and their revenue. */
 export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const tenant = useTenant()
@@ -61,6 +79,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const me = membership?.id
   // Studio Rental: Purpose, Time, Describes and the lead date (with time) instead of Temp / Funnel / Value
   const studio = activeType(selected, sub) === BT.STUDIO_RENTAL
+  // Paid Podcast leads: the old CRM's columns (Received, Call booking, Last comment, Follow-ups done, Status) and row buttons
+  const pp = !customers && !!sub && activeType(selected, sub) === BT.PAID_PODCAST
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
@@ -85,6 +105,10 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
   const [bulk, setBulk] = useState({ owner: '', temp: '', followUp: '', stage: '', reason: '' })
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
+  const [extras, setExtras] = useState<Map<string, LeadExtras>>(new Map())
+  const [outcomes, setOutcomes] = useState<Option[]>([])
+  const [logFu, setLogFu] = useState<FollowUpRow | null>(null)
+  const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
 
   const load = useCallback(() => {
     Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
@@ -99,6 +123,39 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id, businesses])
   useEffect(load, [load])
+  const loadExtras = useCallback(() => {
+    if (!pp || !sub) return
+    listLeadExtras(tenant.id, sub.id)
+      .then(setExtras)
+      .catch((e: Error) => setNotice({ error: e.message }))
+    listOutcomes(tenant.id).then(setOutcomes)
+  }, [pp, sub, tenant.id])
+  useEffect(loadExtras, [loadExtras])
+
+  /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
+  async function openLogFollowUp(l: LeadRow) {
+    const pendingId = extras.get(l.id)?.pending_fu_id
+    const row = pendingId ? await getFollowUp(pendingId) : null
+    setLogFu(
+      row ?? {
+        id: '',
+        tenant_id: tenant.id,
+        lead_id: l.id,
+        assigned_to: l.owner_id,
+        due_at: new Date().toISOString(),
+        mode: 'call',
+        purpose: null,
+        status: 'pending',
+        outcome_id: null,
+        result_note: null,
+        completed_at: null,
+        completed_by: null,
+        created_at: new Date().toISOString(),
+        leads: { id: l.id, first_name: l.first_name, last_name: l.last_name, phone: l.phone, whatsapp: l.whatsapp, business_id: l.business_id, sub_business_id: l.sub_business_id, funnel_id: l.funnel_id ?? '', stage_id: l.stage_id ?? '', owner_id: l.owner_id },
+      },
+    )
+  }
+  const lostStageOf = (l: LeadRow) => funnels.find((f) => f.id === l.funnel_id)?.funnel_stages.find((s) => s.kind === 'lost') ?? null
 
   // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
   const [importing, setImporting] = useState(false)
@@ -234,6 +291,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       setNotice({ ok })
       setPicked(new Set())
       load()
+      loadExtras()
       return true
     } catch (e) {
       setNotice({ error: (e as Error).message })
@@ -550,6 +608,19 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     />
                   </th>
                   <th>{Word}</th>
+                  {pp ? (
+                    <>
+                      <th>Received</th>
+                      <th>Source</th>
+                      <th>Call booking</th>
+                      <th>Last comment</th>
+                      <th>Follow-ups done</th>
+                      <th>Next follow-up</th>
+                      <th>Status</th>
+                      <th />
+                    </>
+                  ) : (
+                  <>
                   {!studio && <th>Temp</th>}
                   <th>Source</th>
                   {studio && (
@@ -572,6 +643,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     !studio && <th style={{ textAlign: 'right' }}>Value</th>
                   )}
                   <th>{studio ? 'Lead date' : 'Created'}</th>
+                  </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -599,6 +672,25 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           </div>
                         )}
                       </td>
+                      {pp ? (
+                        <PpCells
+                          l={l}
+                          x={extras.get(l.id)}
+                          source={sourceName(l.source_id)}
+                          stage={stageById.get(l.stage_id ?? '') ?? null}
+                          fu={fu}
+                          canFollowUp={can('follow_ups', 'add') || can('leads', 'edit')}
+                          canMeet={can('meetings', 'add')}
+                          canLose={can('leads', 'edit') && !!lostStageOf(l)}
+                          onFollowUp={() => void openLogFollowUp(l)}
+                          onMeeting={() => setMeetFor(l)}
+                          onLose={() => {
+                            const s = lostStageOf(l)
+                            if (s) requestMove([l.id], s)
+                          }}
+                        />
+                      ) : (
+                      <>
                       {!studio && <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>}
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
                       {studio && (
@@ -635,6 +727,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           ? leadDate(l)
                           : new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
+                      </>
+                      )}
                     </tr>
                   )
                 })}
@@ -678,6 +772,34 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         />
       )}
 
+      {logFu && (
+        <CompleteModal
+          followUp={logFu}
+          outcomes={outcomes}
+          onClose={() => setLogFu(null)}
+          onSaved={(msg) => {
+            setLogFu(null)
+            setNotice({ ok: msg })
+            load()
+            loadExtras()
+          }}
+        />
+      )}
+      {meetFor && (
+        <MeetingDrawer
+          meeting={null}
+          lead={meetFor}
+          leads={[meetFor]}
+          members={members}
+          onClose={() => setMeetFor(null)}
+          onSaved={(msg) => {
+            setMeetFor(null)
+            setNotice({ ok: msg })
+            load()
+            loadExtras()
+          }}
+        />
+      )}
       {pendingMove && (
         <StageMoveModal
           stage={pendingMove.stage}
@@ -705,6 +827,96 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           void run(() => deleteLeads(pickedIds), `${n} ${word}${n === 1 ? '' : 's'} deleted.`)
         }}
       />
+    </>
+  )
+}
+
+/** Paid Podcast row: the old CRM's columns and its Follow-up / Meeting / ✕ buttons */
+function PpCells({
+  l,
+  x,
+  source,
+  stage,
+  fu,
+  canFollowUp,
+  canMeet,
+  canLose,
+  onFollowUp,
+  onMeeting,
+  onLose,
+}: {
+  l: LeadRow
+  x: LeadExtras | undefined
+  source: string | undefined
+  stage: StageRow | null
+  fu: { text: string; state: string }
+  canFollowUp: boolean
+  canMeet: boolean
+  canLose: boolean
+  onFollowUp: () => void
+  onMeeting: () => void
+  onLose: () => void
+}) {
+  const m = x?.meeting_status ? MEETING_LABEL[x.meeting_status] : null
+  const formFilled = !m && Boolean(extraOf(l, 'call_booked_at'))
+  const comment = x?.last_note || l.notes || ''
+  const closed = stage?.kind === 'won' || stage?.kind === 'lost'
+  const stop = (e: React.MouseEvent) => e.stopPropagation()
+  return (
+    <>
+      <td className="nowrap">{receivedOn(l)}</td>
+      <td>{source ?? <span className="muted">—</span>}</td>
+      <td className="nowrap">
+        {m ? (
+          <span className="row" style={{ gap: 4 }}>
+            <span className={cn('badge', m.tone)}>{m.label}</span>
+            {x?.meeting_status === 'scheduled' && x.meeting_link && (
+              <a href={x.meeting_link} target="_blank" rel="noreferrer" onClick={stop} title="Open the meeting link" aria-label="Open the meeting link">
+                <Link2 size={14} />
+              </a>
+            )}
+          </span>
+        ) : formFilled ? (
+          <span className="badge badge-warning">Form filled</span>
+        ) : (
+          <span className="muted">—</span>
+        )}
+      </td>
+      <td style={{ maxWidth: 220 }}>
+        {comment ? (
+          <span className="clamp-2" title={comment}>
+            {comment}
+          </span>
+        ) : (
+          <span className="muted">—</span>
+        )}
+      </td>
+      <td className="nowrap">
+        <b>{x?.fu_done ?? 0}</b> <span className="muted small">· {x?.connected ?? 0} connected</span>
+      </td>
+      <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.state === 'none' ? 'No follow-up' : fu.text}</td>
+      <td className="nowrap">
+        {stage ? <span className={cn('badge', stage.kind === 'won' ? 'badge-success' : stage.kind === 'lost' ? 'badge-muted' : 'badge-warning')}>{stage.name}</span> : <span className="muted">—</span>}
+      </td>
+      <td className="nowrap" onClick={stop}>
+        <span className="row" style={{ gap: 6 }}>
+          {canFollowUp && (
+            <button type="button" className="btn btn-primary btn-sm" onClick={onFollowUp}>
+              <Phone size={13} /> Follow-up
+            </button>
+          )}
+          {canMeet && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={onMeeting}>
+              <CalendarCheck size={13} /> Meeting
+            </button>
+          )}
+          {canLose && !closed && (
+            <button type="button" className="btn btn-outline btn-sm danger-text" onClick={onLose} title="Mark Lost" aria-label="Mark Lost">
+              <X size={14} />
+            </button>
+          )}
+        </span>
+      </td>
     </>
   )
 }
