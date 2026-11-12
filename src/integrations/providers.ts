@@ -88,8 +88,7 @@ export const PROVIDERS: Provider[] = [
     description: 'Call logs from your team’s phones, matched to leads by phone number.',
     usedFor: 'Call history on leads, caller reports',
     fields: [
-      { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Callyzer → Settings → API' },
-      { key: 'company_id', label: 'Company ID' },
+      { key: 'api_key', label: 'API access key', secret: true, required: true, hint: 'Callyzer → Connectors → API & Webhook → API Config' },
     ],
   },
   {
