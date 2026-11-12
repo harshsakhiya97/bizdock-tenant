@@ -28,7 +28,17 @@ type Fu = {
 }
 
 /** a phone call from Callyzer (or the old CRM's Callyzer log): shown, not edited */
-type CallRow = { id: string; direction: string; started_at: string; duration_sec: number | null; agent_phone: string | null; member_id: string | null; recording_url: string | null }
+type CallRow = {
+  id: string
+  direction: string
+  started_at: string
+  duration_sec: number | null
+  agent_phone: string | null
+  member_id: string | null
+  emp_name: string | null
+  recording_url: string | null
+  call_method: string | null
+}
 /** a WATI message of the lead */
 type WaLog = { id: string; direction: string; template: string | null; body: string | null; status: string; sent_at: string; sent_by: string | null }
 const secs = (n: number | null) => (!n ? '0s' : n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`)
@@ -84,19 +94,26 @@ export function FollowUpsTab({
       .order('due_at', { ascending: false })
       .then(({ data }) => setFus((data ?? []) as Fu[]))
     listLeadMessages(leadId).then(setMsgs).catch(() => setMsgs([]))
-    db()
-      .from('calls')
-      .select('id, direction, started_at, duration_sec, agent_phone, member_id, recording_url')
-      .eq('lead_id', leadId)
-      .order('started_at', { ascending: false })
-      .then(({ data }) => setPhoneCalls((data ?? []) as CallRow[]))
+    // Callyzer calls: every call with the lead's number
+    void (async () => {
+      const { data: l } = await db().from('leads').select('phone').eq('id', leadId).maybeSingle()
+      const ph = String(l?.phone ?? '').replace(/\D/g, '').slice(-10)
+      if (ph.length < 10) return setPhoneCalls([])
+      const { data } = await db()
+        .from('calls')
+        .select('id, direction, started_at, duration_sec, agent_phone, member_id, emp_name, recording_url, call_method')
+        .eq('tenant_id', tenant.id)
+        .eq('phone', ph)
+        .order('started_at', { ascending: false })
+      setPhoneCalls((data ?? []) as CallRow[])
+    })()
     db()
       .from('whatsapp_logs')
       .select('id, direction, template, body, status, sent_at, sent_by')
       .eq('lead_id', leadId)
       .order('sent_at', { ascending: false })
       .then(({ data }) => setWati((data ?? []) as WaLog[]))
-  }, [leadId])
+  }, [leadId, tenant.id])
   useEffect(load, [load, refreshKey])
   useEffect(() => {
     void listOutcomes(tenant.id).then(setOutcomes)
@@ -301,6 +318,7 @@ export function FollowUpsTab({
                   <thead>
                     <tr>
                       <th>Date</th>
+                      <th>Call</th>
                       <th>Type</th>
                       <th>Duration</th>
                       <th>Status</th>
@@ -312,12 +330,15 @@ export function FollowUpsTab({
                     {paged.map((c) => (
                       <tr key={c.id}>
                         <td className="nowrap">{when(c.started_at)}</td>
+                        <td className="nowrap">
+                          {c.call_method === 'WhatsAppCall' ? <span className="badge badge-success">WhatsApp call</span> : <span className="badge badge-muted">Normal call</span>}
+                        </td>
                         <td>{DIR[c.direction] ?? c.direction}</td>
                         <td className="num">{secs(c.duration_sec)}</td>
                         <td>
                           <span className={cn('badge', (c.duration_sec ?? 0) > 0 ? 'badge-success' : 'badge-muted')}>{(c.duration_sec ?? 0) > 0 ? 'Connected' : 'Not connected'}</span>
                         </td>
-                        <td className="muted nowrap">{c.member_id ? name(c.member_id) : (c.agent_phone ?? '—')}</td>
+                        <td className="muted nowrap">{c.member_id ? name(c.member_id) : (c.emp_name ?? c.agent_phone ?? '—')}</td>
                         <td>
                           {c.recording_url ? (
                             <a href={c.recording_url} target="_blank" rel="noreferrer">

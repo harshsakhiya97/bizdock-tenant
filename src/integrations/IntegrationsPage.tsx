@@ -17,6 +17,8 @@ import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, WHATSAPP_VENDORS, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { connectZoom, testZoom } from '@/zoom/api'
+import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
+import { syncCallyzer } from '@/callyzer/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -25,6 +27,21 @@ export function IntegrationsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [open, setOpen] = useState<{ p: Provider; row: IntegrationRow | null } | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
+  // Connect Callyzer popup (reconnect: change the key)
+  const [czOpen, setCzOpen] = useState<{ reconnect: boolean } | null>(null)
+  const [czBusy, setCzBusy] = useState(false)
+  async function czSync() {
+    setCzBusy(true)
+    try {
+      await syncCallyzer(tenant.id)
+      setNotice({ ok: 'Checking Callyzer for new calls. They appear on leads in a minute.' })
+      window.setTimeout(load, 15000)
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    } finally {
+      setCzBusy(false)
+    }
+  }
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   // what BizDock (admin) allows this workspace: { whatsapp: { allowed, provider } }
   const [allow, setAllow] = useState<({ whatsapp?: { allowed: boolean; provider: WhatsAppVendor | null } } & Record<string, { allowed?: boolean } | undefined>) | null>(null)
@@ -224,7 +241,13 @@ export function IntegrationsPage() {
               )}
               <div className="int-foot">
                 <span className="muted small">
-                  {off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                  {p.id === 'callyzer' && r && !off
+                    ? r.config.cursor
+                      ? 'Bringing in past calls…'
+                      : r.config.last_sync_at
+                        ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
+                        : 'Connected · first check in a minute'
+                    : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
@@ -257,7 +280,21 @@ export function IntegrationsPage() {
                       Disconnect
                     </button>
                   )}
-                  {!off && !p.multiple && (
+                  {p.id === 'callyzer' && !off && r && (
+                    <button type="button" className="btn btn-outline btn-sm" disabled={czBusy || !r.is_enabled} onClick={() => void czSync()}>
+                      {czBusy ? 'Checking…' : 'Sync now'}
+                    </button>
+                  )}
+                  {p.id === 'callyzer' && !off && (
+                    <button type="button" className={cn('btn btn-sm', r ? 'btn-outline' : 'btn-primary')} onClick={() => setCzOpen({ reconnect: !!r })}>
+                      {r ? 'Change key' : (
+                        <>
+                          <PlugZap size={14} /> Connect
+                        </>
+                      )}
+                    </button>
+                  )}
+                  {!off && !p.multiple && p.id !== 'callyzer' && (
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
@@ -286,6 +323,18 @@ export function IntegrationsPage() {
             setOpen(null)
             setNotice({ ok: msg })
             load()
+          }}
+        />
+      )}
+      {czOpen && (
+        <CallyzerConnect
+          reconnect={czOpen.reconnect}
+          onClose={() => setCzOpen(null)}
+          onDone={(msg) => {
+            setCzOpen(null)
+            setNotice({ ok: msg })
+            load()
+            window.setTimeout(load, 20000)
           }}
         />
       )}
