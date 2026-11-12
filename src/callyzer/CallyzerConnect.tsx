@@ -7,7 +7,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { connectCallyzer } from './api'
 
 /** a prompt for Claude in Chrome that opens Callyzer's API key page (the person is logged in to Callyzer as an admin) */
-const callyzerPrompt = () => `In Chrome I'm logged in to the Callyzer web dashboard (app.callyzer.co) as an admin. I want an API access key for BizDock. Don't change or delete anything else in Callyzer. Never read out or copy the API key into this chat; I'll copy it myself. Never type my password: when Callyzer asks for it, stop and let me type it. If something on screen doesn't match, stop and tell me what you see.
+const callyzerPrompt = () => `In Chrome I'm logged in to the Callyzer web dashboard (web.callyzer.co) as an admin. I want an API access key for BizDock. Don't change or delete anything else in Callyzer. Never read out or copy the API key into this chat; I'll copy it myself. Never type my password: when Callyzer asks for it, stop and let me type it. If something on screen doesn't match, stop and tell me what you see.
 
 1. In the left menu open Connectors → API & Webhook → API Config.
    (If there's no API Config, stop and tell me: the API add-on may not be on our plan.)
@@ -69,7 +69,7 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
         <div className="int-guide">
           <b>How to get the key</b>
           <ol>
-            <li>Log in to the Callyzer web dashboard (app.callyzer.co) as an admin.</li>
+            <li>Log in to the Callyzer web dashboard (web.callyzer.co) as an admin.</li>
             <li>Left menu: Connectors → API &amp; Webhook → API Config. (Not there? Callyzer’s API add-on needs to be on your plan — ask Callyzer.)</li>
             <li>Click “Generate API Access Key”, enter your Callyzer login again and click “Generate Token”.</li>
             <li>Copy the key into the box below and press {reconnect ? 'Save' : 'Connect'}: BizDock checks it with Callyzer straight away.</li>
