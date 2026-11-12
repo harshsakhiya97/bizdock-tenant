@@ -282,7 +282,7 @@ export function IntegrationsPage() {
                   )}
                   {p.id === 'callyzer' && !off && r && (
                     <Link to="/integrations/callyzer/logs" className="btn btn-outline btn-sm">
-                      <ScrollText size={14} /> Log history
+                      <ScrollText size={14} /> Logs
                     </Link>
                   )}
                   {r && (
