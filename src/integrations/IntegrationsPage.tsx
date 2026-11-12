@@ -162,16 +162,23 @@ export function IntegrationsPage() {
                 <div className="int-accounts">
                   {accounts.map((a) => (
                     <div key={a.id} className="int-account">
-                      <label className="switch" title={a.is_enabled ? 'Pause' : 'Turn on'}>
-                        <input type="checkbox" checked={a.is_enabled} disabled={off} onChange={() => void toggle(a)} />
-                      </label>
+                      {p.id === 'zoom' ? (
+                        // Zoom: the radio picks the default account (picked first for new meetings and workflow steps)
+                        <label className="int-default" title={a.config.is_default === 'Yes' ? 'Default account' : 'Make this the default account'}>
+                          <input type="radio" name="zoom-default" checked={a.config.is_default === 'Yes'} disabled={off} onChange={() => void makeDefault(a)} />
+                        </label>
+                      ) : (
+                        <label className="switch" title={a.is_enabled ? 'Pause' : 'Turn on'}>
+                          <input type="checkbox" checked={a.is_enabled} disabled={off} onChange={() => void toggle(a)} />
+                        </label>
+                      )}
                       <div className="int-account-main">
                         <b>
                           {a.label || a.config.ad_account_id}
                           {p.id === 'zoom' && a.config.is_default === 'Yes' && <span className="badge badge-muted" style={{ marginLeft: 6 }}>Default</span>}
                         </b>
                         <span className="muted small">
-                          {p.id === 'zoom' ? (a.config.auth === 'oauth' ? `${a.config.zoom_email || 'Zoom user'} · Connected with Zoom` : a.config.host_email || 'App owner') : a.config.ad_account_id}
+                          {p.id === 'zoom' ? (a.config.auth === 'oauth' ? `${a.config.zoom_email || 'Zoom user'} · Connected with Zoom` : a.config.host_email || 'Connected with keys') : a.config.ad_account_id}
                           {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                         </span>
                       </div>
@@ -185,11 +192,6 @@ export function IntegrationsPage() {
                           onClick={() => connect(a.id)}
                         >
                           {a.config.auth === 'oauth' ? 'Reconnect' : 'Connect with Zoom'}
-                        </button>
-                      )}
-                      {!off && p.id === 'zoom' && a.config.is_default !== 'Yes' && (
-                        <button type="button" className="btn btn-ghost btn-sm" title="Picked first for new meetings and workflow steps" onClick={() => void makeDefault(a)}>
-                          Make default
                         </button>
                       )}
                       {!off && (p.id !== 'zoom' || a.config.auth !== 'oauth') && (
