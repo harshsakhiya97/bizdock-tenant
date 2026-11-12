@@ -46,3 +46,13 @@ export async function disconnectIntegration(id: string) {
   const { error } = await db().from('integrations').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
+
+/** one Zoom account is the default (picked first for new meetings and workflow steps); the others are not */
+export async function setZoomDefault(zoomRows: IntegrationRow[], id: string) {
+  for (const r of zoomRows) {
+    const want = r.id === id ? 'Yes' : 'No'
+    if ((r.config.is_default ?? 'No') === want) continue
+    const { error } = await db().from('integrations').update({ config: { ...r.config, is_default: want } }).eq('id', r.id)
+    if (error) throw new Error(error.message)
+  }
+}
