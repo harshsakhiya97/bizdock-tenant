@@ -21,6 +21,7 @@ export const releases: Release[] = [
       'System Connections → Zoom → Connect with Zoom: a popup opens Zoom’s login, you press Allow, and the account is added with its Zoom name and email. Zoom’s login is kept fresh by itself; if BizDock is removed on Zoom, the account shows Reconnect.',
       'A Zoom login that’s already connected shows “Already connected”, with Use a different Zoom account (signs Zoom out, then its login page) or Done.',
       'Make default on a Zoom account in the list: the one picked first for new meetings and workflow steps.',
+      'Public Privacy Policy, Terms of Use and Support pages (<app>/privacy-policy, /terms, /support), no login needed.',
     ],
     removed: ['Zoom accounts: Add with keys, Test and Settings (cloud recording stays on).'],
   },
