@@ -13,6 +13,18 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.13',
+    date: '2026-11-12',
+    title: 'Connect with Zoom',
+    summary: 'Connect a Zoom account in a popup: log in to Zoom and press Allow — no Zoom app to make, no keys to copy.',
+    new: [
+      'System Connections → Zoom → Connect with Zoom: a popup opens Zoom’s login, you press Allow, and the account is added with its Zoom name and email. Zoom’s login is kept fresh by itself; if BizDock is removed on Zoom, the account shows Reconnect.',
+      'A Zoom login that’s already connected shows “Already connected”, with Use a different Zoom account (signs Zoom out, then its login page) or Done.',
+      'Make default on a Zoom account in the list: the one picked first for new meetings and workflow steps.',
+    ],
+    removed: ['Zoom accounts: Add with keys, Test and Settings (cloud recording stays on).'],
+  },
+  {
     version: '0.12',
     date: '2026-11-10',
     title: 'Webinar business type, WhatsApp logs, Webinar date widget',
