@@ -27,7 +27,7 @@ export function IntegrationsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [open, setOpen] = useState<{ p: Provider; row: IntegrationRow | null } | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
-  // Connect Callyzer side panel (reconnect: change the key)
+  // Connect Callyzer side panel (reconnect: Settings, change the key)
   const [czOpen, setCzOpen] = useState<{ reconnect: boolean } | null>(null)
   const [czBusy, setCzBusy] = useState(false)
   async function czSync() {
@@ -287,7 +287,7 @@ export function IntegrationsPage() {
                   )}
                   {p.id === 'callyzer' && !off && (
                     <button type="button" className={cn('btn btn-sm', r ? 'btn-outline' : 'btn-primary')} onClick={() => setCzOpen({ reconnect: !!r })}>
-                      {r ? 'Change key' : (
+                      {r ? 'Settings' : (
                         <>
                           <PlugZap size={14} /> Connect
                         </>
