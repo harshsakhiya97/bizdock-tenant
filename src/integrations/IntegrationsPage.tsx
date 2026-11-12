@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { CheckCircle2, CircleAlert, MessageSquareText, PlugZap, ScrollText } from 'lucide-react'
+import { Check, CheckCircle2, CircleAlert, Copy, MessageSquareText, PlugZap, ScrollText } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -14,9 +14,9 @@ import { useTenant } from '@/tenant/useTenant'
 import { WaWebhookBox } from './WaWebhookBox'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, WHATSAPP_VENDORS, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, WHATSAPP_VENDORS, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
-import { connectZoom } from '@/zoom/api'
+import { connectZoom, testZoom } from '@/zoom/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -73,6 +73,9 @@ export function IntegrationsPage() {
       setNotice({ error: (e as Error).message })
     }
   }
+  // Add with keys (a Zoom Server-to-Server app): only its three keys; recording on, default when it's the first
+  const zoomKeys = (p: Provider): Provider => ({ ...p, fields: p.fields.filter((f) => ['account_id', 'client_id', 'client_secret'].includes(f.key)) })
+
   // the Zoom account picked first for new meetings and workflow steps (only one)
   async function makeDefault(r: IntegrationRow) {
     try {
@@ -189,8 +192,8 @@ export function IntegrationsPage() {
                           Make default
                         </button>
                       )}
-                      {!off && p.id !== 'zoom' && (
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p, row: a })}>
+                      {!off && (p.id !== 'zoom' || a.config.auth !== 'oauth') && (
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p: p.id === 'zoom' ? zoomKeys(p) : p, row: a })}>
                           Settings
                         </button>
                       )}
@@ -233,6 +236,11 @@ export function IntegrationsPage() {
                     </Link>
                   )}
                   {p.id === 'zoom' && !off && (
+                    <button type="button" className="btn btn-ghost btn-sm" title="With a Server-to-Server app made in that Zoom account" onClick={() => setOpen({ p: zoomKeys(p), row: null })}>
+                      Add with keys
+                    </button>
+                  )}
+                  {p.id === 'zoom' && !off && (
                     <button type="button" className="btn btn-sm btn-primary" disabled={!!zoomWait} onClick={() => connect()}>
                       <PlugZap size={14} /> {zoomWait ? 'Waiting for Zoom…' : 'Connect with Zoom'}
                     </button>
@@ -270,6 +278,7 @@ export function IntegrationsPage() {
           existing={open.row && open.p.id === 'whatsapp' && open.row.config.vendor !== waVendor ? null : open.row}
           replaceId={open.p.multiple ? null : (open.row?.id ?? null)}
           vendor={open.p.id === 'whatsapp' ? waVendor : null}
+          zoomCount={allOf('zoom').length}
           onClose={() => setOpen(null)}
           onSaved={(msg) => {
             setOpen(null)
@@ -308,6 +317,7 @@ function ConnectDrawer({
   existing,
   replaceId,
   vendor,
+  zoomCount = 0,
   onClose,
   onSaved,
 }: {
@@ -316,6 +326,8 @@ function ConnectDrawer({
   /** a saved row whose keys no longer fit (WhatsApp provider changed): overwritten */
   replaceId: string | null
   vendor: WhatsAppVendor | null
+  /** Zoom accounts already connected (the first one becomes the default) */
+  zoomCount?: number
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
@@ -340,9 +352,23 @@ function ConnectDrawer({
       if (f.required && !v) return setError(`${f.label} is required.`)
       config[f.key] = v
     }
+    if (provider.id === 'zoom' && !existing) {
+      config.cloud_record = 'Yes'
+      config.is_default = zoomCount ? 'No' : 'Yes'
+    }
     setBusy(true)
     try {
-      await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config, provider.multiple ? label.trim() : null)
+      const id = await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config, provider.multiple ? label.trim() : null)
+      // Zoom keys: checked straight away
+      if (provider.id === 'zoom' && id) {
+        try {
+          const u = await testZoom(id)
+          onSaved(`${label.trim()} connected to Zoom as ${u.name || u.email}${u.email ? ` (${u.email})` : ''}.`)
+        } catch (e) {
+          onSaved(`${label.trim()} saved, but Zoom refused the keys: ${(e as Error).message} Fix them with Settings on the account.`)
+        }
+        return
+      }
       onSaved(provider.multiple ? (existing ? `${label.trim()} saved.` : `${label.trim()} connected.`) : existing ? `${provider.name} settings saved.` : `${provider.name} connected.`)
     } catch (e) {
       setError((e as Error).message)
@@ -380,6 +406,7 @@ function ConnectDrawer({
             <div className="muted small">{provider.description}</div>
           </div>
         </div>
+        {provider.id === 'zoom' && <ZoomPromptBox />}
         {provider.guide && (
           <div className="int-guide">
             <b>How to get these keys</b>
@@ -451,5 +478,34 @@ function ConnectDrawer({
         )}
       </div>
     </Drawer>
+  )
+}
+
+/** Add with keys: a ready prompt for Claude in Chrome that makes the Zoom app with every scope */
+function ZoomPromptBox() {
+  const [copied, setCopied] = useState(false)
+  const text = zoomKeysPrompt()
+  return (
+    <div className="int-guide">
+      <b>Let Claude in Chrome make the Zoom app</b>
+      <p className="muted small" style={{ margin: '4px 0 8px' }}>
+        Log in at marketplace.zoom.us as the Zoom account’s owner or admin, open Claude in Chrome, paste this, and it makes the app with every permission BizDock
+        needs. Then copy the three keys from its App Credentials page into the boxes below.
+      </p>
+      <pre className="embed-code" style={{ maxHeight: 180, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{text}</pre>
+      <button
+        type="button"
+        className="btn btn-outline btn-sm"
+        style={{ marginTop: 8 }}
+        onClick={() =>
+          void navigator.clipboard.writeText(text).then(() => {
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 1500)
+          })
+        }
+      >
+        {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy prompt'}
+      </button>
+    </div>
   )
 }
