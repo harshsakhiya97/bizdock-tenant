@@ -76,10 +76,33 @@ export function PrivacyPage() {
         Data is kept while the customer’s workspace is active. A customer can delete their data at any time, or ask us at{' '}
         <a href={`mailto:${CONTACT}`}>{CONTACT}</a> to delete their workspace and its data; we do so within 30 days.
       </p>
-      <h2>Your rights</h2>
+      <h2>Your data protection rights</h2>
+      <p>Depending on where you live, you have the right to:</p>
+      <ul>
+        <li>
+          <b>access</b> the personal data we hold about you and get a copy of it;
+        </li>
+        <li>
+          <b>correct</b> data that is wrong or incomplete;
+        </li>
+        <li>
+          <b>delete</b> your data (“right to be forgotten”);
+        </li>
+        <li>
+          <b>object to</b> or <b>restrict</b> how we use your data;
+        </li>
+        <li>
+          <b>receive</b> your data in a portable format;
+        </li>
+        <li>
+          <b>withdraw consent</b> at any time, for example by disconnecting Zoom or another connected service;
+        </li>
+        <li>complain to your local data protection authority.</li>
+      </ul>
       <p>
-        If you are a lead or contact of one of our customers, please contact that business first; you can also write to us and we will pass your request on or
-        help where we can (access, correction or deletion of your data).
+        <b>How to exercise them:</b> email <a href={`mailto:${CONTACT}`}>{CONTACT}</a> from the email address linked to your data, saying which right you
+        want to use. We may ask you to confirm your identity, and we reply within 30 days. If you are a lead or contact of one of our customers, you can also
+        ask that business directly; we will help them answer your request.
       </p>
       <h2>Changes</h2>
       <p>We may update this policy; the date at the top shows the latest version.</p>
