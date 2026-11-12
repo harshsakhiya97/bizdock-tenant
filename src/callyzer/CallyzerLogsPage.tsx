@@ -34,7 +34,7 @@ const DIR: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing'
 const name = (r: CallLog) => (r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : '')
 const by = (r: CallLog) => r.emp_name || (r.agent_phone ? nicePhone(r.agent_phone) : '')
 
-/** System Connections → Callyzer → Log history: every call brought in from Callyzer (lead numbers only). */
+/** System Connections → Callyzer → Logs: every call brought in from Callyzer (lead numbers only). */
 export function CallyzerLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
@@ -81,7 +81,7 @@ export function CallyzerLogsPage() {
   return (
     <>
       <PageHead
-        title="Callyzer log history"
+        title="Callyzer logs"
         subtitle="Every call brought in from Callyzer (calls to a lead’s number), with type, duration and recording."
         actions={
           <Link to="/integrations" className="btn btn-outline">
