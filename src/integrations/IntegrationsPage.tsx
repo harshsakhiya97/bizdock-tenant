@@ -275,9 +275,9 @@ export function IntegrationsPage() {
                       <PlugZap size={14} /> {accounts.length ? 'Add account' : 'Connect'}
                     </button>
                   )}
-                  {r && (
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(r)}>
-                      Disconnect
+                  {p.id === 'callyzer' && !off && r && (
+                    <button type="button" className="btn btn-outline btn-sm" disabled={czBusy || !r.is_enabled} onClick={() => void czSync()}>
+                      {czBusy ? 'Checking…' : 'Sync now'}
                     </button>
                   )}
                   {p.id === 'callyzer' && !off && r && (
@@ -285,9 +285,9 @@ export function IntegrationsPage() {
                       <ScrollText size={14} /> Log history
                     </Link>
                   )}
-                  {p.id === 'callyzer' && !off && r && (
-                    <button type="button" className="btn btn-outline btn-sm" disabled={czBusy || !r.is_enabled} onClick={() => void czSync()}>
-                      {czBusy ? 'Checking…' : 'Sync now'}
+                  {r && (
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(r)}>
+                      Disconnect
                     </button>
                   )}
                   {p.id === 'callyzer' && !off && (
