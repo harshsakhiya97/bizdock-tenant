@@ -162,3 +162,22 @@ export async function deleteLeads(ids: string[]) {
   if (error) throw error
   if ((data ?? []).length < ids.length) throw new Error('Some leads couldn’t be deleted (no permission).')
 }
+
+/** Paid Podcast list (like the old CRM): per lead its last comment, follow-ups done, connected calls, pending follow-up, latest meeting */
+export type LeadExtras = {
+  lead_id: string
+  last_note: string | null
+  last_note_at: string | null
+  fu_done: number
+  connected: number
+  pending_fu_id: string | null
+  meeting_status: string | null
+  meeting_link: string | null
+  meeting_date: string | null
+  meeting_time: string | null
+}
+export async function listLeadExtras(tenantId: string, subId: string): Promise<Map<string, LeadExtras>> {
+  const { data, error } = await db().rpc('lead_list_extras', { p_tenant: tenantId, p_sub: subId })
+  if (error) throw new Error(error.message)
+  return new Map(((data ?? []) as LeadExtras[]).map((r) => [r.lead_id, r]))
+}
