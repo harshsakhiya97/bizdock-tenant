@@ -1358,3 +1358,14 @@ a.db-card:hover { border-color: var(--brand); }
 .wd-show:hover { border-color: color-mix(in srgb, var(--brand) 50%, var(--line)); }
 .wd-show.is-on { border-color: var(--brand); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 20%, transparent); background: color-mix(in srgb, var(--brand) 5%, var(--surface)); }
 @media (max-width: 640px) { .wd-shows { grid-template-columns: 1fr; } }
+
+/* public pages: Privacy Policy, Terms of Use, Support */
+.legal { min-height: 100vh; background: var(--surface-muted); padding: 40px 16px; }
+.legal-body { max-width: 760px; margin: 0 auto; background: var(--surface, #fff); border: 1px solid var(--line); border-radius: 14px; padding: 32px 36px; line-height: 1.6; }
+.legal-brand { font-weight: 700; color: var(--brand); margin-bottom: 8px; }
+.legal-body h1 { font-size: 26px; margin: 0 0 4px; }
+.legal-body h2 { font-size: 17px; margin: 24px 0 6px; }
+.legal-body ul { padding-left: 20px; }
+.legal-body li { margin: 4px 0; }
+.legal-nav { display: flex; gap: 16px; border-top: 1px solid var(--line); margin-top: 28px; padding-top: 14px; font-size: 14px; }
+@media (max-width: 600px) { .legal-body { padding: 22px 18px; } }
