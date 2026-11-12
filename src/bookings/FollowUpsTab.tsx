@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Paged } from '@/components/ui'
-import { MessageCircle, PhoneCall, X } from 'lucide-react'
+import { MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
 import { listOutcomes, scheduleFollowUp } from '@/followups/api'
@@ -26,6 +26,13 @@ type Fu = {
   assigned_to: string | null
   created_by: string | null
 }
+
+/** a phone call from Callyzer (or the old CRM's Callyzer log): shown, not edited */
+type CallRow = { id: string; direction: string; started_at: string; duration_sec: number | null; agent_phone: string | null; member_id: string | null; recording_url: string | null }
+/** a WATI message of the lead */
+type WaLog = { id: string; direction: string; template: string | null; body: string | null; status: string; sent_at: string; sent_by: string | null }
+const secs = (n: number | null) => (!n ? '0s' : n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`)
+const DIR: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing', missed: 'Missed', rejected: 'Rejected', unknown: '—' }
 
 const dayPlus = (n: number) => {
   const d = new Date()
@@ -54,7 +61,9 @@ export function FollowUpsTab({
   const tenant = useTenant()
   const { membership } = useAuth()
   const me = membership?.id
-  const [tab, setTab] = useState<'calls' | 'whatsapp'>('calls')
+  const [tab, setTab] = useState<'calls' | 'callyzer' | 'whatsapp'>('calls')
+  const [phoneCalls, setPhoneCalls] = useState<CallRow[] | null>(null)
+  const [wati, setWati] = useState<WaLog[]>([])
   const [fus, setFus] = useState<Fu[] | null>(null)
   const [msgs, setMsgs] = useState<LeadMessage[] | null>(null)
   const [outcomes, setOutcomes] = useState<Option[]>([])
@@ -75,6 +84,18 @@ export function FollowUpsTab({
       .order('due_at', { ascending: false })
       .then(({ data }) => setFus((data ?? []) as Fu[]))
     listLeadMessages(leadId).then(setMsgs).catch(() => setMsgs([]))
+    db()
+      .from('calls')
+      .select('id, direction, started_at, duration_sec, agent_phone, member_id, recording_url')
+      .eq('lead_id', leadId)
+      .order('started_at', { ascending: false })
+      .then(({ data }) => setPhoneCalls((data ?? []) as CallRow[]))
+    db()
+      .from('whatsapp_logs')
+      .select('id, direction, template, body, status, sent_at, sent_by')
+      .eq('lead_id', leadId)
+      .order('sent_at', { ascending: false })
+      .then(({ data }) => setWati((data ?? []) as WaLog[]))
   }, [leadId])
   useEffect(load, [load, refreshKey])
   useEffect(() => {
@@ -127,8 +148,11 @@ export function FollowUpsTab({
           <button type="button" className={cn(tab === 'calls' && 'is-active')} onClick={() => setTab('calls')}>
             <PhoneCall size={14} /> Calls <span className="muted small">{done.length + pending.length}</span>
           </button>
+          <button type="button" className={cn(tab === 'callyzer' && 'is-active')} onClick={() => setTab('callyzer')}>
+            <PhoneIncoming size={14} /> Callyzer <span className="muted small">{phoneCalls?.length ?? 0}</span>
+          </button>
           <button type="button" className={cn(tab === 'whatsapp' && 'is-active')} onClick={() => setTab('whatsapp')}>
-            <MessageCircle size={14} /> WhatsApp <span className="muted small">{msgs?.length ?? 0}</span>
+            <MessageCircle size={14} /> WhatsApp <span className="muted small">{(msgs?.length ?? 0) + wati.length}</span>
           </button>
         </div>
         {tab === 'whatsapp' && (
@@ -264,6 +288,54 @@ export function FollowUpsTab({
         </>
       )}
 
+      {tab === 'callyzer' &&
+        (!phoneCalls ? (
+          <div className="muted small">Loading…</div>
+        ) : phoneCalls.length === 0 ? (
+          <div className="muted small">No calls from Callyzer yet.</div>
+        ) : (
+          <Paged rows={phoneCalls}>
+            {(paged) => (
+              <div className="table-wrap">
+                <table className="table table-compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                      <th>By</th>
+                      <th>Recording</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((c) => (
+                      <tr key={c.id}>
+                        <td className="nowrap">{when(c.started_at)}</td>
+                        <td>{DIR[c.direction] ?? c.direction}</td>
+                        <td className="num">{secs(c.duration_sec)}</td>
+                        <td>
+                          <span className={cn('badge', (c.duration_sec ?? 0) > 0 ? 'badge-success' : 'badge-muted')}>{(c.duration_sec ?? 0) > 0 ? 'Connected' : 'Not connected'}</span>
+                        </td>
+                        <td className="muted nowrap">{c.member_id ? name(c.member_id) : (c.agent_phone ?? '—')}</td>
+                        <td>
+                          {c.recording_url ? (
+                            <a href={c.recording_url} target="_blank" rel="noreferrer">
+                              Play
+                            </a>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paged>
+        ))}
+
       {tab === 'whatsapp' && (
         <>
           {waPending.map((f) => (
@@ -276,22 +348,33 @@ export function FollowUpsTab({
           ))}
           {!msgs ? (
             <div className="muted small">Loading…</div>
-          ) : msgs.length === 0 ? (
+          ) : msgs.length + wati.length === 0 ? (
             <div className="muted small">No WhatsApp messages yet.</div>
           ) : (
             <ol className="timeline">
-              {msgs.map((m) => (
-                <li key={m.id}>
-                  <span className="tl-dot" />
-                  <div>
-                    <b>{m.title ?? 'Message'}</b>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{m.body}</p>
-                    <small>
-                      {name(m.sent_by)} · {ago(m.sent_at)} · {when(m.sent_at)}
-                    </small>
-                  </div>
-                </li>
-              ))}
+              {[
+                ...msgs.map((m) => ({ key: m.id, at: m.sent_at, title: m.title ?? 'Message', body: m.body, foot: name(m.sent_by) })),
+                ...wati.map((w) => ({
+                  key: `w${w.id}`,
+                  at: w.sent_at,
+                  title: w.direction === 'in' ? 'Reply received' : (w.template ?? 'WhatsApp (WATI)'),
+                  body: w.body ?? '',
+                  foot: w.direction === 'in' ? 'WATI' : `WATI · ${w.status}`,
+                })),
+              ]
+                .sort((a, b) => b.at.localeCompare(a.at))
+                .map((m) => (
+                  <li key={m.key}>
+                    <span className="tl-dot" />
+                    <div>
+                      <b>{m.title}</b>
+                      {m.body && <p style={{ whiteSpace: 'pre-wrap' }}>{m.body}</p>}
+                      <small>
+                        {m.foot} · {ago(m.at)} · {when(m.at)}
+                      </small>
+                    </div>
+                  </li>
+                ))}
             </ol>
           )}
         </>
