@@ -1,5 +1,32 @@
 import { Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
 
+/** the scopes a Zoom Server-to-Server app needs for BizDock (Add with keys) */
+export const ZOOM_KEYS_SCOPES: { label: string; items: string[] }[] = [
+  { label: 'Account info', items: ['user:read:user:admin'] },
+  { label: 'Meetings', items: ['meeting:read:meeting:admin', 'meeting:write:meeting:admin', 'meeting:update:meeting:admin', 'meeting:delete:meeting:admin'] },
+  { label: 'Registrants', items: ['meeting:write:registrant:admin', 'meeting:read:list_registrants:admin', 'meeting:update:registration_question:admin'] },
+  {
+    label: 'Webinars (only with the Zoom Webinars add-on)',
+    items: ['webinar:read:webinar:admin', 'webinar:write:webinar:admin', 'webinar:update:webinar:admin', 'webinar:delete:webinar:admin', 'webinar:write:registrant:admin', 'webinar:read:past_qa:admin'],
+  },
+  { label: 'Attendance', items: ['report:read:list_meeting_participants:admin', 'report:read:list_webinar_participants:admin'] },
+  { label: 'Q&A and polls', items: ['report:read:meeting_qa:admin', 'meeting:read:list_past_poll_results:admin', 'webinar:read:list_past_poll_results:admin'] },
+  { label: 'Chat (cloud recording)', items: ['cloud_recording:read:list_recording_files:admin'] },
+]
+
+/** a prompt for Claude in Chrome that makes the Zoom Server-to-Server app (the person is logged in to Zoom as the owner / admin) */
+export const zoomKeysPrompt = () => `In Chrome I'm logged in at https://marketplace.zoom.us as the owner / admin of the Zoom account I want to connect to BizDock. Create a Server-to-Server OAuth app for it. Don't change or delete any other app. Never read out or copy the Client ID / Client Secret / Account ID into this chat; I'll copy them myself. If something on screen doesn't match, stop and tell me what you see.
+
+1. Top right: Develop → Build App → choose "Server-to-Server OAuth app" → Create. Name it: BizDock
+   (If it says an app named BizDock already exists, open that one instead of creating another.)
+2. Information page: Short description "Connects this Zoom account to BizDock CRM: meetings, registrants, attendance." Company name: BizDock. Developer name and email: the account owner's (use what's shown on the profile). Continue.
+3. Feature page: leave everything off. Continue.
+4. Scopes → Add Scopes. Search and tick each of these (pick the ":admin" one; if one doesn't exist, skip it and tell me):
+${ZOOM_KEYS_SCOPES.flatMap((g) => g.items).join('\n')}
+   Press Done, then Continue.
+5. Activation → Activate your app.
+6. Open "App Credentials" and tell me only: "Credentials page is open", plus which scopes you couldn't find, and whether activation succeeded.`
+
 export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw'
 export type ProviderField = {
   key: string
@@ -82,18 +109,9 @@ export const PROVIDERS: Provider[] = [
       'Information: fill a short description, company name, and the developer’s name and email (needed to activate).',
       {
         text: 'Scopes → Add Scopes: paste each name into “Search scope”, tick it, and press Done at the end.',
-        groups: [
-          { label: 'Meetings', items: ['meeting:write:meeting:admin', 'meeting:update:meeting:admin', 'meeting:read:meeting:admin', 'meeting:delete:meeting:admin'] },
-          {
-            label: 'Webinars (only with the Zoom Webinars add-on)',
-            items: ['webinar:write:webinar:admin', 'webinar:update:webinar:admin', 'webinar:read:webinar:admin', 'webinar:delete:webinar:admin', 'webinar:read:past_qa:admin'],
-          },
-          { label: 'Attendance', items: ['report:read:list_meeting_participants:admin', 'report:read:list_webinar_participants:admin'] },
-          { label: 'Chat (cloud recording)', items: ['cloud_recording:read:list_recording_files:admin'] },
-          { label: 'Test button', items: ['user:read:user:admin'] },
-        ],
+        groups: ZOOM_KEYS_SCOPES,
       },
-      'Activation → Activate your app. Then save here and press Test.',
+      'Activation → Activate your app. Then fill the boxes below and press Connect: BizDock checks the keys straight away.',
     ],
     fields: [
       { key: 'account_id', label: 'Account ID', required: true, hint: 'The first value on your app’s App credentials page (step 3 above).' },
