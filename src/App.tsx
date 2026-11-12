@@ -8,6 +8,7 @@ import { AppLayout } from '@/layout/AppLayout'
 import { DashboardPage } from '@/pages/Dashboard'
 import { LoginPage } from '@/pages/Login'
 import { ShortLinkPage } from '@/pages/ShortLink'
+import { ZoomConnectPage } from '@/pages/ZoomConnect'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
 import { AccessControlPage } from '@/access/AccessControlPage'
@@ -44,6 +45,7 @@ export default function App() {
             {/* short links made by workflows: <app>/<code> */}
             {/* widgets embedded on other sites (no login): <app>/embed/<code> */}
             <Route path="/embed/:code" element={<EmbedPage />} />
+            <Route path="/zoom-connect" element={<ZoomConnectPage />} />
             <Route path="/:code" element={<ShortLinkPage />} />
             <Route element={<RequireAuth />}>
               <Route
