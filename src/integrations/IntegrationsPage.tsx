@@ -281,6 +281,11 @@ export function IntegrationsPage() {
                     </button>
                   )}
                   {p.id === 'callyzer' && !off && r && (
+                    <Link to="/integrations/callyzer/logs" className="btn btn-outline btn-sm">
+                      <ScrollText size={14} /> Log history
+                    </Link>
+                  )}
+                  {p.id === 'callyzer' && !off && r && (
                     <button type="button" className="btn btn-outline btn-sm" disabled={czBusy || !r.is_enabled} onClick={() => void czSync()}>
                       {czBusy ? 'Checking…' : 'Sync now'}
                     </button>
