@@ -100,8 +100,7 @@ export function IntegrationsPage() {
   // Continue with Facebook: the popup is open (Cancel stops waiting)
   const [metaWait, setMetaWait] = useState<{ cancel: () => void } | null>(null)
   const [metaBusy, setMetaBusy] = useState(false)
-  const [metaSettings, setMetaSettings] = useState<IntegrationRow | null>(null)
-  // Add with a token (row: a new token for that connection)
+  // Add with keys (a system user's token)
   const [metaToken, setMetaToken] = useState<{ row: IntegrationRow | null } | null>(null)
   function connectFb(integrationId?: string) {
     try {
@@ -224,66 +223,33 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
-              {p.id === 'facebook_ads' && accounts.length > 0 && (
+              {p.id === 'facebook_ads' && adAccounts.length > 0 && (
                 <div className="int-accounts">
-                  {accounts.map((a) => {
-                    const mine = adAccounts.filter((x) => x.integration_id === a.id)
-                    return (
-                      <div key={a.id}>
-                        <div className="int-account">
-                          <div className="int-account-main">
-                            <b>{a.label || 'Facebook'}</b>
-                            <span className="muted small">
-                              {a.config.fb_name ? `${a.config.fb_name} · ` : ''}{a.config.auth === 'token' ? 'Connected with a token' : 'Connected with Facebook'} · {mine.length} ad account{mine.length === 1 ? '' : 's'}
-                              {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
-                            </span>
-                          </div>
-                          <div className="int-account-actions">
-                            {!off && a.config.auth === 'token' && (
-                              <button type="button" className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')} title="Paste a new token for this connection" onClick={() => setMetaToken({ row: a })}>
-                                New token
-                              </button>
-                            )}
-                            {!off && a.config.auth !== 'token' && (
-                              <button type="button" className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')} disabled={!!metaWait} title="Log in to Facebook again, or share more ad accounts" onClick={() => connectFb(a.id)}>
-                                Reconnect
-                              </button>
-                            )}
-                            {!off && (
-                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMetaSettings(a)}>
-                                Settings
-                              </button>
-                            )}
-                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(a)}>
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                        {mine.map((x) => (
-                          <div key={x.id} className="int-account int-subaccount">
-                            <label className="switch" title={x.is_enabled ? 'Stop bringing in this account’s numbers' : 'Bring in this account’s numbers'}>
-                              <input type="checkbox" checked={x.is_enabled} disabled={off} onChange={() => void toggleAdAccount(x)} />
-                            </label>
-                            <div className="int-account-main">
-                              <b>{x.name || x.act_id}</b>
-                              <span className="muted small">
-                                {x.act_id.replace(/^act_/, '')}
-                                {x.currency ? ` · ${x.currency}` : ''}
-                                {x.last_error
-                                  ? ` · ${x.last_error}`
-                                  : x.last_sync_at
-                                    ? ` · numbers checked ${ago(x.last_sync_at)}`
-                                    : x.synced_until
-                                      ? ` · bringing in history (up to ${x.synced_until})`
-                                      : ' · first pull in a minute'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                  {adAccounts.map((x) => (
+                    <div key={x.id} className="int-account">
+                      <label className="switch" title={x.is_enabled ? 'Stop bringing in this account’s numbers' : 'Bring in this account’s numbers'}>
+                        <input type="checkbox" checked={x.is_enabled} disabled={off} onChange={() => void toggleAdAccount(x)} />
+                      </label>
+                      <div className="int-account-main">
+                        <b>{x.name || x.act_id}</b>
+                        <span className="muted small">
+                          {x.act_id.replace(/^act_/, '')}
+                          {x.currency ? ` · ${x.currency}` : ''}
+                          {x.last_error
+                            ? ` · ${x.last_error}`
+                            : x.last_sync_at
+                              ? ` · numbers checked ${ago(x.last_sync_at)}`
+                              : x.synced_until
+                                ? ` · bringing in history (up to ${x.synced_until})`
+                                : ' · first pull in a minute'}
+                        </span>
                       </div>
-                    )
-                  })}
+                    </div>
+                  ))}
                 </div>
+              )}
+              {p.id === 'facebook_ads' && accounts.some((a) => a.status === 'error') && (
+                <div className="int-note">A Facebook connection needs attention: open Logs → Connections.</div>
               )}
               {p.id === 'facebook_ads' && metaWait && (
                 <div className="int-note row-between">
@@ -395,6 +361,11 @@ export function IntegrationsPage() {
                       {metaBusy ? 'Starting…' : 'Sync now'}
                     </button>
                   )}
+                  {p.id === 'facebook_ads' && !off && accounts.length > 0 && (
+                    <Link to="/integrations/facebook-ads/logs" className="btn btn-outline btn-sm">
+                      <ScrollText size={14} /> Logs
+                    </Link>
+                  )}
                   {p.id === 'facebook_ads' && !off && (
                     <button type="button" className="btn btn-outline btn-sm" onClick={() => setMetaToken({ row: null })}>
                       Add with keys
@@ -488,18 +459,6 @@ export function IntegrationsPage() {
             setNotice({ ok: msg })
             load()
             window.setTimeout(load, 20000)
-          }}
-        />
-      )}
-      {metaSettings && (
-        <MetaSettingsDrawer
-          row={metaSettings}
-          accounts={adAccounts.filter((x) => x.integration_id === metaSettings.id)}
-          onClose={() => setMetaSettings(null)}
-          onSaved={(msg) => {
-            setMetaSettings(null)
-            setNotice({ ok: msg })
-            load()
           }}
         />
       )}
@@ -741,59 +700,6 @@ function ConnectDrawer({
             <CheckCircle2 size={14} /> Last updated {ago(existing.updated_at)}
           </div>
         )}
-      </div>
-    </Drawer>
-  )
-}
-
-/** a Facebook connection's settings: the GST % added to its ad accounts' spend (Meta India charges 18%) */
-function MetaSettingsDrawer({ row, accounts, onClose, onSaved }: { row: IntegrationRow; accounts: AdAccount[]; onClose: () => void; onSaved: (msg: string) => void }) {
-  const [rates, setRates] = useState<Record<string, string>>(() => Object.fromEntries(accounts.map((a) => [a.id, String(a.gst_rate)])))
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  async function save() {
-    for (const a of accounts) {
-      const v = Number(rates[a.id])
-      if (!Number.isFinite(v) || v < 0 || v > 50) return setError(`GST for ${a.name ?? a.act_id} must be between 0 and 50.`)
-    }
-    setBusy(true)
-    try {
-      for (const a of accounts) if (Number(rates[a.id]) !== Number(a.gst_rate)) await updateAdAccount(a.id, { gst_rate: Number(rates[a.id]) })
-      onSaved('Facebook settings saved.')
-    } catch (e) {
-      setError((e as Error).message)
-      setBusy(false)
-    }
-  }
-  return (
-    <Drawer
-      open
-      onClose={onClose}
-      width={480}
-      title={`${row.label || 'Facebook'} · Settings`}
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <div className="foot-end">
-            {error && <p className="err-text">{error}</p>}
-            <Button onClick={save} disabled={busy}>
-              {busy ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
-        </>
-      }
-    >
-      <div className="stack">
-        <Hint>Reports show ad spend with GST added (hover a number to see both). Meta India charges 18%.</Hint>
-        {accounts.map((a) => (
-          <div key={a.id}>
-            <Label htmlFor={`gst-${a.id}`}>GST % · {a.name || a.act_id}</Label>
-            <TextInput id={`gst-${a.id}`} type="number" min={0} max={50} step="0.01" value={rates[a.id] ?? ''} onChange={(e) => setRates((r) => ({ ...r, [a.id]: e.target.value }))} />
-          </div>
-        ))}
-        {!accounts.length && <div className="muted small">No ad accounts in this connection.</div>}
       </div>
     </Drawer>
   )

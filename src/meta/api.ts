@@ -97,11 +97,12 @@ export type AdAccount = {
   backfill_from: string | null
   last_sync_at: string | null
   last_error: string | null
+  account_status: number | null
 }
 export async function listAdAccounts(tenantId: string): Promise<AdAccount[]> {
   const { data, error } = await db()
     .from('meta_ad_accounts')
-    .select('id, integration_id, act_id, name, currency, business_name, is_enabled, gst_rate, synced_until, backfill_from, last_sync_at, last_error')
+    .select('id, integration_id, act_id, name, currency, business_name, is_enabled, gst_rate, synced_until, backfill_from, last_sync_at, last_error, account_status')
     .eq('tenant_id', tenantId)
     .order('name')
   if (error) throw new Error(error.message)
@@ -208,4 +209,63 @@ export async function adSpendReplace(funnelId: string): Promise<number> {
   const { data, error } = await db().rpc('ad_spend_replace', { p_funnel: funnelId })
   if (error) throw new Error(error.message)
   return Number(data ?? 0)
+}
+
+/** every row of a query, 1000 at a time (the API returns at most 1000 per call) */
+async function every<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = []
+  for (let i = 0; i < 200; i++) {
+    const { data, error } = await page(i * 1000, i * 1000 + 999)
+    if (error) throw new Error(error.message)
+    out.push(...((data ?? []) as T[]))
+    if (!data || data.length < 1000) break
+  }
+  return out
+}
+
+export type MetaObj = { id: string; account_id: string; campaign_id: string; adset_id: string | null; name: string | null; effective_status: string | null; status: string | null }
+export type MetaDay = {
+  account_id: string
+  campaign_id: string
+  adset_id: string
+  ad_id: string
+  spend: number
+  impressions: number | null
+  reach: number | null
+  clicks: number | null
+  link_clicks: number | null
+  landing_page_views: number | null
+  leads: number | null
+  purchases: number | null
+}
+/** Facebook Ads logs: every campaign, ad set and ad of the workspace's ad accounts, and their numbers per ad and day over a date range */
+export async function metaLogs(tenantId: string, from: string, to: string) {
+  const [campaigns, adsets, ads, days] = await Promise.all([
+    every<{ campaign_id: string; account_id: string; name: string | null; status: string | null; effective_status: string | null }>((a, b) =>
+      db().from('meta_campaigns').select('campaign_id, account_id, name, status, effective_status').eq('tenant_id', tenantId).order('campaign_id').range(a, b),
+    ),
+    every<{ adset_id: string; campaign_id: string; account_id: string; name: string | null; status: string | null; effective_status: string | null }>((a, b) =>
+      db().from('meta_adsets').select('adset_id, campaign_id, account_id, name, status, effective_status').eq('tenant_id', tenantId).order('adset_id').range(a, b),
+    ),
+    every<{ ad_id: string; adset_id: string; campaign_id: string; account_id: string; name: string | null; status: string | null; effective_status: string | null }>((a, b) =>
+      db().from('meta_ads').select('ad_id, adset_id, campaign_id, account_id, name, status, effective_status').eq('tenant_id', tenantId).order('ad_id').range(a, b),
+    ),
+    every<MetaDay>((a, b) =>
+      db()
+        .from('meta_insights')
+        .select('account_id, campaign_id, adset_id, ad_id, spend, impressions, reach, clicks, link_clicks, landing_page_views, leads, purchases')
+        .eq('tenant_id', tenantId)
+        .gte('day', from)
+        .lte('day', to)
+        .order('ad_id')
+        .order('day')
+        .range(a, b),
+    ),
+  ])
+  return {
+    campaigns: campaigns.map((c): MetaObj => ({ id: c.campaign_id, account_id: c.account_id, campaign_id: c.campaign_id, adset_id: null, name: c.name, status: c.status, effective_status: c.effective_status })),
+    adsets: adsets.map((s): MetaObj => ({ id: s.adset_id, account_id: s.account_id, campaign_id: s.campaign_id, adset_id: s.adset_id, name: s.name, status: s.status, effective_status: s.effective_status })),
+    ads: ads.map((d): MetaObj => ({ id: d.ad_id, account_id: d.account_id, campaign_id: d.campaign_id, adset_id: d.adset_id, name: d.name, status: d.status, effective_status: d.effective_status })),
+    days,
+  }
 }
