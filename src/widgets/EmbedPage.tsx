@@ -36,9 +36,17 @@ function fromAddress(...keys: string[]) {
   } catch {
     /* no referrer */
   }
-  // the names as given, and in the usual form (Company Name → company_name)
-  const names = [...new Set(keys.flatMap((k) => [k, k.toLowerCase()]))]
-  return names.map((k) => q.get(k)?.trim() || host.get(k)?.trim() || '').find(Boolean) ?? ''
+  // names match whatever their case or separators: firstName = first_name = first-name = FirstName
+  const norm = (k: string) => k.toLowerCase().replace(/[\s_-]/g, '')
+  const pick = (p: URLSearchParams) => {
+    const m = new Map<string, string>()
+    p.forEach((v, k) => {
+      if (v.trim() && !m.has(norm(k))) m.set(norm(k), v.trim())
+    })
+    return m
+  }
+  const [own, page] = [pick(q), pick(host)]
+  return keys.map((k) => own.get(norm(k)) || page.get(norm(k)) || '').find(Boolean) ?? ''
 }
 
 /** a booking calendar's own fields filled from the page address (dropdowns: only one of their options) */
