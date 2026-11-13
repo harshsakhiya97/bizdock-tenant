@@ -231,7 +231,10 @@ export function IntegrationsPage() {
                         <input type="checkbox" checked={x.is_enabled} disabled={off} onChange={() => void toggleAdAccount(x)} />
                       </label>
                       <div className="int-account-main">
-                        <b>{x.name || x.act_id}</b>
+                        <b>
+                          {accounts.find((c) => c.id === x.integration_id)?.label ? `${accounts.find((c) => c.id === x.integration_id)?.label} - ` : ''}
+                          {x.name || x.act_id}
+                        </b>
                         <span className="muted small">
                           {x.act_id.replace(/^act_/, '')}
                           {x.currency ? ` · ${x.currency}` : ''}
