@@ -98,11 +98,14 @@ export type AdAccount = {
   last_sync_at: string | null
   last_error: string | null
   account_status: number | null
+  /** money on Facebook (main units): prepaid funds left (available), amount due, spent, spending limit */
+  funds: { prepaid: boolean; available: number | null; funds_text: string | null; due: number | null; spent: number | null; cap: number | null; currency: string | null; note: string | null } | null
+  funds_at: string | null
 }
 export async function listAdAccounts(tenantId: string): Promise<AdAccount[]> {
   const { data, error } = await db()
     .from('meta_ad_accounts')
-    .select('id, integration_id, act_id, name, currency, business_name, is_enabled, gst_rate, synced_until, backfill_from, last_sync_at, last_error, account_status')
+    .select('id, integration_id, act_id, name, currency, business_name, is_enabled, gst_rate, synced_until, backfill_from, last_sync_at, last_error, account_status, funds, funds_at')
     .eq('tenant_id', tenantId)
     .order('name')
   if (error) throw new Error(error.message)
@@ -287,4 +290,15 @@ export async function funnelDaySpend(tenantId: string, links: { campaign_id: str
     for (const d of data ?? []) ads.set(d.ad_id as string, (d.name as string) ?? d.ad_id)
   }
   return { days, ads }
+}
+
+/** what's left to spend on an ad account: prepaid funds left, else what's left of its spending limit; and what's due */
+export function fundsLeft(a: AdAccount): { left: number | null; kind: 'prepaid' | 'limit' | null; due: number | null } {
+  const f = a.funds
+  if (!f) return { left: null, kind: null, due: null }
+  if (f.prepaid && f.available != null) return { left: f.available, kind: 'prepaid', due: null }
+  // prepaid: the spending limit is the funds added, amount_spent what's used of it
+  if (f.prepaid && f.cap != null && f.spent != null) return { left: Math.max(0, f.cap - f.spent), kind: 'prepaid', due: null }
+  if (f.cap != null && f.spent != null) return { left: Math.max(0, f.cap - f.spent), kind: 'limit', due: f.due }
+  return { left: null, kind: null, due: f.due }
 }
