@@ -391,7 +391,7 @@ export function MetaLogsPage() {
                 <table className="table table-compact">
                   <thead>
                     <tr>
-                      <th>{LEVELS.find((l) => l[0] === level)?.[1].replace(/s$/, '')}</th>
+                      <th style={{ minWidth: 340 }}>{LEVELS.find((l) => l[0] === level)?.[1].replace(/s$/, '')}</th>
                       <th>Delivery</th>
                       <th className="num" title="With GST (hover: without GST + GST)">
                         Spend
@@ -429,7 +429,7 @@ export function MetaLogsPage() {
                       const acc = accById.get(o.account_id)
                       return (
                         <tr key={o.id} className={cn(level !== 'ads' && 'is-clickable')} onClick={() => open(o)} title={level === 'campaigns' ? 'Open its ad sets' : level === 'adsets' ? 'Open its ads' : undefined}>
-                          <td style={{ maxWidth: 320 }}>
+                          <td style={{ minWidth: 340, maxWidth: 440 }}>
                             <b>{o.name ?? o.id}</b>
                             <div className="muted small">
                               {acc?.name ?? ''}
