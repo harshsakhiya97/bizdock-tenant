@@ -33,7 +33,10 @@ export const releases: Release[] = [
       'A number that is a lead in two businesses shows its calls and WhatsApp messages on both leads.',
       'Access Control → Team: roles at your own level can be given too (not only below), and people at your own level can be managed; never above your level, never the Owner, never your own role.',
     ],
-    fixed: ['Paid Podcast leads list no longer stops with “statement timeout”.'],
+    fixed: [
+      'Paid Podcast leads list no longer stops with “statement timeout”.',
+      'Booking calendar fills Full name from firstName / lastName in the address: field names now match whatever their case or separators (firstName = first_name = first-name).',
+    ],
     removed: [
       'Temperature filter on the leads list (every business).',
       'Funnel and Source filters on the Paid Podcast leads list.',
