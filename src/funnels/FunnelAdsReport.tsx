@@ -38,8 +38,10 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
     funnelAdsReport(funnelId, from, to).then(setR, (e: Error) => setError(e.message))
   }, [funnelId, from, to])
 
-  const maxDay = useMemo(() => Math.max(1, ...(r?.days ?? []).map((d) => Number(d.spend_gst))), [r])
-  const maxLeads = useMemo(() => Math.max(1, ...(r?.days ?? []).map((d) => d.leads)), [r])
+  // the old CRM's saved day-wise spend is hidden for now: only Facebook's numbers
+  const fbDays = useMemo(() => (r?.days ?? []).filter((d) => d.meta), [r])
+  const maxDay = useMemo(() => Math.max(1, ...fbDays.map((d) => Number(d.spend_gst))), [fbDays])
+  const maxLeads = useMemo(() => Math.max(1, ...fbDays.map((d) => d.leads)), [fbDays])
 
   const pickPreset = (k: string) => {
     setPreset(k)
@@ -50,11 +52,12 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
     }
   }
 
-  const spend = Number(r?.spend_gst ?? 0)
+  const spend = fbDays.reduce((t, d) => t + Number(d.spend_gst), 0)
+  const spendEx = fbDays.reduce((t, d) => t + Number(d.spend), 0)
   const balance = Number(r?.revenue ?? 0) - Number(r?.collected ?? 0)
   const tiles = r
     ? [
-        { label: 'Ad spend (with GST)', value: <GstMoney ex={Number(r.spend)} inc={spend} /> },
+        { label: 'Ad spend (with GST)', value: <GstMoney ex={spendEx} inc={spend} /> },
         { label: 'Leads', value: num(r.leads), sub: r.leads ? `${inr(spend / r.leads)} per lead` : '' },
         { label: 'Won', value: num(r.won), sub: r.won ? `${inr(spend / r.won)} per sale` : '', tone: 'tone-success' },
         { label: 'Revenue (with GST)', value: inr(r.revenue), sub: spend ? `${(Number(r.revenue) / spend).toFixed(2)}× of spend (ROAS)` : '' },
@@ -98,10 +101,7 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
               </div>
             ))}
           </div>
-          {!r.linked && <div className="muted small">No Facebook campaigns are linked to this funnel yet (Facebook Ads tab). Spend below comes from the day-wise ad spend saved for this funnel.</div>}
-          {r.old_days > 0 && r.linked > 0 && (
-            <div className="muted small">{r.old_days} day{r.old_days === 1 ? '' : 's'} use the saved day-wise spend (no Facebook numbers for them).</div>
-          )}
+          {!r.linked && <div className="muted small">No Facebook campaigns are linked to this funnel yet (Facebook Ads tab), so there’s no ad spend.</div>}
 
           {/* where the leads are now */}
           <div className="ads-stages">
@@ -115,13 +115,13 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
           </div>
 
           {/* spend and leads per day */}
-          {r.days.length > 0 && (
+          {fbDays.length > 0 && (
             <div>
               <div className="muted small" style={{ marginBottom: 6 }}>
                 Spend per day (bars, with GST) and leads (dots)
               </div>
               <div className="ads-days">
-                {r.days.map((d) => (
+                {fbDays.map((d) => (
                   <div key={d.day} className="ads-day" title={`${d.day}: ${inr(Number(d.spend_gst))} spend (${inr(Number(d.spend))} + GST)${d.meta ? '' : ' · saved spend'} · ${d.leads} lead${d.leads === 1 ? '' : 's'}`}>
                     <span className="ads-dot" style={{ bottom: `${(d.leads / maxLeads) * 100}%` }} />
                     <span className={cn('ads-bar', !d.meta && 'is-old')} style={{ height: `${(Number(d.spend_gst) / maxDay) * 100}%` }} />
@@ -129,8 +129,8 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
                 ))}
               </div>
               <div className="row-between muted small">
-                <span>{r.days[0].day}</span>
-                <span>{r.days[r.days.length - 1].day}</span>
+                <span>{fbDays[0].day}</span>
+                <span>{fbDays[fbDays.length - 1].day}</span>
               </div>
             </div>
           )}
