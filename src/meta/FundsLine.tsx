@@ -15,8 +15,12 @@ export function FundsLine({ a }: { a: AdAccount }) {
   else parts.push(a.funds.prepaid ? 'Prepaid · amount left not shared by Facebook' : 'Postpaid (billed to card) · no spending limit')
   if (due) parts.push(`${money(due, cur)} due`)
   return (
-    <span className={cn('small', low ? 'tone-danger' : 'muted')} title={`Checked with the numbers${a.funds.spent != null ? ` · spent since the limit was last reset ${money(a.funds.spent, cur)}` : ''}`} style={{ fontWeight: left != null ? 600 : undefined }}>
-      {parts.join(' · ')}
+    <span className={cn('small', low ? 'tone-danger' : 'muted')} title={`Checked with the numbers${a.funds.spent != null ? ` · spent since the limit was last reset ${money(a.funds.spent, cur)}` : ''}`} style={{ fontWeight: left != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
+      {parts.map((t) => (
+        <span key={t} style={{ display: 'block', whiteSpace: 'normal', overflow: 'visible' }}>
+          {t}
+        </span>
+      ))}
     </span>
   )
 }
