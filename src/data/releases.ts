@@ -13,6 +13,20 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.15',
+    date: '2026-11-13',
+    title: 'Facebook Ads',
+    summary: 'Connect Facebook ad accounts in a popup, link campaigns or ad sets to funnels, and see each funnel’s ad spend (with GST) all the way to leads, won, revenue, collected and balance.',
+    new: [
+      'System Connections → Facebook Ads → Continue with Facebook: log in, pick the business and ad accounts, press Allow. Read-only, the login doesn’t expire. Several Facebook logins can be added; each shows its ad accounts with an on/off switch and when their numbers were last checked.',
+      'Facebook Ads: Sync now, and per connection Reconnect (log in again or share more ad accounts), Settings (GST % per ad account, 18% by default) and Remove (numbers already brought in and funnel links stay).',
+      'Ad numbers per ad and day (spend, impressions, reach, clicks, link clicks, CTR, CPC, CPM, landing page views, Facebook leads and purchases): every 3 hours, the last 7 days again every night, and history on connect.',
+      'Funnel → Facebook Ads tab: every campaign of the connected ad accounts with search, ad account filter, Active only and 30-day spend; tick a whole campaign (ad sets added later too) or only some ad sets. An ad set belongs to one funnel (“In <funnel>”).',
+      'Funnel → Facebook Ads → Saved spend vs Facebook: the funnel’s saved day-wise spend (old CRM) next to Facebook’s, day by day, and Replace with Facebook’s numbers (the saved amount is kept in the day’s notes).',
+      'Funnel → Overview → Ads → leads → money: ad spend with GST (hover: without GST + GST), leads and cost per lead, won and cost per sale, revenue with GST and ROAS, collected, balance due, leads per stage, a spend / leads chart per day, and a table per ad (spend, impressions, link clicks, Facebook leads, leads here, won, revenue). Leads are matched to ads by the names their form sends, old names too.',
+    ],
+  },
+  {
     version: '0.14',
     date: '2026-11-13',
     title: 'Callyzer, old CRM data, lead list actions',
