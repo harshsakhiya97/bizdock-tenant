@@ -1,7 +1,7 @@
 import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { getFollowUp, listOutcomes, scheduleFollowUp } from '@/followups/api'
+import { getFollowUp, listOutcomes, pendingFollowUpId, scheduleFollowUp } from '@/followups/api'
 import { CompleteModal } from '@/followups/CompleteModal'
 import type { FollowUpRow } from '@/followups/types'
 import { MeetingDrawer } from '@/meetings/MeetingDrawer'
@@ -126,12 +126,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   }, [tenant.id, businesses])
   useEffect(load, [load])
   const loadExtras = useCallback(() => {
+    if (studio && !customers) listOutcomes(tenant.id).then(setOutcomes)
     if (!pp || !sub) return
     listLeadExtras(tenant.id, sub.id)
       .then(setExtras)
       .catch((e: Error) => setNotice({ error: e.message }))
     listOutcomes(tenant.id).then(setOutcomes)
-  }, [pp, sub, tenant.id])
+  }, [pp, studio, customers, sub, tenant.id])
   useEffect(loadExtras, [loadExtras])
   useEffect(() => {
     if (pp || customers || !allLeads?.length) return
@@ -142,7 +143,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
 
   /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
   async function openLogFollowUp(l: LeadRow) {
-    const pendingId = extras.get(l.id)?.pending_fu_id
+    const pendingId = pp ? extras.get(l.id)?.pending_fu_id : await pendingFollowUpId(l.id)
     const row = pendingId ? await getFollowUp(pendingId) : null
     setLogFu(
       row ?? {
@@ -652,6 +653,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   )}
                   {!customers && <th>Calls</th>}
                   <th>{studio ? 'Lead date' : 'Created'}</th>
+                  {studio && !customers && <th />}
                   </>
                   )}
                 </tr>
@@ -747,6 +749,22 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           ? leadDate(l)
                           : new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
+                      {studio && !customers && (
+                        <RowActions
+                          closed={(() => {
+                            const k = stageById.get(l.stage_id ?? '')?.kind
+                            return k === 'won' || k === 'lost'
+                          })()}
+                          canFollowUp={can('follow_ups', 'add') || can('leads', 'edit')}
+                          canMeet={false}
+                          canLose={can('leads', 'edit') && !!lostStageOf(l)}
+                          onFollowUp={() => void openLogFollowUp(l)}
+                          onLose={() => {
+                            const st = lostStageOf(l)
+                            if (st) requestMove([l.id], st)
+                          }}
+                        />
+                      )}
                       </>
                       )}
                     </tr>
@@ -918,25 +936,48 @@ function PpCells({
       <td className="nowrap">
         {stage ? <span className={cn('badge', stage.kind === 'won' ? 'badge-success' : stage.kind === 'lost' ? 'badge-muted' : 'badge-warning')}>{stage.name}</span> : <span className="muted">—</span>}
       </td>
-      <td className="nowrap" onClick={stop}>
-        <span className="row" style={{ gap: 6 }}>
-          {canFollowUp && (
-            <button type="button" className="btn btn-primary btn-sm" onClick={onFollowUp}>
-              <Phone size={13} /> Follow-up
-            </button>
-          )}
-          {canMeet && (
-            <button type="button" className="btn btn-outline btn-sm" onClick={onMeeting}>
-              <CalendarCheck size={13} /> Meeting
-            </button>
-          )}
-          {canLose && !closed && (
-            <button type="button" className="btn btn-outline btn-sm danger-text" onClick={onLose} title="Mark Lost" aria-label="Mark Lost">
-              <X size={14} />
-            </button>
-          )}
-        </span>
-      </td>
+      <RowActions closed={closed} canFollowUp={canFollowUp} canMeet={canMeet} canLose={canLose} onFollowUp={onFollowUp} onMeeting={onMeeting} onLose={onLose} />
     </>
+  )
+}
+
+/** a row's buttons (Paid Podcast, Studio Rental): Follow-up, Meeting (Paid Podcast), ✕ = mark Lost */
+function RowActions({
+  closed,
+  canFollowUp,
+  canMeet,
+  canLose,
+  onFollowUp,
+  onMeeting,
+  onLose,
+}: {
+  closed: boolean
+  canFollowUp: boolean
+  canMeet: boolean
+  canLose: boolean
+  onFollowUp: () => void
+  onMeeting?: () => void
+  onLose: () => void
+}) {
+  return (
+    <td className="nowrap" onClick={(e) => e.stopPropagation()}>
+      <span className="row" style={{ gap: 6 }}>
+        {canFollowUp && (
+          <button type="button" className="btn btn-primary btn-sm" onClick={onFollowUp}>
+            <Phone size={13} /> Follow-up
+          </button>
+        )}
+        {canMeet && onMeeting && (
+          <button type="button" className="btn btn-outline btn-sm" onClick={onMeeting}>
+            <CalendarCheck size={13} /> Meeting
+          </button>
+        )}
+        {canLose && !closed && (
+          <button type="button" className="btn btn-outline btn-sm danger-text" onClick={onLose} title="Mark Lost" aria-label="Mark Lost">
+            <X size={14} />
+          </button>
+        )}
+      </span>
+    </td>
   )
 }
