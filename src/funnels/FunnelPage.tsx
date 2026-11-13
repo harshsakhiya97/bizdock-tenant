@@ -15,6 +15,8 @@ import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
+import { FunnelAdsTab } from './FunnelAdsTab'
+import { FunnelAdsReport } from './FunnelAdsReport'
 import { listWorkflows } from '@/workflows/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
@@ -23,6 +25,7 @@ import { Flash } from '@/components/Flash'
 const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'leads', label: 'Leads' },
+  { key: 'ads', label: 'Facebook Ads' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'workflows', label: 'Workflows' },
   { key: 'pages', label: 'Landing pages' },
@@ -179,6 +182,8 @@ export function FunnelPage() {
                 </div>
               </div>
 
+              <FunnelAdsReport funnelId={funnel.id} />
+
               <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>
                   <b>Details</b>
@@ -276,6 +281,7 @@ export function FunnelPage() {
             />
           )}
 
+          {tab === 'ads' && <FunnelAdsTab funnelId={funnel.id} canEdit={can('funnels', 'edit')} onSaved={(msg) => setNotice({ ok: msg })} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' &&

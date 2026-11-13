@@ -19,6 +19,7 @@ import { Flash } from '@/components/Flash'
 import { connectZoom, testZoom } from '@/zoom/api'
 import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
 import { syncCallyzer } from '@/callyzer/api'
+import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -61,8 +62,11 @@ export function IntegrationsPage() {
   // only what BizDock has turned on for this workspace (plus anything still saved, so it can be disconnected)
   const visible = allow ? PROVIDERS.filter((p) => !blocked(p) || (rows ?? []).some((r) => r.provider === p.id)) : []
 
+  // Facebook Ads: the ad accounts of each Facebook connection
+  const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
+    listAdAccounts(tenant.id).then(setAdAccounts, () => setAdAccounts([]))
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -90,6 +94,46 @@ export function IntegrationsPage() {
       setNotice({ error: (e as Error).message })
     }
   }
+  // Continue with Facebook: the popup is open (Cancel stops waiting)
+  const [metaWait, setMetaWait] = useState<{ cancel: () => void } | null>(null)
+  const [metaBusy, setMetaBusy] = useState(false)
+  const [metaSettings, setMetaSettings] = useState<IntegrationRow | null>(null)
+  function connectFb(integrationId?: string) {
+    try {
+      const c = connectMeta(tenant.id, integrationId)
+      setMetaWait({ cancel: c.cancel })
+      c.done
+        .then((r) => setNotice(r.ok ? { ok: `${r.message} Its numbers are being brought in.` } : r.message === 'Cancelled.' ? {} : { error: r.message }))
+        .catch((e: Error) => setNotice({ error: e.message }))
+        .finally(() => {
+          setMetaWait(null)
+          load()
+        })
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    }
+  }
+  async function fbSync() {
+    setMetaBusy(true)
+    try {
+      await syncMeta(tenant.id)
+      setNotice({ ok: 'Bringing in the latest numbers from Facebook. They show in a minute.' })
+      window.setTimeout(load, 20000)
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    } finally {
+      setMetaBusy(false)
+    }
+  }
+  async function toggleAdAccount(a: AdAccount) {
+    try {
+      await updateAdAccount(a.id, { is_enabled: !a.is_enabled })
+      load()
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    }
+  }
+
   // Add with keys (a Zoom Server-to-Server app): only its three keys; recording on, default when it's the first
   const zoomKeys = (p: Provider): Provider => ({ ...p, fields: p.fields.filter((f) => ['account_id', 'client_id', 'client_secret'].includes(f.key)) })
 
@@ -175,7 +219,71 @@ export function IntegrationsPage() {
               <div className="int-used">
                 <span>Used for</span> {p.usedFor}
               </div>
-              {p.multiple && accounts.length > 0 && (
+              {p.id === 'facebook_ads' && accounts.length > 0 && (
+                <div className="int-accounts">
+                  {accounts.map((a) => {
+                    const mine = adAccounts.filter((x) => x.integration_id === a.id)
+                    return (
+                      <div key={a.id}>
+                        <div className="int-account">
+                          <div className="int-account-main">
+                            <b>{a.label || 'Facebook'}</b>
+                            <span className="muted small">
+                              {a.config.fb_name ? `${a.config.fb_name} · ` : ''}Connected with Facebook · {mine.length} ad account{mine.length === 1 ? '' : 's'}
+                              {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
+                            </span>
+                          </div>
+                          <div className="int-account-actions">
+                            {!off && (
+                              <button type="button" className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')} disabled={!!metaWait} title="Log in to Facebook again, or share more ad accounts" onClick={() => connectFb(a.id)}>
+                                Reconnect
+                              </button>
+                            )}
+                            {!off && (
+                              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMetaSettings(a)}>
+                                Settings
+                              </button>
+                            )}
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(a)}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                        {mine.map((x) => (
+                          <div key={x.id} className="int-account int-subaccount">
+                            <label className="switch" title={x.is_enabled ? 'Stop bringing in this account’s numbers' : 'Bring in this account’s numbers'}>
+                              <input type="checkbox" checked={x.is_enabled} disabled={off} onChange={() => void toggleAdAccount(x)} />
+                            </label>
+                            <div className="int-account-main">
+                              <b>{x.name || x.act_id}</b>
+                              <span className="muted small">
+                                {x.act_id.replace(/^act_/, '')}
+                                {x.currency ? ` · ${x.currency}` : ''}
+                                {x.last_error
+                                  ? ` · ${x.last_error}`
+                                  : x.last_sync_at
+                                    ? ` · numbers checked ${ago(x.last_sync_at)}`
+                                    : x.synced_until
+                                      ? ` · bringing in history (up to ${x.synced_until})`
+                                      : ' · first pull in a minute'}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              {p.id === 'facebook_ads' && metaWait && (
+                <div className="int-note row-between">
+                  <span>Waiting for Facebook… log in, pick your business and ad accounts, and press Allow.</span>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={metaWait.cancel}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {p.multiple && p.id !== 'facebook_ads' && accounts.length > 0 && (
                 <div className="int-accounts">
                   {accounts.map((a) => (
                     <div key={a.id} className="int-account">
@@ -247,6 +355,8 @@ export function IntegrationsPage() {
                       : r.config.last_sync_at
                         ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
                         : 'Connected · first check in a minute'
+                    : p.id === 'facebook_ads' && !off && accounts.length
+                      ? 'Numbers every 3 hours · last 7 days again every night'
                     : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
@@ -270,7 +380,17 @@ export function IntegrationsPage() {
                       <PlugZap size={14} /> {zoomWait ? 'Waiting for Zoom…' : 'Connect with Zoom'}
                     </button>
                   )}
-                  {p.multiple && p.id !== 'zoom' && !off && (
+                  {p.id === 'facebook_ads' && !off && accounts.length > 0 && (
+                    <button type="button" className="btn btn-outline btn-sm" disabled={metaBusy} onClick={() => void fbSync()}>
+                      {metaBusy ? 'Starting…' : 'Sync now'}
+                    </button>
+                  )}
+                  {p.id === 'facebook_ads' && !off && (
+                    <button type="button" className={cn('btn btn-sm', accounts.length ? 'btn-outline' : 'btn-primary')} disabled={!!metaWait} onClick={() => connectFb()}>
+                      <PlugZap size={14} /> {metaWait ? 'Waiting for Facebook…' : accounts.length ? 'Add another Facebook login' : 'Continue with Facebook'}
+                    </button>
+                  )}
+                  {p.multiple && p.id !== 'zoom' && p.id !== 'facebook_ads' && !off && (
                     <button type="button" className={cn('btn btn-sm', accounts.length ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p, row: null })}>
                       <PlugZap size={14} /> {accounts.length ? 'Add account' : 'Connect'}
                     </button>
@@ -343,11 +463,27 @@ export function IntegrationsPage() {
           }}
         />
       )}
+      {metaSettings && (
+        <MetaSettingsDrawer
+          row={metaSettings}
+          accounts={adAccounts.filter((x) => x.integration_id === metaSettings.id)}
+          onClose={() => setMetaSettings(null)}
+          onSaved={(msg) => {
+            setMetaSettings(null)
+            setNotice({ ok: msg })
+            load()
+          }}
+        />
+      )}
       {removing && (
         <ConfirmModal
           open
           title={`${removing.label ? `Remove ${removing.label}` : `Disconnect ${PROVIDERS.find((p) => p.id === removing.provider)?.name}`}?`}
-          message="The saved keys are removed. Anything using this connection stops until it is connected again."
+          message={
+            removing.provider === 'facebook_ads'
+              ? 'BizDock stops bringing in this Facebook login’s ad numbers. The numbers already brought in, and the funnels’ campaign links, stay.'
+              : 'The saved keys are removed. Anything using this connection stops until it is connected again.'
+          }
           confirmLabel="Disconnect"
           danger
           onCancel={() => setRemoving(null)}
@@ -563,5 +699,58 @@ function ZoomPromptBox() {
         {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy prompt'}
       </button>
     </div>
+  )
+}
+
+/** a Facebook connection's settings: the GST % added to its ad accounts' spend (Meta India charges 18%) */
+function MetaSettingsDrawer({ row, accounts, onClose, onSaved }: { row: IntegrationRow; accounts: AdAccount[]; onClose: () => void; onSaved: (msg: string) => void }) {
+  const [rates, setRates] = useState<Record<string, string>>(() => Object.fromEntries(accounts.map((a) => [a.id, String(a.gst_rate)])))
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  async function save() {
+    for (const a of accounts) {
+      const v = Number(rates[a.id])
+      if (!Number.isFinite(v) || v < 0 || v > 50) return setError(`GST for ${a.name ?? a.act_id} must be between 0 and 50.`)
+    }
+    setBusy(true)
+    try {
+      for (const a of accounts) if (Number(rates[a.id]) !== Number(a.gst_rate)) await updateAdAccount(a.id, { gst_rate: Number(rates[a.id]) })
+      onSaved('Facebook settings saved.')
+    } catch (e) {
+      setError((e as Error).message)
+      setBusy(false)
+    }
+  }
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      width={480}
+      title={`${row.label || 'Facebook'} · Settings`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <div className="foot-end">
+            {error && <p className="err-text">{error}</p>}
+            <Button onClick={save} disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </>
+      }
+    >
+      <div className="stack">
+        <Hint>Reports show ad spend with GST added (hover a number to see both). Meta India charges 18%.</Hint>
+        {accounts.map((a) => (
+          <div key={a.id}>
+            <Label htmlFor={`gst-${a.id}`}>GST % · {a.name || a.act_id}</Label>
+            <TextInput id={`gst-${a.id}`} type="number" min={0} max={50} step="0.01" value={rates[a.id] ?? ''} onChange={(e) => setRates((r) => ({ ...r, [a.id]: e.target.value }))} />
+          </div>
+        ))}
+        {!accounts.length && <div className="muted small">No ad accounts in this connection.</div>}
+      </div>
+    </Drawer>
   )
 }
