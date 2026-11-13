@@ -238,11 +238,10 @@ export function IntegrationsPage() {
                         </b>
                         <span className="muted small">
                           {x.act_id.replace(/^act_/, '')}
-                          {x.currency ? ` · ${x.currency}` : ''}
                           {x.last_error
                             ? ` · ${x.last_error}`
                             : x.last_sync_at
-                              ? ` · numbers checked ${ago(x.last_sync_at)}`
+                              ? ''
                               : x.synced_until
                                 ? ` · bringing in history (up to ${x.synced_until})`
                                 : ' · first pull in a minute'}
