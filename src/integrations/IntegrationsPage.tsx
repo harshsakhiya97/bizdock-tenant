@@ -20,6 +20,7 @@ import { connectZoom, testZoom } from '@/zoom/api'
 import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
 import { syncCallyzer } from '@/callyzer/api'
 import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
+import { MetaTokenConnect } from '@/meta/MetaTokenConnect'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -98,6 +99,8 @@ export function IntegrationsPage() {
   const [metaWait, setMetaWait] = useState<{ cancel: () => void } | null>(null)
   const [metaBusy, setMetaBusy] = useState(false)
   const [metaSettings, setMetaSettings] = useState<IntegrationRow | null>(null)
+  // Add with a token (row: a new token for that connection)
+  const [metaToken, setMetaToken] = useState<{ row: IntegrationRow | null } | null>(null)
   function connectFb(integrationId?: string) {
     try {
       const c = connectMeta(tenant.id, integrationId)
@@ -229,12 +232,17 @@ export function IntegrationsPage() {
                           <div className="int-account-main">
                             <b>{a.label || 'Facebook'}</b>
                             <span className="muted small">
-                              {a.config.fb_name ? `${a.config.fb_name} · ` : ''}Connected with Facebook · {mine.length} ad account{mine.length === 1 ? '' : 's'}
+                              {a.config.fb_name ? `${a.config.fb_name} · ` : ''}{a.config.auth === 'token' ? 'Connected with a token' : 'Connected with Facebook'} · {mine.length} ad account{mine.length === 1 ? '' : 's'}
                               {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                             </span>
                           </div>
                           <div className="int-account-actions">
-                            {!off && (
+                            {!off && a.config.auth === 'token' && (
+                              <button type="button" className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')} title="Paste a new token for this connection" onClick={() => setMetaToken({ row: a })}>
+                                New token
+                              </button>
+                            )}
+                            {!off && a.config.auth !== 'token' && (
                               <button type="button" className={cn('btn btn-sm', a.status === 'error' ? 'btn-outline' : 'btn-ghost')} disabled={!!metaWait} title="Log in to Facebook again, or share more ad accounts" onClick={() => connectFb(a.id)}>
                                 Reconnect
                               </button>
@@ -386,6 +394,11 @@ export function IntegrationsPage() {
                     </button>
                   )}
                   {p.id === 'facebook_ads' && !off && (
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setMetaToken({ row: null })}>
+                      Add with a token
+                    </button>
+                  )}
+                  {p.id === 'facebook_ads' && !off && (
                     <button type="button" className={cn('btn btn-sm', accounts.length ? 'btn-outline' : 'btn-primary')} disabled={!!metaWait} onClick={() => connectFb()}>
                       <PlugZap size={14} /> {metaWait ? 'Waiting for Facebook…' : accounts.length ? 'Add another Facebook login' : 'Continue with Facebook'}
                     </button>
@@ -457,6 +470,19 @@ export function IntegrationsPage() {
           onClose={() => setCzOpen(null)}
           onDone={(msg) => {
             setCzOpen(null)
+            setNotice({ ok: msg })
+            load()
+            window.setTimeout(load, 20000)
+          }}
+        />
+      )}
+      {metaToken && (
+        <MetaTokenConnect
+          integrationId={metaToken.row?.id ?? null}
+          label={metaToken.row?.label}
+          onClose={() => setMetaToken(null)}
+          onDone={(msg) => {
+            setMetaToken(null)
             setNotice({ ok: msg })
             load()
             window.setTimeout(load, 20000)
