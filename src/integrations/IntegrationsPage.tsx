@@ -397,7 +397,7 @@ export function IntegrationsPage() {
                   )}
                   {p.id === 'facebook_ads' && !off && (
                     <button type="button" className="btn btn-outline btn-sm" onClick={() => setMetaToken({ row: null })}>
-                      Add with a token
+                      Add with keys
                     </button>
                   )}
                   {p.id === 'facebook_ads' && !off && (
