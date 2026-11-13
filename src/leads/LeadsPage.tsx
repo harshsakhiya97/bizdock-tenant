@@ -411,7 +411,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
-          {!studio && (
+          {!studio && !pp && (
           <select className="input input-sm filter-select" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
             <option value="all">All funnels</option>
             {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
@@ -430,7 +430,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
-          {!studio && (
+          {!studio && !pp && (
           <select className="input input-sm filter-select" value={filters.source} onChange={(e) => setF('source', e.target.value)} aria-label="Source">
             <option value="">Source</option>
             {sources.map((s) => (
