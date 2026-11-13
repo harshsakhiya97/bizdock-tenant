@@ -139,7 +139,7 @@ export default function App() {
                 <Route
                   path="/integrations/callyzer/logs"
                   element={
-                    <RequirePermission module="settings" action="edit">
+                    <RequirePermission module="call_logs" orModule="settings" orAction="edit">
                       <CallyzerLogsPage />
                     </RequirePermission>
                   }

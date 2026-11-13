@@ -14,7 +14,7 @@ import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteLeads, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
+import { deleteLeads, listLeadCalls, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
@@ -106,6 +106,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [bulk, setBulk] = useState({ owner: '', temp: '', followUp: '', stage: '', reason: '' })
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [extras, setExtras] = useState<Map<string, LeadExtras>>(new Map())
+  // other businesses' lists: Callyzer calls per lead (by number)
+  const [callCounts, setCallCounts] = useState<Map<string, { total: number; connected: number }>>(new Map())
   const [outcomes, setOutcomes] = useState<Option[]>([])
   const [logFu, setLogFu] = useState<FollowUpRow | null>(null)
   const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
@@ -131,6 +133,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     listOutcomes(tenant.id).then(setOutcomes)
   }, [pp, sub, tenant.id])
   useEffect(loadExtras, [loadExtras])
+  useEffect(() => {
+    if (pp || customers || !allLeads?.length) return
+    listLeadCalls(tenant.id, allLeads.map((l) => l.id))
+      .then(setCallCounts)
+      .catch(() => setCallCounts(new Map()))
+  }, [pp, customers, allLeads, tenant.id])
 
   /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
   async function openLogFollowUp(l: LeadRow) {
@@ -642,6 +650,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   ) : (
                     !studio && <th style={{ textAlign: 'right' }}>Value</th>
                   )}
+                  {!customers && <th>Calls</th>}
                   <th>{studio ? 'Lead date' : 'Created'}</th>
                   </>
                   )}
@@ -721,6 +730,17 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                             {money(l.estimated_amount)}
                           </td>
                         )
+                      )}
+                      {!customers && (
+                        <td className="nowrap">
+                          {callCounts.get(l.id) ? (
+                            <>
+                              <b>{callCounts.get(l.id)!.total}</b> <span className="muted small">· {callCounts.get(l.id)!.connected} connected</span>
+                            </>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </td>
                       )}
                       <td className="muted nowrap">
                         {studio
