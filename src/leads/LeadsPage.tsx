@@ -612,7 +612,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                       <th>Follow-ups done</th>
                       <th>Next follow-up</th>
                       <th>Status</th>
-                      <th>Received</th>
+                      <th>Lead date</th>
                       <th />
                     </>
                   ) : (
