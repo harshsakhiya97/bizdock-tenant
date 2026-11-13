@@ -71,6 +71,13 @@ export function connectMeta(tenantId: string, integrationId?: string | null) {
   return { done, cancel }
 }
 
+/** Add with a token: a system user's token from the client's Business Settings (made for the BizDock app); checked with Facebook, then saved */
+export async function connectMetaToken(tenantId: string, token: string, integrationId?: string | null) {
+  const { data, error } = await db().functions.invoke('meta-oauth', { body: { action: 'token', tenant_id: tenantId, token, integration_id: integrationId ?? null } })
+  if (error || data?.error) throw new Error(await errText(error, data))
+  return String(data?.message ?? 'Facebook connected.')
+}
+
 /** pull the ad accounts' numbers now (in the background) */
 export async function syncMeta(tenantId: string) {
   const { data, error } = await db().functions.invoke('meta-ads', { body: { action: 'sync', tenant_id: tenantId } })
