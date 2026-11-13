@@ -13,6 +13,32 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.14',
+    date: '2026-11-13',
+    title: 'Callyzer, old CRM data, lead list actions',
+    summary: 'Callyzer call logs on every lead, the old Paid Podcast CRM’s data brought in, and the Paid Podcast and Studio Rental leads lists working like the old CRM.',
+    new: [
+      'System Connections → Callyzer: Connect opens a side panel with a ready prompt for Claude in Chrome, the steps to get the API access key, and the key box; the key is checked with Callyzer on Connect. Settings changes the key.',
+      'Callyzer calls (phone calls and WhatsApp calls) are brought in every 5 minutes, and the last 180 days on connect. Only calls to a lead’s number are kept. Sync now checks straight away.',
+      'Lead → Follow-ups → Callyzer: every call to the lead’s number with date, Normal / WhatsApp call, type, duration, Connected / Not connected, who called, and the recording (Play).',
+      'Callyzer Logs (System Connections → Callyzer → Logs): every call of the business picked at the top, with filters for call, type, status, caller and dates.',
+      'Access Control → Call logs: a View call logs tick box to open Callyzer Logs without System Connections access.',
+      'Paid Podcast leads list in the old CRM’s columns: Lead, Source, Call booking (Scheduled with meeting link, Done, No-show, Form filled), Last comment, Follow-ups done · connected calls, Next follow-up, Status, Lead date (date and time).',
+      'Paid Podcast and Studio Rental leads: Follow-up button (mark the pending follow-up done, or record one done now, with the next follow-up) and ✕ to mark Lost; Paid Podcast also has Meeting.',
+      'Calls column (calls · connected) on the leads lists of every other business.',
+      'Old Paid Podcast CRM (AI Income CRM) data brought in: 450 leads with their extra fields, comments, follow-up history, meetings, bookings and payments, 3,168 calls, 2,741 WhatsApp messages and 57 days of ad spend.',
+    ],
+    improved: [
+      'Lead → Follow-ups → WhatsApp also shows WATI messages (sent, delivered, read and replies) of the lead’s number.',
+      'A number that is a lead in two businesses shows its calls and WhatsApp messages on both leads.',
+    ],
+    fixed: ['Paid Podcast leads list no longer stops with “statement timeout”.'],
+    removed: [
+      'Temperature filter on the leads list (every business).',
+      'Funnel and Source filters on the Paid Podcast leads list.',
+    ],
+  },
+  {
     version: '0.13',
     date: '2026-11-12',
     title: 'Connect with Zoom',
