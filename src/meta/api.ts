@@ -212,7 +212,7 @@ export async function adSpendReplace(funnelId: string): Promise<number> {
 }
 
 /** every row of a query, 1000 at a time (the API returns at most 1000 per call) */
-async function every<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
+export async function every<T>(page: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>): Promise<T[]> {
   const out: T[] = []
   for (let i = 0; i < 200; i++) {
     const { data, error } = await page(i * 1000, i * 1000 + 999)
@@ -268,4 +268,23 @@ export async function metaLogs(tenantId: string, from: string, to: string) {
     ads: ads.map((d): MetaObj => ({ id: d.ad_id, account_id: d.account_id, campaign_id: d.campaign_id, adset_id: d.adset_id, name: d.name, status: d.status, effective_status: d.effective_status })),
     days,
   }
+}
+
+/** a funnel's Facebook spend per day and ad: the insights of its linked campaigns / ad sets (without GST) */
+export async function funnelDaySpend(tenantId: string, links: { campaign_id: string; adset_id: string | null }[], from: string, to: string) {
+  const ids = [...new Set(links.map((l) => l.campaign_id))]
+  if (!ids.length) return { days: [], ads: new Map<string, string>() }
+  const rows = await every<{ day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }>((a, b) =>
+    db().from('meta_insights').select('day, account_id, campaign_id, adset_id, ad_id, spend').eq('tenant_id', tenantId).in('campaign_id', ids).gte('day', from).lte('day', to).order('day').order('ad_id').range(a, b),
+  )
+  const whole = new Set(links.filter((l) => !l.adset_id).map((l) => l.campaign_id))
+  const sets = new Set(links.filter((l) => l.adset_id).map((l) => l.adset_id as string))
+  const days = rows.filter((r) => whole.has(r.campaign_id) || sets.has(r.adset_id))
+  const adIds = [...new Set(days.map((r) => r.ad_id))]
+  const ads = new Map<string, string>()
+  for (let i = 0; i < adIds.length; i += 200) {
+    const { data } = await db().from('meta_ads').select('ad_id, name').eq('tenant_id', tenantId).in('ad_id', adIds.slice(i, i + 200))
+    for (const d of data ?? []) ads.set(d.ad_id as string, (d.name as string) ?? d.ad_id)
+  }
+  return { days, ads }
 }

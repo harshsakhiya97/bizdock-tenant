@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { campaignSpend, listAdAccounts, listCampaignTree, saveFunnelLinks, syncMeta, type AdAccount, type AdLink, type AdSet, type Campaign } from '@/meta/api'
 import { listFunnels } from './api'
-import { AdSpendCompare } from './AdSpendCompare'
+import { FunnelDaySpend } from './FunnelDaySpend'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const day = (d: Date) => d.toLocaleDateString('en-CA')
@@ -268,7 +268,10 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
           })}
         </div>
       )}
-      {pick.size > 0 && !dirty && <AdSpendCompare funnelId={funnelId} canEdit={canEdit} onDone={onSaved} />}
+      {/* the old CRM's saved day-wise spend (AdSpendCompare) is hidden for now */}
+      {pick.size > 0 && !dirty && accounts && (
+        <FunnelDaySpend links={links.filter((x) => x.funnel_id === funnelId)} accounts={accounts} campaigns={campaigns} adsets={adsets} />
+      )}
       {canEdit && (
         <div className="row-between">
           <span className="muted small">
