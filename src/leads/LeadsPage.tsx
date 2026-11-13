@@ -184,14 +184,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     [funnels, selected, sub],
   )
   // Studio Rental has no funnel / source filter: its one funnel (if it has just one), else all of them
-  const funnel = studio ? (scopedFunnels.length === 1 ? scopedFunnels[0] : null) : (scopedFunnels.find((f) => f.id === funnelId) ?? null)
+  // Paid Podcast has no Funnel filter: always all its funnels (a funnel picked earlier elsewhere doesn't hide leads)
+  const funnel = studio ? (scopedFunnels.length === 1 ? scopedFunnels[0] : null) : pp ? null : (scopedFunnels.find((f) => f.id === funnelId) ?? null)
   const stageById = useMemo(() => {
     const m = new Map<string, StageRow>()
     for (const f of funnels) for (const s of f.funnel_stages) m.set(s.id, s)
     return m
   }, [funnels])
   const funnelName = (id: string | null) => (id ? (funnels.find((f) => f.id === id)?.name ?? '—') : 'No funnel')
-  const noFunnel = !studio && funnelId === 'none'
+  const noFunnel = !studio && !pp && funnelId === 'none'
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
 
@@ -423,14 +424,6 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             ))}
           </select>
           )}
-          <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Temperature">
-            <option value="">Temperature</option>
-            {TEMPERATURES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
           {!studio && !pp && (
           <select className="input input-sm filter-select" value={filters.source} onChange={(e) => setF('source', e.target.value)} aria-label="Source">
             <option value="">Source</option>
