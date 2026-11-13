@@ -19,12 +19,16 @@ export const releases: Release[] = [
     summary: 'Connect Facebook ad accounts in a popup, link campaigns or ad sets to funnels, and see each funnel’s ad spend (with GST) all the way to leads, won, revenue, collected and balance.',
     new: [
       'System Connections → Facebook Ads → Continue with Facebook: log in, pick the business and ad accounts, press Allow. Read-only, the login doesn’t expire. Several Facebook logins can be added; each shows its ad accounts with an on/off switch and when their numbers were last checked.',
-      'System Connections → Facebook Ads → Add with a token: a side panel with a ready prompt for Claude in Chrome, the steps to make a read-only BizDock system user and its token in Meta Business Settings, and the token box; the token is checked with Facebook on Connect. Those connections show “Connected with a token” and have New token instead of Reconnect.',
+      'System Connections → Facebook Ads → Add with keys: a side panel with two tabs — Token (the token box, checked with Facebook on Connect) and Prompts & steps (Claude in Chrome prompts for your business’s Facebook and for BizDock approving the app request, and the steps to make a read-only BizDock system user and its token in Meta Business Settings). Those connections show “Connected with a token” and have New token instead of Reconnect.',
       'Facebook Ads: Sync now, and per connection Reconnect (log in again or share more ad accounts), Settings (GST % per ad account, 18% by default) and Remove (numbers already brought in and funnel links stay).',
       'Ad numbers per ad and day (spend, impressions, reach, clicks, link clicks, CTR, CPC, CPM, landing page views, Facebook leads and purchases): every 3 hours, the last 7 days again every night, and history on connect.',
       'Funnel → Facebook Ads tab: every campaign of the connected ad accounts with search, ad account filter, Active only and 30-day spend; tick a whole campaign (ad sets added later too) or only some ad sets. An ad set belongs to one funnel (“In <funnel>”).',
       'Funnel → Facebook Ads → Saved spend vs Facebook: the funnel’s saved day-wise spend (old CRM) next to Facebook’s, day by day, and Replace with Facebook’s numbers (the saved amount is kept in the day’s notes).',
       'Funnel → Overview → Ads → leads → money: ad spend with GST (hover: without GST + GST), leads and cost per lead, won and cost per sale, revenue with GST and ROAS, collected, balance due, leads per stage, a spend / leads chart per day, and a table per ad (spend, impressions, link clicks, Facebook leads, leads here, won, revenue). Leads are matched to ads by the names their form sends, old names too.',
+    ],
+    improved: [
+      'Zoom (Add with keys and Settings), Callyzer and WhatsApp · WATI side panels: two tabs — the keys form, and Prompt & steps with the Claude in Chrome prompt and the written steps. WATI gets a new prompt that opens API Docs and adds BizDock’s webhook.',
+      'System Connections buttons: Add with keys outlined next to the blue Connect with Zoom / Continue with Facebook.',
     ],
   },
   {
