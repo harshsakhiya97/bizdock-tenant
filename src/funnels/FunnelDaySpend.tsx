@@ -120,9 +120,11 @@ export function FunnelDaySpend({
               <table className="table table-compact">
                 <thead>
                   <tr>
-                    <th>Day</th>
+                    <th style={{ width: 170 }}>Day</th>
                     <th>Ads</th>
-                    <th className="num">Spend</th>
+                    <th className="num" style={{ width: 160 }}>
+                      Spend
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -142,7 +144,10 @@ export function FunnelDaySpend({
                           }
                         >
                           <td className="nowrap">
-                            {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />} <b>{d.day}</b>
+                            <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+                              {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                              <b>{d.day}</b>
+                            </span>
                           </td>
                           <td className="muted small">
                             {d.ads.length} ad{d.ads.length === 1 ? '' : 's'}
