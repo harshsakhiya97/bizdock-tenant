@@ -31,6 +31,7 @@ export const releases: Release[] = [
     improved: [
       'Lead → Follow-ups → WhatsApp also shows WATI messages (sent, delivered, read and replies) of the lead’s number.',
       'A number that is a lead in two businesses shows its calls and WhatsApp messages on both leads.',
+      'Access Control → Team: roles at your own level can be given too (not only below), and people at your own level can be managed; never above your level, never the Owner, never your own role.',
     ],
     fixed: ['Paid Podcast leads list no longer stops with “statement timeout”.'],
     removed: [
