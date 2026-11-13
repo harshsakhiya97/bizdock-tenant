@@ -149,6 +149,21 @@ export const PROVIDERS: Provider[] = [
   },
 ]
 
+/** WATI: a prompt for Claude in Chrome that opens the API Docs (endpoint and token) and adds BizDock's webhook */
+export const watiPrompt = (webhookUrl: string | null) => `In Chrome I'm logged in to WATI (app.wati.io) as an admin. I want to connect it to BizDock. Don't change, delete or send anything else in WATI (no contacts, templates, broadcasts or chatbots). Never read out or copy the Access Token into this chat; I'll copy it myself. Never type my password: if WATI asks for it, stop and let me type it. If something on screen doesn't match, stop and tell me what you see.
+
+1. Open API Docs (left menu, or the menu under my profile at the top right).
+2. Tell me the API Endpoint shown there (it looks like https://live-mt-server.wati.io/123456) and tell me "The Access Token is on screen — copy it into BizDock (without Bearer)".${
+  webhookUrl
+    ? `
+3. Then open Webhooks (left menu, or Integrations → Webhooks). If a webhook with this URL already exists, only make sure it's enabled and stop:
+   ${webhookUrl}
+4. Otherwise click Add Webhook, paste that URL, status Enabled, and tick the message events that exist: Message received, Session message sent, Template message sent, Message delivered, Message read, Message failed / Template message failed. Save.
+5. Tell me "Webhook added".`
+    : `
+3. Stop there. (The webhook URL is shown in BizDock after WATI is connected.)`
+}`
+
 /** "••••••••3f9a" */
 export const mask = (v: string) => (v ? `${'•'.repeat(8)}${v.slice(-4)}` : '')
 

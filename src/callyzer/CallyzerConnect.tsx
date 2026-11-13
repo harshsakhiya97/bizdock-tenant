@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Check, Copy, PhoneCall } from 'lucide-react'
+import { PhoneCall } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Hint, Label, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
+import { FormPromptTabs, PromptBox } from '@/integrations/PromptBox'
 import { connectCallyzer } from './api'
 
 /** a prompt for Claude in Chrome that opens Callyzer's API key page (the person is logged in to Callyzer as an admin) */
@@ -21,6 +22,7 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [tab, setTab] = useState<'key' | 'prompt'>('key')
 
   async function save() {
     if (!key.trim()) return setError('API access key is required.')
@@ -55,65 +57,55 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
         </>
       }
     >
-      <div className="stack">
-        <div className="int-top">
-          <div className="int-icon" style={{ ['--c' as string]: '#2563eb' }}>
-            <PhoneCall size={20} />
+      <FormPromptTabs
+        tabs={[
+          ['key', 'Key'],
+          ['prompt', 'Prompt & steps'],
+        ]}
+        value={tab}
+        onChange={setTab}
+      />
+      {tab === 'key' && (
+        <div className="stack">
+          <div className="int-top">
+            <div className="int-icon" style={{ ['--c' as string]: '#2563eb' }}>
+              <PhoneCall size={20} />
+            </div>
+            <div>
+              <b>Callyzer</b>
+              <div className="muted small">Call logs from your team’s phones, matched to leads by phone number.</div>
+            </div>
           </div>
           <div>
-            <b>Callyzer</b>
-            <div className="muted small">Call logs from your team’s phones, matched to leads by phone number.</div>
+            <Label htmlFor="cz-key" required>
+              API access key
+            </Label>
+            <TextInput id="cz-key" type="password" autoComplete="off" placeholder={reconnect ? 'Saved — paste a new key to replace it' : 'Paste the key from Callyzer'} value={key} onChange={(e) => setKey(e.target.value)} />
+            <Hint>
+              No key yet? See Prompt &amp; steps. BizDock only reads calls (phone and WhatsApp calls) every 5 minutes{reconnect ? '' : ', and brings in the last 180 days on connect'}. Only calls to a lead’s number are kept; they show on the lead under Follow-ups →
+              Callyzer.
+            </Hint>
           </div>
         </div>
-        <PromptBox />
-        <div className="int-guide">
-          <b>How to get the key</b>
-          <ol>
-            <li>Log in to the Callyzer web dashboard (web.callyzer.co) as an admin.</li>
-            <li>Left menu: Connectors → API &amp; Webhook → API Config. (Not there? Callyzer’s API add-on needs to be on your plan — ask Callyzer.)</li>
-            <li>Click “Generate API Access Key”, enter your Callyzer login again and click “Generate Token”.</li>
-            <li>Copy the key into the box below and press {reconnect ? 'Save' : 'Connect'}: BizDock checks it with Callyzer straight away.</li>
-          </ol>
+      )}
+      {tab === 'prompt' && (
+        <div className="stack">
+          <PromptBox
+            title="Let Claude in Chrome open the key page"
+            note="Log in to Callyzer as an admin, open Claude in Chrome, paste this, and it takes you to the API key. You type your login and copy the key yourself."
+            text={callyzerPrompt()}
+          />
+          <div className="int-guide">
+            <b>How to get the key</b>
+            <ol>
+              <li>Log in to the Callyzer web dashboard (web.callyzer.co) as an admin.</li>
+              <li>Left menu: Connectors → API &amp; Webhook → API Config. (Not there? Callyzer’s API add-on needs to be on your plan — ask Callyzer.)</li>
+              <li>Click “Generate API Access Key”, enter your Callyzer login again and click “Generate Token”.</li>
+              <li>Paste the key in the Key tab and press {reconnect ? 'Save' : 'Connect'}: BizDock checks it with Callyzer straight away.</li>
+            </ol>
+          </div>
         </div>
-        <div>
-          <Label htmlFor="cz-key" required>
-            API access key
-          </Label>
-          <TextInput id="cz-key" type="password" autoComplete="off" placeholder={reconnect ? 'Saved — paste a new key to replace it' : 'Paste the key from Callyzer'} value={key} onChange={(e) => setKey(e.target.value)} />
-          <Hint>
-            BizDock only reads calls (phone and WhatsApp calls) every 5 minutes{reconnect ? '' : ', and brings in the last 180 days on connect'}. Only calls to a lead’s number are kept; they show on the lead under Follow-ups →
-            Callyzer.
-          </Hint>
-        </div>
-      </div>
+      )}
     </Drawer>
-  )
-}
-
-/** the ready prompt for Claude in Chrome, with Copy */
-function PromptBox() {
-  const [copied, setCopied] = useState(false)
-  const text = callyzerPrompt()
-  return (
-    <div className="int-guide">
-      <b>Let Claude in Chrome open the key page</b>
-      <p className="muted small" style={{ margin: '4px 0 8px' }}>
-        Log in to Callyzer as an admin, open Claude in Chrome, paste this, and it takes you to the API key. You type your login and copy the key yourself.
-      </p>
-      <pre className="embed-code" style={{ maxHeight: 180, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{text}</pre>
-      <button
-        type="button"
-        className="btn btn-outline btn-sm"
-        style={{ marginTop: 8 }}
-        onClick={() =>
-          void navigator.clipboard.writeText(text).then(() => {
-            setCopied(true)
-            window.setTimeout(() => setCopied(false), 1500)
-          })
-        }
-      >
-        {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy prompt'}
-      </button>
-    </div>
   )
 }
