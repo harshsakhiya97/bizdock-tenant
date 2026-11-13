@@ -56,12 +56,6 @@ const leadDate = (l: LeadRow) => {
   return new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-/** "12 Nov" (with the year when not this year): when the form was sent, else when the lead was added */
-const receivedOn = (l: LeadRow) => {
-  const sent = ['submitted', 'submitted_at', 'submitted_at_utc', 'submitted_on', 'timestamp'].map((k) => extraOf(l, k)).find(Boolean)
-  const d = new Date(sent && !Number.isNaN(Date.parse(sent)) ? Date.parse(sent) : Date.parse(l.created_at))
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) })
-}
 /** Paid Podcast's call booking: the latest meeting, else "Form filled" when the call-booking form was sent */
 const MEETING_LABEL: Record<string, { label: string; tone: string }> = {
   scheduled: { label: 'Scheduled', tone: 'badge-brand' },
@@ -612,13 +606,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   <th>{Word}</th>
                   {pp ? (
                     <>
-                      <th>Received</th>
                       <th>Source</th>
                       <th>Call booking</th>
                       <th>Last comment</th>
                       <th>Follow-ups done</th>
                       <th>Next follow-up</th>
                       <th>Status</th>
+                      <th>Received</th>
                       <th />
                     </>
                   ) : (
@@ -895,7 +889,6 @@ function PpCells({
   const stop = (e: React.MouseEvent) => e.stopPropagation()
   return (
     <>
-      <td className="nowrap">{receivedOn(l)}</td>
       <td>{source ?? <span className="muted">—</span>}</td>
       <td className="nowrap">
         {m ? (
@@ -929,6 +922,7 @@ function PpCells({
       <td className="nowrap">
         {stage ? <span className={cn('badge', stage.kind === 'won' ? 'badge-success' : stage.kind === 'lost' ? 'badge-muted' : 'badge-warning')}>{stage.name}</span> : <span className="muted">—</span>}
       </td>
+      <td className="muted nowrap">{leadDate(l)}</td>
       <RowActions closed={closed} canFollowUp={canFollowUp} canMeet={canMeet} canLose={canLose} onFollowUp={onFollowUp} onMeeting={onMeeting} onLose={onLose} />
     </>
   )
