@@ -31,6 +31,7 @@ import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { WaLogsPage } from '@/integrations/WaLogsPage'
 import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
+import { MetaLogsPage } from '@/meta/MetaLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
 import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
@@ -143,6 +144,14 @@ export default function App() {
                   element={
                     <RequirePermission module="call_logs" orModule="settings" orAction="edit">
                       <CallyzerLogsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/integrations/facebook-ads/logs"
+                  element={
+                    <RequirePermission module="settings" action="edit">
+                      <MetaLogsPage />
                     </RequirePermission>
                   }
                 />
