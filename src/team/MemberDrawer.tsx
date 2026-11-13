@@ -45,8 +45,8 @@ export function MemberDrawer({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  // only roles below my own level can be given
-  const roleOptions = useMemo(() => roles.filter((r) => !r.is_system && r.level > level), [roles, level])
+  // roles at or below my own level can be given (never the Owner role, except by Tech Support)
+  const roleOptions = useMemo(() => roles.filter((r) => !r.is_system && r.level >= level && (r.level > 1 || level === 0)), [roles, level])
   const reportOptions = members.filter((m) => m.id !== member?.id && m.status === 'active')
   const set = (k: keyof MemberInput) => (e: { target: { value: string } }) =>
     setInput((d) => ({ ...d, [k]: e.target.value }))

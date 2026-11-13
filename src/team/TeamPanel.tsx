@@ -82,8 +82,11 @@ export function TeamPanel() {
       .filter((m) => !q || m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q) || (m.phone ?? '').includes(q))
   }, [members, tab, query])
 
-  /** I can change people whose role sits below my level (never myself). */
-  const below = (m: MemberRow) => m.id !== membership?.id && (roleById.get(m.role_id)?.level ?? 0) > level
+  /** I can change people whose role sits at or below my level (never myself, never the Owner except Tech Support). */
+  const below = (m: MemberRow) => {
+    const l = roleById.get(m.role_id)?.level ?? 0
+    return m.id !== membership?.id && l >= level && (l > 1 || level === 0)
+  }
   const canManage = (m: MemberRow) => canEdit && below(m)
 
   function businessText(m: MemberRow) {
@@ -331,7 +334,7 @@ export function TeamPanel() {
       {accessFor && (
         <PersonAccessDrawer
           member={accessFor}
-          roles={roles.filter((r) => !r.is_system && r.level > level)}
+          roles={roles.filter((r) => !r.is_system && r.level >= level && (r.level > 1 || level === 0))}
           members={members ?? []}
           onClose={() => setAccessFor(null)}
           onSaved={() => {
