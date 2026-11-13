@@ -181,3 +181,10 @@ export async function listLeadExtras(tenantId: string, subId: string): Promise<M
   if (error) throw new Error(error.message)
   return new Map(((data ?? []) as LeadExtras[]).map((r) => [r.lead_id, r]))
 }
+
+/** Callyzer calls per lead (by the lead's number): total and connected */
+export async function listLeadCalls(tenantId: string, leadIds: string[]): Promise<Map<string, { total: number; connected: number }>> {
+  const { data, error } = await db().rpc('lead_call_counts', { p_tenant: tenantId, p_leads: leadIds })
+  if (error) throw new Error(error.message)
+  return new Map(((data ?? []) as { lead_id: string; total: number; connected: number }[]).map((r) => [r.lead_id, { total: r.total, connected: r.connected }]))
+}

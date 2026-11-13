@@ -99,6 +99,14 @@ export function FollowUpsTab({
       const { data: l } = await db().from('leads').select('phone').eq('id', leadId).maybeSingle()
       const ph = String(l?.phone ?? '').replace(/\D/g, '').slice(-10)
       if (ph.length < 10) return setPhoneCalls([])
+      // WhatsApp (WATI) messages: every message with the lead's number
+      db()
+        .from('whatsapp_logs')
+        .select('id, direction, template, body, status, sent_at, sent_by')
+        .eq('tenant_id', tenant.id)
+        .in('phone', [ph, `91${ph}`])
+        .order('sent_at', { ascending: false })
+        .then(({ data }) => setWati((data ?? []) as WaLog[]))
       const { data } = await db()
         .from('calls')
         .select('id, direction, started_at, duration_sec, agent_phone, member_id, emp_name, recording_url, call_method')
@@ -107,12 +115,7 @@ export function FollowUpsTab({
         .order('started_at', { ascending: false })
       setPhoneCalls((data ?? []) as CallRow[])
     })()
-    db()
-      .from('whatsapp_logs')
-      .select('id, direction, template, body, status, sent_at, sent_by')
-      .eq('lead_id', leadId)
-      .order('sent_at', { ascending: false })
-      .then(({ data }) => setWati((data ?? []) as WaLog[]))
+
   }, [leadId, tenant.id])
   useEffect(load, [load, refreshKey])
   useEffect(() => {

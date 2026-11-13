@@ -5,6 +5,7 @@ import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { useBusiness } from '@/business/useBusiness'
 import { at, nicePhone as waPhone } from '@/integrations/waLogs'
 
 type CallLog = {
@@ -18,7 +19,7 @@ type CallLog = {
   emp_name: string | null
   agent_phone: string | null
   recording_url: string | null
-  leads?: { first_name: string; last_name: string | null } | null
+  lead_name: string | null
 }
 
 /** calls keep the 10-digit number */
@@ -31,13 +32,14 @@ const ago = (n: number) => {
 }
 const secs = (n: number | null) => (!n ? '0s' : n >= 3600 ? `${Math.floor(n / 3600)}h ${Math.floor((n % 3600) / 60)}m` : n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`)
 const DIR: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing', missed: 'Missed', rejected: 'Rejected', unknown: '—' }
-const name = (r: CallLog) => (r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : '')
+const name = (r: CallLog) => r.lead_name ?? ''
 const by = (r: CallLog) => r.emp_name || (r.agent_phone ? nicePhone(r.agent_phone) : '')
 
-/** System Connections → Callyzer → Logs: every call brought in from Callyzer (lead numbers only). */
+/** System Connections → Callyzer → Logs: the calls to numbers that are leads in the top-bar business (and sub-business). */
 export function CallyzerLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
+  const { selected, sub } = useBusiness()
   const [from, setFrom] = useState(ago(30))
   const [to, setTo] = useState(day(new Date()))
   const [rows, setRows] = useState<CallLog[] | null>(null)
@@ -50,17 +52,17 @@ export function CallyzerLogsPage() {
 
   const load = useCallback(() => {
     setError(null)
-    let qy = db()
-      .from('calls')
-      .select('id, lead_id, phone, direction, started_at, duration_sec, call_method, emp_name, agent_phone, recording_url, leads(first_name, last_name)')
-      .eq('tenant_id', tenant.id)
-      .eq('source', 'callyzer')
-    if (from) qy = qy.gte('started_at', `${from}T00:00:00+05:30`)
-    if (to) qy = qy.lte('started_at', `${to}T23:59:59+05:30`)
-    qy.order('started_at', { ascending: false })
-      .limit(5000)
-      .then(({ data, error: e }) => (e ? setError(e.message) : setRows((data ?? []) as unknown as CallLog[])))
-  }, [tenant.id, from, to])
+    setRows(null)
+    db()
+      .rpc('callyzer_logs', {
+        p_tenant: tenant.id,
+        p_business: selected?.id ?? null,
+        p_sub: sub?.id ?? null,
+        p_from: `${from || '2000-01-01'}T00:00:00+05:30`,
+        p_to: `${to || day(new Date())}T23:59:59+05:30`,
+      })
+      .then(({ data, error: e }) => (e ? setError(e.message) : setRows((data ?? []) as CallLog[])))
+  }, [tenant.id, from, to, selected?.id, sub?.id])
   useEffect(load, [load])
 
   const emps = useMemo(() => [...new Set((rows ?? []).map(by).filter(Boolean))].sort(), [rows])
@@ -82,7 +84,7 @@ export function CallyzerLogsPage() {
     <>
       <PageHead
         title="Callyzer logs"
-        subtitle="Every call brought in from Callyzer (calls to a lead’s number), with type, duration and recording."
+        subtitle={`Calls to numbers that are leads${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}, with type, duration and recording.`}
         actions={
           <Link to="/integrations" className="btn btn-outline">
             <ArrowLeft size={16} /> System Connections
