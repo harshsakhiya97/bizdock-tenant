@@ -108,3 +108,9 @@ export async function getFollowUp(id: string): Promise<FollowUpRow | null> {
   const { data } = await db().from('follow_ups').select(COLS).eq('id', id).maybeSingle()
   return (data ?? null) as unknown as FollowUpRow | null
 }
+
+/** the lead's next pending follow-up (if any) */
+export async function pendingFollowUpId(leadId: string): Promise<string | null> {
+  const { data } = await db().from('follow_ups').select('id').eq('lead_id', leadId).eq('status', 'pending').order('due_at').limit(1).maybeSingle()
+  return (data?.id as string | undefined) ?? null
+}
