@@ -23,6 +23,7 @@ import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
 import { syncCallyzer } from '@/callyzer/api'
 import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
 import { MetaTokenConnect } from '@/meta/MetaTokenConnect'
+import { FundsLine } from '@/meta/FundsLine'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -246,6 +247,7 @@ export function IntegrationsPage() {
                                 ? ` · bringing in history (up to ${x.synced_until})`
                                 : ' · first pull in a minute'}
                         </span>
+                        <FundsLine a={x} />
                       </div>
                     </div>
                   ))}
