@@ -16,29 +16,40 @@ export function FundsLine({ a }: { a: AdAccount }) {
   const parts: string[] = []
   let title = 'Checked with the numbers'
   if (kind === 'prepaid' && left != null) {
-    parts.push(`Prepaid · ${money(left * gst, cur)} left`)
+    parts.push(`${money(left * gst, cur)} left`)
     title = `${money(left, cur)} + GST ${money(left * gst - left, cur)} = ${money(left * gst, cur)}`
   } else if (kind === 'limit' && left != null) {
-    parts.push(`Postpaid · ${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
+    parts.push(`${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
     if (due) parts.push(`${money(due, cur)} due`)
   } else if (card) {
     parts.push(`Billed to ${a.funds.funds_text} · no spending limit`)
     if (due) parts.push(`${money(due, cur)} due`)
   } else if (a.funds.prepaid) {
-    parts.push('Prepaid · amount left not shared by Facebook')
+    parts.push('Amount left not shared by Facebook')
   } else {
     // funds added in Ads Manager pay the balance: what's left after today's spend, and today's spend
     parts.push(kind === 'funds' && left != null ? `Balance till now: ${money(left - (due ?? 0), cur)}` : 'Balance till now: not shared by Facebook')
     parts.push(`Today’s spend: ${money(due ?? 0, cur)}`)
     title = 'Today’s spend is the balance not yet taken from the funds (without tax).'
   }
+  // the account's type, on its own line after the account number
+  const type = a.funds.prepaid ? 'Prepaid' : kind === 'limit' || card ? 'Postpaid' : 'Wallet'
   return (
-    <span className={cn('small', low ? 'tone-danger' : 'muted')} title={title} style={{ fontWeight: shown != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
-      {parts.map((t) => (
-        <span key={t} style={{ display: 'block', whiteSpace: 'normal', overflow: 'visible' }}>
-          {t}
-        </span>
-      ))}
-    </span>
+    <>
+      <span className="muted small" style={{ display: 'block' }}>
+        {type}
+      </span>
+      <span
+        className={cn('small', low ? 'tone-danger' : 'muted')}
+        title={title}
+        style={{ fontWeight: shown != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}
+      >
+        {parts.map((t) => (
+          <span key={t} style={{ display: 'block', whiteSpace: 'normal', overflow: 'visible' }}>
+            {t}
+          </span>
+        ))}
+      </span>
+    </>
   )
 }
