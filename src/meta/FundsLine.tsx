@@ -8,16 +8,32 @@ export function FundsLine({ a }: { a: AdAccount }) {
   if (!a.funds) return null
   const { left, kind, due } = fundsLeft(a)
   const cur = a.funds.currency ?? a.currency
-  const low = left != null && left < 1000
+  const gst = 1 + Number(a.gst_rate ?? 18) / 100
+  // prepaid: what Ads Manager shows as Available funds includes GST
+  const shown = kind === 'prepaid' && left != null ? left * gst : left
+  const low = shown != null && shown < 1000
+  const card = !!a.funds.funds_text && /\*\d{3,}/.test(a.funds.funds_text)
   const parts: string[] = []
-  if (kind === 'prepaid' && left != null) parts.push(`Prepaid · ${money(left, cur)} left`)
-  else if (kind === 'funds' && left != null) parts.push(`Funds · ${money(left, cur)} left`)
-  else if (kind === 'limit' && left != null) parts.push(`Postpaid · ${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
-  else if (a.funds.funds_text && /\*\d{3,}/.test(a.funds.funds_text)) parts.push(`Billed to ${a.funds.funds_text} · no spending limit`)
-  else parts.push(a.funds.prepaid ? 'Prepaid · amount left not shared by Facebook' : 'Funds not shared by Facebook · no spending limit')
-  if (due) parts.push(`${money(due, cur)} due`)
+  let title = 'Checked with the numbers'
+  if (kind === 'prepaid' && left != null) {
+    parts.push(`Prepaid · ${money(left * gst, cur)} left`)
+    title = `${money(left, cur)} + GST ${money(left * gst - left, cur)} = ${money(left * gst, cur)}`
+  } else if (kind === 'limit' && left != null) {
+    parts.push(`Postpaid · ${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
+    if (due) parts.push(`${money(due, cur)} due`)
+  } else if (card) {
+    parts.push(`Billed to ${a.funds.funds_text} · no spending limit`)
+    if (due) parts.push(`${money(due, cur)} due`)
+  } else if (a.funds.prepaid) {
+    parts.push('Prepaid · amount left not shared by Facebook')
+  } else {
+    // funds added in Ads Manager pay the balance: what's left after today's spend, and today's spend
+    parts.push(kind === 'funds' && left != null ? `Balance till now: ${money(left - (due ?? 0), cur)}` : 'Balance till now: not shared by Facebook')
+    parts.push(`Today’s spend: ${money(due ?? 0, cur)}`)
+    title = 'Today’s spend is the balance not yet taken from the funds (without tax).'
+  }
   return (
-    <span className={cn('small', low ? 'tone-danger' : 'muted')} title={`Checked with the numbers${a.funds.spent != null ? ` · spent since the limit was last reset ${money(a.funds.spent, cur)}` : ''}`} style={{ fontWeight: left != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
+    <span className={cn('small', low ? 'tone-danger' : 'muted')} title={title} style={{ fontWeight: shown != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>
       {parts.map((t) => (
         <span key={t} style={{ display: 'block', whiteSpace: 'normal', overflow: 'visible' }}>
           {t}
