@@ -310,3 +310,26 @@ export async function adPreview(tenantId: string, adId: string, format: string) 
   if (error || data?.error) throw new Error(await errText(error, data))
   return String(data.src)
 }
+
+export type FunnelFlow = {
+  spend: number
+  impressions: number
+  link_clicks: number
+  lpv: number
+  meta_leads: number
+  purchases: number
+  leads: number
+  leads_ads: number
+  stages: { name: string; kind: string; n: number; ads: number }[]
+  lost: number
+  revenue: number
+  revenue_ads: number
+  collected: number
+  linked: number
+}
+/** the funnel's flow for the Overview: impressions → clicks → page views → leads → each stage reached → revenue */
+export async function funnelFlow(funnelId: string, from: string, to: string): Promise<FunnelFlow | null> {
+  const { data, error } = await db().rpc('funnel_flow', { p_funnel: funnelId, p_from: from, p_to: to })
+  if (error) throw new Error(error.message)
+  return (data ?? null) as FunnelFlow | null
+}
