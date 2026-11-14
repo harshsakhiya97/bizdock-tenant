@@ -99,7 +99,7 @@ export type AdAccount = {
   last_error: string | null
   account_status: number | null
   /** money on Facebook (main units): prepaid funds left (available), amount due, spent, spending limit */
-  funds: { prepaid: boolean; available: number | null; funds_text: string | null; due: number | null; spent: number | null; cap: number | null; currency: string | null; note: string | null } | null
+  funds: { prepaid: boolean; available: number | null; funds_text: string | null; source_type?: number | null; due: number | null; spent: number | null; cap: number | null; currency: string | null; note: string | null } | null
   funds_at: string | null
 }
 export async function listAdAccounts(tenantId: string): Promise<AdAccount[]> {

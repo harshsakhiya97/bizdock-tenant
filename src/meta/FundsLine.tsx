@@ -13,6 +13,7 @@ export function FundsLine({ a }: { a: AdAccount }) {
   if (kind === 'prepaid' && left != null) parts.push(`Prepaid · ${money(left, cur)} left`)
   else if (kind === 'funds' && left != null) parts.push(`Funds · ${money(left, cur)} left`)
   else if (kind === 'limit' && left != null) parts.push(`Postpaid · ${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
+  else if (a.funds.funds_text && /\*\d{3,}/.test(a.funds.funds_text)) parts.push(`Billed to ${a.funds.funds_text} · no spending limit`)
   else parts.push(a.funds.prepaid ? 'Prepaid · amount left not shared by Facebook' : 'Funds not shared by Facebook · no spending limit')
   if (due) parts.push(`${money(due, cur)} due`)
   return (
