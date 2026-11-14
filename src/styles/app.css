@@ -1406,3 +1406,23 @@ a.db-card:hover { border-color: var(--brand); }
 .ml-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 600; line-height: 18px; }
 .ml-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; flex: none; }
 .ml-chip-x:hover { background: rgba(0, 0, 0, 0.08); }
+
+/* Funnel → Overview: the 3D funnel */
+.flow { display: flex; flex-direction: column; align-items: center; gap: 0; max-width: 620px; width: 100%; margin: 0 auto; }
+.flow-step { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.flow-stage { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 12px 18% 14px; color: #fff; text-align: center; box-shadow: inset 0 6px 10px rgba(255, 255, 255, 0.18); }
+.flow-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.9; }
+.flow-value { font-size: 26px; line-height: 1.15; }
+.flow-title { font-size: 13px; font-weight: 600; }
+.flow-sub { font-size: 11px; opacity: 0.9; }
+.flow-rate { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0; padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface, #fff); font-size: 12px; text-align: center; }
+.flow-tiles { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.flow-tile { flex: 0 1 150px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 10px; border-radius: 10px; color: #fff; text-align: center; }
+.flow-tile b { font-size: 20px; }
+.flow-tile span { font-size: 12px; font-weight: 700; }
+.flow-tile small { font-size: 11px; opacity: 0.9; }
+.flow-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 8px; }
+.flow-card { display: flex; flex-direction: column; gap: 2px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.flow-card b { font-size: 20px; }
+.flow-card span { font-size: 12px; font-weight: 600; }
+@media (max-width: 640px) { .flow-stage { padding-left: 12%; padding-right: 12%; } .flow-value { font-size: 20px; } }

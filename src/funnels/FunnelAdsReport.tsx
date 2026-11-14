@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
-import { funnelAdsReport, type AdsReport } from '@/meta/api'
+import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
+import { FunnelFlow } from './FunnelFlow'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const num = (n: number | null | undefined) => Number(n || 0).toLocaleString('en-IN')
@@ -31,11 +32,14 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
   const [to, setTo] = useState(day(new Date()))
   const [r, setR] = useState<AdsReport | null | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
+  const [flow, setFlow] = useState<Flow | null>(null)
 
   useEffect(() => {
     setR(undefined)
     setError(null)
+    setFlow(null)
     funnelAdsReport(funnelId, from, to).then(setR, (e: Error) => setError(e.message))
+    funnelFlow(funnelId, from, to).then(setFlow, (e: Error) => setError(e.message))
   }, [funnelId, from, to])
 
   // the old CRM's saved day-wise spend is hidden for now: only Facebook's numbers
@@ -103,16 +107,8 @@ export function FunnelAdsReport({ funnelId }: { funnelId: string }) {
           </div>
           {!r.linked && <div className="muted small">No Facebook campaigns are linked to this funnel yet (Facebook Ads tab), so there’s no ad spend.</div>}
 
-          {/* where the leads are now */}
-          <div className="ads-stages">
-            {r.stages.map((s) => (
-              <div key={s.name} className={cn('ads-stage', s.kind === 'won' && 'is-won', s.kind === 'lost' && 'is-lost')}>
-                <span className="muted small">{s.name}</span>
-                <b>{num(s.n)}</b>
-                <span className="muted small">{r.leads ? `${Math.round((s.n / r.leads) * 100)}%` : '—'}</span>
-              </div>
-            ))}
-          </div>
+          {/* the 3D funnel: reach → clicks → page views → leads → stages → revenue */}
+          {flow && <FunnelFlow f={flow} gst={spendEx ? spend / spendEx : 1.18} />}
 
           {/* spend and leads per day */}
           {fbDays.length > 0 && (
