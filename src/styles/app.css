@@ -1401,3 +1401,8 @@ a.db-card:hover { border-color: var(--brand); }
 .ads-bar { width: 100%; background: var(--brand); border-radius: 2px 2px 0 0; min-height: 1px; opacity: .8; }
 .ads-bar.is-old { background: var(--line-strong); }
 .ads-dot { position: absolute; left: 50%; width: 6px; height: 6px; margin: 0 0 -3px -3px; border-radius: 50%; background: var(--success); }
+
+/* Facebook Ads logs: the picked campaign / ad set */
+.ml-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 4px 6px 4px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 12px; font-weight: 600; line-height: 18px; }
+.ml-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; flex: none; }
+.ml-chip-x:hover { background: rgba(0, 0, 0, 0.08); }

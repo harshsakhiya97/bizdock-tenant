@@ -303,3 +303,10 @@ export function fundsLeft(a: AdAccount): { left: number | null; kind: 'prepaid' 
   if (f.cap != null && f.spent != null) return { left: Math.max(0, f.cap - f.spent), kind: 'limit', due: f.due }
   return { left: null, kind: null, due: f.due }
 }
+
+/** an ad's preview as Facebook draws it: the address of Facebook's preview frame (works for a short while) */
+export async function adPreview(tenantId: string, adId: string, format: string) {
+  const { data, error } = await db().functions.invoke('meta-preview', { body: { tenant_id: tenantId, ad_id: adId, format } })
+  if (error || data?.error) throw new Error(await errText(error, data))
+  return String(data.src)
+}

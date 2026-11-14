@@ -10,6 +10,7 @@ import { ago as agoTime } from '@/team/time'
 import { connectMeta, listAdAccounts, metaLogs, type AdAccount, type MetaDay, type MetaObj } from './api'
 import { MetaSettingsDrawer } from './MetaSettingsDrawer'
 import { MetaTokenConnect } from './MetaTokenConnect'
+import { AdPreviewDrawer } from './AdPreviewDrawer'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const inr2 = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -71,6 +72,7 @@ export function MetaLogsPage() {
   const [tokenFor, setTokenFor] = useState<IntegrationRow | null>(null)
   const [settingsFor, setSettingsFor] = useState<IntegrationRow | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
+  const [preview, setPreview] = useState<{ id: string; name: string | null; sub: string } | null>(null)
   const [fbWait, setFbWait] = useState<{ cancel: () => void } | null>(null)
 
   const loadConns = useCallback(() => {
@@ -184,6 +186,9 @@ export function MetaLogsPage() {
       setAdset(o)
       if (!campaign) setCampaign(data?.campaigns.find((c) => c.id === o.campaign_id) ?? null)
       setLevel('ads')
+    } else {
+      setPreview({ id: o.id, name: o.name, sub: `${accById.get(o.account_id)?.name ?? ''} · ${names.get(o.campaign_id) ?? o.campaign_id}${o.adset_id ? ` · ${names.get(o.adset_id) ?? o.adset_id}` : ''}` })
+      return
     }
     setQ('')
   }
@@ -361,19 +366,19 @@ export function MetaLogsPage() {
           </button>
         </div>
         {(campaign || adset) && (
-          <div className="panel-filters" style={{ paddingTop: 0 }}>
+          <div className="panel-filters" style={{ paddingTop: 0, gap: 8, flexWrap: 'wrap' }}>
             {campaign && (
-              <span className="badge badge-brand row" style={{ gap: 4 }}>
+              <span className="ml-chip">
                 Campaign: {campaign.name ?? campaign.id}
-                <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Clear campaign" onClick={() => (setCampaign(null), setAdset(null))}>
+                <button type="button" className="ml-chip-x" aria-label="Clear campaign" onClick={() => (setCampaign(null), setAdset(null))}>
                   <X size={12} />
                 </button>
               </span>
             )}
             {adset && (
-              <span className="badge badge-brand row" style={{ gap: 4 }}>
+              <span className="ml-chip">
                 Ad set: {adset.name ?? adset.id}
-                <button type="button" className="btn btn-ghost btn-icon btn-sm" aria-label="Clear ad set" onClick={() => setAdset(null)}>
+                <button type="button" className="ml-chip-x" aria-label="Clear ad set" onClick={() => setAdset(null)}>
                   <X size={12} />
                 </button>
               </span>
@@ -428,7 +433,7 @@ export function MetaLogsPage() {
                       const [label, tone] = delivery(o)
                       const acc = accById.get(o.account_id)
                       return (
-                        <tr key={o.id} className={cn(level !== 'ads' && 'is-clickable')} onClick={() => open(o)} title={level === 'campaigns' ? 'Open its ad sets' : level === 'adsets' ? 'Open its ads' : undefined}>
+                        <tr key={o.id} className="is-clickable" onClick={() => open(o)} title={level === 'campaigns' ? 'Open its ad sets' : level === 'adsets' ? 'Open its ads' : 'See the ad’s preview'}>
                           <td style={{ minWidth: 340, maxWidth: 440 }}>
                             <b>{o.name ?? o.id}</b>
                             <div className="muted small">
@@ -461,6 +466,7 @@ export function MetaLogsPage() {
         )}
       </section>
 
+      {preview && <AdPreviewDrawer ad={preview} onClose={() => setPreview(null)} />}
       {tokenFor && (
         <MetaTokenConnect
           integrationId={tokenFor.id}
