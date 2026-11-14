@@ -14,7 +14,7 @@ const tokenPrompt = () => `In Chrome I'm logged in to Facebook as an admin of ou
 
 1. Open https://business.facebook.com/settings and make sure our business is the one selected (top left). If I'm not an admin there, stop and tell me.
 2. Left menu: Users → System users. If a system user named "BizDock" already exists, use it; otherwise click Add, name it "BizDock", role Employee (not Admin), and create it.
-3. With "BizDock" selected, click "Assign assets" (or Add assets) → Ad accounts → tick our ad accounts → give only "View performance" (read-only, no manage access) → Assign.
+3. With "BizDock" selected, click "Assign assets" (or Add assets) → Ad accounts → tick our ad accounts → turn on "Manage ad account" (full control, so BizDock can read the billing: funds and amount due; BizDock only reads, it never changes anything) → Assign.
 4. Left menu: Accounts → Apps. If BizDock (App ID ${APP_ID}) isn't listed, click Add → "Connect an app ID" (or "Request access to an app ID"), enter ${APP_ID} and send. If Facebook says the app's owner has to approve, stop and tell me "Waiting for BizDock to approve the app request" (when I say "approved, continue", go on from here). Once BizDock is listed, open the "BizDock" system user → Assign assets → Apps → BizDock → "Manage app" off, only the basic access → Assign.
 5. On the "BizDock" system user click "Generate new token" (or Generate token): app = BizDock, token expiration = Never, permissions = ads_read and business_management only. Click Generate.
 6. When the token is on screen, tell me only: "The token is on screen — copy it into BizDock". Don't close the dialog.`
@@ -96,7 +96,7 @@ export function MetaTokenConnect({ integrationId, label, onClose, onDone }: { in
         <div className="stack">
           <PromptBox
             title="Step 1 · Your business’s Facebook"
-            note="Log in to Facebook as an admin of the business that owns the ad accounts, open Claude in Chrome and paste this. It makes the read-only BizDock user and asks for the BizDock app; you copy the token yourself."
+            note="Log in to Facebook as an admin of the business that owns the ad accounts, open Claude in Chrome and paste this. It makes the BizDock user and asks for the BizDock app; you copy the token yourself."
             text={tokenPrompt()}
           />
           <PromptBox
@@ -109,7 +109,7 @@ export function MetaTokenConnect({ integrationId, label, onClose, onDone }: { in
             <ol>
               <li>Open Meta Business Settings (business.facebook.com/settings) as an admin of the business that owns the ad accounts.</li>
               <li>Users → System users → Add: name “BizDock”, role Employee.</li>
-              <li>On BizDock: Assign assets → Ad accounts → tick the ad accounts → “View performance” only.</li>
+              <li>On BizDock: Assign assets → Ad accounts → tick the ad accounts → “Manage ad account” (full control: needed to read the billing — funds left and amount due; BizDock only reads).</li>
               <li>Accounts → Apps: Add → Request access to an app ID → {APP_ID}. BizDock approves it (step 2), then assign the app to the BizDock system user.</li>
               <li>On the BizDock system user: Generate new token → app BizDock → expiration Never → permissions ads_read and business_management → Generate.</li>
               <li>Paste the token in the Token tab and press {replace ? 'Save' : 'Connect'}: BizDock checks it with Facebook straight away.</li>

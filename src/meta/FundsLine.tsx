@@ -11,8 +11,9 @@ export function FundsLine({ a }: { a: AdAccount }) {
   const low = left != null && left < 1000
   const parts: string[] = []
   if (kind === 'prepaid' && left != null) parts.push(`Prepaid · ${money(left, cur)} left`)
+  else if (kind === 'funds' && left != null) parts.push(`Funds · ${money(left, cur)} left`)
   else if (kind === 'limit' && left != null) parts.push(`Postpaid · ${money(left, cur)} left of ${money(a.funds.cap ?? 0, cur)} limit`)
-  else parts.push(a.funds.prepaid ? 'Prepaid · amount left not shared by Facebook' : 'Postpaid (billed to card) · no spending limit')
+  else parts.push(a.funds.prepaid ? 'Prepaid · amount left not shared by Facebook' : 'Funds not shared by Facebook · no spending limit')
   if (due) parts.push(`${money(due, cur)} due`)
   return (
     <span className={cn('small', low ? 'tone-danger' : 'muted')} title={`Checked with the numbers${a.funds.spent != null ? ` · spent since the limit was last reset ${money(a.funds.spent, cur)}` : ''}`} style={{ fontWeight: left != null ? 600 : undefined, whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip' }}>

@@ -293,10 +293,11 @@ export async function funnelDaySpend(tenantId: string, links: { campaign_id: str
 }
 
 /** what's left to spend on an ad account: prepaid funds left, else what's left of its spending limit; and what's due */
-export function fundsLeft(a: AdAccount): { left: number | null; kind: 'prepaid' | 'limit' | null; due: number | null } {
+export function fundsLeft(a: AdAccount): { left: number | null; kind: 'prepaid' | 'funds' | 'limit' | null; due: number | null } {
   const f = a.funds
   if (!f) return { left: null, kind: null, due: null }
-  if (f.prepaid && f.available != null) return { left: f.available, kind: 'prepaid', due: null }
+  // funds added in Ads Manager (prepaid, or a funds wallet that pays the balance): what Facebook's billing shows
+  if (f.available != null) return { left: f.available, kind: f.prepaid ? 'prepaid' : 'funds', due: f.prepaid ? null : f.due }
   // prepaid: the spending limit is the funds added, amount_spent what's used of it
   if (f.prepaid && f.cap != null && f.spent != null) return { left: Math.max(0, f.cap - f.spent), kind: 'prepaid', due: null }
   if (f.cap != null && f.spent != null) return { left: Math.max(0, f.cap - f.spent), kind: 'limit', due: f.due }
