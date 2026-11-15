@@ -637,7 +637,6 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                       <th>Last comment</th>
                       <th>Follow-ups done</th>
                       <th>Next follow-up</th>
-                      <th>Status</th>
                       <th>Lead date</th>
                       <th />
                     </>
@@ -947,9 +946,6 @@ function PpCells({
         <b>{x?.fu_done ?? 0}</b> <span className="muted small">· {x?.connected ?? 0} connected</span>
       </td>
       <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.state === 'none' ? 'No follow-up' : fu.text}</td>
-      <td className="nowrap">
-        {stage ? <span className={cn('badge', stage.kind === 'won' ? 'badge-success' : stage.kind === 'lost' ? 'badge-muted' : 'badge-warning')}>{stage.name}</span> : <span className="muted">—</span>}
-      </td>
       <td className="muted nowrap">{leadDate(l)}</td>
       <RowActions closed={closed} canFollowUp={canFollowUp} canMeet={canMeet} canLose={canLose} onFollowUp={onFollowUp} onMeeting={onMeeting} onLose={onLose} />
     </>
