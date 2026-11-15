@@ -67,8 +67,18 @@ export async function deleteMeeting(id: string) {
   if (error) throw error
 }
 
-/** quick outcome from the dashboard (Qualified, Not qualified, No-show) */
-export async function setMeetingStatus(id: string, status: MeetingStatus) {
-  const { error } = await db().from('meetings').update({ status }).eq('id', id)
+/** Done (with a comment) or No-show (with a reason): the note is the meeting's outcome note */
+export async function closeMeeting(id: string, status: 'done' | 'no_show', note: string) {
+  const { error } = await db().from('meetings').update({ status, outcome_note: note.trim() || null }).eq('id', id)
+  if (error) throw error
+}
+
+/** Reschedule: the same meeting moves to a new date and time (same guest, team member and Zoom — its Zoom meeting moves too); the old slot and the reason go in its history */
+export async function rescheduleMeeting(m: MeetingRow, memberId: string | undefined, date: string, start: string, end: string, reason: string) {
+  const reschedules: Reschedule[] = [
+    ...(m.reschedules ?? []),
+    { date: m.meeting_date, start: m.start_time.slice(0, 5), end: m.end_time.slice(0, 5), reason: reason.trim() || null, at: new Date().toISOString(), by: memberId ?? null },
+  ]
+  const { error } = await db().from('meetings').update({ meeting_date: date, start_time: start, end_time: end, status: 'scheduled', reschedules }).eq('id', m.id)
   if (error) throw error
 }

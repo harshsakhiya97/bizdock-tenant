@@ -15,6 +15,7 @@ import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { ActivityLog } from './ActivityLog'
+import { CategorySelect } from './CategorySelect'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
@@ -40,7 +41,7 @@ export function LeadPage() {
   const { id = '' } = useParams()
   const tenant = useTenant()
   const navigate = useNavigate()
-  const { can, businesses } = useAuth()
+  const { can, businesses, membership } = useAuth()
   const refs = useBookingRefs()
   const [lead, setLead] = useState<LeadRow | null | undefined>(undefined)
   const [members, setMembers] = useState<MemberOption[]>([])
@@ -175,7 +176,7 @@ export function LeadPage() {
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
-    ...(isPodcast && can('meetings', 'view') ? [{ id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).filter((m) => m.status !== 'cancelled').length }] : []),
+    ...(isPodcast && can('meetings', 'view') ? [{ id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).length }] : []),
     ...(isWebinar
       ? [
           { id: 'webinars' as Tab, label: 'Webinars' },
@@ -206,6 +207,17 @@ export function LeadPage() {
                 {stage.name}
               </span>
             )}
+            <CategorySelect
+              tenantId={tenant.id}
+              memberId={membership?.id}
+              leadId={lead.id}
+              value={lead.temperature}
+              canEdit={canEdit}
+              onChanged={(v) => {
+                setLead({ ...lead, temperature: v })
+                setRefresh((r) => r + 1)
+              }}
+            />
             {isCustomer && (
               <span className="badge badge-success">
                 <Star size={12} /> Customer

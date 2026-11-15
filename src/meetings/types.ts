@@ -1,4 +1,5 @@
-export type MeetingStatus = 'scheduled' | 'qualified' | 'not_qualified' | 'no_show' | 'cancelled'
+/** scheduled = Upcoming */
+export type MeetingStatus = 'scheduled' | 'done' | 'no_show'
 export type MeetingMode = 'online' | 'in_person'
 
 /** an earlier slot of a rescheduled meeting */
@@ -34,11 +35,9 @@ export type MeetingRow = {
 }
 
 export const MEETING_STATUS: Record<MeetingStatus, { label: string; tone: string; color: string }> = {
-  scheduled: { label: 'Scheduled', tone: 'badge-info', color: '#2563eb' },
-  qualified: { label: 'Qualified', tone: 'badge-success', color: '#16a34a' },
-  not_qualified: { label: 'Not qualified', tone: 'badge-danger', color: '#dc2626' },
+  scheduled: { label: 'Upcoming', tone: 'badge-info', color: '#2563eb' },
+  done: { label: 'Done', tone: 'badge-success', color: '#16a34a' },
   no_show: { label: 'No-show', tone: 'badge-warning', color: '#d97706' },
-  cancelled: { label: 'Cancelled', tone: 'badge-muted', color: '#94a3b8' },
 }
 
 export const MODE_LABEL: Record<MeetingMode, string> = { online: 'Online', in_person: 'In person' }

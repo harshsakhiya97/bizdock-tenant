@@ -39,8 +39,8 @@ const write = (k: string, v: string) => {
   }
 }
 
-type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; archived: boolean; sort: string }
-const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', archived: false, sort: 'newest' }
+type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string }
+const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest' }
 
 type PendingMove = { ids: string[]; stage: StageRow }
 
@@ -56,14 +56,20 @@ const leadDate = (l: LeadRow) => {
   return new Date(t).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-/** Paid Podcast's call booking: the latest meeting, else "Form filled" when the call-booking form was sent */
+/** Paid Podcast's form steps: 1 opt-in form, 2 VSL form (business details), 3 a meeting (booking calendar) — then the meeting's status */
 const MEETING_LABEL: Record<string, { label: string; tone: string }> = {
-  scheduled: { label: 'Scheduled', tone: 'badge-brand' },
-  qualified: { label: 'Done', tone: 'badge-success' },
-  not_qualified: { label: 'Done', tone: 'badge-success' },
+  scheduled: { label: 'Meeting upcoming', tone: 'badge-brand' },
+  done: { label: 'Meeting done', tone: 'badge-success' },
   no_show: { label: 'No-show', tone: 'badge-danger' },
-  cancelled: { label: 'Cancelled', tone: 'badge-muted' },
 }
+const FORM_STEPS = [
+  { value: 'optin', label: 'Opt-in form only' },
+  { value: 'vsl', label: 'VSL form filled' },
+  { value: 'meeting', label: 'Meeting scheduled' },
+] as const
+/** how far the lead got through the forms */
+const formStep = (l: LeadRow, x: LeadExtras | undefined): 'optin' | 'vsl' | 'meeting' =>
+  x?.meeting_status ? 'meeting' : l.extra?.vsl_form_at || l.extra?.call_booked_at ? 'vsl' : 'optin'
 
 /** Leads, or (customers) leads with a confirmed / completed booking and their revenue. */
 export function LeadsPage({ customers = false }: { customers?: boolean }) {
@@ -228,6 +234,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       )
       .filter((l) => studio || !filters.source || l.source_id === filters.source)
       .filter((l) => !filters.temp || l.temperature === filters.temp)
+      .filter((l) => !pp || !filters.form || formStep(l, extras.get(l.id)) === filters.form)
       .filter((l) => !filters.owner || (filters.owner === 'none' ? !l.owner_id : l.owner_id === filters.owner))
       .filter((l) => {
         if (!filters.followUp) return true
@@ -245,7 +252,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope])
+  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras])
 
   const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =
@@ -319,7 +326,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
 
   function exportCsv() {
     const rows = [
-      ['Name', 'Phone', 'WhatsApp', 'Email', 'City', 'Funnel', 'Stage', 'Temperature', 'Source', 'Owner', 'Estimated amount', 'Next follow-up', 'Tags', 'Created'],
+      ['Name', 'Phone', 'WhatsApp', 'Email', 'City', 'Funnel', 'Stage', 'Category', 'Source', 'Owner', 'Estimated amount', 'Next follow-up', 'Tags', 'Created'],
       ...visible.map((l) => [
         fullName(l),
         l.phone,
@@ -437,6 +444,24 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Category">
+            <option value="">Category</option>
+            {TEMPERATURES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+          {pp && (
+            <select className="input input-sm filter-select" value={filters.form} onChange={(e) => setF('form', e.target.value)} aria-label="Form">
+              <option value="">Form</option>
+              {FORM_STEPS.map((f) => (
+                <option key={f.value} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+          )}
           <select className="input input-sm filter-select" value={filters.followUp} onChange={(e) => setF('followUp', e.target.value)} aria-label="Follow-up">
             <option value="">Follow-up</option>
             <option value="overdue">Overdue</option>
@@ -488,8 +513,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             )}
             {can('leads', 'edit') && (
               <span className="bulk-group">
-                <select className="input input-sm" value={bulk.temp} onChange={(e) => setBulk((b) => ({ ...b, temp: e.target.value }))} aria-label="Temperature">
-                  <option value="">Temperature…</option>
+                <select className="input input-sm" value={bulk.temp} onChange={(e) => setBulk((b) => ({ ...b, temp: e.target.value }))} aria-label="Category">
+                  <option value="">Category…</option>
                   {TEMPERATURES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
@@ -504,7 +529,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     run(async () => {
                       await updateLeads(pickedIds, { temperature: bulk.temp as Temperature })
                       await logActivity(tenant.id, me, pickedIds, { kind: 'temperature', note: tempOf(bulk.temp as Temperature)?.label })
-                    }, 'Temperature updated.')
+                    }, 'Category updated.')
                   }
                 >
                   Set
@@ -606,8 +631,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   <th>{Word}</th>
                   {pp ? (
                     <>
+                      <th>Category</th>
                       <th>Source</th>
-                      <th>Call booking</th>
+                      <th>Form</th>
                       <th>Last comment</th>
                       <th>Follow-ups done</th>
                       <th>Next follow-up</th>
@@ -617,7 +643,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     </>
                   ) : (
                   <>
-                  {!studio && <th>Temp</th>}
+                  <th>Category</th>
                   <th>Source</th>
                   {studio && (
                     <>
@@ -689,7 +715,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                         />
                       ) : (
                       <>
-                      {!studio && <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>}
+                      <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
                       {studio && (
                         <>
@@ -883,12 +909,14 @@ function PpCells({
   onLose: () => void
 }) {
   const m = x?.meeting_status ? MEETING_LABEL[x.meeting_status] : null
-  const formFilled = !m && Boolean(extraOf(l, 'call_booked_at'))
+  const step = formStep(l, x)
+  const t = tempOf(l.temperature)
   const comment = x?.last_note || l.notes || ''
   const closed = stage?.kind === 'won' || stage?.kind === 'lost'
   const stop = (e: React.MouseEvent) => e.stopPropagation()
   return (
     <>
+      <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
       <td>{source ?? <span className="muted">—</span>}</td>
       <td className="nowrap">
         {m ? (
@@ -900,10 +928,10 @@ function PpCells({
               </a>
             )}
           </span>
-        ) : formFilled ? (
-          <span className="badge badge-warning">Form filled</span>
+        ) : step === 'vsl' ? (
+          <span className="badge badge-warning">VSL form filled</span>
         ) : (
-          <span className="muted">—</span>
+          <span className="badge badge-muted">Opt-in form</span>
         )}
       </td>
       <td style={{ maxWidth: 220 }}>

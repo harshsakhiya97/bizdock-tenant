@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { AlarmClock, CalendarCheck, CalendarDays, Download, ListTodo, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
-import { fullName } from '@/leads/labels'
+import { fullName, TEMPERATURES } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { CompleteModal } from './CompleteModal'
 import { FollowUpTable } from './FollowUpTable'
@@ -30,6 +30,7 @@ export function FollowUpsPage() {
   const [q, setQ] = useState('')
   const [assigned, setAssigned] = useState('')
   const [mode, setMode] = useState('')
+  const [cat, setCat] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [done, setDone] = useState<FollowUpRow | null>(null)
@@ -64,6 +65,7 @@ export function FollowUpsPage() {
     return data.followUps
       .filter((f) => !assigned || (assigned === 'me' ? f.assigned_to === membership?.id : f.assigned_to === assigned))
       .filter((f) => !mode || f.mode === mode)
+      .filter((f) => !cat || f.leads?.temperature === cat)
       .filter((f) => !from || new Date(f.due_at) >= new Date(`${from}T00:00`))
       .filter((f) => !to || new Date(f.due_at) <= new Date(`${to}T23:59`))
       .filter(
@@ -72,7 +74,7 @@ export function FollowUpsPage() {
           (f.leads && fullName(f.leads).toLowerCase().includes(s)) ||
           (!!digits && (f.leads?.phone ?? '').replace(/\D/g, '').includes(digits)),
       )
-  }, [data.followUps, q, assigned, mode, from, to, membership?.id])
+  }, [data.followUps, q, assigned, mode, cat, from, to, membership?.id])
 
   const rows = filtered
     .filter((f) => inTab(f, tab))
@@ -164,6 +166,14 @@ export function FollowUpsPage() {
             {MODES.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
+              </option>
+            ))}
+          </select>
+          <select className="input input-sm filter-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+            <option value="">Category</option>
+            {TEMPERATURES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
               </option>
             ))}
           </select>

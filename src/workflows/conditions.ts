@@ -24,7 +24,7 @@ export const LEAD_FIELDS: FieldDef[] = [
   { value: 'stage', label: 'Stage', kind: 'select', group: 'Lead' },
   { value: 'source', label: 'Source', kind: 'select', group: 'Lead' },
   { value: 'owner', label: 'Owner', kind: 'select', group: 'Lead' },
-  { value: 'temperature', label: 'Temperature', kind: 'select', group: 'Lead' },
+  { value: 'temperature', label: 'Category', kind: 'select', group: 'Lead' },
   { value: 'webinar_category', label: 'Webinar category', kind: 'select', group: 'Lead' },
   { value: 'tag', label: 'Tags', kind: 'tag', group: 'Lead' },
   { value: 'landing_page', label: 'Form (webhook)', kind: 'select', group: 'Lead' },
@@ -42,10 +42,12 @@ export const LEAD_FIELDS: FieldDef[] = [
 ]
 
 export const TEMPERATURES = [
+  { value: 'new', label: 'New' },
   { value: 'hot', label: 'Hot' },
   { value: 'warm', label: 'Warm' },
   { value: 'cold', label: 'Cold' },
   { value: 'not_interested', label: 'Not interested' },
+  { value: 'closed', label: 'Closed' },
 ]
 
 export const OP_LABEL: Record<CondOp, string> = {

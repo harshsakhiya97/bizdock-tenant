@@ -1,10 +1,13 @@
 import type { Temperature } from './types'
 
+/** the lead's category: New, Hot, Warm, Cold, Not interested, Closed (Won → Closed, Lost → Not interested, automatically) */
 export const TEMPERATURES: { value: Temperature; label: string; tone: string }[] = [
+  { value: 'new', label: 'New', tone: 'badge-brand' },
   { value: 'hot', label: 'Hot', tone: 'badge-danger' },
   { value: 'warm', label: 'Warm', tone: 'badge-warning' },
   { value: 'cold', label: 'Cold', tone: 'badge-info' },
   { value: 'not_interested', label: 'Not interested', tone: 'badge-muted' },
+  { value: 'closed', label: 'Closed', tone: 'badge-success' },
 ]
 export const tempOf = (t: Temperature | null) => TEMPERATURES.find((x) => x.value === t)
 

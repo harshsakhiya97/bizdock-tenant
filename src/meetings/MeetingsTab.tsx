@@ -18,13 +18,13 @@ export function MeetingsTab({
   onOpen: (m: MeetingRow) => void
 }) {
   const sorted = [...(meetings ?? [])].sort((a, b) => (b.meeting_date + b.start_time).localeCompare(a.meeting_date + a.start_time))
-  const live = sorted.filter((m) => m.status !== 'cancelled')
+  const live = sorted
   return (
     <div className="stack">
       <div className="row-between">
         <span className="muted small">
           {live.length} meeting{live.length === 1 ? '' : 's'}
-          {live.some((m) => m.status === 'qualified') ? ' · qualified' : live.some((m) => m.status === 'not_qualified') ? ' · not qualified' : ''}
+          {live.some((m) => m.status === 'scheduled') ? ' · one upcoming' : ''}
         </span>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
@@ -46,7 +46,7 @@ export function MeetingsTab({
                 <th>When</th>
                 <th>Mode</th>
                 <th>Status</th>
-                <th>Outcome</th>
+                <th>Comment / reason</th>
                 <th />
               </tr>
             </thead>
@@ -75,7 +75,7 @@ export function MeetingsTab({
                         </a>
                       )}{' '}
                       <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpen(m)}>
-                        Open
+                        {m.status === 'scheduled' ? 'Done / Reschedule / No-show' : 'Open'}
                       </button>
                     </td>
                   </tr>

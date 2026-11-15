@@ -14,6 +14,8 @@ export type FollowUpLead = {
   owner_id: string | null
   purpose?: string | null
   required_on?: string | null
+  /** the lead's category */
+  temperature?: string | null
 }
 
 export type FollowUpRow = {

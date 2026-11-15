@@ -42,7 +42,7 @@ export function ActivityLog({
       case 'assigned':
         return 'Owner changed'
       case 'temperature':
-        return 'Temperature changed'
+        return 'Category changed'
       case 'follow_up':
         return 'Follow-up scheduled'
       case 'archived':
