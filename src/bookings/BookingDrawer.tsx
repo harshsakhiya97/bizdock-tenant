@@ -29,6 +29,8 @@ const PART_LABELS = ['Advance', 'Pre-shoot', 'After shoot', 'After service', 'Fi
  */
 export function BookingDrawer({
   booking: initial,
+  service = false,
+  copyFrom,
   defaults,
   lead,
   leads,
@@ -37,6 +39,10 @@ export function BookingDrawer({
   onSaved,
 }: {
   booking: BookingRow | null
+  /** Default business: a service purchase (no calendar slot, no time) */
+  service?: boolean
+  /** Repeat: a new booking with this one's services, GST and note */
+  copyFrom?: BookingRow | null
   defaults?: { date?: string; start?: string; end?: string }
   /** fixed enquiry (lead / client page) */
   lead?: { id: string | null; customer_id?: string | null; name: string; phone: string; purpose: string | null; business_id: string; sub_business_id?: string | null } | null
@@ -69,8 +75,8 @@ export function BookingDrawer({
     phone: booking?.phone ?? lead?.phone ?? '',
     purpose: booking?.purpose ?? lead?.purpose ?? '',
     booking_date: booking?.booking_date ?? defaults?.date ?? today(),
-    start_time: hm(booking?.start_time) || defaults?.start || '10:00',
-    end_time: hm(booking?.end_time) || defaults?.end || '12:00',
+    start_time: service ? '00:00' : hm(booking?.start_time) || defaults?.start || '10:00',
+    end_time: service ? '00:00' : hm(booking?.end_time) || defaults?.end || '12:00',
     amount: booking ? String(booking.amount) : '',
     items: booking
       ? booking.booking_items?.length
@@ -78,17 +84,19 @@ export function BookingDrawer({
         : Number(booking.amount) > 0
           ? [{ key: key(), product_id: '', name: booking.purpose || 'Booking', price: String(booking.amount) }]
           : []
-      : [],
+      : copyFrom?.booking_items?.length
+        ? [...copyFrom.booking_items].sort((a, b) => a.sort_order - b.sort_order).map((i) => ({ key: key(), product_id: i.product_id ?? '', name: i.name, price: String(i.price) }))
+        : [],
     parts: booking
       ? [...booking.booking_payments]
           .sort((a, b) => (a.due_on ?? a.paid_on ?? '').localeCompare(b.due_on ?? b.paid_on ?? ''))
           .map((p) => ({ key: p.id, id: p.id, label: p.label ?? 'Payment', due_on: p.due_on ?? p.paid_on ?? '', amount: String(p.amount), mode: p.payment_mode_id ?? '', note: p.note ?? p.reference ?? '', status: p.status, paid_on: p.paid_on ?? '' }))
       : [],
-    gst_applicable: booking?.gst_applicable ?? false,
-    gst_rate: booking ? String(booking.gst_rate) : '18',
+    gst_applicable: booking?.gst_applicable ?? copyFrom?.gst_applicable ?? false,
+    gst_rate: booking ? String(booking.gst_rate) : copyFrom ? String(copyFrom.gst_rate) : '18',
     status: booking?.status ?? 'confirmed',
-    billing_company_id: booking?.billing_company_id ?? refs.companies[0]?.id ?? '',
-    notes: booking?.notes ?? '',
+    billing_company_id: booking?.billing_company_id ?? copyFrom?.billing_company_id ?? refs.companies[0]?.id ?? '',
+    notes: booking?.notes ?? copyFrom?.notes ?? '',
   }))
   const set = <K extends keyof BookingInput>(k: K, v: BookingInput[K]) => setInput((p) => ({ ...p, [k]: v }))
   const setItem = (k: string, patch: Partial<ItemDraft>) => setInput((d) => ({ ...d, items: d.items.map((i) => (i.key === k ? { ...i, ...patch } : i)) }))
@@ -178,7 +186,8 @@ export function BookingDrawer({
     if (!data.business_id) return setError('Pick the business.')
     if (!data.client_name.trim()) return setError('Client name is required.')
     if (!data.booking_date) return setError('Pick the date.')
-    if (hours <= 0) return setError('End time must be after the start time.')
+    if (!service && hours <= 0) return setError('End time must be after the start time.')
+    if (service && !input.items.length) return setError('Add at least one service.')
     if (clash) return setError(clashText(clash))
     if (input.items.some((i) => !i.name.trim())) return setError('Pick or name every service, or remove it.')
     if (input.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
@@ -201,7 +210,11 @@ export function BookingDrawer({
       }
       const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
       onSaved(
-        booking
+        service
+          ? booking
+            ? 'Booking updated.'
+            : `New booking for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
+          : booking
           ? 'Booking updated.'
           : `Booked ${data.client_name.trim()} on ${[data.booking_date, ...extra.map((x) => x.date)].map(day).join(', ')}.`,
       )
@@ -216,7 +229,7 @@ export function BookingDrawer({
       open
       onClose={close}
       width={720}
-      title={booking ? `Booking · ${booking.client_name}` : 'New booking'}
+      title={booking ? `Booking · ${booking.client_name}` : copyFrom ? 'New booking (repeat)' : 'New booking'}
       footer={
         <>
           <Button variant="outline" onClick={close}>
@@ -226,7 +239,7 @@ export function BookingDrawer({
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
               <Button onClick={save} disabled={busy || !!clash}>
-                {busy ? 'Saving…' : booking ? 'Save booking' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
+                {busy ? 'Saving…' : booking ? 'Save booking' : service ? 'Save booking' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
               </Button>
             )}
           </div>
@@ -234,7 +247,10 @@ export function BookingDrawer({
       }
     >
       <div className="stack">
-        <FormSection title="Booking details" description={booking ? undefined : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}>
+        <FormSection
+          title="Booking details"
+          description={booking ? undefined : service ? 'A service the client bought: add its services below, then the payment parts. Its invoice gets the next number.' : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+        >
           <div className="form-grid">
             <div className="span-2">
               <Label htmlFor="bk-lead">Linked enquiry</Label>
@@ -266,6 +282,8 @@ export function BookingDrawer({
               <Label htmlFor="bk-purpose">Purpose</Label>
               <TextInput id="bk-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={(e) => set('purpose', e.target.value)} disabled={!canEdit} />
             </div>
+            {!service && (
+            <>
             <div>
               <Label htmlFor="bk-start" required>
                 Start time
@@ -278,6 +296,8 @@ export function BookingDrawer({
               </Label>
               <TextInput id="bk-end" type="time" step={900} value={input.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit} />
             </div>
+            </>
+            )}
             {clashes[0] && <div className="span-2 alert alert-error small">{clashText(clashes[0])}</div>}
             <div>
               <Label htmlFor="bk-status">Status</Label>
@@ -295,7 +315,7 @@ export function BookingDrawer({
             </div>
           </div>
 
-          {!booking && (
+          {!booking && !service && (
             <div className="stack" style={{ gap: 8 }}>
               {extra.map((x, i) => {
                 const upd = (k: 'date' | 'start' | 'end' | 'amount', v: string) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, [k]: v } : y)))

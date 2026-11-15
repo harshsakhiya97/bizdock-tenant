@@ -4,10 +4,11 @@ import { purchaseTotals } from '@/webinars/api'
 
 type Bk = { status: string; paid_amount: number | string; business_id: string; sub_business_id: string | null }
 
-/** true for bookings of a Paid Podcast (sub-)business */
+/** true for bookings of a Paid Podcast or Default (sub-)business: a payment received makes the customer */
 export function podcastCheck(businesses: Business[]) {
-  const subs = new Set(businesses.flatMap((b) => b.subs.filter((x) => x.type === BT.PAID_PODCAST).map((x) => x.id)))
-  const whole = new Set(businesses.filter((b) => !b.subs.length && b.type === BT.PAID_PODCAST).map((b) => b.id))
+  const byPayment = (t: string | null | undefined) => t === BT.PAID_PODCAST || t === BT.DEFAULT
+  const subs = new Set(businesses.flatMap((b) => b.subs.filter((x) => byPayment(x.type)).map((x) => x.id)))
+  const whole = new Set(businesses.filter((b) => !b.subs.length && byPayment(b.type)).map((b) => b.id))
   return (b: Pick<Bk, 'business_id' | 'sub_business_id'>) => (b.sub_business_id ? subs.has(b.sub_business_id) : whole.has(b.business_id))
 }
 
