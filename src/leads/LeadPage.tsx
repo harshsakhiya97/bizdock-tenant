@@ -53,7 +53,7 @@ export function LeadPage() {
     return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
-  const [bk, setBk] = useState<{ booking: BookingRow | null } | null>(null)
+  const [bk, setBk] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
   const [meetings, setMeetings] = useState<MeetingRow[] | null>(null)
   const [mt, setMt] = useState<{ meeting: MeetingRow | null } | null>(null)
   const [purchases, setPurchases] = useState<Purchase[] | null>(null)
@@ -126,6 +126,8 @@ export function LeadPage() {
   const isPodcast = leadType === BT.PAID_PODCAST
   // Webinar lead: Webinars and Purchases tabs
   const isWebinar = leadType === BT.WEBINAR
+  // Default lead: Services (service bookings, each with its invoice) instead of the calendar bookings
+  const isDefault = leadType === BT.DEFAULT
   // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
   const podcastBk = podcastCheck(businesses)
   const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))
@@ -183,7 +185,7 @@ export function LeadPage() {
           { id: 'purchases' as Tab, label: 'Purchases', count: (purchases ?? []).filter((p) => p.status === 'active').length },
         ]
       : can('bookings', 'view')
-        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
+        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? 'Services' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
   ]
 
@@ -314,7 +316,17 @@ export function LeadPage() {
         {tab === 'purchases' && isWebinar && (
           <PurchasesTab purchases={purchases} canAdd={canEdit} onAdd={() => setPu({ purchase: null })} onOpen={(p) => setPu({ purchase: p })} onChanged={done} />
         )}
-        {tab === 'bookings' && !isWebinar && <BookingsTab bookings={bookings} podcast={isPodcast} canAdd={canBook} onAdd={() => setBk({ booking: null })} onOpen={(b) => setBk({ booking: b })} />}
+        {tab === 'bookings' && !isWebinar && (
+          <BookingsTab
+            bookings={bookings}
+            podcast={isPodcast}
+            service={isDefault}
+            canAdd={canBook}
+            onAdd={() => setBk({ booking: null })}
+            onOpen={(b) => setBk({ booking: b })}
+            onRepeat={(b) => setBk({ booking: null, copy: b })}
+          />
+        )}
       </section>
 
       {editing && (
@@ -377,8 +389,10 @@ export function LeadPage() {
       )}
       {bk && (
         <BookingDrawer
-          key={bk.booking?.id ?? 'new'}
+          key={bk.booking?.id ?? bk.copy?.id ?? 'new'}
           booking={bk.booking}
+          service={isDefault}
+          copyFrom={bk.copy ?? null}
           lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id, sub_business_id: lead.sub_business_id }}
           refs={refs}
           onClose={() => setBk(null)}

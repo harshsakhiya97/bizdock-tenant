@@ -28,7 +28,8 @@ export function CategorySelect({
 }) {
   const [busy, setBusy] = useState(false)
   const t = tempOf(value)
-  if (!canEdit) return t ? <span className={cn('badge', t.tone)}>{t.label}</span> : null
+  // a Closed lead is a customer: its category stays
+  if (!canEdit || value === 'closed') return t ? <span className={cn('badge', t.tone)}>{t.label}</span> : null
   return (
     <select
       className={cn('input input-sm cat-select', t?.tone)}

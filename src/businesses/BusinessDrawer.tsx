@@ -22,7 +22,7 @@ const emptyInput: BusinessInput = {
   gst_number: '',
   legal_name: '',
   has_sub_businesses: false,
-  type: BT.STUDIO_RENTAL,
+  type: BT.DEFAULT,
 }
 /** Create or edit a business, Nothing is saved until "Save". */
 export function BusinessDrawer({
@@ -52,7 +52,7 @@ export function BusinessDrawer({
           gst_number: business.gst_number ?? '',
           legal_name: business.legal_name ?? '',
           has_sub_businesses: business.has_sub_businesses,
-          type: typeCode(business.type) ?? BT.STUDIO_RENTAL,
+          type: typeCode(business.type) ?? BT.DEFAULT,
         }
       : emptyInput,
   )
@@ -168,7 +168,7 @@ export function BusinessDrawer({
               checked={input.has_sub_businesses}
               onChange={(v) => {
                 setInput((d) => ({ ...d, has_sub_businesses: v }))
-                if (v && !subs.length) setSubs([{ name: '', type: BT.EDITING }])
+                if (v && !subs.length) setSubs([{ name: '', type: BT.DEFAULT }])
               }}
               label="Does this business contain multiple sub-businesses?"
               description="Tick it to split the business (e.g. Editing service, Podcast, Podcast studio rental), each with its own type. Leave it off when the business does one thing."
@@ -221,7 +221,7 @@ export function BusinessDrawer({
             </div>
           )}
           <div>
-            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: BT.EDITING }])}>
+            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: BT.DEFAULT }])}>
               <Plus /> Add sub-business
             </Button>
           </div>

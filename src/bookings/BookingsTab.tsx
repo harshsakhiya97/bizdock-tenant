@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { Paged } from '@/components/ui'
-import { CalendarPlus, FileText } from 'lucide-react'
+import { CalendarPlus, FileText, Plus, Repeat } from 'lucide-react'
 import { money } from '@/leads/labels'
 import type { BookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow } from './types'
@@ -10,7 +10,10 @@ export const slotText = (b: Pick<BookingRow, 'booking_date' | 'start_time' | 'en
     const [h, m] = x.split(':').map(Number)
     return new Date(2000, 0, 1, h, m).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
   }
-  return `${new Date(`${b.booking_date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · ${t(b.start_time)} – ${t(b.end_time)}`
+  const day = new Date(`${b.booking_date}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  // a service booking (Default) has no time
+  if (b.start_time.slice(0, 5) === b.end_time.slice(0, 5)) return day
+  return `${day} · ${t(b.start_time)} – ${t(b.end_time)}`
 }
 
 /** Bookings of one lead / client. */
@@ -22,14 +25,20 @@ export function BookingsTab({
   canAdd,
   onAdd,
   onOpen,
+  onRepeat,
   podcast = false,
+  service = false,
 }: {
   bookings: BookingRow[] | null
   canAdd: boolean
   onAdd: () => void
   onOpen: (b: BookingRow) => void
+  /** Default business: a new booking with the same services */
+  onRepeat?: (b: BookingRow) => void
   /** Paid Podcast: shown as podcasts */
   podcast?: boolean
+  /** Default business: service purchases (no slot), each with its invoice */
+  service?: boolean
 }) {
   const one = podcast ? 'podcast' : 'booking'
   const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
@@ -43,7 +52,7 @@ export function BookingsTab({
         </span>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
-            <CalendarPlus size={14} /> {podcast ? 'Book podcast' : 'Book slot'}
+            {service ? <Plus size={14} /> : <CalendarPlus size={14} />} {service ? 'New booking' : podcast ? 'Book podcast' : 'Book slot'}
           </button>
         )}
       </div>
@@ -58,8 +67,9 @@ export function BookingsTab({
           <table className="table">
             <thead>
               <tr>
-                <th>{podcast ? 'Shoot' : 'Slot'}</th>
-                <th>Type</th>
+                <th>{service ? 'Date' : podcast ? 'Shoot' : 'Slot'}</th>
+                <th>{service ? 'Services' : 'Type'}</th>
+                {service && <th>Invoice</th>}
                 <th>Status</th>
                 <th className="num">Total</th>
                 <th className="num">Paid</th>
@@ -71,7 +81,8 @@ export function BookingsTab({
               {paged.map((b) => (
                 <tr key={b.id} className="is-clickable" onClick={() => onOpen(b)}>
                   <td className="nowrap">{slotText(b)}</td>
-                  <td>{b.purpose ?? '—'}</td>
+                  <td>{service ? (b.booking_items?.length ? [...b.booking_items].sort((x, y) => x.sort_order - y.sort_order).map((i) => i.name).join(', ') : (b.purpose ?? '—')) : (b.purpose ?? '—')}</td>
+                  {service && <td className="nowrap">{b.invoice_no ?? '—'}</td>}
                   <td>
                     <span className={`badge ${STATUS_META[b.status].tone}`}>{STATUS_META[b.status].label}</span>
                   </td>
@@ -86,6 +97,14 @@ export function BookingsTab({
                       <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
                         Invoice
                       </a>
+                    )}
+                    {service && onRepeat && canAdd && (
+                      <>
+                        {' '}
+                        <button type="button" className="btn btn-outline btn-sm" title="A new booking with the same services" onClick={() => onRepeat(b)}>
+                          <Repeat size={13} /> Repeat
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>
