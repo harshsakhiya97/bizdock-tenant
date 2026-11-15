@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { CalendarClock, CircleCheck, CircleX, Handshake, Plus } from 'lucide-react'
+import { CalendarClock, CircleCheck, Handshake, Plus, UserX } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
@@ -9,7 +9,7 @@ import { Flash } from '@/components/Flash'
 import { SlotCalendar, clock, fmtDay, isoDay } from '@/components/SlotCalendar'
 import { PageHead, StatCard } from '@/components/ui'
 import { listLeads, listMemberOptions } from '@/leads/api'
-import { fullName } from '@/leads/labels'
+import { fullName, TEMPERATURES } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listMeetings } from './api'
@@ -34,6 +34,7 @@ export function MeetingsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [status, setStatus] = useState<'' | MeetingStatus>('')
   const [memberF, setMemberF] = useState('')
+  const [catF, setCatF] = useState('')
   const [widgetF, setWidgetF] = useState('')
   const [widgets, setWidgets] = useState<WidgetRow[]>([])
   // booking calendar → its booked slots ("member|2026-11-05 10:30"), to tell which meetings came from it
@@ -85,22 +86,23 @@ export function MeetingsPage() {
         (m) =>
           (!status || m.status === status) &&
           (!memberF || m.assigned_to === memberF) &&
+          (!catF || leadById.get(m.lead_id)?.temperature === catF) &&
           (!widgetF || !!booked.get(widgetF)?.has(`${m.assigned_to}|${m.meeting_date} ${String(m.start_time ?? '').slice(0, 5)}`)),
       ),
-    [scoped, status, memberF, widgetF, booked],
+    [scoped, status, memberF, catF, leadById, widgetF, booked],
   )
   const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
   // ---- stats for the month on screen ----
   const month = anchor.slice(0, 7)
   const stats = useMemo(() => {
-    const inMonth = scoped.filter((m) => m.status !== 'cancelled' && m.meeting_date.slice(0, 7) === month)
-    const qualified = inMonth.filter((m) => m.status === 'qualified').length
-    const notQ = inMonth.filter((m) => m.status === 'not_qualified').length
-    const decided = qualified + notQ
+    const inMonth = scoped.filter((m) => m.meeting_date.slice(0, 7) === month)
+    const done = inMonth.filter((m) => m.status === 'done').length
+    const noShow = inMonth.filter((m) => m.status === 'no_show').length
+    const decided = done + noShow
     const upcoming = scoped.filter((m) => m.status === 'scheduled' && m.meeting_date >= today).length
     const rescheduled = inMonth.filter((m) => (m.reschedules ?? []).length > 0).length
-    return { count: inMonth.length, qualified, notQ, rate: decided ? Math.round((qualified / decided) * 100) : 0, upcoming, todays: scoped.filter((m) => m.status === 'scheduled' && m.meeting_date === today).length, rescheduled }
+    return { count: inMonth.length, done, noShow, rate: decided ? Math.round((done / decided) * 100) : 0, upcoming, todays: scoped.filter((m) => m.status === 'scheduled' && m.meeting_date === today).length, rescheduled }
   }, [scoped, month, today])
 
   const items = useMemo(
@@ -132,7 +134,7 @@ export function MeetingsPage() {
                     Lead
                   </Link>
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setDrawer({ meeting: m })}>
-                    {m.status === 'scheduled' ? 'Reschedule / outcome' : 'Open'}
+                    {m.status === 'scheduled' ? 'Done / Reschedule / No-show' : 'Open'}
                   </button>
                 </>
               ),
@@ -146,7 +148,7 @@ export function MeetingsPage() {
     <>
       <PageHead
         title="Meetings"
-        subtitle="Meetings with guests: qualified guests get their podcast booked, the rest are dropped. Drag over free time to schedule one."
+        subtitle="Meetings with guests: Upcoming, then Done (with a comment) or No-show; Reschedule moves the same meeting. Drag over free time to schedule one."
         actions={
           canAdd && (
             <button type="button" className="btn btn-primary" onClick={() => setDrawer({ meeting: null, date: anchor })}>
@@ -161,8 +163,8 @@ export function MeetingsPage() {
       <div className="stat-grid">
         <StatCard icon={Handshake} tone="brand" value={stats.count} label={`Meetings in ${fmtDay(`${month}-01`, { month: 'short' })}`} hint={stats.rescheduled ? `${stats.rescheduled} rescheduled` : undefined} />
         <StatCard icon={CalendarClock} tone="info" value={stats.upcoming} label="Upcoming" hint={`${stats.todays} today`} />
-        <StatCard icon={CircleCheck} tone="success" value={stats.qualified} label="Qualified" hint={stats.qualified + stats.notQ ? `${stats.rate}% of decided` : undefined} />
-        <StatCard icon={CircleX} tone="danger" value={stats.notQ} label="Not qualified" hint="Leads dropped" />
+        <StatCard icon={CircleCheck} tone="success" value={stats.done} label="Done" hint={stats.done + stats.noShow ? `${stats.rate}% showed up` : undefined} />
+        <StatCard icon={UserX} tone="danger" value={stats.noShow} label="No-show" />
       </div>
 
       <SlotCalendar
@@ -199,6 +201,14 @@ export function MeetingsPage() {
                 ))}
               </select>
             )}
+            <select className="input input-sm filter-select" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
+              <option value="">All categories</option>
+              {TEMPERATURES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
             <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
               <option value="">All statuses</option>
               {(Object.keys(MEETING_STATUS) as MeetingStatus[]).map((s) => (

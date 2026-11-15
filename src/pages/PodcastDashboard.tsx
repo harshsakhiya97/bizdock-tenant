@@ -17,9 +17,10 @@ import { fullName, money } from '@/leads/labels'
 import { QuickAddLead } from '@/leads/QuickAddLead'
 import type { LeadRow, MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
-import { listMeetings, setMeetingStatus } from '@/meetings/api'
+import { listMeetings } from '@/meetings/api'
 import { MeetingDrawer } from '@/meetings/MeetingDrawer'
 import { MEETING_STATUS, type MeetingRow, type MeetingStatus } from '@/meetings/types'
+import type { MeetingAction } from '@/meetings/MeetingDrawer'
 import { useTenant } from '@/tenant/useTenant'
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -33,7 +34,7 @@ const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateStrin
 const shortMonth = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
 const dayLabel = (d: string, o: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', o)
 const daysAgo = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000))
-const DONE: MeetingStatus[] = ['qualified', 'not_qualified']
+const DONE: MeetingStatus[] = ['done']
 
 type SectionId = 'today' | 'funnel' | 'overdue' | 'tasks' | 'recordings'
 const HIDE_KEY = 'podcastDash.hidden'
@@ -55,7 +56,7 @@ export function PodcastDashboard() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [adding, setAdding] = useState(false)
   const [book, setBook] = useState<{ lead: LeadRow | null; booking?: BookingRow } | null>(null)
-  const [mt, setMt] = useState<{ meeting: MeetingRow | null; lead?: LeadRow } | null>(null)
+  const [mt, setMt] = useState<{ meeting: MeetingRow | null; lead?: LeadRow; act?: MeetingAction } | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [allTasks, setAllTasks] = useState(false)
   const [hidden, setHidden] = useState<SectionId[]>(() => {
@@ -136,10 +137,8 @@ export function PodcastDashboard() {
       scheduled: mm.length,
       kinds,
       conducted: doneM.length,
-      qualified: mm.filter((m) => m.status === 'qualified').length,
       noShow,
       rescheduled: mm.filter((m) => (m.reschedules ?? []).length).length,
-      cancelled: mm.filter((m) => m.status === 'cancelled').length,
       closed: closedLeads.size,
       paid: paidLeads.size,
       awaiting: mm.filter(awaiting).length,
@@ -159,7 +158,7 @@ export function PodcastDashboard() {
     // ---- upcoming recordings ----
     const recordings = B.filter((b) => b.booking_date >= today).sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time))
 
-    const qualifiedLeads = new Set(M.filter((m) => m.status === 'qualified').map((m) => m.lead_id))
+    const qualifiedLeads = new Set(M.filter((m) => m.status === 'done').map((m) => m.lead_id))
     return { leadById, fuDue, monthLeads, openNow, mb, collected, billed, pending, mm, doneM, noShow, overdue, clients, funnel, dayMeetings, tasks, recordings, qualifiedLeads, awaiting, kind }
   }, [leads, fus, bookings, meetings, refs.funnels, inScope, month, day, today, businesses])
 
@@ -176,15 +175,6 @@ export function PodcastDashboard() {
     return l ? fullName(l) : 'Guest'
   }
 
-  async function mark(m: MeetingRow, status: MeetingStatus) {
-    try {
-      await setMeetingStatus(m.id, status)
-      setNotice({ ok: `${name(m.lead_id)}: ${MEETING_STATUS[status].label}${status === 'not_qualified' ? ' (lead moved to Lost)' : ''}.` })
-      load()
-    } catch (e) {
-      setNotice({ error: (e as Error).message })
-    }
-  }
   const bookFor = (leadId: string) => {
     const l = d.leadById.get(leadId)
     if (l) setBook({ lead: l })
@@ -193,17 +183,14 @@ export function PodcastDashboard() {
   const outcomeButtons = (m: MeetingRow) =>
     canMeet && (
       <span className="row" style={{ gap: 6, justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-        <button type="button" className="btn btn-outline btn-sm pd-ok" onClick={() => void mark(m, 'qualified')}>
-          <Check size={13} /> Qualified
+        <button type="button" className="btn btn-outline btn-sm pd-ok" onClick={() => setMt({ meeting: m, act: 'done' })}>
+          <Check size={13} /> Done
         </button>
-        <button type="button" className="btn btn-outline btn-sm pd-no" onClick={() => void mark(m, 'not_qualified')}>
-          <X size={13} /> Not qualified
-        </button>
-        <button type="button" className="btn btn-outline btn-sm pd-no" onClick={() => void mark(m, 'no_show')}>
-          No-show
-        </button>
-        <button type="button" className="btn btn-outline btn-sm" onClick={() => setMt({ meeting: m })}>
+        <button type="button" className="btn btn-outline btn-sm" onClick={() => setMt({ meeting: m, act: 'reschedule' })}>
           <RotateCcw size={13} /> Reschedule
+        </button>
+        <button type="button" className="btn btn-outline btn-sm pd-no" onClick={() => setMt({ meeting: m, act: 'no_show' })}>
+          <X size={13} /> No-show
         </button>
       </span>
     )
@@ -411,7 +398,7 @@ export function PodcastDashboard() {
                           {k !== 'team' && <span className="badge badge-muted">{k === 'reattempt' ? 'Re-attempt' : k === 'followup' ? 'Follow-up meeting' : 'Rescheduled'}</span>}
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          {m.status === 'qualified' && can('bookings', 'add') ? (
+                          {m.status === 'done' && can('bookings', 'add') ? (
                             <button type="button" className="btn btn-outline btn-sm pd-ok" onClick={() => bookFor(m.lead_id)}>
                               <CalendarCheck size={13} /> Book podcast
                             </button>
@@ -447,17 +434,15 @@ export function PodcastDashboard() {
             {bar('Rescheduled slot', 'Moved to a new date or time', f.kinds.rescheduled, { indent: true })}
             {bar('Re-attempt', 'Booked again after a no-show', f.kinds.reattempt, { indent: true })}
             {bar('Follow-up meeting', 'Another meeting after a done one', f.kinds.followup, { indent: true })}
-            {bar('Meetings conducted', 'Marked Qualified or Not qualified', f.conducted)}
-            {bar('Qualified', 'Guest fits the podcast', f.qualified, { indent: true, tone: 'is-green' })}
+            {bar('Meetings done', 'Marked Done', f.conducted, { tone: 'is-green' })}
             {bar('No-show', 'Guest did not turn up', f.noShow, { tone: 'is-orange' })}
             {bar('Rescheduled', 'Moved to a new date', f.rescheduled)}
-            {bar('Cancelled', 'Dropped, not rebooked', f.cancelled)}
             {bar('Closed (booked)', 'Podcast booked', f.closed, { tone: 'is-orange', lost: lostPct(f.scheduled, f.closed) })}
             {bar('Payment started', 'At least one payment received', f.paid)}
           </div>
           {f.awaiting > 0 && (
             <p className="small tone-danger" style={{ marginTop: 10 }}>
-              {f.awaiting} meeting{f.awaiting === 1 ? '' : 's'} in {ml} still awaiting a result — record them on the <Link to="/meetings">Meetings page</Link>, otherwise Meetings conducted stays low.
+              {f.awaiting} meeting{f.awaiting === 1 ? '' : 's'} in {ml} still awaiting a result — record them on the <Link to="/meetings">Meetings page</Link>, otherwise Meetings done stays low.
             </p>
           )}
         </section>
@@ -613,6 +598,7 @@ export function PodcastDashboard() {
         <MeetingDrawer
           key={mt.meeting?.id ?? mt.lead?.id ?? 'new'}
           meeting={mt.meeting}
+          initialAction={mt.act}
           lead={mt.lead ?? null}
           leads={mt.lead ? [mt.lead] : (leads ?? []).filter((l) => inScope(l.business_id, l.sub_business_id))}
           members={members}

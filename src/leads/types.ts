@@ -1,4 +1,5 @@
-export type Temperature = 'hot' | 'warm' | 'cold' | 'not_interested'
+/** the lead's category (stored as temperature) */
+export type Temperature = 'new' | 'hot' | 'warm' | 'cold' | 'not_interested' | 'closed'
 
 export type LeadRow = {
   id: string
