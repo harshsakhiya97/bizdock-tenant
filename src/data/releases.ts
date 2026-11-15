@@ -13,6 +13,30 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.16',
+    date: '2026-11-15',
+    title: 'Lead category, form steps and meeting outcomes',
+    summary: 'Paid Podcast feedback: every lead has a category, the form a lead got to is shown and filterable, and meetings end as Done, Rescheduled (same meeting) or No-show. Plus the funnel’s 3D report and simpler Facebook campaign picking.',
+    new: [
+      'Lead category for every business: New, Hot, Warm, Cold, Not interested, Closed. New leads start New; Won → Closed; Lost (or the ✕ button) → Not interested; a follow-up saved as “Connected – not interested” → Not interested. Change it from the lead’s page (a coloured pick-list), in bulk, or when a meeting is marked Done.',
+      'Category column in the leads lists, and a Category filter on Leads, Follow-ups and the Meeting calendar.',
+      'Paid Podcast: Form column and filter — Opt-in form → VSL form filled → Meeting scheduled (then the meeting’s status). The VSL webhook marks the lead as VSL form filled.',
+      'Meetings: an upcoming meeting has Done (comment required, lead’s category can be changed), Reschedule (reason and new date and time; the same meeting moves — same lead, team member and Zoom, whose time is updated — and shows “Previously scheduled … rescheduled: reason”) and No-show (reason required).',
+      'Funnel → Overview: the 3D funnel report — ad reach → link clicks → landing page views → leads → each stage reached → revenue, ads vs organic, with Ad spend, Gross profit, ROAS, CAC, Cost per lead and the ad performance breakdown.',
+      'Facebook Ads logs: click an ad to see its preview as Facebook draws it, per placement (feeds, stories, reels).',
+    ],
+    improved: [
+      'Meeting statuses are now Upcoming, Done and No-show (Qualified / Not qualified became Done with the old result at the start of the comment; Cancelled became No-show; past Scheduled became Done). Meetings no longer move the lead to another stage. Meetings page and Paid Podcast dashboard count Done and No-show.',
+      'Funnel → Facebook Ads: only the campaigns added to the funnel are listed (remove with ✕); Add more → pick an ad account → tick its campaigns not already added → Add.',
+      'Facebook Ads card: a type line per ad account (Prepaid / Wallet / Postpaid); prepaid amount left includes GST, like Ads Manager; wallet accounts show Balance till now and Today’s spend.',
+      'Facebook Ads logs: proper campaign / ad set chips; a loader while an ad preview loads.',
+    ],
+    removed: [
+      'Funnel → Overview: the old ads tiles, spend-per-day chart and per-ad table (the 3D funnel report replaces them).',
+      'Paid Podcast leads list: the Status column.',
+    ],
+  },
+  {
     version: '0.15',
     date: '2026-11-13',
     title: 'Facebook Ads',
