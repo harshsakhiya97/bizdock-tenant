@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Ban, CheckCheck, Eye, Megaphone, MessageCircleReply, Plus, RefreshCw, Send, XCircle } from 'lucide-react'
+import { useAuth } from '@/auth/useAuth'
 import { Drawer } from '@/components/Drawer'
 import { Flash } from '@/components/Flash'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
@@ -73,7 +74,9 @@ export function CampaignsPage() {
     return { sent: sum('sent'), delivered: sum('delivered'), seen: sum('seen'), replied: sum('replied'), failed: sum('failed') }
   }, [rows, stats])
 
-  const byName = (id: string | null) => members.find((m) => m.id === id)?.name ?? '—'
+  const { membership } = useAuth()
+  // Tech Support isn't in the team list
+  const byName = (id: string | null) => (!id ? '—' : (members.find((m) => m.id === id)?.name ?? (id === membership?.id ? 'You' : 'Tech Support')))
 
   async function cancel() {
     if (!cancelling) return
