@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { AlertTriangle, BadgeIndianRupee, Eye, FileText, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeIndianRupee, FileText, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput, StatCard, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -132,7 +132,6 @@ export function InvoicesPage() {
                   <th style={{ textAlign: 'right' }}>Received</th>
                   <th style={{ textAlign: 'right' }}>Balance</th>
                   <th>Status</th>
-                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -140,14 +139,14 @@ export function InvoicesPage() {
                   const st = PAY_META[payState(b)]
                   const paidParts = b.booking_payments.filter((p) => p.status === 'paid').length
                   return (
-                    <tr key={b.id}>
+                    <tr key={b.id} className="is-clickable" onClick={() => (orderNos.has(b.id) ? setOpen(b.id) : window.open(invoiceHref(b.id), '_blank', 'noopener'))}>
                       <td className="nowrap">
                         <b>{b.invoice_no}</b>
                         <div className="muted small">{day(b.invoice_date)}</div>
                       </td>
                       <td>
                         {b.lead_id ? (
-                          <Link to={`/customers/${b.lead_id}`} className="strong">
+                          <Link to={`/customers/${b.lead_id}`} className="strong" onClick={(e) => e.stopPropagation()}>
                             {b.client_name}
                           </Link>
                         ) : (
@@ -168,17 +167,6 @@ export function InvoicesPage() {
                       </td>
                       <td>
                         <span className={cn('badge', st.tone)}>{st.label}</span>
-                      </td>
-                      <td className="right">
-                        {orderNos.has(b.id) ? (
-                          <button type="button" className="btn btn-outline btn-sm" onClick={() => setOpen(b.id)}>
-                            <Eye size={14} /> View
-                          </button>
-                        ) : (
-                          <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
-                            <Eye size={14} /> View
-                          </a>
-                        )}
                       </td>
                     </tr>
                   )
