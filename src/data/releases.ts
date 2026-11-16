@@ -13,6 +13,31 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.18',
+    date: '2026-11-16',
+    title: 'Company Master, GST / non-GST invoices and the Bookings page',
+    summary: 'Invoices are issued from a company (Company Master) to the client’s billing details, With GST (Tax Invoice) or Without GST, and printed in the Tally layout. Every business now invoices like orders: tick bookings of one client → Generate invoice. An invoice opens in one side panel.',
+    new: [
+      'Masters → Company Master: name on invoice, address, email, GSTIN, state and state code, CIN, PAN, bank details (holder, bank, account no., branch, IFSC), and the invoice number — a number format typed with Insert a field (Number, Number with zeros, Financial year) and the next number, with a preview. The old billing companies are in it and keep their numbering.',
+      'Businesses → edit → Invoices: the company invoices are issued from, with “Use this for non-GST invoices too” (ticked) or another company for non-GST invoices; a sub-business can pick its own.',
+      'Masters → Services: Name on GST bill and HSN / SAC code (optional), printed on GST invoices.',
+      'Client → Details: Billing details (company, address, state and code, GSTIN), optional, with Edit; filled and saved back when an invoice is generated.',
+      'Generate invoice: With GST or Without GST, From (the business’s company for that type, with the invoice number it will get), Bill to (the client’s billing details), the bookings / orders and the payment plan. GST goes on top of the price, no rounding.',
+      'Bookings page (Studio, Paid Podcast and other booking businesses), like Orders: every booking with its services, status, team member, total, paid, balance and invoice; tick bookings of one client → Generate invoice.',
+      'New booking / New order / New brand deal button on the Bookings and Orders pages: pick the client (or a direct booking) and fill the same form.',
+      'Printed invoice in the Tally layout: Tax Invoice or Invoice, the company and Bill to boxes, the empty delivery / order boxes, Particulars with HSN/SAC (each line with its date when the invoice has several bookings), CGST + SGST in the same state or IGST across states, the tax table, amounts in words, bank details, PAN and Authorised Signatory.',
+      'Invoice side panel (click an invoice anywhere): status and totals, type and company, Bill to, its bookings / orders (open, remove, add one of that client’s), GST %, the payment parts (record payments) and Print — all in one place.',
+    ],
+    improved: [
+      'A booking has no GST or payment plan of its own any more: they are on its invoice, which can hold several bookings of one client. Existing booking invoices became one-booking invoices with the same numbers and payments.',
+      'Dashboards and the lead page count payments received on invoices.',
+      'Businesses list: Sub-businesses and their types instead of GST.',
+      'Masters Overview lists the same tabs in the same order (WhatsApp messages added).',
+      'Invoices page: click a row to open the invoice (no View button); the booking dates show for booking invoices.',
+    ],
+    removed: ['Business form: the GST / legal details (they’re in Company Master); a business’s existing ones are kept.'],
+  },
+  {
     version: '0.17',
     date: '2026-11-16',
     title: 'Orders, Brand Deals, order invoices and a new Customers table',
