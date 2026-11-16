@@ -26,6 +26,7 @@ import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
 import { InvoicesPage } from '@/bookings/InvoicesPage'
 import { InvoiceDetailPage } from '@/invoices/InvoiceDetailPage'
+import { CustomersPage } from '@/leads/CustomersPage'
 import { OrdersPage } from '@/orders/OrdersPage'
 import { MeetingsPage } from '@/meetings/MeetingsPage'
 import { IntegrationsPage } from '@/integrations/IntegrationsPage'
@@ -87,7 +88,7 @@ export default function App() {
                 />
                 <Route path="/leads" element={<RequirePermission area="leads"><LeadsPage key="leads" /></RequirePermission>} />
                 <Route path="/leads/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
-                <Route path="/customers" element={<RequirePermission area="leads"><LeadsPage customers key="customers" /></RequirePermission>} />
+                <Route path="/customers" element={<RequirePermission area="leads"><CustomersPage /></RequirePermission>} />
                 <Route path="/customers/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
                 <Route path="/invoices" element={<RequirePermission module="bookings"><InvoicesPage /></RequirePermission>} />
                 <Route path="/invoices/:id" element={<RequirePermission module="bookings"><InvoiceDetailPage /></RequirePermission>} />
