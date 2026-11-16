@@ -3,7 +3,7 @@ import { Paged } from '@/components/ui'
 import { CalendarPlus, FileText, Plus, Repeat } from 'lucide-react'
 import { money } from '@/leads/labels'
 import type { BookingRefs } from './useBookingRefs'
-import { STATUS_META, type BookingRow } from './types'
+import { ORDER_STATUS, STATUS_META, type BookingRow } from './types'
 
 export const slotText = (b: Pick<BookingRow, 'booking_date' | 'start_time' | 'end_time'>) => {
   const t = (x: string) => {
@@ -40,7 +40,7 @@ export function BookingsTab({
   /** Default business: service purchases (no slot), each with its invoice */
   service?: boolean
 }) {
-  const one = podcast ? 'podcast' : 'booking'
+  const one = service ? 'order' : podcast ? 'podcast' : 'booking'
   const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
   const total = live.reduce((s, b) => s + Number(b.total_amount), 0)
   const paid = live.reduce((s, b) => s + Number(b.paid_amount), 0)
@@ -52,7 +52,7 @@ export function BookingsTab({
         </span>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
-            {service ? <Plus size={14} /> : <CalendarPlus size={14} />} {service ? 'New booking' : podcast ? 'Book podcast' : 'Book slot'}
+            {service ? <Plus size={14} /> : <CalendarPlus size={14} />} {service ? 'New order' : podcast ? 'Book podcast' : 'Book slot'}
           </button>
         )}
       </div>
@@ -67,9 +67,9 @@ export function BookingsTab({
           <table className="table">
             <thead>
               <tr>
+                {service && <th>Order</th>}
                 <th>{service ? 'Date' : podcast ? 'Shoot' : 'Slot'}</th>
                 <th>{service ? 'Services' : 'Type'}</th>
-                {service && <th>Invoice</th>}
                 <th>Status</th>
                 <th className="num">Total</th>
                 <th className="num">Paid</th>
@@ -80,11 +80,20 @@ export function BookingsTab({
             <tbody>
               {paged.map((b) => (
                 <tr key={b.id} className="is-clickable" onClick={() => onOpen(b)}>
+                  {service && (
+                    <td className="nowrap">
+                      <b>{b.order_no ?? '—'}</b>
+                      {b.invoice_no && <div className="muted small">{b.invoice_no}</div>}
+                    </td>
+                  )}
                   <td className="nowrap">{slotText(b)}</td>
                   <td>{service ? (b.booking_items?.length ? [...b.booking_items].sort((x, y) => x.sort_order - y.sort_order).map((i) => i.name).join(', ') : (b.purpose ?? '—')) : (b.purpose ?? '—')}</td>
-                  {service && <td className="nowrap">{b.invoice_no ?? '—'}</td>}
                   <td>
-                    <span className={`badge ${STATUS_META[b.status].tone}`}>{STATUS_META[b.status].label}</span>
+                    {service && b.order_status ? (
+                      <span className={`badge ${ORDER_STATUS[b.order_status].tone}`}>{ORDER_STATUS[b.order_status].label}</span>
+                    ) : (
+                      <span className={`badge ${STATUS_META[b.status].tone}`}>{STATUS_META[b.status].label}</span>
+                    )}
                   </td>
                   <td className="num">{money(b.total_amount)}</td>
                   <td className="num">{money(b.paid_amount)}</td>
@@ -101,7 +110,7 @@ export function BookingsTab({
                     {service && onRepeat && canAdd && (
                       <>
                         {' '}
-                        <button type="button" className="btn btn-outline btn-sm" title="A new booking with the same services" onClick={() => onRepeat(b)}>
+                        <button type="button" className="btn btn-outline btn-sm" title="A new order with the same services" onClick={() => onRepeat(b)}>
                           <Repeat size={13} /> Repeat
                         </button>
                       </>

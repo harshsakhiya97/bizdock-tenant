@@ -185,7 +185,7 @@ export function LeadPage() {
           { id: 'purchases' as Tab, label: 'Purchases', count: (purchases ?? []).filter((p) => p.status === 'active').length },
         ]
       : can('bookings', 'view')
-        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? 'Services' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
+        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? 'Orders' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
   ]
 
