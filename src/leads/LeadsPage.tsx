@@ -398,6 +398,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          {/* customers are always Closed: no Category filter there */}
+          {!customers && (
           <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Category">
             <option value="">Category</option>
             {TEMPERATURES.map((t) => (
@@ -406,6 +408,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               </option>
             ))}
           </select>
+          )}
           {pp && (
             <select className="input input-sm filter-select" value={filters.form} onChange={(e) => setF('form', e.target.value)} aria-label="Form">
               <option value="">Form</option>
@@ -465,7 +468,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                 </button>
               </span>
             )}
-            {can('leads', 'edit') && (
+            {can('leads', 'edit') && !customers && (
               <span className="bulk-group">
                 <select className="input input-sm" value={bulk.temp} onChange={(e) => setBulk((b) => ({ ...b, temp: e.target.value }))} aria-label="Category">
                   <option value="">Category…</option>
@@ -596,7 +599,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     </>
                   ) : (
                   <>
-                  <th>Category</th>
+                  {!customers && <th>Category</th>}
                   <th>Source</th>
                   {studio && (
                     <>
@@ -668,7 +671,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                         />
                       ) : (
                       <>
-                      <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
+                      {!customers && <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>}
                       <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
                       {studio && (
                         <>
