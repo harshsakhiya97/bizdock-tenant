@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { CheckCircle2, CircleAlert, MessageSquareText, PlugZap, ScrollText } from 'lucide-react'
+import { CheckCircle2, CircleAlert, PlugZap, ScrollText } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -340,16 +340,6 @@ export function IntegrationsPage() {
                     : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
-                  {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
-                    <Link to="/integrations/whatsapp/templates" className="btn btn-outline btn-sm">
-                      <MessageSquareText size={14} /> Templates
-                    </Link>
-                  )}
-                  {p.id === 'whatsapp' && r && !stale && r.is_enabled && waVendor === 'wati' && (
-                    <Link to="/integrations/whatsapp/logs" className="btn btn-outline btn-sm">
-                      <ScrollText size={14} /> Logs
-                    </Link>
-                  )}
                   {p.id === 'zoom' && !off && (
                     <button type="button" className="btn btn-outline btn-sm" title="With a Server-to-Server app made in that Zoom account" onClick={() => setOpen({ p: zoomKeys(p), row: null })}>
                       Add with keys

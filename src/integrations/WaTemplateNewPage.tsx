@@ -197,7 +197,7 @@ export function WaTemplateNewPage() {
     setBusy(true)
     try {
       await createWatiTemplate(tenant.id, template)
-      navigate('/integrations/whatsapp/templates', { replace: true })
+      navigate('/whatsapp/templates', { replace: true })
     } catch (e) {
       // the connection dropped before WATI's answer came back (it can take a while with a video):
       // the template may well be saved, so look for it before calling it a failure
@@ -206,7 +206,7 @@ export function WaTemplateNewPage() {
         const saved = await listWatiTemplates(tenant.id)
           .then((all) => all.some((t) => t.elementName === element && (t.language?.value ?? language) === language))
           .catch(() => false)
-        if (saved) return navigate('/integrations/whatsapp/templates', { replace: true })
+        if (saved) return navigate('/whatsapp/templates', { replace: true })
         setError('The connection dropped before WATI answered. Check Your templates in WATI (or reload this list) before submitting again, so it isn’t saved twice.')
       } else setError((e as Error).message)
       setBusy(false)
@@ -215,7 +215,7 @@ export function WaTemplateNewPage() {
 
   return (
     <>
-      <Link to="/integrations/whatsapp/templates" className="back-link">
+      <Link to="/whatsapp/templates" className="back-link">
         <ArrowLeft size={15} /> WhatsApp templates
       </Link>
       <div className="row-between page-top">
