@@ -96,14 +96,15 @@ export function MeetingsPage() {
   // ---- stats for the month on screen ----
   const month = anchor.slice(0, 7)
   const stats = useMemo(() => {
-    const inMonth = scoped.filter((m) => m.meeting_date.slice(0, 7) === month)
+    // the cards follow the filters (team member, booking calendar, category, status)
+    const inMonth = visible.filter((m) => m.meeting_date.slice(0, 7) === month)
     const done = inMonth.filter((m) => m.status === 'done').length
     const noShow = inMonth.filter((m) => m.status === 'no_show').length
     const decided = done + noShow
-    const upcoming = scoped.filter((m) => m.status === 'scheduled' && m.meeting_date >= today).length
+    const upcoming = visible.filter((m) => m.status === 'scheduled' && m.meeting_date >= today).length
     const rescheduled = inMonth.filter((m) => (m.reschedules ?? []).length > 0).length
-    return { count: inMonth.length, done, noShow, rate: decided ? Math.round((done / decided) * 100) : 0, upcoming, todays: scoped.filter((m) => m.status === 'scheduled' && m.meeting_date === today).length, rescheduled }
-  }, [scoped, month, today])
+    return { count: inMonth.length, done, noShow, rate: decided ? Math.round((done / decided) * 100) : 0, upcoming, todays: visible.filter((m) => m.status === 'scheduled' && m.meeting_date === today).length, rescheduled }
+  }, [visible, month, today])
 
   const items = useMemo(
     () =>

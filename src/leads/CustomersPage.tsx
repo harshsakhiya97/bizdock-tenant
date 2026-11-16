@@ -100,19 +100,20 @@ export function CustomersPage() {
       )
   }, [rows, f])
 
+  // the cards follow the filters
   const stats = useMemo(() => {
-    const billed = rows.reduce((n, x) => n + x.r.billed, 0)
-    const paid = rows.reduce((n, x) => n + x.r.paid, 0)
+    const billed = visible.reduce((n, x) => n + x.r.billed, 0)
+    const paid = visible.reduce((n, x) => n + x.r.paid, 0)
     return {
-      count: rows.length,
-      bookings: rows.reduce((n, x) => n + x.r.count, 0),
-      hours: rows.reduce((n, x) => n + x.r.hours, 0),
+      count: visible.length,
+      bookings: visible.reduce((n, x) => n + x.r.count, 0),
+      hours: visible.reduce((n, x) => n + x.r.hours, 0),
       billed,
       paid,
-      due: rows.reduce((n, x) => n + x.balance, 0),
-      owing: rows.filter((x) => x.balance > 0.01).length,
+      due: visible.reduce((n, x) => n + x.balance, 0),
+      owing: visible.filter((x) => x.balance > 0.01).length,
     }
-  }, [rows])
+  }, [visible])
 
   async function addBooking(l: LeadRow) {
     const service = isOrderType(typeOf(l))

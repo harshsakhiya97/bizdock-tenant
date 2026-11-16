@@ -69,10 +69,11 @@ export function CampaignsPage() {
   }, [rows, f])
 
   const totals = useMemo(() => {
-    const all = (rows ?? []).map((c) => stats.get(c.id) ?? EMPTY_STATS(c))
+    // the cards follow the filters
+    const all = visible.map((c) => stats.get(c.id) ?? EMPTY_STATS(c))
     const sum = (k: keyof Omit<CampaignStats, 'campaign_id'>) => all.reduce((n, s) => n + s[k], 0)
     return { sent: sum('sent'), delivered: sum('delivered'), seen: sum('seen'), replied: sum('replied'), failed: sum('failed') }
-  }, [rows, stats])
+  }, [visible, stats])
 
   const { membership } = useAuth()
   // Tech Support isn't in the team list
@@ -112,7 +113,7 @@ export function CampaignsPage() {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={Send} tone="brand" value={totals.sent} label="Sent" hint={`${(rows ?? []).length} campaigns`} />
+        <StatCard icon={Send} tone="brand" value={totals.sent} label="Sent" hint={`${visible.length} campaign${visible.length === 1 ? '' : 's'}`} />
         <StatCard icon={CheckCheck} tone="info" value={totals.delivered} label="Delivered" hint={pct(totals.delivered, totals.sent)} />
         <StatCard icon={Eye} tone="success" value={totals.seen} label="Seen" hint={pct(totals.seen, totals.sent)} />
         <StatCard icon={MessageCircleReply} tone="purple" value={totals.replied} label="Replied" hint={pct(totals.replied, totals.sent)} />
