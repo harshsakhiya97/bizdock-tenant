@@ -4,17 +4,10 @@ import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
 import { SpendLines, type Line } from './SpendLines'
+import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const day = (d: Date) => d.toLocaleDateString('en-CA')
-const ago = (n: number) => day(new Date(Date.now() - n * 86400_000))
-const PRESETS = [
-  { key: '7', label: 'Last 7 days', from: () => ago(6) },
-  { key: '30', label: 'Last 30 days', from: () => ago(29) },
-  { key: '90', label: 'Last 90 days', from: () => ago(89) },
-  { key: 'month', label: 'This month', from: () => `${day(new Date()).slice(0, 8)}01` },
-  { key: 'all', label: 'Everything', from: () => '2020-01-01' },
-] as const
 
 type Ad = { ad_id: string; name: string; campaign: string; adset: string; spend: number; gst: number }
 type Day = { day: string; spend: number; gst: number; ads: Ad[] }
@@ -32,9 +25,9 @@ export function FunnelDaySpend({
   adsets: AdSet[]
 }) {
   const tenant = useTenant()
-  const [preset, setPreset] = useState('30')
-  const [from, setFrom] = useState(ago(29))
-  const [to, setTo] = useState(day(new Date()))
+  // same presets as Facebook Ads Manager (Last 30 days ends yesterday)
+  const [range, setRange] = useState<Range>(() => presetRange('last30'))
+  const { from, to } = range
   const [data, setData] = useState<Awaited<ReturnType<typeof funnelDaySpend>> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
@@ -101,15 +94,6 @@ export function FunnelDaySpend({
     </span>
   )
 
-  function pickPreset(k: string) {
-    setPreset(k)
-    const p = PRESETS.find((x) => x.key === k)
-    if (p) {
-      setFrom(p.from())
-      setTo(day(new Date()))
-    }
-  }
-
   return (
     <section className="card card-pad stack" style={{ gap: 12 }}>
       <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
@@ -121,20 +105,7 @@ export function FunnelDaySpend({
           </div>
         </div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-          <select className="input input-sm filter-select" aria-label="Period" value={preset} onChange={(e) => pickPreset(e.target.value)}>
-            {PRESETS.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
-            ))}
-            <option value="custom">Custom dates</option>
-          </select>
-          {preset === 'custom' && (
-            <>
-              <input className="input input-sm filter-select" type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-              <input className="input input-sm filter-select" type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-            </>
-          )}
+          <DateRangePicker value={range} onChange={setRange} />
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
