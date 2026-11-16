@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Repeat, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
-import { listMemberOptions } from '@/leads/api'
+import { listLeads, listMemberOptions } from '@/leads/api'
 import { money } from '@/leads/labels'
-import type { MemberOption } from '@/leads/types'
+import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
@@ -62,6 +62,12 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const [invoicing, setInvoicing] = useState<BookingRow[] | null>(null)
   // the invoice side panel
   const [invoiceOpen, setInvoiceOpen] = useState<string | null>(null)
+  // New booking / order: pick the client (a lead or customer) from this list
+  const [leads, setLeads] = useState<LeadRow[] | null>(null)
+  function newOne() {
+    setOpen({ booking: null })
+    if (!leads) listLeads(tenant.id).then(setLeads, () => setLeads([]))
+  }
 
   const load = useCallback(() => {
     listBookings(tenant.id)
@@ -126,7 +132,17 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
 
   return (
     <>
-      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status and invoice. Tick ${one}s of one client → Generate invoice${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. ${bookings ? 'New bookings are added from the Booking Calendar or the customer’s page.' : `New ${one}s are added from the customer’s page.`}`} />
+      <PageHead
+        title={noun.many}
+        subtitle={`Every ${one}: its services, status and invoice. Tick ${one}s of one client → Generate invoice${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}.`}
+        actions={
+          can('bookings', 'add') && (
+            <button type="button" className="btn btn-primary" onClick={newOne}>
+              <Plus size={16} /> New {one}
+            </button>
+          )
+        }
+      />
       {error && <div className="alert alert-error">{error}</div>}
       <Flash msg={notice} dep={notice} />
 
@@ -202,7 +218,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
         {!rows ? (
           <div className="empty">Loading {one}s…</div>
         ) : visible.length === 0 ? (
-          <Empty icon={PackageCheck}>{scoped.length ? `No ${one}s match these filters.` : bookings ? 'No bookings yet. Add one from the Booking Calendar.' : `No ${one}s yet. Add one from a customer’s page → ${noun.many} → New ${one}.`}</Empty>
+          <Empty icon={PackageCheck}>{scoped.length ? `No ${one}s match these filters.` : `No ${one}s yet. Add one with New ${one}.`}</Empty>
         ) : (
           <Paged rows={visible} reset={[f]}>
             {(paged) => (
@@ -338,6 +354,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                 }
               : null
           }
+          leads={(leads ?? []).filter((l) => !l.is_archived && inScope(l.business_id, l.sub_business_id))}
           refs={refs}
           onClose={() => setOpen(null)}
           onSaved={(msg) => {
