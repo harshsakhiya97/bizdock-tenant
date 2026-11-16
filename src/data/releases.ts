@@ -13,6 +13,34 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.17',
+    date: '2026-11-16',
+    title: 'Orders, Brand Deals, order invoices and a new Customers table',
+    summary: 'New business types Default and Brand Deals work with orders instead of a booking calendar; orders are invoiced later, one invoice for one or more orders of a client. Customers get one table for every business, and the funnel’s Facebook numbers match Ads Manager.',
+    new: [
+      'Business type Default (picked by default for a new business): no booking calendar; a lead’s Orders tab with New order — services, team member, status (Not started, Active, Completed, Cancelled) and a multi-line Description — and Repeat. Each order gets the next ORD number of its business (ORD-0001…).',
+      'Business type Brand Deals: works like Default, with orders called Brand Deals (tab, button, form, page and menu).',
+      'Orders page (Default / Brand Deals): every order with its customer, services, team member, status, total, paid, balance, invoice and next due part; filters for status, payment, team member, overdue parts and dates.',
+      'Adding an order (not cancelled) makes its lead a customer and Closed straight away, paid or not.',
+      'Order invoices: an order is saved without GST or payments. On the Orders page tick one or more orders of one client → Generate invoice → GST and the payment plan → the next invoice number. Orders of two different clients can’t be invoiced together.',
+      'Invoice page (from the Orders page and Invoices): client details, its orders and part payments; Payments & GST to record payments and change GST; Add order (that client’s orders not invoiced yet); Remove an order (not when more is paid than the new total); Print / PDF lists every order’s services.',
+      'An invoice’s orders can be edited until it’s fully paid. When its total changes, the last unpaid part takes the difference (a new Balance part if everything is already paid).',
+      'Funnel → Facebook Ads: a spend-per-day graph above the table — a line per campaign or per ad (top 8 + the rest), hover for the day’s amounts, click a name to hide its line.',
+      'Funnel report: Sync from Facebook with when the numbers were last refreshed.',
+      'Customers: one table for every business — customer, company, source, customer since, bookings (shoots with hours, recordings, orders or brand deals), last and next, billed (with GST), received, balance (Paid ✓ or the amount due) and owner, with Open and + Booking (+ Order / + Brand Deal repeats the last one). Cards for customers, bookings, received and balance due; filters for owner, source, payment and sort; Export CSV.',
+    ],
+    improved: [
+      'Funnel report and Spend per day: a date picker like Facebook Ads Manager (Today, Yesterday, Last 7 / 14 / 28 / 30 days, This / Last week, month and quarter, Maximum, or a custom range on a calendar) showing the dates picked. Last N days ends yesterday, like Ads Manager, so the numbers match.',
+      'Funnel tabs: Facebook Ads shows how many campaigns are added.',
+      'A lead has one multi-line Description (details page and lead form) instead of separate notes, in every business.',
+      'Invoices page lists order invoices too (with their order numbers) next to booking invoices.',
+    ],
+    removed: [
+      'Leads: the Funnel and Source filters (every business).',
+      'Customers: the Category column, filter and bulk change (customers are always Closed), and Purpose, Time, Describes, Funnel and Next follow-up.',
+    ],
+  },
+  {
     version: '0.16',
     date: '2026-11-15',
     title: 'Lead category, form steps and meeting outcomes',
