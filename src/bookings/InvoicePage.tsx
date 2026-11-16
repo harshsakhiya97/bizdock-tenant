@@ -15,7 +15,7 @@ const TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 
 const two = (n: number) => (n < 20 ? ONES[n] : `${TENS[Math.floor(n / 10)]}${n % 10 ? ` ${ONES[n % 10]}` : ''}`)
 const three = (n: number) => [n >= 100 ? `${ONES[Math.floor(n / 100)]} Hundred` : '', two(n % 100)].filter(Boolean).join(' ')
 /** Indian numbering: 12500 → "Twelve Thousand Five Hundred Rupees Only" */
-function inWords(amount: number) {
+export function inWords(amount: number) {
   let n = Math.floor(amount)
   const paise = Math.round((amount - n) * 100)
   if (!n && !paise) return 'Zero Rupees Only'

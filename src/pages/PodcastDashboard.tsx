@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarCheck, CalendarClock, Check, ChevronLeft, Chevro
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { listBookings } from '@/bookings/api'
+import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import type { BookingRow } from '@/bookings/types'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
@@ -78,7 +79,11 @@ export function PodcastDashboard() {
   const load = useCallback(() => {
     listLeads(tenant.id).then(setLeads, () => setLeads([]))
     listFollowUps(tenant.id).then(setFus, () => setFus([]))
-    if (can('bookings', 'view')) listBookings(tenant.id).then(setBookings, () => setBookings([]))
+    if (can('bookings', 'view'))
+      Promise.all([listBookings(tenant.id), listInvoices(tenant.id).catch(() => [])]).then(
+        ([b, inv]) => setBookings(withInvoicePayments(b, inv)),
+        () => setBookings([]),
+      )
     if (can('meetings', 'view')) listMeetings(tenant.id).then(setMeetings, () => setMeetings([]))
     listMemberOptions(tenant.id).then(setMembers, () => setMembers([]))
   }, [tenant.id, can])

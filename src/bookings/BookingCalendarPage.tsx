@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { CalendarCheck, Clock3, IndianRupee, Plus, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -12,7 +13,6 @@ import type { LeadRow } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listBookings, studioBusy, type BusySlot } from './api'
 import { BookingDrawer } from './BookingDrawer'
-import { invoiceHref } from './BookingsTab'
 import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
@@ -107,10 +107,10 @@ function BookingsCalendar() {
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => setDrawer({ booking: b })}>
                   Edit
                 </button>
-                {b.status !== 'cancelled' && (
-                  <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
+                {b.invoice_id && (
+                  <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`}>
                     Invoice
-                  </a>
+                  </Link>
                 )}
               </>
             ),

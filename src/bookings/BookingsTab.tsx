@@ -105,18 +105,10 @@ export function BookingsTab({
                     <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpen(b)}>
                       Edit
                     </button>{' '}
-                    {service ? (
-                      b.invoice_id && (
-                        <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`} title={invoiceNo(b) ?? undefined}>
-                          Invoice
-                        </Link>
-                      )
-                    ) : (
-                      b.status !== 'cancelled' && (
-                        <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
-                          Invoice
-                        </a>
-                      )
+                    {b.invoice_id && (
+                      <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`} title={invoiceNo(b) ?? undefined}>
+                        Invoice
+                      </Link>
                     )}
                     {service && onRepeat && canAdd && (
                       <>

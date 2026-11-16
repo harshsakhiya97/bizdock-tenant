@@ -45,6 +45,12 @@ export type LeadRow = {
   /** the date (and hours) the lead needs the service / slot */
   required_on: string | null
   required_hours: number | null
+  /** billing details for invoices (Bill to), all optional */
+  bill_company?: string | null
+  bill_address?: string | null
+  bill_state?: string | null
+  bill_state_code?: string | null
+  bill_gstin?: string | null
 }
 
 export type ActivityRow = {

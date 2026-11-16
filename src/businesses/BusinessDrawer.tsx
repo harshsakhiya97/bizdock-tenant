@@ -8,6 +8,9 @@ import { AddressFields } from '@/components/AddressFields'
 import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
 import { listSubBusinesses, saveBusiness, saveSubBusinesses, type SubBusinessDraft } from './api'
+import { CompanyPick } from './CompanyPick'
+import { listBillingCompanies } from '@/masters/api'
+import type { BillingCompanyRow } from '@/masters/types'
 import { isValidEmail, isValidGst, type BusinessInput, type BusinessRow } from './types'
 
 const MAX_LOGO = 2 * 1024 * 1024
@@ -23,6 +26,8 @@ const emptyInput: BusinessInput = {
   legal_name: '',
   has_sub_businesses: false,
   type: BT.DEFAULT,
+  company_id: null,
+  nongst_company_id: null,
 }
 /** Create or edit a business, Nothing is saved until "Save". */
 export function BusinessDrawer({
@@ -53,6 +58,8 @@ export function BusinessDrawer({
           legal_name: business.legal_name ?? '',
           has_sub_businesses: business.has_sub_businesses,
           type: typeCode(business.type) ?? BT.DEFAULT,
+          company_id: business.company_id ?? null,
+          nongst_company_id: business.nongst_company_id ?? null,
         }
       : emptyInput,
   )
@@ -65,6 +72,10 @@ export function BusinessDrawer({
   useEffect(() => {
     if (business) void listSubBusinesses(business.id).then(setSubs, () => setSubs([]))
   }, [business])
+  const [companies, setCompanies] = useState<BillingCompanyRow[]>([])
+  useEffect(() => {
+    void listBillingCompanies(tenant.id).then(setCompanies, () => setCompanies([]))
+  }, [tenant.id])
   const setSub = (i: number, patch: Partial<SubBusinessDraft>) => setSubs((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s)))
 
   const logoPreview = useMemo(() => {
@@ -196,7 +207,8 @@ export function BusinessDrawer({
           {subs.length > 0 && (
             <div className="stack" style={{ gap: 8 }}>
               {subs.map((s, i) => (
-                <div key={s.id ?? `new-${i}`} className="sub-biz-row">
+                <div key={s.id ?? `new-${i}`} className="stack" style={{ gap: 6 }}>
+                <div className="sub-biz-row">
                   <TextInput aria-label="Sub-business name" placeholder="e.g. Podcast Studio Rental" value={s.name} onChange={(e) => setSub(i, { name: e.target.value })} />
                   <Select aria-label="Type" value={s.type} onChange={(e) => setSub(i, { type: e.target.value as SubBusinessDraft['type'] })}>
                     {typeOptions(s.type).map((t) => (
@@ -217,6 +229,17 @@ export function BusinessDrawer({
                     <X size={16} />
                   </button>
                 </div>
+                {companies.length > 0 && (
+                  <CompanyPick
+                    id={`sb-${i}`}
+                    companies={companies}
+                    company={s.company_id ?? ''}
+                    nongst={s.nongst_company_id ?? ''}
+                    emptyLabel="Same as the business"
+                    onChange={(v) => setSub(i, { company_id: v.company || null, nongst_company_id: v.nongst || null })}
+                  />
+                )}
+                </div>
               ))}
             </div>
           )}
@@ -228,6 +251,20 @@ export function BusinessDrawer({
           {removedSubs.length > 0 && <Hint>Leads, sales and bookings of a removed sub-business stay in this business.</Hint>}
         </FormSection>
         )}
+
+        <FormSection title="Invoices" description="The company invoices are issued from (Masters → Company Master). A sub-business can pick its own.">
+          {companies.length ? (
+            <CompanyPick
+              id="bz"
+              companies={companies}
+              company={input.company_id ?? ''}
+              nongst={input.nongst_company_id ?? ''}
+              onChange={(v) => setInput((d) => ({ ...d, company_id: v.company || null, nongst_company_id: v.nongst || null }))}
+            />
+          ) : (
+            <Hint>No companies yet: add them in Masters → Company Master.</Hint>
+          )}
+        </FormSection>
 
         <FormSection title="Contact" description="How customers and your team reach this business.">
           <div className="form-grid">

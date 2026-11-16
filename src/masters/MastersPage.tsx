@@ -10,6 +10,7 @@ import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
 import { listProducts } from './api'
 import { BusinessTypesTab } from './BusinessTypesTab'
+import { CompaniesTab } from './CompaniesTab'
 import { WebinarHostsTab } from './WebinarHostsTab'
 import { BT } from '@/auth/auth-context'
 import { ProductDrawer } from './ProductDrawer'
@@ -18,7 +19,7 @@ import { TemplatesTab } from './TemplatesTab'
 import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'companies' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
@@ -28,6 +29,7 @@ const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> =
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'overview', label: 'Overview' },
+  { id: 'companies', label: 'Company Master' },
   { id: 'business_types', label: 'Business types' },
   { id: 'products', label: 'Services' },
   { id: 'payment_modes', label: 'Payment modes' },
@@ -72,6 +74,7 @@ export function MastersPage() {
           </div>
         </div>
         {tab === 'overview' && <Overview go={go} webinar={webinar} />}
+        {tab === 'companies' && <CompaniesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'products' && <ProductsTab key="services" canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'goods' && <ProductsTab key="goods" kind="product" canEdit={canEdit} onNotice={onNotice} />}
@@ -96,7 +99,7 @@ function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   useEffect(() => {
-    const tables = ['business_types', 'products', 'goods', 'webinar_hosts', ...Object.keys(SIMPLE)]
+    const tables = ['billing_companies', 'business_types', 'products', 'goods', 'webinar_hosts', ...Object.keys(SIMPLE)]
     void Promise.all(
       tables.map((t) => {
         let q = db()
@@ -112,6 +115,7 @@ function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
   }, [tenant.id])
 
   const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
+    { tab: 'companies', label: 'Company Master', table: 'billing_companies', purpose: 'Who invoices are issued from: address, GSTIN, state, CIN, PAN, bank details and the invoice number series.' },
     { tab: 'business_types', label: 'Business types', table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
     { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
     ...(webinar

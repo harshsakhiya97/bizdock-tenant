@@ -5,8 +5,10 @@ import type { InvoiceInput, InvoiceRow } from './types'
 const COLS = '*, invoice_payments(*), bookings(*, booking_items(*), booking_payments(*))'
 const num = (v: string) => (v.trim() ? Math.max(0, Number(v)) : 0)
 
-export async function listInvoices(tenantId: string): Promise<InvoiceRow[]> {
-  const { data, error } = await db().from('invoices').select(COLS).eq('tenant_id', tenantId).order('invoice_date', { ascending: false })
+export async function listInvoices(tenantId: string, f: { leadId?: string } = {}): Promise<InvoiceRow[]> {
+  let q = db().from('invoices').select(COLS).eq('tenant_id', tenantId)
+  if (f.leadId) q = q.eq('lead_id', f.leadId)
+  const { data, error } = await q.order('invoice_date', { ascending: false })
   if (error) throw error
   return (data ?? []) as InvoiceRow[]
 }
@@ -23,9 +25,10 @@ const partJson = (p: PartDraft) => ({ label: p.label, due_on: p.due_on, amount: 
 export async function createInvoice(orderIds: string[], input: InvoiceInput) {
   const { data, error } = await db().rpc('invoice_create', {
     p_orders: orderIds,
+    p_kind: input.kind,
     p_company: input.billing_company_id || null,
-    p_gst: input.gst_applicable,
     p_rate: Number(input.gst_rate) || 18,
+    p_buyer: input.buyer,
     p_parts: input.parts.filter((p) => num(p.amount) > 0).map(partJson),
   })
   if (error) throw new Error(error.message)
@@ -35,9 +38,15 @@ export async function createInvoice(orderIds: string[], input: InvoiceInput) {
 /** GST / billing company and the payment plan of an invoice */
 export async function saveInvoice(tenantId: string, memberId: string | undefined, inv: InvoiceRow, input: InvoiceInput) {
   // GST first (the database moves the change onto the last unpaid part), then the plan as entered here wins
-  const rate = input.gst_applicable ? Number(input.gst_rate) || 18 : Number(inv.gst_rate) || 18
-  if (input.gst_applicable !== inv.gst_applicable || rate !== Number(inv.gst_rate) || (input.billing_company_id || null) !== inv.billing_company_id) {
-    const { error } = await db().from('invoices').update({ gst_applicable: input.gst_applicable, gst_rate: rate, billing_company_id: input.billing_company_id || null }).eq('id', inv.id)
+  // the type and company stay (the number is from that company); a GST invoice's rate can change
+  const rate = Number(input.gst_rate) || 18
+  if (inv.kind === 'gst' && rate !== Number(inv.gst_rate)) {
+    const { error } = await db().from('invoices').update({ gst_rate: rate }).eq('id', inv.id)
+    if (error) throw new Error(error.message)
+  }
+  const b = inv.buyer ?? {}
+  if ((['company', 'address', 'state', 'state_code', 'gstin'] as const).some((k) => (b[k] ?? '') !== input.buyer[k].trim())) {
+    const { error } = await db().rpc('invoice_set_buyer', { p_invoice: inv.id, p_buyer: input.buyer })
     if (error) throw new Error(error.message)
   }
   const now = await db().from('invoice_payments').select('id, status').eq('invoice_id', inv.id)
