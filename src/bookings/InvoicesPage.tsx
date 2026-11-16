@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, Eye, FileText, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput, StatCard, Paged } from '@/components/ui'
@@ -11,6 +11,9 @@ import { invoiceHref } from './BookingsTab'
 import { partState, type BookingRow } from './types'
 import { listInvoices } from '@/invoices/api'
 import { invoiceAsBooking } from '@/invoices/asBooking'
+import { InvoicePanel } from '@/invoices/InvoicePanel'
+import { useBookingRefs } from './useBookingRefs'
+import { Flash } from '@/components/Flash'
 
 type PayState = 'paid' | 'part' | 'due' | 'overdue'
 const PAY_META: Record<PayState, { label: string; tone: string }> = {
@@ -39,14 +42,21 @@ export function InvoicesPage() {
   // invoices of orders (Default / Brand Deals): their order numbers, by invoice id
   const [orderNos, setOrderNos] = useState<Map<string, string>>(new Map())
 
-  useEffect(() => {
+  const refs = useBookingRefs()
+  // the invoice side panel (?open=<id>, e.g. from a booking)
+  const [params, setParams] = useSearchParams()
+  const openId = params.get('open')
+  const setOpen = (id: string | null) => setParams(id ? { open: id } : {}, { replace: true })
+  const [notice, setNotice] = useState<string | null>(null)
+  const load = useCallback(() => {
     Promise.all([listBookings(tenant.id), listInvoices(tenant.id)])
       .then(([b, inv]) => {
-        setOrderNos(new Map(inv.map((i) => [i.id, i.bookings.filter((o) => o.status !== 'cancelled').map((o) => o.order_no).sort().join(', ')])))
+        setOrderNos(new Map(inv.map((i) => [i.id, i.bookings.filter((o) => o.status !== 'cancelled').map((o) => o.order_no ?? new Date(`${o.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })).sort().join(', ')])))
         setRows([...b.filter((x) => x.status !== 'cancelled' && x.invoice_no && !x.invoice_id && !x.order_no), ...inv.map((i) => invoiceAsBooking(i).b)])
       })
       .catch((e: Error) => setError(e.message))
   }, [tenant.id])
+  useEffect(load, [load])
 
   const months = useMemo(() => [...new Set((rows ?? []).map((b) => (b.invoice_date ?? b.booking_date).slice(0, 7)))].sort().reverse(), [rows])
 
@@ -68,6 +78,7 @@ export function InvoicesPage() {
     <>
       <PageHead title="Invoices" subtitle={`One invoice per booking, or per group of orders${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}; the amount is received in parts.`} />
       {error && <div className="alert alert-error">{error}</div>}
+      <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
         <StatCard icon={FileText} tone="brand" value={visible.length} label="Invoices" />
@@ -160,9 +171,9 @@ export function InvoicesPage() {
                       </td>
                       <td className="right">
                         {orderNos.has(b.id) ? (
-                          <Link className="btn btn-outline btn-sm" to={`/invoices/${b.id}`}>
+                          <button type="button" className="btn btn-outline btn-sm" onClick={() => setOpen(b.id)}>
                             <Eye size={14} /> View
-                          </Link>
+                          </button>
                         ) : (
                           <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
                             <Eye size={14} /> View
@@ -179,6 +190,19 @@ export function InvoicesPage() {
 </Paged>
         )}
       </div>
+
+      {openId && (
+        <InvoicePanel
+          key={openId}
+          invoiceId={openId}
+          refs={refs}
+          onClose={() => setOpen(null)}
+          onChanged={(msg) => {
+            setNotice(msg)
+            load()
+          }}
+        />
+      )}
     </>
   )
 }

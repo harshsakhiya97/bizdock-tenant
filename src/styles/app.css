@@ -1510,3 +1510,4 @@ a.db-card:hover { border-color: var(--brand); }
   .tinv-amt { width: 92px; }
   .tinv-hsn { width: 60px; }
 }
+.inv-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); font-size: 13px; }
