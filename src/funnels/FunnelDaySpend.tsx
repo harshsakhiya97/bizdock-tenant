@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
+import { SpendLines, type Line } from './SpendLines'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const day = (d: Date) => d.toLocaleDateString('en-CA')
@@ -65,6 +66,34 @@ export function FunnelDaySpend({
     }
     return [...byDay.values()].filter((d) => d.spend > 0).map((d) => ({ ...d, ads: d.ads.filter((a) => a.spend > 0).sort((a, b) => b.spend - a.spend) })).sort((a, b) => b.day.localeCompare(a.day))
   }, [data, accounts, campaigns, adsets])
+  // the graph: every day from the first to the last day with spend, one line per campaign or per ad (with GST)
+  const [by, setBy] = useState<'campaign' | 'ad'>('campaign')
+  const chart = useMemo(() => {
+    const gst = new Map(accounts.map((a) => [a.id, Number(a.gst_rate)]))
+    const rows = (data?.days ?? []).filter((r) => Number(r.spend) > 0)
+    if (!rows.length) return { days: [] as string[], lines: [] as Line[] }
+    const first = rows.reduce((m, r) => (r.day < m ? r.day : m), rows[0].day)
+    const last = rows.reduce((m, r) => (r.day > m ? r.day : m), rows[0].day)
+    const axis: string[] = []
+    for (let d = new Date(`${first}T00:00:00`); day(d) <= last; d.setDate(d.getDate() + 1)) axis.push(day(d))
+    const at = new Map(axis.map((d, i) => [d, i]))
+    const cName = new Map(campaigns.map((c) => [c.campaign_id, c.name ?? c.campaign_id]))
+    const series = new Map<string, Line>()
+    for (const r of rows) {
+      const k = by === 'campaign' ? r.campaign_id : r.ad_id
+      const l = series.get(k) ?? { key: k, name: by === 'campaign' ? (cName.get(k) ?? k) : (data?.ads.get(k) ?? k), values: axis.map(() => 0) }
+      l.values[at.get(r.day)!] += Number(r.spend) * (1 + (gst.get(r.account_id) ?? 18) / 100)
+      series.set(k, l)
+    }
+    const sum = (l: Line) => l.values.reduce((a, b) => a + b, 0)
+    const sorted = [...series.values()].sort((a, b) => sum(b) - sum(a))
+    // many ads: the top 8, the rest as one "Other ads" line
+    if (sorted.length > 9) {
+      const rest = sorted.slice(8)
+      return { days: axis, lines: [...sorted.slice(0, 8), { key: 'other', name: `Other ${rest.length} ${by === 'ad' ? 'ads' : 'campaigns'}`, values: axis.map((_, i) => rest.reduce((t, l) => t + l.values[i], 0)) }] }
+    }
+    return { days: axis, lines: sorted }
+  }, [data, accounts, campaigns, by])
   const total = days.reduce((t, d) => ({ spend: t.spend + d.spend, gst: t.gst + d.gst }), { spend: 0, gst: 0 })
   const money = (ex: number, inc: number) => (
     <span className="gst-hover" title={`${inr(ex)} + GST ${inr(inc - ex)} = ${inr(inc)}`}>
@@ -114,6 +143,21 @@ export function FunnelDaySpend({
       ) : !days.length ? (
         <div className="muted small">No spend on the linked campaigns in these dates.</div>
       ) : (
+        <>
+        <div className="stack" style={{ gap: 8 }}>
+          <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <span className="muted small">Spend per day with GST · click a name below to hide / show its line</span>
+            <div className="seg seg-sm" role="group" aria-label="Lines">
+              <button type="button" className={by === 'campaign' ? 'is-active' : undefined} onClick={() => setBy('campaign')}>
+                By campaign
+              </button>
+              <button type="button" className={by === 'ad' ? 'is-active' : undefined} onClick={() => setBy('ad')}>
+                By ad
+              </button>
+            </div>
+          </div>
+          <SpendLines key={by} days={chart.days} lines={chart.lines} />
+        </div>
         <Paged rows={days} reset={[from, to]}>
           {(rows) => (
             <div className="table-wrap">
@@ -177,6 +221,7 @@ export function FunnelDaySpend({
             </div>
           )}
         </Paged>
+        </>
       )}
     </section>
   )
