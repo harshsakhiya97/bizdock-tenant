@@ -9,6 +9,8 @@ import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from './api'
 import { invoiceHref } from './BookingsTab'
 import { partState, type BookingRow } from './types'
+import { listInvoices } from '@/invoices/api'
+import { invoiceAsBooking } from '@/invoices/asBooking'
 
 type PayState = 'paid' | 'part' | 'due' | 'overdue'
 const PAY_META: Record<PayState, { label: string; tone: string }> = {
@@ -27,17 +29,22 @@ function payState(b: BookingRow): PayState {
   return b.paid_amount > 0 ? 'part' : 'due'
 }
 
-/** Every invoice: one per booking, paid in parts. */
+/** Every invoice: one per booking, or (Default / Brand Deals) one per group of orders of a client; paid in parts. */
 export function InvoicesPage() {
   const tenant = useTenant()
   const { selected, sub, inScope } = useBusiness()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [f, setF] = useState({ q: '', state: '', month: '' })
+  // invoices of orders (Default / Brand Deals): their order numbers, by invoice id
+  const [orderNos, setOrderNos] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
-    listBookings(tenant.id)
-      .then((b) => setRows(b.filter((x) => x.status !== 'cancelled' && x.invoice_no)))
+    Promise.all([listBookings(tenant.id), listInvoices(tenant.id)])
+      .then(([b, inv]) => {
+        setOrderNos(new Map(inv.map((i) => [i.id, i.bookings.filter((o) => o.status !== 'cancelled').map((o) => o.order_no).sort().join(', ')])))
+        setRows([...b.filter((x) => x.status !== 'cancelled' && x.invoice_no && !x.invoice_id && !x.order_no), ...inv.map((i) => invoiceAsBooking(i).b)])
+      })
       .catch((e: Error) => setError(e.message))
   }, [tenant.id])
 
@@ -49,7 +56,7 @@ export function InvoicesPage() {
     .filter((b) => !f.state || payState(b) === f.state)
     .filter((b) => {
       const q = f.q.trim().toLowerCase()
-      return !q || b.client_name.toLowerCase().includes(q) || (b.invoice_no ?? '').toLowerCase().includes(q) || (b.phone ?? '').includes(q)
+      return !q || b.client_name.toLowerCase().includes(q) || (b.invoice_no ?? '').toLowerCase().includes(q) || (b.phone ?? '').includes(q) || (orderNos.get(b.id) ?? '').toLowerCase().includes(q)
     })
     .sort((a, b) => (b.invoice_no ?? '').localeCompare(a.invoice_no ?? ''))
 
@@ -59,7 +66,7 @@ export function InvoicesPage() {
 
   return (
     <>
-      <PageHead title="Invoices" subtitle={`One invoice per booking${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}; the amount is received in parts.`} />
+      <PageHead title="Invoices" subtitle={`One invoice per booking, or per group of orders${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}; the amount is received in parts.`} />
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="stat-grid">
@@ -108,7 +115,7 @@ export function InvoicesPage() {
                 <tr>
                   <th>Invoice</th>
                   <th>Client</th>
-                  <th>Shoot date</th>
+                  <th>Shoot date / orders</th>
                   <th>Receipts</th>
                   <th style={{ textAlign: 'right' }}>Total</th>
                   <th style={{ textAlign: 'right' }}>Received</th>
@@ -137,7 +144,7 @@ export function InvoicesPage() {
                         )}
                         <div className="muted small">{b.phone ?? ''}</div>
                       </td>
-                      <td className="nowrap">{day(b.booking_date)}</td>
+                      <td className="nowrap">{orderNos.has(b.id) ? orderNos.get(b.id) || '—' : day(b.booking_date)}</td>
                       <td className="muted nowrap">{b.booking_payments.length ? `${paidParts} of ${b.booking_payments.length} paid` : '—'}</td>
                       <td className="num nowrap" style={{ textAlign: 'right' }}>
                         {money(b.total_amount)}
@@ -152,9 +159,15 @@ export function InvoicesPage() {
                         <span className={cn('badge', st.tone)}>{st.label}</span>
                       </td>
                       <td className="right">
-                        <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
-                          <Eye size={14} /> View
-                        </a>
+                        {orderNos.has(b.id) ? (
+                          <Link className="btn btn-outline btn-sm" to={`/invoices/${b.id}`}>
+                            <Eye size={14} /> View
+                          </Link>
+                        ) : (
+                          <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
+                            <Eye size={14} /> View
+                          </a>
+                        )}
                       </td>
                     </tr>
                   )

@@ -7,6 +7,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { PodcastDashboard } from './PodcastDashboard'
+import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { SubBusinessCards } from './SubBusinessCards'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
@@ -58,7 +59,11 @@ function MonthDashboard() {
   const load = useCallback(() => {
     listLeads(tenant.id).then(setLeads, () => setLeads([]))
     listFollowUps(tenant.id).then(setFus, () => setFus([]))
-    if (can('bookings', 'view')) listBookings(tenant.id).then(setBookings, () => setBookings([]))
+    if (can('bookings', 'view'))
+      Promise.all([listBookings(tenant.id), listInvoices(tenant.id).catch(() => [])]).then(
+        ([b, inv]) => setBookings(withInvoicePayments(b, inv)),
+        () => setBookings([]),
+      )
   }, [tenant.id, can])
   useEffect(load, [load])
 

@@ -3,7 +3,7 @@ import { Paged } from '@/components/ui'
 import { CalendarPlus, FileText, Plus, Repeat } from 'lucide-react'
 import { money } from '@/leads/labels'
 import type { BookingRefs } from './useBookingRefs'
-import { ORDER_STATUS, STATUS_META, type BookingRow } from './types'
+import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingRow } from './types'
 
 export const slotText = (b: Pick<BookingRow, 'booking_date' | 'start_time' | 'end_time'>) => {
   const t = (x: string) => {
@@ -86,7 +86,7 @@ export function BookingsTab({
                   {service && (
                     <td className="nowrap">
                       <b>{b.order_no ?? '—'}</b>
-                      {b.invoice_no && <div className="muted small">{b.invoice_no}</div>}
+                      {invoiceNo(b) && <div className="muted small">{invoiceNo(b)}</div>}
                     </td>
                   )}
                   <td className="nowrap">{slotText(b)}</td>
@@ -105,10 +105,18 @@ export function BookingsTab({
                     <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpen(b)}>
                       Edit
                     </button>{' '}
-                    {b.status !== 'cancelled' && (
-                      <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
-                        Invoice
-                      </a>
+                    {service ? (
+                      b.invoice_id && (
+                        <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`} title={invoiceNo(b) ?? undefined}>
+                          Invoice
+                        </Link>
+                      )
+                    ) : (
+                      b.status !== 'cancelled' && (
+                        <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
+                          Invoice
+                        </a>
+                      )
                     )}
                     {service && onRepeat && canAdd && (
                       <>

@@ -74,7 +74,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/widgets': { title: 'Widgets', crumb: 'Overview', icon: Blocks },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
   '/customers': { title: 'Customers', crumb: 'Booked clients & revenue', icon: Contact },
-  '/invoices': { title: 'Invoices', crumb: 'One invoice per booking', icon: FileText },
+  '/invoices': { title: 'Invoices', crumb: 'Invoices & payments', icon: FileText },
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },
