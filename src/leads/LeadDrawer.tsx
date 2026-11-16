@@ -4,12 +4,12 @@ import { PhoneInput, fullPhone, localPhone, phoneValid } from '@/components/Phon
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { FormSection, Label, Select, TextInput } from '@/components/Field'
+import { FormSection, Label, Select, TextArea, TextInput } from '@/components/Field'
 import type { FunnelRow } from '@/funnels/types'
 import { useTenant } from '@/tenant/useTenant'
 import { ago } from '@/team/time'
 import { clearLeadFollowUps, scheduleFollowUp } from '@/followups/api'
-import { createLead, listActivities, logActivity, updateLead } from './api'
+import { createLead, listActivities, updateLead } from './api'
 import { toLocalInput } from './labels'
 import { LeadOrigin } from './LeadOrigin'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option } from './types'
@@ -69,7 +69,6 @@ export function LeadDrawer({
   const [name, setName] = useState(() => `${lead?.first_name ?? ''} ${lead?.last_name ?? ''}`.trim())
   const lostReason = ''
   const [activities, setActivities] = useState<ActivityRow[] | null>(null)
-  const [newNote, setNewNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -137,13 +136,6 @@ export function LeadDrawer({
       setError((err as Error).message)
       setBusy(false)
     }
-  }
-
-  async function addNote() {
-    if (!lead || !newNote.trim()) return
-    await logActivity(tenant.id, me, [lead.id], { kind: 'note', note: newNote.trim() })
-    setNewNote('')
-    setActivities(await listActivities(lead.id))
   }
 
   function activityText(a: ActivityRow) {
@@ -252,6 +244,10 @@ export function LeadDrawer({
                 disabled={!canEdit}
               />
             </div>
+            <div className="span-2">
+              <Label htmlFor="l-notes">Description</Label>
+              <TextArea id="l-notes" rows={4} placeholder="About this lead: what they need, budget, anything useful" value={input.notes} onChange={(e) => setInput((d) => ({ ...d, notes: e.target.value }))} disabled={!canEdit} />
+            </div>
           </div>
         </FormSection>
 
@@ -259,12 +255,6 @@ export function LeadDrawer({
 
         {lead && (
           <FormSection title="Activity">
-            <div className="row" style={{ flexWrap: 'nowrap' }}>
-              <TextInput placeholder="Add a note (call outcome, next step…)" value={newNote} onChange={(e) => setNewNote(e.target.value)} />
-              <Button variant="dark" onClick={addNote} disabled={!newNote.trim()}>
-                Add note
-              </Button>
-            </div>
             {!activities ? (
               <div className="muted small">Loading…</div>
             ) : activities.length === 0 ? (

@@ -16,6 +16,7 @@ import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { ActivityLog } from './ActivityLog'
 import { CategorySelect } from './CategorySelect'
+import { LeadDescription } from './LeadDescription'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
@@ -293,16 +294,14 @@ export function LeadPage() {
                 </div>
               ))}
             </dl>
-            {lead.notes && (
-              <div>
-                <span className="field-label">Notes</span>
-                <p style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{lead.notes}</p>
-              </div>
-            )}
+            <div>
+              <span className="field-label">Description</span>
+              <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
+            </div>
             <LeadOrigin lead={lead} />
             <div>
               <span className="field-label">Activity</span>
-              <ActivityLog leadId={lead.id} stageName={stageName} members={members} canNote={canFollow} refreshKey={refresh} />
+              <ActivityLog leadId={lead.id} stageName={stageName} members={members} canNote={false} refreshKey={refresh} />
             </div>
           </div>
         )}
