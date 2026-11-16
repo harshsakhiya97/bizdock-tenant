@@ -660,7 +660,8 @@ html, body, #root { overflow-x: hidden; overscroll-behavior-x: none; }
 
 /* ---------- WhatsApp templates ---------- */
 .wa-phone { background: #efeae2; border-radius: 14px; padding: 16px 12px; min-height: 160px; }
-.wa-msg { max-width: 320px; }
+/* the template preview stretches across its box (the chat bubbles use .wa-msg) */
+.wa-tpl-msg { width: 100%; }
 .wa-bubble { position: relative; background: #fff; border-radius: 0 10px 10px 10px; padding: 8px 10px 18px; box-shadow: 0 1px .5px rgba(11,20,26,.13); font-size: 13.5px; line-height: 1.45; color: #111b21; }
 .wa-head-text { font-weight: 700; margin-bottom: 4px; }
 .wa-media { height: 120px; margin: -2px -4px 8px; border-radius: 6px; background: #d1d7db; display: grid; place-items: center; color: #fff; }

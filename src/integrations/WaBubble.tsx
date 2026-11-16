@@ -48,7 +48,7 @@ export function WaBubble({
 }) {
   const ht = (headerType ?? 'none').toLowerCase()
   return (
-    <div className="wa-msg">
+    <div className="wa-tpl-msg">
       <div className="wa-bubble">
         {ht === 'text' && headerText && <div className="wa-head-text">{headerText}</div>}
         {['image', 'video', 'document'].includes(ht) && (
