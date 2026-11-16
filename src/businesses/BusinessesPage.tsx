@@ -9,7 +9,7 @@ import type { BusinessListRow, BusinessRow } from './types'
 
 export function BusinessesPage() {
   const tenant = useTenant()
-  const { can, refreshProfile } = useAuth()
+  const { can, refreshProfile, businesses, typeName } = useAuth()
   const [rows, setRows] = useState<BusinessListRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -91,9 +91,25 @@ export function BusinessesPage() {
       ),
     },
     {
-      key: 'gst',
-      label: 'GST',
-      render: (b) => (b.gst_number ? <span className="code-chip">{b.gst_number}</span> : <span className="muted">—</span>),
+      key: 'subs',
+      label: 'Sub-businesses · type',
+      render: (b) => {
+        const subs = businesses.find((x) => x.id === b.id)?.subs ?? []
+        return subs.length ? (
+          <div className="stack" style={{ gap: 2 }}>
+            {subs.map((sb) => (
+              <div key={sb.id} className="nowrap">
+                {sb.name} <span className="muted small">· {typeName(sb.type)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span>
+            <span className="muted small">No sub-businesses · </span>
+            {b.type ? typeName(b.type) : '—'}
+          </span>
+        )
+      },
     },
     {
       key: 'actions',
