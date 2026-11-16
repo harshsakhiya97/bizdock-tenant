@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Repeat, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -16,7 +16,8 @@ import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { ORDER_STATUS, STATUS_META, invoiceNo, partState, type BookingRow, type BookingStatus, type OrderStatus } from '@/bookings/types'
 import { slotText } from '@/bookings/BookingsTab'
 import { bookingRef } from '@/invoices/InvoiceDrawer'
-import { invoicePath, listInvoices } from '@/invoices/api'
+import { listInvoices } from '@/invoices/api'
+import { InvoicePanel } from '@/invoices/InvoicePanel'
 import { InvoiceDrawer } from '@/invoices/InvoiceDrawer'
 import { isFullyPaid, type InvoicePayment, type InvoiceRow } from '@/invoices/types'
 
@@ -59,7 +60,8 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   // orders ticked for one invoice
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [invoicing, setInvoicing] = useState<BookingRow[] | null>(null)
-  const navigate = useNavigate()
+  // the invoice side panel
+  const [invoiceOpen, setInvoiceOpen] = useState<string | null>(null)
 
   const load = useCallback(() => {
     listBookings(tenant.id)
@@ -279,9 +281,9 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                           <td className="num nowrap">{cancelled(b) ? '—' : money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount)))}</td>
                           <td className="nowrap" onClick={(e) => e.stopPropagation()}>
                             {b.invoice_id ? (
-                              <Link to={invoicePath(b.invoice_id)} className="strong">
+                              <button type="button" className="link-btn strong" onClick={() => setInvoiceOpen(b.invoice_id)}>
                                 {invoiceNo(b) ?? 'Invoice'}
-                              </Link>
+                              </button>
                             ) : cancelled(b) ? (
                               <span className="muted">—</span>
                             ) : (
@@ -346,6 +348,19 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
         />
       )}
 
+      {invoiceOpen && (
+        <InvoicePanel
+          key={invoiceOpen}
+          invoiceId={invoiceOpen}
+          refs={refs}
+          onClose={() => setInvoiceOpen(null)}
+          onChanged={(msg) => {
+            setNotice(msg)
+            load()
+          }}
+        />
+      )}
+
       {invoicing && (
         <InvoiceDrawer
           orders={invoicing}
@@ -356,7 +371,8 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
             setInvoicing(null)
             setPicked(new Set())
             setNotice(msg)
-            navigate(invoicePath(id))
+            load()
+            setInvoiceOpen(id)
           }}
         />
       )}

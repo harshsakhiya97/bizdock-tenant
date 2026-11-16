@@ -97,7 +97,7 @@ export async function removeInvoiceOrder(orderId: string) {
 }
 
 /** the invoice's page in the app */
-export const invoicePath = (id: string) => `/invoices/${id}`
+export const invoicePath = (id: string) => `/invoices?open=${id}`
 /** the printable invoice, opened in a new tab */
 export const invoicePrintHref = (id: string) => `${import.meta.env.BASE_URL}invoices/${id}/print`
 

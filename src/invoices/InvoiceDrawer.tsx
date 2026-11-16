@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Eye, Plus, Printer, Unlink } from 'lucide-react'
+import { cn } from '@/lib/cn'
+import { ORDER_STATUS, STATUS_META } from '@/bookings/types'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -9,7 +12,7 @@ import { useTenant } from '@/tenant/useTenant'
 import type { BookingRow, PartDraft } from '@/bookings/types'
 import type { BookingRefs } from '@/bookings/useBookingRefs'
 import { formatInvoiceNo } from '@/masters/types'
-import { createInvoice, saveInvoice } from './api'
+import { createInvoice, invoicePrintHref, saveInvoice } from './api'
 import { BuyerFields, buyerError, buyerOfJson, buyerOfLead, emptyBuyer } from './Billing'
 import { PaymentPlan, planError } from './PaymentPlan'
 import { isFullyPaid, type InvoiceInput, type InvoiceRow } from './types'
@@ -49,6 +52,10 @@ export function InvoiceDrawer({
   invoice,
   refs,
   noun = 'Booking',
+  onViewBooking,
+  onRemoveBooking,
+  onAddBooking,
+  outerError,
   onClose,
   onSaved,
 }: {
@@ -59,6 +66,12 @@ export function InvoiceDrawer({
   refs: BookingRefs
   /** Booking, Order or Brand Deal */
   noun?: string
+  /** the invoice panel: a booking's View / Remove and Add booking */
+  onViewBooking?: (b: BookingRow) => void
+  onRemoveBooking?: (b: BookingRow) => void
+  onAddBooking?: () => void
+  /** a message from the panel (e.g. a booking couldn't be removed) */
+  outerError?: string | null
   onClose: () => void
   onSaved: (msg: string, invoiceId: string) => void
 }) {
@@ -149,7 +162,12 @@ export function InvoiceDrawer({
             {canEdit ? 'Cancel' : 'Close'}
           </Button>
           <div className="foot-end">
-            {error && <p className="err-text">{error}</p>}
+            {(error || outerError) && <p className="err-text">{error || outerError}</p>}
+            {invoice && (
+              <a className="btn btn-outline" href={invoicePrintHref(invoice.id)} target="_blank" rel="noreferrer">
+                <Printer size={15} /> Print / PDF
+              </a>
+            )}
             {canEdit && (
               <Button onClick={save} disabled={busy}>
                 {busy ? 'Saving…' : invoice ? 'Save invoice' : 'Generate invoice'}
@@ -160,6 +178,25 @@ export function InvoiceDrawer({
       }
     >
       <div className="stack">
+        {invoice && (
+          <div className="inv-sum">
+            <span className={cn('badge', locked ? 'badge-success' : Number(invoice.paid_amount) > 0 ? 'badge-warning' : 'badge-muted')}>
+              {locked ? 'Fully paid' : Number(invoice.paid_amount) > 0 ? 'Part paid' : 'Unpaid'}
+            </span>
+            <span>
+              Total <b>{money(invoice.total_amount)}</b>
+            </span>
+            <span>
+              Received <b className="tone-success">{money(invoice.paid_amount)}</b>
+            </span>
+            <span>
+              Balance <b className={Number(invoice.total_amount) - Number(invoice.paid_amount) > 0.01 ? 'tone-danger' : undefined}>{money(Math.max(0, Number(invoice.total_amount) - Number(invoice.paid_amount)))}</b>
+            </span>
+            <span className="muted">
+              {new Date(`${invoice.invoice_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+          </div>
+        )}
         <FormSection title="Invoice">
           <div className="form-grid">
             <div className="span-2">
@@ -219,25 +256,52 @@ export function InvoiceDrawer({
         </FormSection>
 
         <FormSection title={`${noun}s on this invoice`}>
+          {invoice && onAddBooking && canEdit && !locked && (
+            <div>
+              <Button variant="outline" size="sm" onClick={onAddBooking}>
+                <Plus /> Add {noun.toLowerCase()}
+              </Button>
+            </div>
+          )}
           <div className="table-wrap">
             <table className="table">
               <thead>
                 <tr>
                   <th>{noun}</th>
                   <th>Services</th>
+                  {invoice && <th>Status</th>}
                   <th className="num">Amount</th>
+                  {invoice && <th />}
                 </tr>
               </thead>
               <tbody>
-                {list.map((o) => (
+                {list.map((o) => {
+                  const st = o.order_no ? (o.order_status ? ORDER_STATUS[o.order_status] : null) : STATUS_META[o.status]
+                  return (
                   <tr key={o.id}>
                     <td className="nowrap">
                       <b>{bookingRef(o)}</b>
                     </td>
                     <td>{serviceText(o)}</td>
+                    {invoice && <td>{st && <span className={`badge ${st.tone}`}>{st.label}</span>}</td>}
                     <td className="num nowrap">{o.status === 'cancelled' ? <span className="muted">Cancelled</span> : money(o.amount)}</td>
+                    {invoice && (
+                      <td className="nowrap" style={{ textAlign: 'right' }}>
+                        {onViewBooking && (
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm" title={`Open this ${noun.toLowerCase()}`} aria-label="Open" onClick={() => onViewBooking(o)}>
+                            <Eye size={15} />
+                          </button>
+                        )}
+                        {onRemoveBooking && canEdit && list.length > 1 && (
+                          <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Take it off this invoice" aria-label="Remove from invoice" onClick={() => onRemoveBooking(o)}>
+                            <Unlink size={15} />
+                          </button>
+                        )}
+                      </td>
+                    )}
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

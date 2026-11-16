@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router'
 import { AuthProvider } from '@/auth/AuthProvider'
 import { TenantProvider } from '@/tenant/TenantProvider'
 import { RequireAuth } from '@/auth/RequireAuth'
@@ -25,7 +25,6 @@ import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
 import { InvoicesPage } from '@/bookings/InvoicesPage'
-import { InvoiceDetailPage } from '@/invoices/InvoiceDetailPage'
 import { InvoicePrint } from '@/invoices/InvoicePrint'
 import { CustomersPage } from '@/leads/CustomersPage'
 import { OrdersPage } from '@/orders/OrdersPage'
@@ -92,7 +91,7 @@ export default function App() {
                 <Route path="/customers" element={<RequirePermission area="leads"><CustomersPage /></RequirePermission>} />
                 <Route path="/customers/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
                 <Route path="/invoices" element={<RequirePermission module="bookings"><InvoicesPage /></RequirePermission>} />
-                <Route path="/invoices/:id" element={<RequirePermission module="bookings"><InvoiceDetailPage /></RequirePermission>} />
+                <Route path="/invoices/:id" element={<InvoiceRedirect />} />
                 <Route path="/orders" element={<RequirePermission module="bookings"><OrdersPage key="orders" /></RequirePermission>} />
                 <Route path="/booking-list" element={<RequirePermission module="bookings"><OrdersPage key="bookings" bookings /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
@@ -216,4 +215,10 @@ export default function App() {
       </AuthProvider>
     </TenantProvider>
   )
+}
+
+/** old invoice page links → the Invoices list with that invoice's side panel open */
+function InvoiceRedirect() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/invoices?open=${id}`} replace />
 }
