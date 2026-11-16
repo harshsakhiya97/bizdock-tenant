@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -126,6 +126,19 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const next = Math.max(1, Math.floor(Number(f.next_no) || 0))
+  // Insert a field: at the cursor in the number format
+  const fmtRef = useRef<HTMLInputElement>(null)
+  function insertToken(tag: string) {
+    const el = fmtRef.current
+    const v = f.number_format
+    const a = el?.selectionStart ?? v.length
+    const b = el?.selectionEnd ?? v.length
+    set('number_format', v.slice(0, a) + tag + v.slice(b))
+    requestAnimationFrame(() => {
+      el?.focus()
+      el?.setSelectionRange(a + tag.length, a + tag.length)
+    })
+  }
   const t = (v: string) => v.trim() || null
 
   async function submit(e: FormEvent) {
@@ -262,7 +275,14 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
             </div>
             <div>
               <Label htmlFor="co-fmt">Number format</Label>
-              <TextInput id="co-fmt" placeholder="{N}/{PREFIX}/{FY}" value={f.number_format} onChange={(e) => set('number_format', e.target.value)} />
+              <input ref={fmtRef} id="co-fmt" className="input" placeholder="e.g. {N}/{PREFIX}/{FY}" value={f.number_format} onChange={(e) => set('number_format', e.target.value)} />
+              <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insertToken(e.target.value)}>
+                <option value="">Insert a field…</option>
+                <option value="{N}">Number ({next})</option>
+                <option value="{NNNN}">Number with zeros ({String(next).padStart(4, '0')})</option>
+                <option value="{FY}">Financial year ({formatInvoiceNo('{FY}', null, 1)})</option>
+                <option value="{PREFIX}">Prefix ({f.invoice_prefix.trim() || 'add one on the left'})</option>
+              </select>
             </div>
             <div>
               <Label htmlFor="co-next" required>
@@ -275,9 +295,7 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
               <b>{formatInvoiceNo(f.number_format, f.invoice_prefix || null, next)}</b>
             </div>
             <div className="span-2">
-              <Hint>
-                {'{N}'} the number (8) · {'{NNNN}'} with zeros (0008) · {'{FY}'} the financial year (26-27) · {'{PREFIX}'} the prefix. E.g. {'{N}/{PREFIX}/{FY}'} → 8/pride/26-27, or just {'{N}'} → 58. Change the next number to continue from another series.
-              </Hint>
+              <Hint>Type the fixed parts (like / or -) and insert the fields where you want them. E.g. Number / Prefix / Financial year → 8/pride/26-27, or just Number → 58. Change the next number to continue from another series.</Hint>
             </div>
           </div>
         </FormSection>
