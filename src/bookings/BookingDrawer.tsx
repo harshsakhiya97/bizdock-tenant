@@ -5,7 +5,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { fullName, money } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
@@ -352,8 +352,12 @@ export function BookingDrawer({
               )}
             </div>
             <div className="span-2">
-              <Label htmlFor="bk-notes">Note</Label>
-              <TextInput id="bk-notes" placeholder="Setup requirements, payment terms, anything useful" value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
+              <Label htmlFor="bk-notes">{service ? 'Description' : 'Note'}</Label>
+              {service ? (
+                <TextArea id="bk-notes" rows={4} placeholder="What’s in this order: deliverables, timelines, payment terms…" value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
+              ) : (
+                <TextInput id="bk-notes" placeholder="Setup requirements, payment terms, anything useful" value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
+              )}
             </div>
           </div>
 
