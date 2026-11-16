@@ -340,3 +340,10 @@ export async function funnelCampaignCount(funnelId: string) {
   if (error) throw new Error(error.message)
   return new Set((data ?? []).map((r: { campaign_id: string }) => r.campaign_id)).size
 }
+
+/** when Facebook's numbers were last brought in (latest insights row saved) */
+export async function metaRefreshedAt(tenantId: string): Promise<string | null> {
+  const { data, error } = await db().from('meta_insights').select('updated_at').eq('tenant_id', tenantId).order('updated_at', { ascending: false }).limit(1).maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data as { updated_at: string } | null)?.updated_at ?? null
+}

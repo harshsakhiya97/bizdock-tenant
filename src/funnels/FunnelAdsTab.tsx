@@ -36,8 +36,9 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
 
   const load = useCallback(() => {
     setError(null)
-    const to = new Date()
-    const from = new Date(Date.now() - 29 * 86400_000)
+    // Last 30 days as Facebook counts it: ending yesterday
+    const to = new Date(Date.now() - 86400_000)
+    const from = new Date(Date.now() - 30 * 86400_000)
     Promise.all([listAdAccounts(tenant.id), listCampaignTree(tenant.id), listFunnels(tenant.id), campaignSpend(tenant.id, day(from), day(to))])
       .then(([a, t, fs, sp]) => {
         setAccounts(a)
