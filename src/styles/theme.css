@@ -367,7 +367,8 @@ a.link:not(.strong) { color: var(--brand); font-weight: 600; font-size: 12.5px; 
 .nav-group-head.is-current { font-weight: 600; color: var(--brand); }
 .nav-chevron { margin-left: auto; transition: transform .15s; color: var(--text-muted); }
 .nav-group.is-open .nav-chevron { transform: rotate(180deg); }
-.nav-item.nav-sub { height: 34px; padding-left: 30px; font-size: 12.5px; }
+.nav-item.nav-sub { height: 34px; padding-left: 24px; font-size: 12.5px; }
+.nav-item.nav-sub.active { background: var(--brand-soft); color: var(--brand); box-shadow: inset 3px 0 0 var(--brand); }
 .sidebar.is-collapsed .nav-chevron { display: none; }
 .sidebar.is-collapsed .nav-item.nav-sub { padding: 0; }
 
