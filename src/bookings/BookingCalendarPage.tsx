@@ -69,13 +69,14 @@ function BookingsCalendar() {
   // ---- stats for the month on screen ----
   const month = anchor.slice(0, 7)
   const stats = useMemo(() => {
-    const inMonth = (bookings ?? []).filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled' && b.booking_date.slice(0, 7) === month)
+    // the cards follow the status filter (cancelled ones only when that's picked)
+    const inMonth = visible.filter((b) => b.booking_date.slice(0, 7) === month)
     const hours = inMonth.reduce((a, b) => a + (minutes(b.end_time) - minutes(b.start_time)) / 60, 0)
     const value = inMonth.reduce((a, b) => a + Number(b.total_amount), 0)
     const paid = inMonth.reduce((a, b) => a + Number(b.paid_amount), 0)
-    const todays = (bookings ?? []).filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled' && b.booking_date === today)
+    const todays = visible.filter((b) => b.booking_date === today)
     return { count: inMonth.length, tentative: inMonth.filter((b) => b.status === 'tentative').length, hours, value, due: Math.max(0, value - paid), todays: todays.length }
-  }, [bookings, inScope, month, today])
+  }, [visible, month, today])
 
   const open = (id: string) => {
     const b = bookings?.find((x) => x.id === id)

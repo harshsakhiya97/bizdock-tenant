@@ -98,12 +98,10 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
       .sort((a, b) => b.booking_date.localeCompare(a.booking_date) || (b.order_no ?? '').localeCompare(a.order_no ?? ''))
   }, [scoped, f, invoices, bookings])
 
-  // this month: orders dated this month (not cancelled), what they're worth, collected and still due
-  const month = new Date().toISOString().slice(0, 7)
-  const thisMonth = scoped.filter((b) => !cancelled(b) && b.booking_date.startsWith(month))
-  const value = thisMonth.reduce((n, b) => n + Number(b.total_amount), 0)
-  const collected = thisMonth.reduce((n, b) => n + Number(b.paid_amount), 0)
-  const live = scoped.filter((b) => !cancelled(b))
+  // the cards follow the filters: the rows in the list (cancelled ones not counted), worth, collected and still due
+  const live = visible.filter((b) => !cancelled(b))
+  const value = live.reduce((n, b) => n + Number(b.total_amount), 0)
+  const collected = live.reduce((n, b) => n + Number(b.paid_amount), 0)
   const due = live.reduce((n, b) => n + Math.max(0, Number(b.total_amount) - Number(b.paid_amount)), 0)
   const liveInvoices = [...new Set(live.map((b) => b.invoice_id).filter(Boolean))].map((id) => invoices.get(id!)).filter(Boolean) as InvoiceRow[]
   const overdueParts = liveInvoices.flatMap((i) => i.invoice_payments).filter((p) => partState(p) === 'overdue')
@@ -147,10 +145,10 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={PackageCheck} tone="brand" value={thisMonth.length} label={`${noun.many} this month`} />
-        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label={`${noun.one} value`} hint="This month, with GST" />
-        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint={`On this month’s ${one}s`} />
-        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`All open ${one}s · ${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} />
+        <StatCard icon={PackageCheck} tone="brand" value={live.length} label={noun.many} hint={filtered ? 'Matching the filters' : 'All, not cancelled'} />
+        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label={`${noun.one} value`} hint="With GST" />
+        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint={value ? `${Math.round((collected / value) * 100)}% of the value` : undefined} />
+        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} />
       </div>
 
       <div className="panel">
