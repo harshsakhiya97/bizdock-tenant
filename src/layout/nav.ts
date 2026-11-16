@@ -1,4 +1,4 @@
-import { Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
+import { PackageCheck, Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
 import { BT, type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -31,6 +31,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
       { to: '/meetings', label: 'Meetings', icon: Handshake, module: 'meetings', onlyType: BT.PAID_PODCAST },
       { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings', hideType: BT.DEFAULT },
+      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'bookings', onlyType: BT.DEFAULT },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
@@ -74,6 +75,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
   '/customers': { title: 'Customers', crumb: 'Booked clients & revenue', icon: Contact },
   '/invoices': { title: 'Invoices', crumb: 'One invoice per booking', icon: FileText },
+  '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },

@@ -80,6 +80,8 @@ export async function saveBooking(
     gst_applicable: input.gst_applicable,
     gst_rate: input.gst_applicable ? Number(input.gst_rate) || 18 : 18,
     status: input.status,
+    ...(input.order_status ? { order_status: input.order_status } : {}),
+    ...(input.owner_id !== undefined ? { owner_id: input.owner_id || null } : {}),
     billing_company_id: input.billing_company_id || null,
     notes: input.notes.trim() || null,
   }
@@ -91,7 +93,7 @@ export async function saveBooking(
     id = crypto.randomUUID()
     const { error } = await db()
       .from('bookings')
-      .insert({ ...row, id, tenant_id: tenantId, owner_id: memberId ?? null, created_by: memberId ?? null })
+      .insert({ owner_id: memberId ?? null, ...row, id, tenant_id: tenantId, created_by: memberId ?? null })
     if (error) throw new Error(error.message)
   }
   await saveItems(tenantId, id!, input.items)

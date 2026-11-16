@@ -8,13 +8,14 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { fullName, money } from '@/leads/labels'
-import type { LeadRow } from '@/leads/types'
+import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import { invoiceHref } from './BookingsTab'
 import type { BookingRefs } from './useBookingRefs'
-import { STATUS_META, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type PartDraft } from './types'
+import { ORDER_STATUS, STATUS_META, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus, type PartDraft } from './types'
+import { listMemberOptions } from '@/leads/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
 const hm = (t: string | null | undefined) => (t ? t.slice(0, 5) : '')
@@ -95,6 +96,7 @@ export function BookingDrawer({
     gst_applicable: booking?.gst_applicable ?? copyFrom?.gst_applicable ?? false,
     gst_rate: booking ? String(booking.gst_rate) : copyFrom ? String(copyFrom.gst_rate) : '18',
     status: booking?.status ?? 'confirmed',
+    ...(service ? { order_status: booking?.order_status ?? 'not_started', owner_id: booking?.owner_id ?? membership?.id ?? '' } : {}),
     billing_company_id: booking?.billing_company_id ?? copyFrom?.billing_company_id ?? refs.companies[0]?.id ?? '',
     notes: booking?.notes ?? copyFrom?.notes ?? '',
   }))
@@ -103,6 +105,12 @@ export function BookingDrawer({
   const setPart = (k: string, patch: Partial<PartDraft>) => setInput((d) => ({ ...d, parts: d.parts.map((p) => (p.key === k ? { ...p, ...patch } : p)) }))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // an order: the team member who took it
+  const [members, setMembers] = useState<MemberOption[]>([])
+  useEffect(() => {
+    if (service) void listMemberOptions(tenant.id).then(setMembers)
+  }, [service, tenant.id])
+  const word = service ? 'order' : 'booking'
 
   const leadOptions = useMemo(
     () => [
@@ -212,8 +220,8 @@ export function BookingDrawer({
       onSaved(
         service
           ? booking
-            ? 'Booking updated.'
-            : `New booking for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
+            ? 'Order updated.'
+            : `New order for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
           : booking
           ? 'Booking updated.'
           : `Booked ${data.client_name.trim()} on ${[data.booking_date, ...extra.map((x) => x.date)].map(day).join(', ')}.`,
@@ -229,7 +237,17 @@ export function BookingDrawer({
       open
       onClose={close}
       width={720}
-      title={booking ? `Booking · ${booking.client_name}` : copyFrom ? 'New booking (repeat)' : 'New booking'}
+      title={
+        service
+          ? booking
+            ? `Order ${booking.order_no ?? ''} · ${booking.client_name}`
+            : copyFrom
+              ? 'New order (repeat)'
+              : 'New order'
+          : booking
+            ? `Booking · ${booking.client_name}`
+            : 'New booking'
+      }
       footer={
         <>
           <Button variant="outline" onClick={close}>
@@ -239,7 +257,7 @@ export function BookingDrawer({
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
               <Button onClick={save} disabled={busy || !!clash}>
-                {busy ? 'Saving…' : booking ? 'Save booking' : service ? 'Save booking' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
+                {busy ? 'Saving…' : booking ? `Save ${word}` : service ? 'Save order' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
               </Button>
             )}
           </div>
@@ -248,8 +266,8 @@ export function BookingDrawer({
     >
       <div className="stack">
         <FormSection
-          title="Booking details"
-          description={booking ? undefined : service ? 'A service the client bought: add its services below, then the payment parts. Its invoice gets the next number.' : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+          title={service ? 'Order details' : 'Booking details'}
+          description={booking ? undefined : service ? 'Add the services below, then the payment parts. The order gets the next ORD number and its invoice the next invoice number.' : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
             <div className="span-2">
@@ -274,14 +292,28 @@ export function BookingDrawer({
             </div>
             <div>
               <Label htmlFor="bk-date" required>
-                Date
+                {service ? 'Order date' : 'Date'}
               </Label>
               <TextInput id="bk-date" type="date" value={input.booking_date} onChange={(e) => set('booking_date', e.target.value)} disabled={!canEdit} />
             </div>
-            <div>
-              <Label htmlFor="bk-purpose">Purpose</Label>
-              <TextInput id="bk-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={(e) => set('purpose', e.target.value)} disabled={!canEdit} />
-            </div>
+            {service ? (
+              <div>
+                <Label htmlFor="bk-owner">Team member</Label>
+                <Select id="bk-owner" value={input.owner_id ?? ''} onChange={(e) => set('owner_id', e.target.value)} disabled={!canEdit}>
+                  <option value="">—</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="bk-purpose">Purpose</Label>
+                <TextInput id="bk-purpose" placeholder="e.g. Podcast" value={input.purpose} onChange={(e) => set('purpose', e.target.value)} disabled={!canEdit} />
+              </div>
+            )}
             {!service && (
             <>
             <div>
@@ -301,13 +333,23 @@ export function BookingDrawer({
             {clashes[0] && <div className="span-2 alert alert-error small">{clashText(clashes[0])}</div>}
             <div>
               <Label htmlFor="bk-status">Status</Label>
-              <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit}>
-                {(Object.keys(STATUS_META) as BookingStatus[]).map((st) => (
-                  <option key={st} value={st}>
-                    {STATUS_META[st].label}
-                  </option>
-                ))}
-              </Select>
+              {service ? (
+                <Select id="bk-status" value={input.order_status ?? 'not_started'} onChange={(e) => set('order_status', e.target.value as OrderStatus)} disabled={!canEdit}>
+                  {(Object.keys(ORDER_STATUS) as OrderStatus[]).map((st) => (
+                    <option key={st} value={st}>
+                      {ORDER_STATUS[st].label}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit}>
+                  {(Object.keys(STATUS_META) as BookingStatus[]).map((st) => (
+                    <option key={st} value={st}>
+                      {STATUS_META[st].label}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </div>
             <div className="span-2">
               <Label htmlFor="bk-notes">Note</Label>

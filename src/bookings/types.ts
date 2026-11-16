@@ -1,4 +1,12 @@
 export type BookingStatus = 'tentative' | 'confirmed' | 'completed' | 'cancelled'
+/** an order's status (Default businesses: a booking without a time is an order) */
+export type OrderStatus = 'not_started' | 'active' | 'completed' | 'cancelled'
+export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: string }> = {
+  not_started: { label: 'Not started', tone: 'badge-muted' },
+  active: { label: 'Active', tone: 'badge-info' },
+  completed: { label: 'Completed', tone: 'badge-success' },
+  cancelled: { label: 'Cancelled', tone: 'badge-danger' },
+}
 
 /** one planned part of a booking's payment (advance, pre-shoot, after-shoot…) */
 export type BookingPayment = {
@@ -44,6 +52,9 @@ export type BookingRow = {
   invoice_date: string | null
   notes: string | null
   owner_id: string | null
+  /** an order (Default business): ORD-0001… */
+  order_no: string | null
+  order_status: OrderStatus | null
   created_by: string | null
   created_at: string
   booking_payments: BookingPayment[]
@@ -79,6 +90,9 @@ export type BookingInput = {
   gst_applicable: boolean
   gst_rate: string
   status: BookingStatus
+  /** an order: its status and the team member who took it */
+  order_status?: OrderStatus
+  owner_id?: string
   billing_company_id: string
   notes: string
   items: ItemDraft[]
