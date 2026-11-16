@@ -51,8 +51,8 @@ function Shell() {
   const sections = navSections
     .map((s) => ({ ...s, items: s.items.filter(
         (i) =>
-          (!i.onlyType || i.onlyType === type) &&
-          (!i.hideType || i.hideType !== type) &&
+          (!i.onlyType || [i.onlyType].flat().includes(type ?? '')) &&
+          (!i.hideType || ![i.hideType].flat().includes(type ?? '')) &&
           (i.area ? scope(i.area) !== 'none' : true) &&
           (!i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action))),
       ).map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i)) }))

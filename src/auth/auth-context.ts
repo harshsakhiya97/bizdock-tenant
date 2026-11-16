@@ -24,7 +24,10 @@ export type Membership = {
 export type SubBusinessType = string
 export type SubBusiness = { id: string; business_id: string; name: string; type: SubBusinessType }
 /** the built-in codes the app works by */
-export const BT = { EDITING: 'EDITING', PAID_PODCAST: 'PAID-PODCAST', STUDIO_RENTAL: 'STUDIO-RENTAL', WEBINAR: 'WEBINAR', DEFAULT: 'DEFAULT' } as const
+export const BT = { EDITING: 'EDITING', PAID_PODCAST: 'PAID-PODCAST', STUDIO_RENTAL: 'STUDIO-RENTAL', WEBINAR: 'WEBINAR', DEFAULT: 'DEFAULT', BRAND_DEALS: 'BRAND-DEALS' } as const
+/** types that work with orders (no calendar): Default and Brand Deals */
+export const ORDER_TYPES: string[] = [BT.DEFAULT, BT.BRAND_DEALS]
+export const isOrderType = (t: string | null | undefined) => !!t && ORDER_TYPES.includes(t)
 /** a type stored before the codes (editing / podcast / studio_rental) → its code */
 const LEGACY: Record<string, string> = { editing: BT.EDITING, podcast: BT.PAID_PODCAST, studio_rental: BT.STUDIO_RENTAL }
 export const typeCode = <T extends string | null | undefined>(t: T): T => (t ? LEGACY[t] ?? t : t) as T

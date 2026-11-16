@@ -1,4 +1,4 @@
-import { BT } from '@/auth/auth-context'
+import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, Receipt, Star, Trash2, Wallet } from 'lucide-react'
@@ -128,7 +128,7 @@ export function LeadPage() {
   // Webinar lead: Webinars and Purchases tabs
   const isWebinar = leadType === BT.WEBINAR
   // Default lead: Services (service bookings, each with its invoice) instead of the calendar bookings
-  const isDefault = leadType === BT.DEFAULT
+  const isDefault = isOrderType(leadType)
   // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
   const podcastBk = podcastCheck(businesses)
   const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))

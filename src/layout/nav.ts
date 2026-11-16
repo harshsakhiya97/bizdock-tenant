@@ -13,9 +13,9 @@ export type NavItem = {
   /** shown with either permission */
   or?: { module: string; action: string }
   /** shown only when this type of (sub-)business is picked in the top bar */
-  onlyType?: SubBusinessType
+  onlyType?: SubBusinessType | SubBusinessType[]
   /** hidden when this type of (sub-)business is picked in the top bar */
-  hideType?: SubBusinessType
+  hideType?: SubBusinessType | SubBusinessType[]
 }
 
 // Same groups and names as Happy OS; pages appear here as they are built.
@@ -30,8 +30,8 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/customers', label: 'Customers', icon: Contact, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
       { to: '/meetings', label: 'Meetings', icon: Handshake, module: 'meetings', onlyType: BT.PAID_PODCAST },
-      { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings', hideType: BT.DEFAULT },
-      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'bookings', onlyType: BT.DEFAULT },
+      { to: '/bookings', label: 'Booking Calendar', icon: CalendarCheck, module: 'bookings', hideType: [BT.DEFAULT, BT.BRAND_DEALS] },
+      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'bookings', onlyType: [BT.DEFAULT, BT.BRAND_DEALS] },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
