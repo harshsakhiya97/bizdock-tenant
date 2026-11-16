@@ -18,6 +18,7 @@ import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
 import { FunnelAdsReport } from './FunnelAdsReport'
 import { listWorkflows } from '@/workflows/api'
+import { funnelCampaignCount } from '@/meta/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -52,6 +53,11 @@ export function FunnelPage() {
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [flowCount, setFlowCount] = useState<number | null>(null)
+  // Facebook campaigns added to this funnel
+  const [adCount, setAdCount] = useState<number | null>(null)
+  const loadAds = useCallback(() => {
+    funnelCampaignCount(id).then(setAdCount, () => setAdCount(null))
+  }, [id])
   const [sources, setSources] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [event, setEvent] = useState<EventRow | null>(null)
@@ -74,9 +80,10 @@ export function FunnelPage() {
     listSheets(id).then(setSheets).catch((e: Error) => setNotice({ error: e.message }))
     listFunnelSubmissions(id).then(setSubs).catch(() => setSubs([]))
     listFunnelLeads(id).then(setLeads).catch(() => setLeads([]))
+    loadAds()
     void listSources(tenant.id).then(setSources)
     void listMemberOptions(tenant.id).then(setMembers)
-  }, [id, tenant.id])
+  }, [id, tenant.id, loadAds])
   useEffect(load, [load])
 
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
@@ -154,6 +161,7 @@ export function FunnelPage() {
                 {t.key === 'webhooks' && hooks && <span className="muted small"> {hooks.length}</span>}
                 {t.key === 'whatsapp' && sheets && <span className="muted small"> {sheets.length}</span>}
                 {t.key === 'leads' && leads && <span className="muted small"> {leads.length}</span>}
+                {t.key === 'ads' && adCount != null && <span className="muted small"> {adCount}</span>}
                 {t.key === 'workflows' && flowCount != null && <span className="muted small"> {flowCount}</span>}
               </button>
             ))}
@@ -281,7 +289,10 @@ export function FunnelPage() {
             />
           )}
 
-          {tab === 'ads' && <FunnelAdsTab funnelId={funnel.id} canEdit={can('funnels', 'edit')} onSaved={(msg) => setNotice({ ok: msg })} />}
+          {tab === 'ads' && <FunnelAdsTab funnelId={funnel.id} canEdit={can('funnels', 'edit')} onSaved={(msg) => {
+                setNotice({ ok: msg })
+                loadAds()
+              }} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' &&

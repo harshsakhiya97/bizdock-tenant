@@ -333,3 +333,10 @@ export async function funnelFlow(funnelId: string, from: string, to: string): Pr
   if (error) throw new Error(error.message)
   return (data ?? null) as FunnelFlow | null
 }
+
+/** how many Facebook campaigns are added to a funnel (Facebook Ads tab count) */
+export async function funnelCampaignCount(funnelId: string) {
+  const { data, error } = await db().from('funnel_ad_links').select('campaign_id').eq('funnel_id', funnelId)
+  if (error) throw new Error(error.message)
+  return new Set((data ?? []).map((r: { campaign_id: string }) => r.campaign_id)).size
+}
