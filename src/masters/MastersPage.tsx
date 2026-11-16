@@ -95,13 +95,25 @@ export function MastersPage() {
   )
 }
 
+/** what each tab is for (Overview), with the table its count comes from */
+const ABOUT: Partial<Record<Tab, { table: string; purpose: string }>> = {
+  companies: { table: 'billing_companies', purpose: 'Who invoices are issued from: address, GSTIN, state, CIN, PAN, bank details and the invoice number series.' },
+  business_types: { table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
+  products: { table: 'products', purpose: 'Services offered on a booking: price, GST, name on the GST bill and HSN / SAC, per business.' },
+  goods: { table: 'goods', purpose: 'What webinar leads buy (entered by hand on the lead): price and GST, per business.' },
+  webinar_hosts: { table: 'webinar_hosts', purpose: 'Who hosts a webinar: name, email and phone.' },
+  whatsapp: { table: 'message_templates', purpose: 'Ready WhatsApp messages sent from a lead (call not received, booking, follow-up…).' },
+  ...Object.fromEntries((Object.keys(SIMPLE) as SimpleTable[]).map((t) => [t, { table: t, purpose: SIMPLE[t]!.purpose }])),
+}
+
 function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
+  // the same lists, in the same order, as the tabs
+  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
   useEffect(() => {
-    const tables = ['billing_companies', 'business_types', 'products', 'goods', 'webinar_hosts', ...Object.keys(SIMPLE)]
     void Promise.all(
-      tables.map((t) => {
+      Object.values(ABOUT).map(({ table: t }) => {
         let q = db()
           .from(t === 'goods' ? 'products' : t)
           .select('id', { count: 'exact', head: true })
@@ -114,18 +126,6 @@ function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
     ).then((r) => setCounts(Object.fromEntries(r)))
   }, [tenant.id])
 
-  const rows: { tab: Tab; label: string; table: string; purpose: string }[] = [
-    { tab: 'companies', label: 'Company Master', table: 'billing_companies', purpose: 'Who invoices are issued from: address, GSTIN, state, CIN, PAN, bank details and the invoice number series.' },
-    { tab: 'business_types', label: 'Business types', table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
-    { tab: 'products', label: 'Services', table: 'products', purpose: 'Services offered on a booking: price and GST, per business.' },
-    ...(webinar
-      ? [
-          { tab: 'goods' as Tab, label: 'Products', table: 'goods', purpose: 'What webinar leads buy (entered by hand on the lead): price and GST, per business.' },
-          { tab: 'webinar_hosts' as Tab, label: 'Webinar hosts', table: 'webinar_hosts', purpose: 'Who hosts a webinar: name, email and phone.' },
-        ]
-      : []),
-    ...(Object.keys(SIMPLE) as SimpleTable[]).map((t) => ({ tab: t, label: SIMPLE[t]!.title, table: t, purpose: SIMPLE[t]!.purpose })),
-  ]
   return (
     <Paged rows={rows}>
 {(paged) => (
