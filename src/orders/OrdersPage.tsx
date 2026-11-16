@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { AlertTriangle, BadgeIndianRupee, PackageCheck, Repeat, Wallet } from 'lucide-react'
+import { Link, useNavigate } from 'react-router'
+import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Repeat, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
@@ -12,9 +12,11 @@ import type { MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
-import { invoiceHref } from '@/bookings/BookingsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
-import { ORDER_STATUS, partState, type BookingRow, type OrderStatus } from '@/bookings/types'
+import { ORDER_STATUS, invoiceNo, partState, type BookingRow, type OrderStatus } from '@/bookings/types'
+import { invoicePath, listInvoices } from '@/invoices/api'
+import { InvoiceDrawer } from '@/invoices/InvoiceDrawer'
+import { isFullyPaid, type InvoicePayment, type InvoiceRow } from '@/invoices/types'
 
 type PayState = 'paid' | 'part' | 'unpaid'
 const PAY: Record<PayState, string> = { paid: 'Fully paid', part: 'Part paid', unpaid: 'Unpaid' }
@@ -27,11 +29,13 @@ const services = (b: BookingRow) =>
         .map((i) => i.name)
         .join(', ')
     : (b.purpose ?? '—')
-/** the first part still to be paid */
-const nextDue = (b: BookingRow) =>
-  [...b.booking_payments].filter((p) => p.status !== 'paid').sort((x, y) => (x.due_on ?? '9999').localeCompare(y.due_on ?? '9999'))[0] ?? null
+/** the first part of the invoice still to be paid */
+const nextDue = (i: InvoiceRow | undefined): InvoicePayment | null =>
+  [...(i?.invoice_payments ?? [])].filter((p) => p.status !== 'paid').sort((x, y) => (x.due_on ?? '9999').localeCompare(y.due_on ?? '9999'))[0] ?? null
+/** one client: the same customer, else the same lead, else the same name + phone */
+const clientKey = (b: BookingRow) => b.customer_id ?? b.lead_id ?? `${b.client_name.trim().toLowerCase()}|${b.phone ?? ''}`
 
-/** Orders (Default businesses): every order — ORD number, services, status, team member, invoice and payment parts. */
+/** Orders (Default / Brand Deals): every order — ORD number, services, status, team member and its invoice. Tick orders of one client → Generate invoice. */
 export function OrdersPage() {
   const tenant = useTenant()
   const { can } = useAuth()
@@ -45,11 +49,20 @@ export function OrdersPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [f, setF] = useState({ q: '', status: '', pay: '', overdue: false, member: '', from: '', to: '' })
   const [open, setOpen] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
+  const [invoices, setInvoices] = useState<Map<string, InvoiceRow>>(new Map())
+  // orders ticked for one invoice
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [invoicing, setInvoicing] = useState<BookingRow[] | null>(null)
+  const navigate = useNavigate()
 
   const load = useCallback(() => {
     listBookings(tenant.id)
       .then((b) => setRows(b.filter((x) => x.order_no)))
       .catch((e: Error) => setError(e.message))
+    listInvoices(tenant.id).then(
+      (l) => setInvoices(new Map(l.map((i) => [i.id, i]))),
+      () => setInvoices(new Map()),
+    )
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -63,13 +76,13 @@ export function OrdersPage() {
     return scoped
       .filter((b) => !f.status || b.order_status === f.status)
       .filter((b) => !f.pay || payState(b) === f.pay)
-      .filter((b) => !f.overdue || b.booking_payments.some((p) => partState(p) === 'overdue'))
+      .filter((b) => !f.overdue || !!invoices.get(b.invoice_id ?? '')?.invoice_payments.some((p) => partState(p) === 'overdue'))
       .filter((b) => !f.member || b.owner_id === f.member)
       .filter((b) => !f.from || b.booking_date >= f.from)
       .filter((b) => !f.to || b.booking_date <= f.to)
-      .filter((b) => !q || `${b.order_no} ${b.invoice_no ?? ''} ${b.client_name} ${b.phone ?? ''} ${services(b)}`.toLowerCase().includes(q))
+      .filter((b) => !q || `${b.order_no} ${invoiceNo(b) ?? ''} ${b.client_name} ${b.phone ?? ''} ${services(b)}`.toLowerCase().includes(q))
       .sort((a, b) => b.booking_date.localeCompare(a.booking_date) || (b.order_no ?? '').localeCompare(a.order_no ?? ''))
-  }, [scoped, f])
+  }, [scoped, f, invoices])
 
   // this month: orders dated this month (not cancelled), what they're worth, collected and still due
   const month = new Date().toISOString().slice(0, 7)
@@ -78,12 +91,34 @@ export function OrdersPage() {
   const collected = thisMonth.reduce((n, b) => n + Number(b.paid_amount), 0)
   const live = scoped.filter((b) => b.order_status !== 'cancelled')
   const due = live.reduce((n, b) => n + Math.max(0, Number(b.total_amount) - Number(b.paid_amount)), 0)
-  const overdueParts = live.flatMap((b) => b.booking_payments).filter((p) => partState(p) === 'overdue')
+  const liveInvoices = [...new Set(live.map((b) => b.invoice_id).filter(Boolean))].map((id) => invoices.get(id!)).filter(Boolean) as InvoiceRow[]
+  const overdueParts = liveInvoices.flatMap((i) => i.invoice_payments).filter((p) => partState(p) === 'overdue')
+  const canInvoice = can('bookings', 'add') || can('bookings', 'edit')
+  const pickable = (b: BookingRow) => canInvoice && !b.invoice_id && b.order_status !== 'cancelled'
+  const pickedRows = scoped.filter((b) => picked.has(b.id) && pickable(b))
+  const toggle = (id: string) =>
+    setPicked((s0) => {
+      const n = new Set(s0)
+      if (n.has(id)) n.delete(id)
+      else n.add(id)
+      return n
+    })
+  function generate() {
+    if (!pickedRows.length) return
+    const first = pickedRows[0]
+    const other = pickedRows.find((b) => clientKey(b) !== clientKey(first) || b.business_id !== first.business_id)
+    if (other) {
+      setError(`Pick ${one}s of one client only: ${first.order_no} is for ${first.client_name}, ${other.order_no} is for ${other.client_name}.`)
+      return
+    }
+    setError(null)
+    setInvoicing(pickedRows)
+  }
   const filtered = f.q || f.status || f.pay || f.overdue || f.member || f.from || f.to
 
   return (
     <>
-      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status, invoice and payment parts${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. New ${one}s are added from the customer’s page.`} />
+      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status and invoice. Tick ${one}s of one client → Generate invoice${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. New ${one}s are added from the customer’s page.`} />
       {error && <div className="alert alert-error">{error}</div>}
       <Flash msg={notice} dep={notice} />
 
@@ -137,6 +172,19 @@ export function OrdersPage() {
           )}
         </div>
 
+        {pickedRows.length > 0 && (
+          <div className="bulk-bar">
+            <b>{pickedRows.length} selected</b>
+            <span className="muted">{money(pickedRows.reduce((n, b) => n + Number(b.amount), 0))} before GST</span>
+            <button type="button" className="btn btn-primary btn-sm" onClick={generate}>
+              <FileText size={14} /> Generate invoice
+            </button>
+            <button type="button" className="clear-btn" onClick={() => setPicked(new Set())}>
+              Clear
+            </button>
+          </div>
+        )}
+
         {!rows ? (
           <div className="empty">Loading {one}s…</div>
         ) : visible.length === 0 ? (
@@ -148,6 +196,25 @@ export function OrdersPage() {
                 <table className="table">
                   <thead>
                     <tr>
+                      <th style={{ width: 32 }}>
+                        {canInvoice && (
+                          <input
+                            type="checkbox"
+                            aria-label="Pick all on this page"
+                            checked={paged.some(pickable) && paged.filter(pickable).every((b) => picked.has(b.id))}
+                            onChange={(e) =>
+                              setPicked((s0) => {
+                                const n = new Set(s0)
+                                for (const b of paged.filter(pickable)) {
+                                  if (e.target.checked) n.add(b.id)
+                                  else n.delete(b.id)
+                                }
+                                return n
+                              })
+                            }
+                          />
+                        )}
+                      </th>
                       <th>{noun.one}</th>
                       <th>Customer</th>
                       <th>Services</th>
@@ -156,6 +223,7 @@ export function OrdersPage() {
                       <th className="num">Total</th>
                       <th className="num">Paid</th>
                       <th className="num">Balance</th>
+                      <th>Invoice</th>
                       <th>Next due</th>
                       <th />
                     </tr>
@@ -163,10 +231,14 @@ export function OrdersPage() {
                   <tbody>
                     {paged.map((b) => {
                       const st = b.order_status ? ORDER_STATUS[b.order_status] : null
-                      const nd = nextDue(b)
+                      const inv = invoices.get(b.invoice_id ?? '')
+                      const nd = nextDue(inv)
                       const late = nd && partState(nd) === 'overdue'
                       return (
                         <tr key={b.id} className="is-clickable" onClick={() => setOpen({ booking: b })}>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            {pickable(b) && <input type="checkbox" aria-label={`Pick ${b.order_no}`} checked={picked.has(b.id)} onChange={() => toggle(b.id)} />}
+                          </td>
                           <td className="nowrap">
                             <b>{b.order_no}</b>
                             <div className="muted small">{day(b.booking_date)}</div>
@@ -187,6 +259,17 @@ export function OrdersPage() {
                           <td className="num nowrap">{money(b.total_amount)}</td>
                           <td className="num nowrap">{money(b.paid_amount)}</td>
                           <td className="num nowrap">{b.order_status === 'cancelled' ? '—' : money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount)))}</td>
+                          <td className="nowrap" onClick={(e) => e.stopPropagation()}>
+                            {b.invoice_id ? (
+                              <Link to={invoicePath(b.invoice_id)} className="strong">
+                                {invoiceNo(b) ?? 'Invoice'}
+                              </Link>
+                            ) : b.order_status === 'cancelled' ? (
+                              <span className="muted">—</span>
+                            ) : (
+                              <span className="muted small">Not invoiced</span>
+                            )}
+                          </td>
                           <td className="nowrap">
                             {nd && b.order_status !== 'cancelled' ? (
                               <span className={late ? 'tone-danger' : undefined}>
@@ -197,11 +280,6 @@ export function OrdersPage() {
                             )}
                           </td>
                           <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                            {b.order_status !== 'cancelled' && b.invoice_no && (
-                              <a className="btn btn-outline btn-sm" href={invoiceHref(b.id)} target="_blank" rel="noreferrer">
-                                Invoice
-                              </a>
-                            )}{' '}
                             {can('bookings', 'add') && (
                               <button type="button" className="btn btn-outline btn-sm" title={`A new ${one} with the same services`} onClick={() => setOpen({ booking: null, copy: b })}>
                                 <Repeat size={13} /> Repeat
@@ -226,6 +304,7 @@ export function OrdersPage() {
           service
           noun={noun.one}
           copyFrom={open.copy ?? null}
+          locked={!!open.booking?.invoice_id && !!invoices.get(open.booking.invoice_id) && isFullyPaid(invoices.get(open.booking.invoice_id)!)}
           lead={
             (open.booking ?? open.copy)
               ? {
@@ -245,6 +324,20 @@ export function OrdersPage() {
             setOpen(null)
             setNotice(msg)
             load()
+          }}
+        />
+      )}
+
+      {invoicing && (
+        <InvoiceDrawer
+          orders={invoicing}
+          refs={refs}
+          onClose={() => setInvoicing(null)}
+          onSaved={(msg, id) => {
+            setInvoicing(null)
+            setPicked(new Set())
+            setNotice(msg)
+            navigate(invoicePath(id))
           }}
         />
       )}

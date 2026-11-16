@@ -1,7 +1,7 @@
 import { db } from '@/lib/supabase'
 import type { BookingInput, BookingRow, LeadMessage, MessageTemplate } from './types'
 
-const COLS = '*, booking_payments(*), booking_items(*)'
+const COLS = '*, booking_payments(*), booking_items(*), invoices(invoice_no)'
 
 export async function listBookings(
   tenantId: string,

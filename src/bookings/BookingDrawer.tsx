@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -14,7 +15,7 @@ import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import { invoiceHref } from './BookingsTab'
 import type { BookingRefs } from './useBookingRefs'
-import { ORDER_STATUS, STATUS_META, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus, type PartDraft } from './types'
+import { ORDER_STATUS, STATUS_META, invoiceNo, partState, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus, type PartDraft } from './types'
 import { listMemberOptions } from '@/leads/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -33,6 +34,7 @@ export function BookingDrawer({
   service = false,
   noun = 'Order',
   copyFrom,
+  locked = false,
   defaults,
   lead,
   leads,
@@ -47,6 +49,8 @@ export function BookingDrawer({
   noun?: string
   /** Repeat: a new booking with this one's services, GST and note */
   copyFrom?: BookingRow | null
+  /** an order whose invoice is fully paid: shown, not editable */
+  locked?: boolean
   defaults?: { date?: string; start?: string; end?: string }
   /** fixed enquiry (lead / client page) */
   lead?: { id: string | null; customer_id?: string | null; name: string; phone: string; purpose: string | null; business_id: string; sub_business_id?: string | null } | null
@@ -62,7 +66,7 @@ export function BookingDrawer({
   const me = membership?.id
   const booking = initial
   const close = onClose
-  const canEdit = booking ? can('bookings', 'edit') : can('bookings', 'add')
+  const canEdit = !locked && (booking ? can('bookings', 'edit') : can('bookings', 'add'))
   const fixed = !!lead || !!booking
   // calendar: a lead to link, or '' for a direct booking (no enquiry)
   const [pickedLead, setPickedLead] = useState<string>('')
@@ -193,7 +197,8 @@ export function BookingDrawer({
   }
 
   async function save() {
-    const data: BookingInput = { ...input, amount: String(amount), new_lead: null, lead_id: fixed ? input.lead_id : pickedLead || null }
+    // an order (Default / Brand Deals) has no GST or payments of its own: they're on its invoice
+    const data: BookingInput = { ...input, ...(service ? { gst_applicable: false, parts: [] } : {}), amount: String(amount), new_lead: null, lead_id: fixed ? input.lead_id : pickedLead || null }
     if (!data.business_id) return setError('Pick the business.')
     if (!data.client_name.trim()) return setError('Client name is required.')
     if (!data.booking_date) return setError('Pick the date.')
@@ -201,8 +206,8 @@ export function BookingDrawer({
     if (service && !input.items.length) return setError('Add at least one service.')
     if (clash) return setError(clashText(clash))
     if (input.items.some((i) => !i.name.trim())) return setError('Pick or name every service, or remove it.')
-    if (input.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
-    if (planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
+    if (!service && input.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
+    if (!service && planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
     for (const x of extra) {
       if (!x.date) return setError('Pick a date for every extra day, or remove it.')
       if (!x.start || !x.end || minutes(x.end) <= minutes(x.start)) return setError(`On ${x.date} the end time must be after the start time.`)
@@ -224,7 +229,7 @@ export function BookingDrawer({
         service
           ? booking
             ? `${noun} updated.`
-            : `New ${word} for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
+            : `New ${word} for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Generate its invoice from the ${noun}s list.`
           : booking
           ? 'Booking updated.'
           : `Booked ${data.client_name.trim()} on ${[data.booking_date, ...extra.map((x) => x.date)].map(day).join(', ')}.`,
@@ -270,7 +275,7 @@ export function BookingDrawer({
       <div className="stack">
         <FormSection
           title={service ? `${noun} details` : 'Booking details'}
-          description={booking ? undefined : service ? `Add the services below, then the payment parts. The ${word} gets the next ORD number and its invoice the next invoice number.` : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+          description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; GST, payments and the invoice come later, from the ${noun}s list → Generate invoice.` : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
             <div className="span-2">
@@ -469,6 +474,12 @@ export function BookingDrawer({
               {!services.length && <Hint>No services in Masters yet; type a name and price, or add them in Masters → Services.</Hint>}
             </div>
           )}
+            {service ? (
+              <div className="bk-total" style={{ alignItems: 'flex-end' }}>
+                <span className="muted small">{noun} amount (before GST)</span>
+                <b>{amount ? money(amount) : '—'}</b>
+              </div>
+            ) : (
             <div className="span-2 bk-gst">
               <div className="row" style={{ alignItems: 'center', gap: 10, flexWrap: 'nowrap' }}>
                 <Checkbox id="bk-gst" checked={input.gst_applicable} onChange={(v) => set('gst_applicable', v)} label="Add GST on this booking" />
@@ -482,8 +493,10 @@ export function BookingDrawer({
                 <span className="muted small">{input.gst_applicable ? `incl. GST ${money(gst)}` : 'No GST'}</span>
               </div>
             </div>
+            )}
         </FormSection>
 
+        {!service && (
         <FormSection title="Payment plan" description="Split the amount into parts (advance, pre-shoot, after shoot…); mark each Paid when the money comes in.">
           {input.parts.length > 0 && (
             <div className="stack" style={{ gap: 8 }}>
@@ -574,8 +587,33 @@ export function BookingDrawer({
             </span>
           </div>
         </FormSection>
+        )}
 
-        {booking && booking.status !== 'cancelled' && (
+        {service && booking && (
+          <FormSection title="Invoice">
+            <div className="row-between">
+              <span className="muted small">
+                {booking.invoice_id ? (
+                  <>
+                    On invoice <b>{invoiceNo(booking)}</b>
+                    {locked ? ' · fully paid, so this ' + word + ' can’t be changed.' : ' · GST and payments are on the invoice.'}
+                  </>
+                ) : booking.status === 'cancelled' ? (
+                  'Cancelled: not invoiced.'
+                ) : (
+                  `Not invoiced yet. Tick it in the ${noun}s list → Generate invoice.`
+                )}
+              </span>
+              {booking.invoice_id && (
+                <Link className="btn btn-outline btn-sm" to={`/invoices/${booking.invoice_id}`} onClick={close}>
+                  <FileText size={14} /> Open invoice
+                </Link>
+              )}
+            </div>
+          </FormSection>
+        )}
+
+        {!service && booking && booking.status !== 'cancelled' && (
           <FormSection title="Invoice">
             <div className="row-between">
               <span className="muted small">{booking.invoice_no ? <b>{booking.invoice_no}</b> : 'No invoice number yet.'}</span>

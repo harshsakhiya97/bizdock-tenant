@@ -5,6 +5,8 @@ import { db } from '@/lib/supabase'
 import type { BillingCompanyRow } from '@/masters/types'
 import { createBookingInvoice, getBooking } from './api'
 import { partState, type BookingRow } from './types'
+import { getInvoice, invoicePrintHref } from '@/invoices/api'
+import { invoiceAsBooking } from '@/invoices/asBooking'
 
 const inr = (n: number) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
 
@@ -28,31 +30,21 @@ function inWords(amount: number) {
   return `${parts.join(' ')} Rupees${paise ? ` and ${two(paise)} Paise` : ''} Only`
 }
 
-/** Printable invoice for one booking (Print → Save as PDF). */
-export function InvoicePage() {
+/** Printable invoice for one booking, or for an invoice of orders (Print → Save as PDF). */
+export function InvoicePage({ kind = 'booking' }: { kind?: 'booking' | 'invoice' }) {
   const { id = '' } = useParams()
   const [b, setB] = useState<BookingRow | null | undefined>(undefined)
   const [co, setCo] = useState<BillingCompanyRow | null>(null)
   const [client, setClient] = useState<{ email: string | null; city: string | null } | null>(null)
   const [modes, setModes] = useState<Map<string, string>>(new Map())
   const [err, setErr] = useState<string | null>(null)
+  // invoice of orders: the order number + date under each order's first line
+  const [subs, setSubs] = useState<Map<string, string>>(new Map())
   // without a billing company the invoice shows the business (and sub-business)
   const [biz, setBiz] = useState<{ name: string; legal_name: string | null; address: string | null; city: string | null; state: string | null; gst_number: string | null; sub: string | null } | null>(null)
 
   useEffect(() => {
-    getBooking(id).then(async (first) => {
-      let bk = first
-      // the invoice number is given the first time the invoice is opened
-      if (bk && !bk.invoice_no && bk.status !== 'cancelled') {
-        try {
-          await createBookingInvoice(bk.id, null)
-          bk = await getBooking(id)
-        } catch (e) {
-          setErr((e as Error).message)
-        }
-      }
-      setB(bk)
-      if (!bk) return
+    async function rest(bk: BookingRow) {
       const [c, m, l] = await Promise.all([
         bk.billing_company_id ? db().from('billing_companies').select('*').eq('id', bk.billing_company_id).maybeSingle() : Promise.resolve({ data: null }),
         db().from('payment_modes').select('id, name').eq('tenant_id', bk.tenant_id),
@@ -66,8 +58,37 @@ export function InvoicePage() {
         bk.sub_business_id ? db().from('sub_businesses').select('name').eq('id', bk.sub_business_id).maybeSingle() : Promise.resolve({ data: null }),
       ])
       if (bz) setBiz({ ...(bz as Omit<NonNullable<typeof biz>, 'sub'>), sub: (sb as { name: string } | null)?.name ?? null })
+    }
+    if (kind === 'invoice') {
+      getInvoice(id).then(async (i) => {
+        if (!i) return setB(null)
+        const x = invoiceAsBooking(i)
+        setSubs(x.subs)
+        setB(x.b)
+        await rest(x.b)
+      }, () => setB(null))
+      return
+    }
+    getBooking(id).then(async (first) => {
+      // an order on an invoice prints its invoice
+      if (first?.invoice_id) {
+        window.location.replace(invoicePrintHref(first.invoice_id))
+        return
+      }
+      let bk = first
+      // the invoice number is given the first time the invoice is opened
+      if (bk && !bk.invoice_no && bk.status !== 'cancelled' && !bk.order_no) {
+        try {
+          await createBookingInvoice(bk.id, null)
+          bk = await getBooking(id)
+        } catch (e) {
+          setErr((e as Error).message)
+        }
+      }
+      setB(bk)
+      if (bk) await rest(bk)
     }, () => setB(null))
-  }, [id])
+  }, [id, kind])
 
   useEffect(() => {
     if (b?.invoice_no) document.title = `Invoice ${b.invoice_no}`
@@ -75,7 +96,7 @@ export function InvoicePage() {
 
   if (b === undefined) return <div className="empty">Loading…</div>
   if (!b) return <div className="empty">This booking isn’t available.</div>
-  if (!b.invoice_no) return <div className="empty">{b.status === 'cancelled' ? 'A cancelled booking has no invoice.' : `The invoice couldn’t be created${err ? `: ${err}` : '.'}`}</div>
+  if (!b.invoice_no) return <div className="empty">{b.status === 'cancelled' ? 'A cancelled booking has no invoice.' : b.order_no ? 'This order isn’t invoiced yet: tick it in the Orders list → Generate invoice.' : `The invoice couldn’t be created${err ? `: ${err}` : '.'}`}</div>
 
   const hours = (() => {
     const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
@@ -89,6 +110,8 @@ export function InvoicePage() {
   function sellerSubName() {
     return b!.purpose || 'Studio booking'
   }
+  // an order (Default / Brand Deals) has a date, no time
+  const timed = b.start_time.slice(0, 5) !== b.end_time.slice(0, 5)
   const half = Math.round((b.gst_amount / 2) * 100) / 100
   const balance = Math.max(0, b.total_amount - b.paid_amount)
 
@@ -110,7 +133,7 @@ export function InvoicePage() {
     <div className="inv2-wrap">
       <div className="inv-actions">
         <button type="button" className="btn btn-outline" onClick={() => (window.history.length > 1 ? window.history.back() : window.close())}>
-          ← Back to Bookings
+          ← Back
         </button>
         <button type="button" className="btn btn-primary inv2-print" onClick={() => window.print()}>
           <Printer size={15} /> Print / Save PDF
@@ -149,10 +172,14 @@ export function InvoicePage() {
             </dd>
             <dt>Invoice Date</dt>
             <dd>{b.invoice_date ? shortDay(b.invoice_date) : '—'}</dd>
-            <dt>Shoot Date</dt>
-            <dd>{longDay(b.booking_date)}</dd>
-            <dt>Status</dt>
-            <dd>{status}</dd>
+            {kind === 'booking' && (
+              <>
+                <dt>{timed ? 'Shoot Date' : 'Order Date'}</dt>
+                <dd>{longDay(b.booking_date)}</dd>
+                <dt>Status</dt>
+                <dd>{status}</dd>
+              </>
+            )}
           </dl>
         </section>
 
@@ -168,12 +195,15 @@ export function InvoicePage() {
               <tr key={it.id}>
                 <td>
                   <b>{it.name}</b>
-                  {i === 0 && (
-                    <div className="inv2-muted">
-                      {b.purpose ? `${b.purpose} · ` : ''}
-                      {shortDay(b.booking_date)} · {clock(b.start_time)} - {clock(b.end_time)} · {hours} hr{hours === 1 ? '' : 's'}
-                    </div>
-                  )}
+                  {kind === 'invoice'
+                    ? subs.get(it.id) && <div className="inv2-muted">{subs.get(it.id)}</div>
+                    : i === 0 && (
+                        <div className="inv2-muted">
+                          {b.purpose ? `${b.purpose} · ` : ''}
+                          {shortDay(b.booking_date)}
+                          {timed ? ` · ${clock(b.start_time)} - ${clock(b.end_time)} · ${hours} hr${hours === 1 ? '' : 's'}` : ''}
+                        </div>
+                      )}
                 </td>
                 <td className="r">{inr(it.price)}</td>
               </tr>
@@ -263,7 +293,7 @@ export function InvoicePage() {
 
         <footer className="inv2-foot">
           <div>
-            <div>Advance is non-refundable. Balance is payable on or before the shoot date.</div>
+            <div>{timed ? 'Advance is non-refundable. Balance is payable on or before the shoot date.' : 'Balance is payable as per the payment plan.'}</div>
             <div>This is a computer-generated invoice.</div>
           </div>
           <div className="inv2-sign">

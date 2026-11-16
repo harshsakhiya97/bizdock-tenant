@@ -55,6 +55,10 @@ export type BookingRow = {
   /** an order (Default business): ORD-0001… */
   order_no: string | null
   order_status: OrderStatus | null
+  /** an order's invoice (Default / Brand Deals: one invoice can hold several orders of one client) */
+  invoice_id: string | null
+  /** that invoice's number (orders carry none of their own) */
+  invoices?: { invoice_no: string } | null
   created_by: string | null
   created_at: string
   booking_payments: BookingPayment[]
@@ -66,6 +70,9 @@ export type BookingItem = { id: string; booking_id: string; product_id: string |
 
 export type ItemDraft = { key: string; product_id: string; name: string; price: string }
 export type PartDraft = { key: string; id?: string; label: string; due_on: string; amount: string; mode: string; note: string; status: 'pending' | 'paid'; paid_on: string }
+
+/** the invoice number of a booking, or of the invoice an order is on */
+export const invoiceNo = (b: Pick<BookingRow, 'invoice_no' | 'invoices'>) => b.invoices?.invoice_no ?? b.invoice_no
 
 /** overdue = still pending after its due date */
 export const partState = (p: Pick<BookingPayment, 'status' | 'due_on'>, today = new Date().toISOString().slice(0, 10)) =>
