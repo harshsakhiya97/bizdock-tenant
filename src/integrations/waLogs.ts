@@ -8,7 +8,7 @@ export type WaLog = {
   lead_id: string | null
   template: string | null
   body: string | null
-  source: 'workflow' | 'app' | 'reply'
+  source: 'workflow' | 'app' | 'reply' | 'campaign'
   workflow_id: string | null
   status: WaLogStatus
   error: string | null
@@ -17,6 +17,7 @@ export type WaLog = {
   read_at: string | null
   leads?: { first_name: string; last_name: string | null } | null
   workflows?: { name: string } | null
+  wa_campaigns?: { name: string } | null
 }
 
 export const STATUS_META: Record<WaLogStatus, { label: string; cls: string }> = {
@@ -31,7 +32,7 @@ export const STATUS_META: Record<WaLogStatus, { label: string; cls: string }> = 
 export async function listWaLogs(tenantId: string, from: string, to: string): Promise<WaLog[]> {
   let q = db()
     .from('whatsapp_logs')
-    .select('id, direction, phone, lead_id, template, body, source, workflow_id, status, error, sent_at, delivered_at, read_at, leads(first_name, last_name), workflows(name)')
+    .select('id, direction, phone, lead_id, template, body, source, workflow_id, status, error, sent_at, delivered_at, read_at, leads(first_name, last_name), workflows(name), wa_campaigns(name)')
     .eq('tenant_id', tenantId)
   if (from) q = q.gte('sent_at', `${from}T00:00:00+05:30`)
   if (to) q = q.lte('sent_at', `${to}T23:59:59+05:30`)

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
-import { ArrowLeft, Check, CheckCheck, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Check, CheckCheck, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
 import { Hint, Label, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
@@ -20,12 +20,12 @@ const short = (iso: string) => {
   return day(d) === day(new Date()) ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-/** System Connections → WhatsApp → Logs: every message sent (and replies), and a chat window per number. */
-export function WaLogsPage() {
+/** WhatsApp → History logs (every message sent, and the replies) / Individual chat (a chat window per number). */
+export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
   const tenant = useTenant()
+  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'chats' ? 'chats' : 'logs'
-  const [from, setFrom] = useState(ago(30))
+  const [from, setFrom] = useState(ago(view === 'chats' ? 90 : 30))
   const [to, setTo] = useState(day(new Date()))
   const [rows, setRows] = useState<WaLog[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -36,32 +36,21 @@ export function WaLogsPage() {
   }, [tenant.id, from, to])
   useEffect(load, [load])
 
-  const go = (t: 'logs' | 'chats', phone?: string) => setParams(t === 'logs' ? {} : { tab: 'chats', ...(phone ? { phone } : {}) }, { replace: true })
-
   return (
     <>
       <PageHead
-        title="WhatsApp logs"
-        subtitle="Every message sent from BizDock (workflows and here), with delivered and read times, and the replies."
-        actions={
-          <Link to="/integrations" className="btn btn-outline">
-            <ArrowLeft size={16} /> System Connections
-          </Link>
+        title={view === 'chats' ? 'Individual chat' : 'History logs'}
+        subtitle={
+          view === 'chats'
+            ? 'A conversation per number (last 90 days), and send an approved template.'
+            : 'Every message sent from BizDock (workflows, campaigns and chats), with delivered and read times, and the replies.'
         }
       />
-      <div className="tabs" role="tablist" style={{ marginBottom: 12 }}>
-        <button type="button" role="tab" className={cn('tab', tab === 'logs' && 'is-active')} onClick={() => go('logs')}>
-          Message logs
-        </button>
-        <button type="button" role="tab" className={cn('tab', tab === 'chats' && 'is-active')} onClick={() => go('chats')}>
-          Chats
-        </button>
-      </div>
       {error && <div className="alert alert-error">{error}</div>}
-      {tab === 'logs' ? (
-        <LogsTab rows={rows} from={from} to={to} setFrom={setFrom} setTo={setTo} reload={load} openChat={(p) => go('chats', p)} />
+      {view === 'logs' ? (
+        <LogsTab rows={rows} from={from} to={to} setFrom={setFrom} setTo={setTo} reload={load} openChat={(p) => navigate(`/whatsapp/chats?phone=${p}`)} />
       ) : (
-        <ChatsTab rows={rows} phone={params.get('phone')} pick={(p) => go('chats', p)} reload={load} />
+        <ChatsTab rows={rows} phone={params.get('phone')} pick={(p) => setParams({ phone: p }, { replace: true })} reload={load} />
       )}
     </>
   )
@@ -117,7 +106,8 @@ function LogsTab({
         <select className="input input-sm filter-select" aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="">All sources</option>
           <option value="workflow">Workflows</option>
-          <option value="app">Sent here</option>
+          <option value="campaign">Campaigns</option>
+          <option value="app">Chats</option>
           <option value="reply">Replies</option>
         </select>
         <select className="input input-sm filter-select" aria-label="Template" value={template} onChange={(e) => setTemplate(e.target.value)}>
@@ -180,7 +170,7 @@ function LogsTab({
                         {r.template && <code>{r.template}</code>}
                         {r.body && <div className="muted small wa-log-body">{r.body}</div>}
                       </td>
-                      <td className="small">{r.source === 'workflow' ? r.workflows?.name ?? 'Workflow' : r.source === 'reply' ? 'Reply' : 'Sent here'}</td>
+                      <td className="small">{r.source === 'workflow' ? r.workflows?.name ?? 'Workflow' : r.source === 'reply' ? 'Reply' : r.source === 'campaign' ? (r.wa_campaigns?.name ? `Campaign · ${r.wa_campaigns.name}` : 'Campaign') : 'Chat'}</td>
                       <td>
                         <span className={cn('badge', STATUS_META[r.status].cls)} title={r.error ?? undefined}>
                           {STATUS_META[r.status].label}

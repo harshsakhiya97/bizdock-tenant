@@ -100,6 +100,15 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'workflows', action: 'delete', label: 'Delete workflows' },
         ],
       },
+      {
+        key: 'whatsapp',
+        label: 'WhatsApp',
+        open: { kind: 'scope', area: 'whatsapp', hint: 'Whose chats and history logs they see (Own: messages they sent or to their own leads)' },
+        actions: [
+          { module: 'whatsapp', action: 'campaign', label: 'Send campaigns', hint: 'Campaign menu: send a template to many numbers and see the reports' },
+          { module: 'whatsapp', action: 'templates', label: 'Manage templates', hint: 'Templates menu: add, duplicate and delete templates' },
+        ],
+      },
     ],
   },
   {

@@ -33,6 +33,7 @@ import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { WaLogsPage } from '@/integrations/WaLogsPage'
+import { CampaignsPage } from '@/whatsapp/CampaignsPage'
 import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
 import { MetaLogsPage } from '@/meta/MetaLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
@@ -138,22 +139,6 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/integrations/whatsapp/templates"
-                  element={
-                    <RequirePermission module="settings" action="edit">
-                      <WaTemplatesPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route
-                  path="/integrations/whatsapp/templates/new"
-                  element={
-                    <RequirePermission module="settings" action="edit">
-                      <WaTemplateNewPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route
                   path="/integrations/callyzer/logs"
                   element={
                     <RequirePermission module="call_logs" orModule="settings" orAction="edit">
@@ -170,14 +155,6 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/integrations/whatsapp/logs"
-                  element={
-                    <RequirePermission module="settings" action="edit">
-                      <WaLogsPage />
-                    </RequirePermission>
-                  }
-                />
-                <Route
                   path="/integrations"
                   element={
                     <RequirePermission module="settings" action="edit">
@@ -185,6 +162,49 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route
+                  path="/whatsapp/chats"
+                  element={
+                    <RequirePermission area="whatsapp">
+                      <WaLogsPage view="chats" />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/whatsapp/logs"
+                  element={
+                    <RequirePermission area="whatsapp">
+                      <WaLogsPage view="logs" />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/whatsapp/campaigns"
+                  element={
+                    <RequirePermission module="whatsapp" action="campaign">
+                      <CampaignsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/whatsapp/templates"
+                  element={
+                    <RequirePermission module="whatsapp" action="templates" orModule="whatsapp" orAction="campaign">
+                      <WaTemplatesPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/whatsapp/templates/new"
+                  element={
+                    <RequirePermission module="whatsapp" action="templates">
+                      <WaTemplateNewPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route path="/integrations/whatsapp/logs" element={<Navigate to="/whatsapp/logs" replace />} />
+                <Route path="/integrations/whatsapp/templates" element={<Navigate to="/whatsapp/templates" replace />} />
+                <Route path="/integrations/whatsapp/templates/new" element={<Navigate to="/whatsapp/templates/new" replace />} />
                 <Route path="/team" element={<Navigate to="/access-control" replace />} />
                 <Route
                   path="/access-control"

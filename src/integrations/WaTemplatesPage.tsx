@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ArrowLeft, Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
+import { Copy, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty, PageHead, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { useAuth } from '@/auth/useAuth'
 import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
 import { deleteWatiTemplate, listWatiTemplates, type WatiTemplate } from './watiApi'
@@ -31,8 +32,10 @@ export const bubbleOf = (t: WatiTemplate) => ({
 export function WaTemplatesPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
+  const { can } = useAuth()
+  const manage = can('whatsapp', 'templates')
   // Duplicate: the new-template page, filled in from this one
-  const duplicate = (t: WatiTemplate) => navigate('/integrations/whatsapp/templates/new', { state: { from: t } })
+  const duplicate = (t: WatiTemplate) => navigate('/whatsapp/templates/new', { state: { from: t } })
   const [rows, setRows] = useState<WatiTemplate[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState('APPROVED')
@@ -72,9 +75,6 @@ export function WaTemplatesPage() {
 
   return (
     <>
-      <Link to="/integrations" className="back-link">
-        <ArrowLeft size={15} /> System Connections
-      </Link>
       <PageHead
         title="WhatsApp templates"
         subtitle="Your templates in WATI. New templates go to Meta for approval; only approved ones can be sent."
@@ -83,9 +83,11 @@ export function WaTemplatesPage() {
             <button type="button" className="btn btn-outline" onClick={load} disabled={loading}>
               <RefreshCw size={15} className={cn(loading && 'spin')} /> Refresh
             </button>
-            <Link to="/integrations/whatsapp/templates/new" className="btn btn-primary">
-              <Plus size={16} /> New template
-            </Link>
+            {manage && (
+              <Link to="/whatsapp/templates/new" className="btn btn-primary">
+                <Plus size={16} /> New template
+              </Link>
+            )}
           </>
         }
       />
@@ -138,7 +140,7 @@ export function WaTemplatesPage() {
                     <span className="muted small">
                       {cap(t.category)} · {t.language?.text ?? t.language?.value ?? '—'}
                     </span>
-                    <button
+                    {manage && <button
                       type="button"
                       className="btn btn-ghost btn-sm"
                       title="Start a new template from this one"
@@ -148,7 +150,7 @@ export function WaTemplatesPage() {
                       }}
                     >
                       <Copy size={14} /> Duplicate
-                    </button>
+                    </button>}
                   </div>
                   <div className="tpl-preview">
                     <WaBubble {...bubbleOf(t)} />
@@ -168,16 +170,22 @@ export function WaTemplatesPage() {
           title={open.elementName}
           footer={
             <>
-              <button type="button" className="btn btn-ghost" onClick={() => setRemoving(open)}>
-                <Trash2 size={15} /> Delete
-              </button>
+              {manage ? (
+                <button type="button" className="btn btn-ghost" onClick={() => setRemoving(open)}>
+                  <Trash2 size={15} /> Delete
+                </button>
+              ) : (
+                <span />
+              )}
               <div className="foot-end">
                 <button type="button" className="btn btn-outline" onClick={() => setOpen(null)}>
                   Close
                 </button>
-                <button type="button" className="btn btn-primary" onClick={() => duplicate(open)}>
-                  <Copy size={15} /> Duplicate
-                </button>
+                {manage && (
+                  <button type="button" className="btn btn-primary" onClick={() => duplicate(open)}>
+                    <Copy size={15} /> Duplicate
+                  </button>
+                )}
               </div>
             </>
           }

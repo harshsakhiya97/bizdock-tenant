@@ -7,34 +7,8 @@ import { listLandingPages } from '@/funnels/api'
 import type { FunnelRow, LandingPage } from '@/funnels/types'
 import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
+import { parseCsv } from '@/lib/csv'
 import { importLeads } from './api'
-
-/** RFC-4180-ish CSV: quotes, "" escapes, commas / newlines inside quotes. */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = []
-  let row: string[] = []
-  let cell = ''
-  let q = false
-  const t = text.replace(/^﻿/, '')
-  for (let i = 0; i < t.length; i++) {
-    const c = t[i]
-    if (q) {
-      if (c === '"' && t[i + 1] === '"') (cell += '"', i++)
-      else if (c === '"') q = false
-      else cell += c
-    } else if (c === '"') q = true
-    else if (c === ',') (row.push(cell), (cell = ''))
-    else if (c === '\n' || c === '\r') {
-      if (c === '\r' && t[i + 1] === '\n') i++
-      row.push(cell)
-      rows.push(row)
-      row = []
-      cell = ''
-    } else cell += c
-  }
-  if (cell || row.length) (row.push(cell), rows.push(row))
-  return rows.filter((r) => r.some((x) => x.trim()))
-}
 
 const TARGETS = [
   { value: 'name', label: 'Full name' },

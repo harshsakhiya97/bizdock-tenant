@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
+import { ChevronDown, LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
@@ -13,7 +13,7 @@ import { LogoutDialog } from '@/components/LogoutDialog'
 import { APP_VERSION } from '@/config'
 import { cn } from '@/lib/cn'
 import { NotificationBell } from './NotificationBell'
-import { navSections, pageMeta, tabNames } from './nav'
+import { navSections, pageMeta, tabNames, type NavItem } from './nav'
 
 const STORAGE_KEY = 'bizdock.sidebarCollapsed'
 
@@ -48,16 +48,24 @@ function Shell() {
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
 
+  const shows = (i: NavItem) =>
+    (!i.onlyType || [i.onlyType].flat().includes(type ?? '')) &&
+    (!i.hideType || ![i.hideType].flat().includes(type ?? '')) &&
+    (i.area ? scope(i.area) !== 'none' : true) &&
+    (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
   const sections = navSections
-    .map((s) => ({ ...s, items: s.items.filter(
-        (i) =>
-          (!i.onlyType || [i.onlyType].flat().includes(type ?? '')) &&
-          (!i.hideType || ![i.hideType].flat().includes(type ?? '')) &&
-          (i.area ? scope(i.area) !== 'none' : true) &&
-          (!i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action))),
-      ).map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i.to === '/orders' ? { ...i, label: orderNoun(type).many } : i)) }))
+    .map((s) => ({
+      ...s,
+      items: s.items
+        .map((i) => (i.children ? { ...i, children: i.children.filter(shows) } : i))
+        .filter((i) => (i.children ? i.children.length > 0 : shows(i)))
+        .map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i.to === '/orders' ? { ...i, label: orderNoun(type).many } : i)),
+    }))
     .filter((s) => s.items.length > 0)
-  const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(
+  // accordions: the one holding the open page starts open
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+  const groupOpen = (to: string) => openGroups[to] ?? pathname.startsWith(`${to}/`)
+  const tabs = [...sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i])), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],
   )
 
@@ -86,12 +94,35 @@ function Shell() {
             {sections.map((section) => (
               <div key={section.title}>
                 {!section.hideTitle && <div className="nav-section-label">{section.title}</div>}
-                {section.items.map(({ to, label, icon: I }) => (
-                  <NavLink key={to} to={to} className="nav-item" title={label} onClick={() => setMobileOpen(false)}>
-                    <I size={17} strokeWidth={1.9} />
-                    <span className="nav-text">{label}</span>
-                  </NavLink>
-                ))}
+                {section.items.map(({ to, label, icon: I, children }) =>
+                  children ? (
+                    <div key={to} className={cn('nav-group', groupOpen(to) && 'is-open')}>
+                      <button
+                        type="button"
+                        className={cn('nav-item nav-group-head', pathname.startsWith(`${to}/`) && 'is-current')}
+                        title={label}
+                        aria-expanded={groupOpen(to)}
+                        onClick={() => setOpenGroups((g) => ({ ...g, [to]: !groupOpen(to) }))}
+                      >
+                        <I size={17} strokeWidth={1.9} />
+                        <span className="nav-text">{label}</span>
+                        <ChevronDown size={15} className="nav-chevron" />
+                      </button>
+                      {groupOpen(to) &&
+                        children.map((c) => (
+                          <NavLink key={c.to} to={c.to} className="nav-item nav-sub" title={c.label} onClick={() => setMobileOpen(false)}>
+                            <c.icon size={16} strokeWidth={1.9} />
+                            <span className="nav-text">{c.label}</span>
+                          </NavLink>
+                        ))}
+                    </div>
+                  ) : (
+                    <NavLink key={to} to={to} className="nav-item" title={label} onClick={() => setMobileOpen(false)}>
+                      <I size={17} strokeWidth={1.9} />
+                      <span className="nav-text">{label}</span>
+                    </NavLink>
+                  ),
+                )}
               </div>
             ))}
           </nav>

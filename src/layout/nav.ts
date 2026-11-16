@@ -1,4 +1,4 @@
-import { PackageCheck, Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
+import { PackageCheck, MessageCircle, MessagesSquare, Megaphone, ScrollText, MessageSquareText, Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
 import { BT, type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -16,6 +16,8 @@ export type NavItem = {
   onlyType?: SubBusinessType | SubBusinessType[]
   /** hidden when this type of (sub-)business is picked in the top bar */
   hideType?: SubBusinessType | SubBusinessType[]
+  /** an accordion: these open under it (it shows when one of them does) */
+  children?: NavItem[]
 }
 
 // Same groups and names as Happy OS; pages appear here as they are built.
@@ -36,6 +38,17 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
+      {
+        to: '/whatsapp',
+        label: 'WhatsApp',
+        icon: MessageCircle,
+        children: [
+          { to: '/whatsapp/chats', label: 'Individual chat', icon: MessagesSquare, area: 'whatsapp' },
+          { to: '/whatsapp/campaigns', label: 'Campaign', icon: Megaphone, module: 'whatsapp', action: 'campaign' },
+          { to: '/whatsapp/logs', label: 'History logs', icon: ScrollText, area: 'whatsapp' },
+          { to: '/whatsapp/templates', label: 'Templates', icon: MessageSquareText, module: 'whatsapp', action: 'templates', or: { module: 'whatsapp', action: 'campaign' } },
+        ],
+      },
     ],
   },
   {
@@ -80,6 +93,11 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },
+  '/whatsapp/chats': { title: 'WhatsApp', crumb: 'Individual chat', icon: MessagesSquare },
+  '/whatsapp/campaigns': { title: 'WhatsApp', crumb: 'Campaigns', icon: Megaphone },
+  '/whatsapp/logs': { title: 'WhatsApp', crumb: 'History logs', icon: ScrollText },
+  '/whatsapp/templates': { title: 'WhatsApp', crumb: 'Templates', icon: MessageSquareText },
+  '/whatsapp': { title: 'WhatsApp', crumb: 'Chats & campaigns', icon: MessageCircle },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },
   '/integrations': { title: 'System Connections', crumb: 'Third-party integrations', icon: Plug },
   '/access-control': { title: 'Access Control', crumb: 'Team & roles', icon: ShieldCheck },
