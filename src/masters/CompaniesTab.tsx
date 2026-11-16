@@ -164,7 +164,7 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
       bank_branch: t(f.bank_branch),
       bank_ifsc: t(f.bank_ifsc.toUpperCase()),
       invoice_prefix: t(f.invoice_prefix),
-      number_format: f.number_format.trim() || '{N}',
+      number_format: f.number_format.trim().replaceAll('{PREFIX}', f.invoice_prefix.trim()) || '{N}',
       next_no: next,
       is_active: f.is_active,
       sort_order: c?.sort_order ?? nextOrder,
@@ -270,18 +270,13 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
         <FormSection title="Invoice numbers" description="Each company has its own series.">
           <div className="form-grid">
             <div>
-              <Label htmlFor="co-px">Prefix</Label>
-              <TextInput id="co-px" placeholder="e.g. pride" value={f.invoice_prefix} onChange={(e) => set('invoice_prefix', e.target.value)} />
-            </div>
-            <div>
               <Label htmlFor="co-fmt">Number format</Label>
-              <input ref={fmtRef} id="co-fmt" className="input" placeholder="e.g. {N}/{PREFIX}/{FY}" value={f.number_format} onChange={(e) => set('number_format', e.target.value)} />
+              <input ref={fmtRef} id="co-fmt" className="input" placeholder="e.g. {N}/pride/{FY}" value={f.number_format} onChange={(e) => set('number_format', e.target.value)} />
               <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insertToken(e.target.value)}>
                 <option value="">Insert a field…</option>
                 <option value="{N}">Number ({next})</option>
                 <option value="{NNNN}">Number with zeros ({String(next).padStart(4, '0')})</option>
                 <option value="{FY}">Financial year ({formatInvoiceNo('{FY}', null, 1)})</option>
-                <option value="{PREFIX}">Prefix ({f.invoice_prefix.trim() || 'add one on the left'})</option>
               </select>
             </div>
             <div>
@@ -295,7 +290,7 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
               <b>{formatInvoiceNo(f.number_format, f.invoice_prefix || null, next)}</b>
             </div>
             <div className="span-2">
-              <Hint>Type the fixed parts (like / or -) and insert the fields where you want them. E.g. Number / Prefix / Financial year → 8/pride/26-27, or just Number → 58. Change the next number to continue from another series.</Hint>
+              <Hint>Type the fixed parts (like / or -) and insert the fields where you want them. E.g. Number, “/pride/”, Financial year → 8/pride/26-27, or just Number → 58. Change the next number to continue from another series.</Hint>
             </div>
           </div>
         </FormSection>
