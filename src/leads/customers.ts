@@ -1,4 +1,4 @@
-import { BT, type Business } from '@/auth/auth-context'
+import { BT, isOrderType, type Business } from '@/auth/auth-context'
 import { db } from '@/lib/supabase'
 import { purchaseTotals } from '@/webinars/api'
 
@@ -6,7 +6,7 @@ type Bk = { status: string; paid_amount: number | string; business_id: string; s
 
 /** true for bookings of a Paid Podcast or Default (sub-)business: a payment received makes the customer */
 export function podcastCheck(businesses: Business[]) {
-  const byPayment = (t: string | null | undefined) => t === BT.PAID_PODCAST || t === BT.DEFAULT
+  const byPayment = (t: string | null | undefined) => t === BT.PAID_PODCAST || isOrderType(t)
   const subs = new Set(businesses.flatMap((b) => b.subs.filter((x) => byPayment(x.type)).map((x) => x.id)))
   const whole = new Set(businesses.filter((b) => !b.subs.length && byPayment(b.type)).map((b) => b.id))
   return (b: Pick<Bk, 'business_id' | 'sub_business_id'>) => (b.sub_business_id ? subs.has(b.sub_business_id) : whole.has(b.business_id))
