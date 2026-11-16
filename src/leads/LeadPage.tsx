@@ -1,3 +1,4 @@
+import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -186,7 +187,7 @@ export function LeadPage() {
           { id: 'purchases' as Tab, label: 'Purchases', count: (purchases ?? []).filter((p) => p.status === 'active').length },
         ]
       : can('bookings', 'view')
-        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? 'Orders' : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
+        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
   ]
 
@@ -320,6 +321,7 @@ export function LeadPage() {
             bookings={bookings}
             podcast={isPodcast}
             service={isDefault}
+            noun={orderNoun(leadType).one}
             canAdd={canBook}
             onAdd={() => setBk({ booking: null })}
             onOpen={(b) => setBk({ booking: b })}
@@ -391,6 +393,7 @@ export function LeadPage() {
           key={bk.booking?.id ?? bk.copy?.id ?? 'new'}
           booking={bk.booking}
           service={isDefault}
+          noun={orderNoun(leadType).one}
           copyFrom={bk.copy ?? null}
           lead={{ id: lead.id, name, phone: lead.phone, purpose: lead.purpose, business_id: lead.business_id, sub_business_id: lead.sub_business_id }}
           refs={refs}

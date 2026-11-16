@@ -12,3 +12,6 @@ export const calendarName = (t: SubBusinessType | null) => (t === BT.PAID_PODCAS
 
 /** Studio Rental and Paid Podcast share one studio */
 export const isStudioType = (t: SubBusinessType | null | undefined) => t === BT.STUDIO_RENTAL || t === BT.PAID_PODCAST
+
+/** what an order is called: Brand Deals call it a brand deal */
+export const orderNoun = (t: SubBusinessType | null | undefined) => (t === BT.BRAND_DEALS ? { one: 'Brand Deal', many: 'Brand Deals' } : { one: 'Order', many: 'Orders' })

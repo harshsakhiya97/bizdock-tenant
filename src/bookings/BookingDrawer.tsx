@@ -31,6 +31,7 @@ const PART_LABELS = ['Advance', 'Pre-shoot', 'After shoot', 'After service', 'Fi
 export function BookingDrawer({
   booking: initial,
   service = false,
+  noun = 'Order',
   copyFrom,
   defaults,
   lead,
@@ -42,6 +43,8 @@ export function BookingDrawer({
   booking: BookingRow | null
   /** Default business: a service purchase (no calendar slot, no time) */
   service?: boolean
+  /** what a service booking is called: Order, or Brand Deal */
+  noun?: string
   /** Repeat: a new booking with this one's services, GST and note */
   copyFrom?: BookingRow | null
   defaults?: { date?: string; start?: string; end?: string }
@@ -110,7 +113,7 @@ export function BookingDrawer({
   useEffect(() => {
     if (service) void listMemberOptions(tenant.id).then(setMembers)
   }, [service, tenant.id])
-  const word = service ? 'order' : 'booking'
+  const word = service ? noun.toLowerCase() : 'booking'
 
   const leadOptions = useMemo(
     () => [
@@ -220,8 +223,8 @@ export function BookingDrawer({
       onSaved(
         service
           ? booking
-            ? 'Order updated.'
-            : `New order for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
+            ? `${noun} updated.`
+            : `New ${word} for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Its invoice is made.`
           : booking
           ? 'Booking updated.'
           : `Booked ${data.client_name.trim()} on ${[data.booking_date, ...extra.map((x) => x.date)].map(day).join(', ')}.`,
@@ -240,10 +243,10 @@ export function BookingDrawer({
       title={
         service
           ? booking
-            ? `Order ${booking.order_no ?? ''} · ${booking.client_name}`
+            ? `${noun} ${booking.order_no ?? ''} · ${booking.client_name}`
             : copyFrom
-              ? 'New order (repeat)'
-              : 'New order'
+              ? `New ${word} (repeat)`
+              : `New ${word}`
           : booking
             ? `Booking · ${booking.client_name}`
             : 'New booking'
@@ -257,7 +260,7 @@ export function BookingDrawer({
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
               <Button onClick={save} disabled={busy || !!clash}>
-                {busy ? 'Saving…' : booking ? `Save ${word}` : service ? 'Save order' : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
+                {busy ? 'Saving…' : booking ? `Save ${word}` : service ? `Save ${word}` : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
               </Button>
             )}
           </div>
@@ -266,8 +269,8 @@ export function BookingDrawer({
     >
       <div className="stack">
         <FormSection
-          title={service ? 'Order details' : 'Booking details'}
-          description={booking ? undefined : service ? 'Add the services below, then the payment parts. The order gets the next ORD number and its invoice the next invoice number.' : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+          title={service ? `${noun} details` : 'Booking details'}
+          description={booking ? undefined : service ? `Add the services below, then the payment parts. The ${word} gets the next ORD number and its invoice the next invoice number.` : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
             <div className="span-2">
@@ -292,7 +295,7 @@ export function BookingDrawer({
             </div>
             <div>
               <Label htmlFor="bk-date" required>
-                {service ? 'Order date' : 'Date'}
+                {service ? `${noun} date` : 'Date'}
               </Label>
               <TextInput id="bk-date" type="date" value={input.booking_date} onChange={(e) => set('booking_date', e.target.value)} disabled={!canEdit} />
             </div>
@@ -354,7 +357,7 @@ export function BookingDrawer({
             <div className="span-2">
               <Label htmlFor="bk-notes">{service ? 'Description' : 'Note'}</Label>
               {service ? (
-                <TextArea id="bk-notes" rows={4} placeholder="What’s in this order: deliverables, timelines, payment terms…" value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
+                <TextArea id="bk-notes" rows={4} placeholder={`What’s in this ${word}: deliverables, timelines, payment terms…`} value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
               ) : (
                 <TextInput id="bk-notes" placeholder="Setup requirements, payment terms, anything useful" value={input.notes} onChange={(e) => set('notes', e.target.value)} disabled={!canEdit} />
               )}

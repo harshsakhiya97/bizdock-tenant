@@ -28,6 +28,7 @@ export function BookingsTab({
   onRepeat,
   podcast = false,
   service = false,
+  noun = 'Order',
 }: {
   bookings: BookingRow[] | null
   canAdd: boolean
@@ -39,8 +40,10 @@ export function BookingsTab({
   podcast?: boolean
   /** Default business: service purchases (no slot), each with its invoice */
   service?: boolean
+  /** what a service booking is called: Order, or Brand Deal */
+  noun?: string
 }) {
-  const one = service ? 'order' : podcast ? 'podcast' : 'booking'
+  const one = service ? noun.toLowerCase() : podcast ? 'podcast' : 'booking'
   const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
   const total = live.reduce((s, b) => s + Number(b.total_amount), 0)
   const paid = live.reduce((s, b) => s + Number(b.paid_amount), 0)
@@ -52,7 +55,7 @@ export function BookingsTab({
         </span>
         {canAdd && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onAdd}>
-            {service ? <Plus size={14} /> : <CalendarPlus size={14} />} {service ? 'New order' : podcast ? 'Book podcast' : 'Book slot'}
+            {service ? <Plus size={14} /> : <CalendarPlus size={14} />} {service ? `New ${one}` : podcast ? 'Book podcast' : 'Book slot'}
           </button>
         )}
       </div>
@@ -67,7 +70,7 @@ export function BookingsTab({
           <table className="table">
             <thead>
               <tr>
-                {service && <th>Order</th>}
+                {service && <th>{noun}</th>}
                 <th>{service ? 'Date' : podcast ? 'Shoot' : 'Slot'}</th>
                 <th>{service ? 'Services' : 'Type'}</th>
                 <th>Status</th>
@@ -110,7 +113,7 @@ export function BookingsTab({
                     {service && onRepeat && canAdd && (
                       <>
                         {' '}
-                        <button type="button" className="btn btn-outline btn-sm" title="A new order with the same services" onClick={() => onRepeat(b)}>
+                        <button type="button" className="btn btn-outline btn-sm" title={`A new ${one} with the same services`} onClick={() => onRepeat(b)}>
                           <Repeat size={13} /> Repeat
                         </button>
                       </>
