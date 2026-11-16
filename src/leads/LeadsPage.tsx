@@ -23,22 +23,6 @@ import type { LeadRow, MemberOption, Option, Temperature } from './types'
 import { Flash } from '@/components/Flash'
 import { listCustomerRevenue, type Revenue } from './customers'
 
-const FUNNEL_KEY = (t: string) => `leads.funnel.${t}`
-const read = (k: string) => {
-  try {
-    return localStorage.getItem(k)
-  } catch {
-    return null
-  }
-}
-const write = (k: string, v: string) => {
-  try {
-    localStorage.setItem(k, v)
-  } catch {
-    /* storage unavailable */
-  }
-}
-
 type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string }
 const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest' }
 
@@ -95,8 +79,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [sources, setSources] = useState<Option[]>([])
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
-  const [funnelId, setFunnelId] = useState<string>(() => read(FUNNEL_KEY(tenant.id)) ?? 'all')
-  const [stageTab, setStageTab] = useState<string>('all')
+  const [stageTab] = useState<string>('all')
   const [filters, setFilters] = useState<Filters>(EMPTY)
   const [picked, setPicked] = useState<Set<string>>(new Set())
   // the list: 20 a page by default
@@ -183,25 +166,17 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     () => funnels.filter((f) => !selected || (f.business_id === selected.id && (!sub || f.sub_business_id === sub.id))),
     [funnels, selected, sub],
   )
-  // Studio Rental has no funnel / source filter: its one funnel (if it has just one), else all of them
-  // Paid Podcast has no Funnel filter: always all its funnels (a funnel picked earlier elsewhere doesn't hide leads)
-  const funnel = studio ? (scopedFunnels.length === 1 ? scopedFunnels[0] : null) : pp ? null : (scopedFunnels.find((f) => f.id === funnelId) ?? null)
+  // no Funnel / Source filter in any business: all funnels (Studio Rental with one funnel: that one)
+  const funnel = studio && scopedFunnels.length === 1 ? scopedFunnels[0] : null
   const stageById = useMemo(() => {
     const m = new Map<string, StageRow>()
     for (const f of funnels) for (const s of f.funnel_stages) m.set(s.id, s)
     return m
   }, [funnels])
   const funnelName = (id: string | null) => (id ? (funnels.find((f) => f.id === id)?.name ?? '—') : 'No funnel')
-  const noFunnel = !studio && !pp && funnelId === 'none'
+  const noFunnel = false
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
-
-  function pickFunnel(id: string) {
-    setFunnelId(id)
-    write(FUNNEL_KEY(tenant.id), id)
-    setStageTab('all')
-    setPicked(new Set())
-  }
 
   // leads before the stage tab (for tab counts)
   const base = useMemo(() => {
@@ -281,7 +256,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   }, [base, stageById, revenue])
 
   // back to page 1 when the list changes (tab, filters, funnel, business)
-  useEffect(() => setPage(1), [stageTab, filters, funnelId, selected, sub])
+  useEffect(() => setPage(1), [stageTab, filters, selected, sub])
   const pages = Math.max(1, Math.ceil(visible.length / perPage))
   const current = Math.min(page, pages)
   const pageRows = visible.slice((current - 1) * perPage, current * perPage)
@@ -414,27 +389,6 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
-          {!studio && !pp && (
-          <select className="input input-sm filter-select" value={funnel ? funnel.id : noFunnel ? 'none' : 'all'} onChange={(e) => pickFunnel(e.target.value)} aria-label="Funnel">
-            <option value="all">All funnels</option>
-            {(leads ?? []).some((l) => !l.funnel_id && !l.is_archived) && <option value="none">No funnel</option>}
-            {scopedFunnels.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name}
-              </option>
-            ))}
-          </select>
-          )}
-          {!studio && !pp && (
-          <select className="input input-sm filter-select" value={filters.source} onChange={(e) => setF('source', e.target.value)} aria-label="Source">
-            <option value="">Source</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          )}
           <select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
             <option value="">Owner</option>
             <option value="none">Unassigned</option>
