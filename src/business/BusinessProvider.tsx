@@ -35,7 +35,9 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   // fall back if the stored business is gone; with only one business, it's always selected
   const selected =
     businesses.find((b) => b.id === selectedId) ?? (canSeeAll ? null : (businesses[0] ?? null))
-  const sub = selected?.subs.find((s) => s.id === subId) ?? null
+  // a business with only one sub-business (e.g. a member given just that one) is always that sub-business:
+  // "the whole business" would hide its menu items (Meetings…), which go by the sub-business's type
+  const sub = selected?.subs.find((s) => s.id === subId) ?? (selected?.subs.length === 1 ? selected.subs[0] : null)
 
   const select = useCallback(
     (id: string | null, nextSub: string | null = null) => {
