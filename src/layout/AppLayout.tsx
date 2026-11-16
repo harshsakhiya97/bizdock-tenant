@@ -5,7 +5,7 @@ import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
 import { useBusiness } from '@/business/useBusiness'
-import { activeType, calendarName } from '@/business/activeType'
+import { activeType, calendarName, orderNoun } from '@/business/activeType'
 import { Avatar } from '@/components/Avatar'
 import { DevelopedBy } from '@/components/DevelopedBy'
 import { TenantLockup } from '@/components/Logo'
@@ -43,7 +43,7 @@ function Shell() {
   const { selected, sub } = useBusiness()
   const type = activeType(selected, sub)
   const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
-  const meta = pathname === '/bookings' ? { ...base, title: calendarName(type) } : base
+  const meta = pathname === '/bookings' ? { ...base, title: calendarName(type) } : pathname === '/orders' ? { ...base, title: orderNoun(type).many } : base
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
@@ -55,7 +55,7 @@ function Shell() {
           (!i.hideType || ![i.hideType].flat().includes(type ?? '')) &&
           (i.area ? scope(i.area) !== 'none' : true) &&
           (!i.module || can(i.module, i.action ?? 'view') || (i.or && can(i.or.module, i.or.action))),
-      ).map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i)) }))
+      ).map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i.to === '/orders' ? { ...i, label: orderNoun(type).many } : i)) }))
     .filter((s) => s.items.length > 0)
   const tabs = [...sections.flatMap((s) => s.items), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],

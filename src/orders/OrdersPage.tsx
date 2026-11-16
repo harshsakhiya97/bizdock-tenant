@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, PackageCheck, Repeat, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
+import { activeType, orderNoun } from '@/business/activeType'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
 import { listMemberOptions } from '@/leads/api'
@@ -36,6 +37,8 @@ export function OrdersPage() {
   const { can } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const refs = useBookingRefs()
+  const noun = orderNoun(activeType(selected, sub))
+  const one = noun.one.toLowerCase()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -80,20 +83,20 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHead title="Orders" subtitle={`Every order: its services, status, invoice and payment parts${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. New orders are added from the customer’s page.`} />
+      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status, invoice and payment parts${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. New ${one}s are added from the customer’s page.`} />
       {error && <div className="alert alert-error">{error}</div>}
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={PackageCheck} tone="brand" value={thisMonth.length} label="Orders this month" />
-        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label="Order value" hint="This month, with GST" />
-        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint="On this month’s orders" />
-        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`All open orders · ${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} />
+        <StatCard icon={PackageCheck} tone="brand" value={thisMonth.length} label={`${noun.many} this month`} />
+        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label={`${noun.one} value`} hint="This month, with GST" />
+        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint={`On this month’s ${one}s`} />
+        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`All open ${one}s · ${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} />
       </div>
 
       <div className="panel">
         <div className="panel-filters">
-          <SearchInput placeholder="Order, invoice, customer, phone or service" value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={260} />
+          <SearchInput placeholder={`${noun.one}, invoice, customer, phone or service`} value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={260} />
           <select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
             <option value="">Status</option>
             {(Object.keys(ORDER_STATUS) as OrderStatus[]).map((k) => (
@@ -135,9 +138,9 @@ export function OrdersPage() {
         </div>
 
         {!rows ? (
-          <div className="empty">Loading orders…</div>
+          <div className="empty">Loading {one}s…</div>
         ) : visible.length === 0 ? (
-          <Empty icon={PackageCheck}>{scoped.length ? 'No orders match these filters.' : 'No orders yet. Add one from a customer’s page → Orders → New order.'}</Empty>
+          <Empty icon={PackageCheck}>{scoped.length ? `No ${one}s match these filters.` : `No ${one}s yet. Add one from a customer’s page → ${noun.many} → New ${one}.`}</Empty>
         ) : (
           <Paged rows={visible} reset={[f]}>
             {(paged) => (
@@ -145,7 +148,7 @@ export function OrdersPage() {
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Order</th>
+                      <th>{noun.one}</th>
                       <th>Customer</th>
                       <th>Services</th>
                       <th>Team member</th>
@@ -200,7 +203,7 @@ export function OrdersPage() {
                               </a>
                             )}{' '}
                             {can('bookings', 'add') && (
-                              <button type="button" className="btn btn-outline btn-sm" title="A new order with the same services" onClick={() => setOpen({ booking: null, copy: b })}>
+                              <button type="button" className="btn btn-outline btn-sm" title={`A new ${one} with the same services`} onClick={() => setOpen({ booking: null, copy: b })}>
                                 <Repeat size={13} /> Repeat
                               </button>
                             )}
@@ -221,6 +224,7 @@ export function OrdersPage() {
           key={open.booking?.id ?? `copy-${open.copy?.id}`}
           booking={open.booking}
           service
+          noun={noun.one}
           copyFrom={open.copy ?? null}
           lead={
             (open.booking ?? open.copy)
