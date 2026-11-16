@@ -40,9 +40,7 @@ export async function saveBusiness(opts: {
     address: clean(input.address),
     city: clean(input.city),
     state: clean(input.state),
-    has_gst: input.has_gst,
-    gst_number: input.has_gst ? (clean(input.gst_number)?.toUpperCase() ?? null) : null,
-    legal_name: input.has_gst ? clean(input.legal_name) : null,
+    // GST / legal details live in Masters → Company Master; a business's old ones are kept as they are
     has_branches: false,
     has_sub_businesses: input.has_sub_businesses,
     type: input.has_sub_businesses ? null : input.type || null,

@@ -11,7 +11,7 @@ import { listSubBusinesses, saveBusiness, saveSubBusinesses, type SubBusinessDra
 import { CompanyPick } from './CompanyPick'
 import { listBillingCompanies } from '@/masters/api'
 import type { BillingCompanyRow } from '@/masters/types'
-import { isValidEmail, isValidGst, type BusinessInput, type BusinessRow } from './types'
+import { isValidEmail, type BusinessInput, type BusinessRow } from './types'
 
 const MAX_LOGO = 2 * 1024 * 1024
 const emptyInput: BusinessInput = {
@@ -91,11 +91,8 @@ export function BusinessDrawer({
   async function submit(e: FormEvent) {
     e.preventDefault()
     const email = (input.email ?? '').trim()
-    const gst = (input.gst_number ?? '').trim().toUpperCase()
     if (!input.name.trim()) return setError('Business name is required.')
     if (email && !isValidEmail(email)) return setError('Enter a valid business email.')
-    if (input.has_gst && !gst) return setError('Enter the GST number, or untick "Registered for GST?".')
-    if (input.has_gst && !isValidGst(gst)) return setError('GST number should be 15 characters, like 24ABCDE1234F1Z5.')
     if (input.has_sub_businesses && !subs.length) return setError('Add the sub-businesses, or untick "Has multiple sub-businesses".')
     if (input.has_sub_businesses && subs.some((s) => !s.name.trim())) return setError('Give every sub-business a name, or remove it.')
     setBusy(true)
@@ -289,43 +286,6 @@ export function BusinessDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="GST / legal details" description="Optional. Used on invoices and receipts later.">
-          <div className="check-box">
-            <Checkbox
-              id="bz-has-gst"
-              checked={input.has_gst}
-              onChange={(v) => setInput((d) => ({ ...d, has_gst: v }))}
-              label="Registered for GST?"
-              description="Tick to add the GST number and legal name."
-            />
-            {input.has_gst && (
-              <div className="form-grid">
-                <div>
-                  <Label htmlFor="bz-legal">Legal name</Label>
-                  <TextInput
-                    id="bz-legal"
-                    placeholder="Registered company name"
-                    value={input.legal_name ?? ''}
-                    onChange={set('legal_name')}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="bz-gst" required>
-                    GST number
-                  </Label>
-                  <TextInput
-                    id="bz-gst"
-                    placeholder="e.g. 24ABCDE1234F1Z5"
-                    value={input.gst_number ?? ''}
-                    onChange={set('gst_number')}
-                    className="input-upper"
-                  />
-                  <Hint>15 characters, e.g. 24ABCDE1234F1Z5.</Hint>
-                </div>
-              </div>
-            )}
-          </div>
-        </FormSection>
       </form>
 
     </Drawer>
