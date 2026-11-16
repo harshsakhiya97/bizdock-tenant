@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, BadgeIndianRupee, FileText, Pencil, Plus, Printer, Unlink, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { orderNoun } from '@/business/activeType'
+import { isOrderType } from '@/auth/auth-context'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Flash } from '@/components/Flash'
@@ -13,9 +14,10 @@ import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
-import { ORDER_STATUS, partState, type BookingRow } from '@/bookings/types'
+import { ORDER_STATUS, STATUS_META, partState, type BookingRow } from '@/bookings/types'
+import { slotText } from '@/bookings/BookingsTab'
 import { addInvoiceOrders, getInvoice, invoicePrintHref, removeInvoiceOrder } from './api'
-import { InvoiceDrawer } from './InvoiceDrawer'
+import { InvoiceDrawer, bookingRef } from './InvoiceDrawer'
 import { isFullyPaid, type InvoiceRow } from './types'
 
 const day = (d: string | null) => (d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
@@ -63,9 +65,10 @@ export function InvoiceDetailPage() {
 
   const biz = businesses.find((b) => b.id === inv?.business_id)
   const type = biz ? (biz.subs.find((s) => s.id === inv?.sub_business_id)?.type ?? biz.type) : null
-  const noun = orderNoun(type)
+  const orders_ = isOrderType(type)
+  const noun = orders_ ? orderNoun(type) : { one: 'Booking', many: 'Bookings' }
   const one = noun.one.toLowerCase()
-  const orders = useMemo(() => [...(inv?.bookings ?? [])].sort((a, b) => (a.order_no ?? '').localeCompare(b.order_no ?? '')), [inv])
+  const orders = useMemo(() => [...(inv?.bookings ?? [])].sort((a, b) => (a.order_no ?? '').localeCompare(b.order_no ?? '') || a.booking_date.localeCompare(b.booking_date)), [inv])
   const parts = useMemo(() => [...(inv?.invoice_payments ?? [])].sort((a, b) => (a.due_on ?? a.paid_on ?? '').localeCompare(b.due_on ?? b.paid_on ?? '')), [inv])
   const modeName = (m: string | null) => refs.modes.find((x) => x.id === m)?.name ?? '—'
 
@@ -82,7 +85,7 @@ export function InvoiceDetailPage() {
     setBusy(true)
     try {
       await removeInvoiceOrder(removing.id)
-      setNotice(`${removing.order_no} removed from ${inv!.invoice_no}.`)
+      setNotice(`${bookingRef(removing)} removed from ${inv!.invoice_no}.`)
       setError(null)
       load()
     } catch (e) {
@@ -109,8 +112,8 @@ export function InvoiceDetailPage() {
             <span className={`badge ${paid ? 'badge-success' : Number(inv.paid_amount) > 0 ? 'badge-warning' : 'badge-muted'}`}>{paid ? 'Fully paid' : Number(inv.paid_amount) > 0 ? 'Part paid' : 'Unpaid'}</span>
           </div>
           <div className="muted small">
-            {day(inv.invoice_date)} · {inv.gst_applicable ? `GST ${Number(inv.gst_rate)}%` : 'No GST'}
-            {biz ? ` · ${biz.name}` : ''}
+            {inv.kind === 'gst' ? `Tax Invoice · GST ${Number(inv.gst_rate)}%` : 'Invoice without GST'} · {day(inv.invoice_date)}
+            {inv.seller?.name ? ` · from ${inv.seller.name}` : biz ? ` · ${biz.name}` : ''}
           </div>
         </div>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
@@ -143,6 +146,12 @@ export function InvoiceDetailPage() {
           )}
         </div>
         <div className="muted small">{[inv.phone, client?.email, client?.city].filter(Boolean).join(' · ') || '—'}</div>
+        {(inv.buyer?.company || inv.buyer?.gstin || inv.buyer?.address) && (
+          <div className="small" style={{ whiteSpace: 'pre-line' }}>
+            <span className="muted">Bill to: </span>
+            {[inv.buyer.company, inv.buyer.address, inv.buyer.state ? `${inv.buyer.state}${inv.buyer.state_code ? `, Code: ${inv.buyer.state_code}` : ''}` : null, inv.buyer.gstin ? `GSTIN ${inv.buyer.gstin}` : null].filter(Boolean).join(' · ')}
+          </div>
+        )}
       </section>
 
       <div className="panel">
@@ -169,12 +178,18 @@ export function InvoiceDetailPage() {
             </thead>
             <tbody>
               {orders.map((o) => {
-                const st = o.order_status ? ORDER_STATUS[o.order_status] : null
+                const st = orders_ ? (o.order_status ? ORDER_STATUS[o.order_status] : null) : STATUS_META[o.status]
                 return (
                   <tr key={o.id} className="is-clickable" onClick={() => setOrder(o)}>
                     <td className="nowrap">
-                      <b>{o.order_no}</b>
-                      <div className="muted small">{day(o.booking_date)}</div>
+                      {orders_ ? (
+                        <>
+                          <b>{o.order_no}</b>
+                          <div className="muted small">{day(o.booking_date)}</div>
+                        </>
+                      ) : (
+                        <b>{slotText(o)}</b>
+                      )}
                     </td>
                     <td style={{ maxWidth: 300 }}>{services(o)}</td>
                     <td>{st && <span className={`badge ${st.tone}`}>{st.label}</span>}</td>
@@ -251,6 +266,7 @@ export function InvoiceDetailPage() {
         <InvoiceDrawer
           invoice={inv}
           refs={refs}
+          noun={noun.one}
           onClose={() => setEditPay(false)}
           onSaved={(msg) => {
             setEditPay(false)
@@ -280,7 +296,7 @@ export function InvoiceDetailPage() {
         <BookingDrawer
           key={order.id}
           booking={order}
-          service
+          service={orders_}
           noun={noun.one}
           lead={{ id: order.lead_id, customer_id: order.customer_id, name: order.client_name, phone: order.phone ?? '', purpose: null, business_id: order.business_id, sub_business_id: order.sub_business_id }}
           refs={refs}
@@ -299,7 +315,7 @@ export function InvoiceDetailPage() {
         open={!!removing}
         icon={Unlink}
         danger
-        title={`Remove ${removing?.order_no ?? ''} from this invoice?`}
+        title={`Remove ${removing ? bookingRef(removing) : ''} from this invoice?`}
         message={`The ${one} stays, but goes back to “not invoiced” and the invoice total drops by ${money(removing?.total_amount ?? 0)}. The last unpaid part is lowered to match.`}
         confirmLabel="Remove"
         busy={busy}
@@ -331,7 +347,7 @@ function AddOrdersDrawer({
   const one = noun.one.toLowerCase()
   useEffect(() => {
     listBookings(tenantId, { leadId: inv.lead_id ?? undefined, customerId: inv.customer_id ?? undefined }).then(
-      (b) => setRows(b.filter((x) => x.order_no && !x.invoice_id && x.status !== 'cancelled' && x.business_id === inv.business_id)),
+      (b) => setRows(b.filter((x) => !!x.order_no === !!inv.bookings[0]?.order_no && !x.invoice_id && x.status !== 'cancelled' && x.business_id === inv.business_id)),
       (e: Error) => setError(e.message),
     )
   }, [tenantId, inv])
@@ -401,8 +417,8 @@ function AddOrdersDrawer({
                     <input type="checkbox" aria-label={`Pick ${o.order_no}`} checked={picked.has(o.id)} onChange={() => toggle(o.id)} onClick={(e) => e.stopPropagation()} />
                   </td>
                   <td className="nowrap">
-                    <b>{o.order_no}</b>
-                    <div className="muted small">{day(o.booking_date)}</div>
+                    <b>{bookingRef(o)}</b>
+                    {o.order_no && <div className="muted small">{day(o.booking_date)}</div>}
                   </td>
                   <td>{services(o)}</td>
                   <td className="num nowrap">{money(o.amount)}</td>

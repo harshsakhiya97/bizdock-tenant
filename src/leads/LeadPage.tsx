@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
+import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { BookingsTab, slotText } from '@/bookings/BookingsTab'
 import { FollowUpsTab } from '@/bookings/FollowUpsTab'
@@ -21,6 +22,7 @@ import { LeadDescription } from './LeadDescription'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
 import { LeadOrigin } from './LeadOrigin'
+import { BillingCard } from '@/invoices/Billing'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
@@ -72,8 +74,9 @@ export function LeadPage() {
         setLead(null)
         setNotice({ error: e.message })
       })
-    listBookings(tenant.id, { leadId: id })
-      .then(setBookings)
+    // payments are on invoices: put them on each invoice's first booking for the totals here
+    Promise.all([listBookings(tenant.id, { leadId: id }), listInvoices(tenant.id, { leadId: id }).catch(() => [])])
+      .then(([b, inv]) => setBookings(withInvoicePayments(b, inv)))
       .catch(() => setBookings([]))
     listPurchases({ leadId: id })
       .then(setPurchases)
@@ -299,6 +302,7 @@ export function LeadPage() {
               <span className="field-label">Description</span>
               <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
             </div>
+            <BillingCard lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
             <LeadOrigin lead={lead} />
             <div>
               <span className="field-label">Activity</span>

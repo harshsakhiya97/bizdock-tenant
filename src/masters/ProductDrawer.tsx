@@ -47,6 +47,8 @@ export function ProductDrawer({
     validity_months: product?.validity_months ? String(product.validity_months) : '',
     is_active: product?.is_active ?? true,
     sort_order: String(product?.sort_order ?? nextOrder),
+    gst_name: product?.gst_name ?? '',
+    hsn_code: product?.hsn_code ?? '',
   })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -82,6 +84,8 @@ export function ProductDrawer({
       is_active: f.is_active,
       sort_order: Number(f.sort_order) || 0,
       kind: product?.kind ?? kind,
+      gst_name: f.gst_name.trim() || null,
+      hsn_code: f.hsn_code.trim() || null,
     }
     try {
       await saveProduct(tenant.id, product?.id ?? null, input)
@@ -159,6 +163,19 @@ export function ProductDrawer({
               <Hint>
                 {money(price)} + GST {money(gst)} = <b>{money(price + gst)}</b>
               </Hint>
+            </div>
+          </div>
+        </FormSection>
+
+        <FormSection title="On a GST invoice" description="Optional: the name and HSN / SAC code printed on GST invoices (else the name above).">
+          <div className="form-grid">
+            <div>
+              <Label htmlFor="p-gstname">Name on GST bill</Label>
+              <TextInput id="p-gstname" placeholder="e.g. Consultancy Fees" value={f.gst_name} onChange={(e) => set('gst_name', e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="p-hsn">HSN / SAC code</Label>
+              <TextInput id="p-hsn" placeholder="e.g. 999293" value={f.hsn_code} onChange={(e) => set('hsn_code', e.target.value)} />
             </div>
           </div>
         </FormSection>

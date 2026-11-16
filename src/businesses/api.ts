@@ -46,6 +46,8 @@ export async function saveBusiness(opts: {
     has_branches: false,
     has_sub_businesses: input.has_sub_businesses,
     type: input.has_sub_businesses ? null : input.type || null,
+    company_id: input.company_id || null,
+    nongst_company_id: input.company_id ? input.nongst_company_id || null : null,
   }
 
   // 1. business
@@ -102,18 +104,19 @@ function pathInBucket(url: string | null) {
   return url && url.includes(marker) ? url.split(marker)[1] : null
 }
 
-export type SubBusinessDraft = { id?: string; name: string; type: SubBusinessType }
+/** company_id '' / null: invoices from the business's company */
+export type SubBusinessDraft = { id?: string; name: string; type: SubBusinessType; company_id?: string | null; nongst_company_id?: string | null }
 
 export async function listSubBusinesses(businessId: string) {
   const { data, error } = await db()
     .from('sub_businesses')
-    .select('id, business_id, name, type')
+    .select('id, business_id, name, type, company_id, nongst_company_id')
     .eq('business_id', businessId)
     .eq('is_active', true)
     .order('sort_order')
     .order('created_at')
   fail(error)
-  return ((data ?? []) as SubBusiness[]).map((x) => ({ ...x, type: typeCode(x.type) }))
+  return ((data ?? []) as (SubBusiness & { company_id: string | null; nongst_company_id: string | null })[]).map((x) => ({ ...x, type: typeCode(x.type) }))
 }
 
 /** Saves the sub-business list of a business: updates, adds and removes (records keep their business). */
@@ -123,7 +126,7 @@ export async function saveSubBusinesses(tenantId: string, businessId: string, ro
     fail(error)
   }
   for (const [i, r] of rows.entries()) {
-    const fields = { name: r.name.trim(), type: r.type, sort_order: i + 1 }
+    const fields = { name: r.name.trim(), type: r.type, sort_order: i + 1, company_id: r.company_id || null, nongst_company_id: r.company_id ? r.nongst_company_id || null : null }
     const { error } = r.id
       ? await db().from('sub_businesses').update(fields).eq('id', r.id)
       : await db().from('sub_businesses').insert({ ...fields, tenant_id: tenantId, business_id: businessId })

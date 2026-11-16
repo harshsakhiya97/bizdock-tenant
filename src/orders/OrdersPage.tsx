@@ -13,7 +13,9 @@ import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
-import { ORDER_STATUS, invoiceNo, partState, type BookingRow, type OrderStatus } from '@/bookings/types'
+import { ORDER_STATUS, STATUS_META, invoiceNo, partState, type BookingRow, type BookingStatus, type OrderStatus } from '@/bookings/types'
+import { slotText } from '@/bookings/BookingsTab'
+import { bookingRef } from '@/invoices/InvoiceDrawer'
 import { invoicePath, listInvoices } from '@/invoices/api'
 import { InvoiceDrawer } from '@/invoices/InvoiceDrawer'
 import { isFullyPaid, type InvoicePayment, type InvoiceRow } from '@/invoices/types'
@@ -35,13 +37,17 @@ const nextDue = (i: InvoiceRow | undefined): InvoicePayment | null =>
 /** one client: the same customer, else the same lead, else the same name + phone */
 const clientKey = (b: BookingRow) => b.customer_id ?? b.lead_id ?? `${b.client_name.trim().toLowerCase()}|${b.phone ?? ''}`
 
-/** Orders (Default / Brand Deals): every order — ORD number, services, status, team member and its invoice. Tick orders of one client → Generate invoice. */
-export function OrdersPage() {
+/**
+ * Orders (Default / Brand Deals) or Bookings (every other business): ORD number or date and time, services, status, team member
+ * and its invoice. Tick orders / bookings of one client → Generate invoice.
+ */
+export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const tenant = useTenant()
   const { can } = useAuth()
   const { selected, sub, inScope } = useBusiness()
   const refs = useBookingRefs()
-  const noun = orderNoun(activeType(selected, sub))
+  const noun = bookings ? { one: 'Booking', many: 'Bookings' } : orderNoun(activeType(selected, sub))
+  const cancelled = (b: BookingRow) => b.status === 'cancelled'
   const one = noun.one.toLowerCase()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
@@ -57,13 +63,13 @@ export function OrdersPage() {
 
   const load = useCallback(() => {
     listBookings(tenant.id)
-      .then((b) => setRows(b.filter((x) => x.order_no)))
+      .then((b) => setRows(b.filter((x) => (bookings ? !x.order_no : !!x.order_no))))
       .catch((e: Error) => setError(e.message))
     listInvoices(tenant.id).then(
       (l) => setInvoices(new Map(l.map((i) => [i.id, i]))),
       () => setInvoices(new Map()),
     )
-  }, [tenant.id])
+  }, [tenant.id, bookings])
   useEffect(load, [load])
   useEffect(() => {
     void listMemberOptions(tenant.id).then(setMembers)
@@ -74,27 +80,27 @@ export function OrdersPage() {
   const visible = useMemo(() => {
     const q = f.q.trim().toLowerCase()
     return scoped
-      .filter((b) => !f.status || b.order_status === f.status)
+      .filter((b) => !f.status || (bookings ? b.status : b.order_status) === f.status)
       .filter((b) => !f.pay || payState(b) === f.pay)
       .filter((b) => !f.overdue || !!invoices.get(b.invoice_id ?? '')?.invoice_payments.some((p) => partState(p) === 'overdue'))
       .filter((b) => !f.member || b.owner_id === f.member)
       .filter((b) => !f.from || b.booking_date >= f.from)
       .filter((b) => !f.to || b.booking_date <= f.to)
-      .filter((b) => !q || `${b.order_no} ${invoiceNo(b) ?? ''} ${b.client_name} ${b.phone ?? ''} ${services(b)}`.toLowerCase().includes(q))
+      .filter((b) => !q || `${b.order_no ?? ''} ${invoiceNo(b) ?? ''} ${b.client_name} ${b.phone ?? ''} ${services(b)}`.toLowerCase().includes(q))
       .sort((a, b) => b.booking_date.localeCompare(a.booking_date) || (b.order_no ?? '').localeCompare(a.order_no ?? ''))
-  }, [scoped, f, invoices])
+  }, [scoped, f, invoices, bookings])
 
   // this month: orders dated this month (not cancelled), what they're worth, collected and still due
   const month = new Date().toISOString().slice(0, 7)
-  const thisMonth = scoped.filter((b) => b.order_status !== 'cancelled' && b.booking_date.startsWith(month))
+  const thisMonth = scoped.filter((b) => !cancelled(b) && b.booking_date.startsWith(month))
   const value = thisMonth.reduce((n, b) => n + Number(b.total_amount), 0)
   const collected = thisMonth.reduce((n, b) => n + Number(b.paid_amount), 0)
-  const live = scoped.filter((b) => b.order_status !== 'cancelled')
+  const live = scoped.filter((b) => !cancelled(b))
   const due = live.reduce((n, b) => n + Math.max(0, Number(b.total_amount) - Number(b.paid_amount)), 0)
   const liveInvoices = [...new Set(live.map((b) => b.invoice_id).filter(Boolean))].map((id) => invoices.get(id!)).filter(Boolean) as InvoiceRow[]
   const overdueParts = liveInvoices.flatMap((i) => i.invoice_payments).filter((p) => partState(p) === 'overdue')
   const canInvoice = can('bookings', 'add') || can('bookings', 'edit')
-  const pickable = (b: BookingRow) => canInvoice && !b.invoice_id && b.order_status !== 'cancelled'
+  const pickable = (b: BookingRow) => canInvoice && !b.invoice_id && !cancelled(b)
   const pickedRows = scoped.filter((b) => picked.has(b.id) && pickable(b))
   const toggle = (id: string) =>
     setPicked((s0) => {
@@ -108,7 +114,7 @@ export function OrdersPage() {
     const first = pickedRows[0]
     const other = pickedRows.find((b) => clientKey(b) !== clientKey(first) || b.business_id !== first.business_id)
     if (other) {
-      setError(`Pick ${one}s of one client only: ${first.order_no} is for ${first.client_name}, ${other.order_no} is for ${other.client_name}.`)
+      setError(`Pick ${one}s of one client only: ${bookingRef(first)} is for ${first.client_name}, ${bookingRef(other)} is for ${other.client_name}.`)
       return
     }
     setError(null)
@@ -118,7 +124,7 @@ export function OrdersPage() {
 
   return (
     <>
-      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status and invoice. Tick ${one}s of one client → Generate invoice${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. New ${one}s are added from the customer’s page.`} />
+      <PageHead title={noun.many} subtitle={`Every ${one}: its services, status and invoice. Tick ${one}s of one client → Generate invoice${selected ? ` · ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}. ${bookings ? 'New bookings are added from the Booking Calendar or the customer’s page.' : `New ${one}s are added from the customer’s page.`}`} />
       {error && <div className="alert alert-error">{error}</div>}
       <Flash msg={notice} dep={notice} />
 
@@ -134,7 +140,13 @@ export function OrdersPage() {
           <SearchInput placeholder={`${noun.one}, invoice, customer, phone or service`} value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={260} />
           <select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
             <option value="">Status</option>
-            {(Object.keys(ORDER_STATUS) as OrderStatus[]).map((k) => (
+            {bookings
+              ? (Object.keys(STATUS_META) as BookingStatus[]).map((k) => (
+                  <option key={k} value={k}>
+                    {STATUS_META[k].label}
+                  </option>
+                ))
+              : (Object.keys(ORDER_STATUS) as OrderStatus[]).map((k) => (
               <option key={k} value={k}>
                 {ORDER_STATUS[k].label}
               </option>
@@ -188,7 +200,7 @@ export function OrdersPage() {
         {!rows ? (
           <div className="empty">Loading {one}s…</div>
         ) : visible.length === 0 ? (
-          <Empty icon={PackageCheck}>{scoped.length ? `No ${one}s match these filters.` : `No ${one}s yet. Add one from a customer’s page → ${noun.many} → New ${one}.`}</Empty>
+          <Empty icon={PackageCheck}>{scoped.length ? `No ${one}s match these filters.` : bookings ? 'No bookings yet. Add one from the Booking Calendar.' : `No ${one}s yet. Add one from a customer’s page → ${noun.many} → New ${one}.`}</Empty>
         ) : (
           <Paged rows={visible} reset={[f]}>
             {(paged) => (
@@ -230,18 +242,24 @@ export function OrdersPage() {
                   </thead>
                   <tbody>
                     {paged.map((b) => {
-                      const st = b.order_status ? ORDER_STATUS[b.order_status] : null
+                      const st = bookings ? STATUS_META[b.status] : b.order_status ? ORDER_STATUS[b.order_status] : null
                       const inv = invoices.get(b.invoice_id ?? '')
                       const nd = nextDue(inv)
                       const late = nd && partState(nd) === 'overdue'
                       return (
                         <tr key={b.id} className="is-clickable" onClick={() => setOpen({ booking: b })}>
                           <td onClick={(e) => e.stopPropagation()}>
-                            {pickable(b) && <input type="checkbox" aria-label={`Pick ${b.order_no}`} checked={picked.has(b.id)} onChange={() => toggle(b.id)} />}
+                            {pickable(b) && <input type="checkbox" aria-label={`Pick ${bookingRef(b)}`} checked={picked.has(b.id)} onChange={() => toggle(b.id)} />}
                           </td>
                           <td className="nowrap">
-                            <b>{b.order_no}</b>
-                            <div className="muted small">{day(b.booking_date)}</div>
+                            {bookings ? (
+                              <b>{slotText(b)}</b>
+                            ) : (
+                              <>
+                                <b>{b.order_no}</b>
+                                <div className="muted small">{day(b.booking_date)}</div>
+                              </>
+                            )}
                           </td>
                           <td onClick={(e) => e.stopPropagation()}>
                             {b.lead_id ? (
@@ -258,20 +276,20 @@ export function OrdersPage() {
                           <td>{st && <span className={`badge ${st.tone}`}>{st.label}</span>}</td>
                           <td className="num nowrap">{money(b.total_amount)}</td>
                           <td className="num nowrap">{money(b.paid_amount)}</td>
-                          <td className="num nowrap">{b.order_status === 'cancelled' ? '—' : money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount)))}</td>
+                          <td className="num nowrap">{cancelled(b) ? '—' : money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount)))}</td>
                           <td className="nowrap" onClick={(e) => e.stopPropagation()}>
                             {b.invoice_id ? (
                               <Link to={invoicePath(b.invoice_id)} className="strong">
                                 {invoiceNo(b) ?? 'Invoice'}
                               </Link>
-                            ) : b.order_status === 'cancelled' ? (
+                            ) : cancelled(b) ? (
                               <span className="muted">—</span>
                             ) : (
                               <span className="muted small">Not invoiced</span>
                             )}
                           </td>
                           <td className="nowrap">
-                            {nd && b.order_status !== 'cancelled' ? (
+                            {nd && !cancelled(b) ? (
                               <span className={late ? 'tone-danger' : undefined}>
                                 {money(nd.amount)} · {nd.due_on ? day(nd.due_on) : 'no date'}
                               </span>
@@ -301,7 +319,7 @@ export function OrdersPage() {
         <BookingDrawer
           key={open.booking?.id ?? `copy-${open.copy?.id}`}
           booking={open.booking}
-          service
+          service={!bookings}
           noun={noun.one}
           copyFrom={open.copy ?? null}
           locked={!!open.booking?.invoice_id && !!invoices.get(open.booking.invoice_id) && isFullyPaid(invoices.get(open.booking.invoice_id)!)}
@@ -332,6 +350,7 @@ export function OrdersPage() {
         <InvoiceDrawer
           orders={invoicing}
           refs={refs}
+          noun={noun.one}
           onClose={() => setInvoicing(null)}
           onSaved={(msg, id) => {
             setInvoicing(null)

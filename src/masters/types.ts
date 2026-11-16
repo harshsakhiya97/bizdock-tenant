@@ -25,6 +25,10 @@ export type ProductRow = {
   sort_order: number
   /** Masters → Services ('service', picked on bookings) or Masters → Products ('product', bought by webinar leads) */
   kind: 'service' | 'product'
+  /** the line's name on a GST invoice (else the name) */
+  gst_name: string | null
+  /** HSN / SAC code on a GST invoice */
+  hsn_code: string | null
 }
 
 export type BillingCompanyRow = {
@@ -38,6 +42,28 @@ export type BillingCompanyRow = {
   invoice_prefix: string | null
   is_active: boolean
   sort_order: number
+  email: string | null
+  state_code: string | null
+  cin: string | null
+  pan: string | null
+  bank_holder: string | null
+  bank_name: string | null
+  bank_account: string | null
+  bank_branch: string | null
+  bank_ifsc: string | null
+  /** invoice number: {N} 8, {NNNN} 0008, {FY} 26-27, {PREFIX} the prefix */
+  number_format: string
+  /** the next invoice gets this number */
+  next_no: number
+}
+
+/** the invoice number a company's format gives for number n (today's financial year) */
+export function formatInvoiceNo(format: string, prefix: string | null, n: number, d = new Date()) {
+  const y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1
+  const fy = `${String(y).slice(2)}-${String(y + 1).slice(2)}`
+  let f = format.trim() || '{N}'
+  if (!f.includes('{N')) f += '{N}'
+  return f.replace('{NNNN}', String(n).padStart(4, '0')).replace('{N}', String(n)).replace('{FY}', fy).replace('{PREFIX}', prefix ?? '')
 }
 
 /** The simple lists: a name, an order and on/off (stages also have a colour). */
