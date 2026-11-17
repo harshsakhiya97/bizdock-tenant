@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
+import { BT } from '@/auth/auth-context'
+import { cn } from '@/lib/cn'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { subOf, useSubBusinesses } from '@/business/SubBusinessSelect'
@@ -14,6 +16,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
+import { DEAL_STEPS, latestStep, saveDealSteps, type DealStep } from './dealSteps'
 import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
@@ -38,6 +41,7 @@ export function BookingDrawer({
   refs,
   onClose,
   onSaved,
+  onTicked,
 }: {
   booking: BookingRow | null
   /** Default business: a service purchase (no calendar slot, no time) */
@@ -56,6 +60,8 @@ export function BookingDrawer({
   refs: BookingRefs
   onClose: () => void
   onSaved: (msg: string) => void
+  /** a Brand Deal step ticked / unticked (saved straight away) */
+  onTicked?: (msg: string) => void
 }) {
   const tenant = useTenant()
   const { can, membership, businesses } = useAuth()
@@ -105,6 +111,9 @@ export function BookingDrawer({
     notes: booking?.notes ?? copyFrom?.notes ?? '',
   }))
   const set = <K extends keyof BookingInput>(k: K, v: BookingInput[K]) => setInput((p) => ({ ...p, [k]: v }))
+  // a Brand Deal (its business or sub-business is Brand Deals): it has steps to tick
+  const bizOf = businesses.find((b) => b.id === input.business_id)
+  const brandDeal = service && (bizOf?.subs.find((x) => x.id === input.sub_business_id)?.type ?? bizOf?.type) === BT.BRAND_DEALS
   const setItem = (k: string, patch: Partial<ItemDraft>) => setInput((d) => ({ ...d, items: d.items.map((i) => (i.key === k ? { ...i, ...patch } : i)) }))
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -459,6 +468,8 @@ export function BookingDrawer({
             </div>
         </FormSection>
 
+        {booking && brandDeal && <DealStepsSection booking={booking} canTick={can('bookings', 'edit')} me={me ?? null} onChanged={(msg) => onTicked?.(msg)} />}
+
         {booking && (
           <FormSection title="Invoice">
             <div className="row-between">
@@ -485,5 +496,48 @@ export function BookingDrawer({
 
       </div>
     </Drawer>
+  )
+}
+
+/** Brand Deals: tick the deal's steps (saved straight away, even on a fully paid deal) */
+function DealStepsSection({ booking, canTick, me, onChanged }: { booking: BookingRow; canTick: boolean; me: string | null; onChanged: (msg: string) => void }) {
+  const [steps, setSteps] = useState<DealStep[]>(booking.deal_steps ?? [])
+  const [busy, setBusy] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const done = new Map(steps.map((s) => [s.step, s]))
+  const latest = latestStep(steps)?.step ?? 0
+
+  async function toggle(n: number) {
+    const next = done.has(n) ? steps.filter((s) => s.step !== n) : [...steps, { step: n, at: new Date().toISOString(), by: me }]
+    setBusy(n)
+    setError(null)
+    try {
+      await saveDealSteps(booking.id, next)
+      setSteps(next)
+      onChanged(done.has(n) ? `Unticked: ${DEAL_STEPS[n - 1]}.` : `Done: ${DEAL_STEPS[n - 1]}.`)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+    setBusy(null)
+  }
+
+  return (
+    <FormSection title="Steps" description="Tick each step as it’s done; the Brand Deals list shows the latest.">
+      {error && <div className="alert alert-error small">{error}</div>}
+      <div className="deal-steps">
+        {DEAL_STEPS.map((name, i) => {
+          const n = i + 1
+          const d = done.get(n)
+          return (
+            <label key={n} className={cn('deal-step', d && 'is-done', n === latest + 1 && !d && 'is-next')}>
+              <input type="checkbox" checked={!!d} disabled={!canTick || busy !== null} onChange={() => void toggle(n)} />
+              <span className="deal-step-no">{d ? '✔' : n}</span>
+              <span className="deal-step-name">{name}</span>
+              {d && <span className="muted small">{new Date(d.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
+            </label>
+          )
+        })}
+      </div>
+    </FormSection>
   )
 }

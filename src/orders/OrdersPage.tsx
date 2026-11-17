@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Trash2, Wallet } from 'lucide-react'
+import { BT } from '@/auth/auth-context'
 import { useAuth } from '@/auth/useAuth'
+import { DEAL_STEPS, latestStep } from '@/bookings/dealSteps'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
@@ -50,6 +52,8 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const noun = bookings ? { one: 'Booking', many: 'Bookings' } : orderNoun(activeType(selected, sub))
   const cancelled = (b: BookingRow) => b.status === 'cancelled'
   const one = noun.one.toLowerCase()
+  // Brand Deals: the deal's latest ticked step
+  const brand = !bookings && activeType(selected, sub) === BT.BRAND_DEALS
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -249,6 +253,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                       <th>Customer</th>
                       <th>Services</th>
                       <th>Team member</th>
+                      {brand && <th>Step</th>}
                       <th>Status</th>
                       <th className="num">Total</th>
                       <th className="num">Paid</th>
@@ -300,6 +305,24 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                           </td>
                           <td style={{ maxWidth: 260 }}>{services(b)}</td>
                           <td className="nowrap">{memberName(b.owner_id)}</td>
+                          {brand && (
+                            <td style={{ minWidth: 170 }}>
+                              {(() => {
+                                const ls = latestStep(b.deal_steps)
+                                return ls ? (
+                                  <>
+                                    <span className="badge badge-info">
+                                      {ls.step}/{DEAL_STEPS.length}
+                                    </span>{' '}
+                                    <span className="small">{DEAL_STEPS[ls.step - 1]}</span>
+                                    <div className="muted small">{new Date(ls.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</div>
+                                  </>
+                                ) : (
+                                  <span className="muted small">No step yet</span>
+                                )
+                              })()}
+                            </td>
+                          )}
                           <td>{st && <span className={`badge ${st.tone}`}>{st.label}</span>}</td>
                           <td className="num nowrap">{money(b.total_amount)}</td>
                           <td className="num nowrap">{money(b.paid_amount)}</td>
@@ -353,6 +376,10 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
           booking={open.booking}
           service={!bookings}
           noun={noun.one}
+          onTicked={(msg) => {
+            setNotice(msg)
+            load()
+          }}
           copyFrom={open.copy ?? null}
           locked={!!open.booking?.invoice_id && !!invoices.get(open.booking.invoice_id) && isFullyPaid(invoices.get(open.booking.invoice_id)!)}
           lead={
