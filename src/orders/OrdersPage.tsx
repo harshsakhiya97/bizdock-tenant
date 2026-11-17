@@ -269,7 +269,16 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                           </td>
                           <td className="nowrap">
                             {bookings ? (
-                              <b>{slotText(b)}</b>
+                              // date, then the time under it
+                              (() => {
+                                const [d, time] = slotText(b).split(' · ')
+                                return (
+                                  <>
+                                    <b>{d}</b>
+                                    {time && <div className="muted small">{time}</div>}
+                                  </>
+                                )
+                              })()
                             ) : (
                               <>
                                 <b>{b.order_no}</b>
