@@ -7,15 +7,17 @@ const label = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN
 
 export type Line = { key: string; name: string; values: number[] }
 
-/** A multi-line chart: one line per series over the days; legend toggles lines, hover shows the day's values. */
-export function SpendLines({ days, lines }: { days: string[]; lines: Line[] }) {
+/** A multi-line chart: one line per series over the days; legend toggles lines, hover shows the day's values (₹, or counts). */
+export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; lines: Line[]; unit?: 'money' | 'count' }) {
+  const full = unit === 'count' ? (n: number) => String(Math.round(n)) : inr
+  const axis = unit === 'count' ? (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)) : short
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [hover, setHover] = useState<number | null>(null)
   const W = 900
   const H = 260
   const P = { l: 56, r: 16, t: 12, b: 28 }
   const shown = lines.filter((l) => !hidden.has(l.key))
-  const max = useMemo(() => Math.max(1, ...shown.flatMap((l) => l.values)), [shown])
+  const max = useMemo(() => Math.max(unit === 'count' ? 4 : 1, ...shown.flatMap((l) => l.values)), [shown, unit])
   const nice = (() => {
     const p = 10 ** Math.floor(Math.log10(max))
     const m = max / p
@@ -30,12 +32,12 @@ export function SpendLines({ days, lines }: { days: string[]; lines: Line[] }) {
   return (
     <div className="stack" style={{ gap: 8 }}>
       <div style={{ position: 'relative' }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Spend per day" style={{ display: 'block' }} onMouseLeave={() => setHover(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Per day" style={{ display: 'block' }} onMouseLeave={() => setHover(null)}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={P.l} x2={W - P.r} y1={y(t)} y2={y(t)} stroke="var(--line)" strokeWidth={1} />
               <text x={P.l - 8} y={y(t) + 4} textAnchor="end" fontSize={11} fill="var(--text-muted)">
-                {short(t)}
+                {axis(t)}
               </text>
             </g>
           ))}
@@ -72,7 +74,7 @@ export function SpendLines({ days, lines }: { days: string[]; lines: Line[] }) {
                     <span style={{ width: 8, height: 8, borderRadius: 4, background: color(l.key), flex: 'none' }} />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.name}</span>
                   </span>
-                  <b>{inr(v)}</b>
+                  <b>{full(v)}</b>
                 </div>
               ))}
           </div>
