@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChartLine, ChevronDown, ChevronRight, List } from 'lucide-react'
 import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
@@ -28,6 +28,8 @@ export function FunnelDaySpend({
   // same presets as Facebook Ads Manager (Last 30 days ends yesterday)
   const [range, setRange] = useState<Range>(() => presetRange('last30'))
   const { from, to } = range
+  // graph (the lines) or list (each day, with its ads)
+  const [view, setView] = useState<'graph' | 'list'>('graph')
   const [data, setData] = useState<Awaited<ReturnType<typeof funnelDaySpend>> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
@@ -106,6 +108,14 @@ export function FunnelDaySpend({
         </div>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <DateRangePicker value={range} onChange={setRange} />
+          <div className="seg" role="group" aria-label="View">
+            <button type="button" className={view === 'graph' ? 'is-active' : undefined} onClick={() => setView('graph')} title="Graph">
+              <ChartLine size={15} /> Graph
+            </button>
+            <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
+              <List size={15} /> List
+            </button>
+          </div>
         </div>
       </div>
       {error && <div className="alert alert-error">{error}</div>}
@@ -115,7 +125,7 @@ export function FunnelDaySpend({
         <div className="muted small">No spend on the linked campaigns in these dates.</div>
       ) : (
         <>
-        <div className="stack" style={{ gap: 8 }}>
+        {view === 'graph' && <div className="stack" style={{ gap: 8 }}>
           <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
             <span className="muted small">Spend per day with GST · click a name below to hide / show its line</span>
             <div className="seg seg-sm" role="group" aria-label="Lines">
@@ -128,8 +138,8 @@ export function FunnelDaySpend({
             </div>
           </div>
           <SpendLines key={by} days={chart.days} lines={chart.lines} />
-        </div>
-        <Paged rows={days} reset={[from, to]}>
+        </div>}
+        {view === 'list' && <Paged rows={days} reset={[from, to]}>
           {(rows) => (
             <div className="table-wrap">
               <table className="table table-compact">
@@ -191,7 +201,7 @@ export function FunnelDaySpend({
               </table>
             </div>
           )}
-        </Paged>
+        </Paged>}
         </>
       )}
     </section>
