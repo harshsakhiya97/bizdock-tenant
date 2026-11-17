@@ -26,3 +26,15 @@ export async function saveDealSteps(bookingId: string, steps: DealStep[]) {
     .eq('id', bookingId)
   if (error) throw new Error(error.message)
 }
+
+/**
+ * Tick a step: it and every step before it are done (the ones already ticked keep their date).
+ * Untick a step: it and every step after it are undone.
+ */
+export function toggleStep(steps: DealStep[], n: number, me: string | null): DealStep[] {
+  const on = steps.some((s) => s.step === n)
+  if (on) return steps.filter((s) => s.step < n)
+  const at = new Date().toISOString()
+  const have = new Map(steps.map((s) => [s.step, s]))
+  return Array.from({ length: n }, (_, i) => have.get(i + 1) ?? { step: i + 1, at, by: me }).concat(steps.filter((s) => s.step > n))
+}

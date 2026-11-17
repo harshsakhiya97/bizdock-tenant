@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { DEAL_STEPS, latestStep, saveDealSteps, type DealStep } from './dealSteps'
+import { DEAL_STEPS, latestStep, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
 
 /** Brand Deals list → Step: the latest step; click to tick / untick steps right here (saved straight away) */
 export function DealStepPicker({
@@ -50,11 +50,11 @@ export function DealStepPicker({
   }
 
   async function tick(n: number) {
-    const next = done.has(n) ? steps.filter((s) => s.step !== n) : [...steps, { step: n, at: new Date().toISOString(), by: me }]
+    const next = toggleStep(steps, n, me)
     setBusy(true)
     try {
       await saveDealSteps(bookingId, next)
-      onSaved(next, done.has(n) ? `Unticked: ${DEAL_STEPS[n - 1]}.` : `Done: ${DEAL_STEPS[n - 1]}.`)
+      onSaved(next, done.has(n) ? n > 1 ? `Back to step ${n - 1}: ${DEAL_STEPS[n - 2]}.` : 'All steps unticked.' : `Done up to step ${n}: ${DEAL_STEPS[n - 1]}.`)
     } catch (e) {
       onError((e as Error).message)
     }
