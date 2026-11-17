@@ -142,7 +142,8 @@ export function QuickAddLead({
             <Label htmlFor="q-tags">Tags</Label>
             <TagInput id="q-tags" value={tags} onChange={setTags} />
           </div>
-          {!funnel && businesses.length > 1 && (
+          {/* the business comes from the top bar; asked only when "All businesses" is picked */}
+          {!funnel && !selected && businesses.length > 1 && (
             <div>
               <Label htmlFor="q-biz" required>
                 Business
