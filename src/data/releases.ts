@@ -27,6 +27,8 @@ export const releases: Release[] = [
       '“Enquiry / Inquiries” is now “Leads” everywhere (dashboards, booking form, new funnels’ first stage).',
       'Bookings list: the date and the time on two lines.',
       'Per-day charts keep the same text size on wide pages; lead counts go up in whole steps.',
+      'Leads: the ✕ (Lost) button for leads in no funnel too (e.g. Brand Deal) — asks the lost reason, sets Category to Not interested and notes it in the lead’s activity.',
+      'Add lead: no Business field when a business is picked in the top bar (the lead goes to it).',
     ],
     removed: [
       'Business cards on the Overview dashboard: the top-source line (e.g. “Instagram · 53”).',
