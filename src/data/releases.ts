@@ -13,6 +13,26 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.19',
+    date: '2026-11-17',
+    title: 'Funnel graphs, one Leads table for every business',
+    summary: 'A funnel’s Facebook spend and leads switch between a graph and a list, with dates and a category filter. The Leads table has the same columns in every business, with a few for Paid Podcast and Studio Rental.',
+    new: [
+      'Funnel → Facebook Ads, Spend per day: Graph / List switch (the chart, or each day with its ads).',
+      'Funnel → Leads: Category filter and a date range (Last 30 days by default, like Facebook), and Graph / List — the graph shows leads per day with a line per category.',
+    ],
+    improved: [
+      'Leads table: the same columns in every business — Lead, Category, Source, Owner, Last comment, Follow-ups done, Next follow-up, Lead date and the Follow-up / ✕ buttons — plus Form (Paid Podcast) or Purpose, Time, Description (Studio Rental). A funnel’s lead list shows the same columns.',
+      'Switching the business in the top bar: a page the new business doesn’t have goes to Dashboards, and a detail page (a funnel, a lead…) goes back to its list.',
+      '“Enquiry / Inquiries” is now “Leads” everywhere (dashboards, booking form, new funnels’ first stage).',
+      'Bookings list: the date and the time on two lines.',
+      'Per-day charts keep the same text size on wide pages; lead counts go up in whole steps.',
+    ],
+    removed: [
+      'Business cards on the Overview dashboard: the top-source line (e.g. “Instagram · 53”).',
+    ],
+  },
+  {
     version: '0.18',
     date: '2026-11-16',
     title: 'Company Master, GST / non-GST invoices and the Bookings page',
