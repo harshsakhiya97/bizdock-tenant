@@ -782,7 +782,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
 
 /** A lead row (every business): Category, Source, Owner, then Form (Paid Podcast) or Purpose / Time / Description
  *  (Studio Rental), Last comment, Follow-ups done, Next follow-up, Lead date and the Follow-up / Meeting / ✕ buttons */
-function LeadCells({
+export function LeadCells({
   kind,
   l,
   x,

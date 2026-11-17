@@ -2,15 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, CalendarDays, ChartLine, List, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
-import { Empty, Paged } from '@/components/ui'
+import { Empty } from '@/components/ui'
 import { listEvents, type EventRow } from '@/calendar/api'
 import { listFunnelLeads, listMemberOptions, listSources } from '@/leads/api'
-import { followUp, fullName, money, tempOf } from '@/leads/labels'
 import type { LeadRow, MemberOption, Option } from '@/leads/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { listFunnelSubmissions, listFunnels, listLandingPages, listSheets, listWebhooks } from './api'
 import { FunnelDrawer } from './FunnelDrawer'
+import { FunnelLeadsTable } from './FunnelLeadsTable'
+import { activeType } from '@/business/activeType'
 import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
@@ -365,59 +366,16 @@ export function FunnelPage() {
                 <SpendLines key={`${leadRange.from}|${leadRange.to}`} days={leadChart.days} lines={leadChart.lines} unit="count" />
               </div>
             ) : (
-              <Paged rows={rangedLeads} reset={[leadRange, leadTemp]}>
-{(paged) => (
-<div className="table-wrap">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Lead</th>
-                      <th>Temp</th>
-                      <th>Source</th>
-                      <th>Owner</th>
-                      <th>Next follow-up</th>
-                      <th style={{ textAlign: 'right' }}>Value</th>
-                      <th>Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paged.map((l) => {
-                      const t = tempOf(l.temperature)
-                      const fu = followUp(l.next_follow_up_at)
-                      return (
-                        <tr key={l.id} className="is-clickable" onClick={() => openLead(l.id)}>
-                          <td>
-                            <span className="strong">{fullName(l)}</span>
-                            <div className="muted small">
-                              {l.phone}
-                              {l.city ? ` · ${l.city}` : ''}
-                            </div>
-                            {l.tags.length > 0 && (
-                              <div className="row" style={{ gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
-                                {l.tags.map((tg) => (
-                                  <span key={tg} className="tag-chip tag-chip-sm">
-                                    {tg}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                          <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
-                          <td>{sources.find((x) => x.id === l.source_id)?.name ?? <span className="muted">—</span>}</td>
-                          <td className="nowrap">{members.find((m) => m.id === l.owner_id)?.name ?? <span className="muted">Unassigned</span>}</td>
-                          <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
-                          <td className="num" style={{ textAlign: 'right' }}>
-                            {money(l.estimated_amount)}
-                          </td>
-                          <td className="muted nowrap">{new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-)}
-</Paged>
+              <FunnelLeadsTable
+                funnel={funnel}
+                type={activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null)}
+                leads={rangedLeads}
+                sources={sources}
+                members={members}
+                resetKey={[leadRange, leadTemp]}
+                onOpen={openLead}
+                onChanged={() => listFunnelLeads(funnel.id).then(setLeads)}
+              />
             ))}
         </div>
       </div>
