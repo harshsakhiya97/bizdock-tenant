@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Paged } from '@/components/ui'
-import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
+import { GripVertical, Plus } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { listSimple, saveSimple } from './api'
 import { EVENT_KINDS, type SimpleRow, type SimpleTable } from './types'
@@ -55,19 +55,30 @@ export function SimpleList({
     }
   }
 
-  /** move a row up / down: it swaps places with its neighbour (the order is renumbered 1, 2, 3…) */
-  async function move(r: Draft, dir: -1 | 1) {
+  /** drag a row onto another: it takes that place (the order is renumbered 1, 2, 3… and saved straight away) */
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+  // only the grip starts a drag (so typing in the name box still works)
+  const [armed, setArmed] = useState<string | null>(null)
+  async function drop(targetId: string) {
+    const from = dragId
+    setDragId(null)
+    setOverId(null)
+    if (!from || from === targetId) return
     const list = [...(rows ?? [])]
-    const i = list.findIndex((x) => x.id === r.id)
-    const j = i + dir
-    if (j < 0 || j >= list.length) return
-    ;[list[i], list[j]] = [list[j], list[i]]
-    setBusy(r.id)
+    const i = list.findIndex((x) => x.id === from)
+    const j = list.findIndex((x) => x.id === targetId)
+    const [moved] = list.splice(i, 1)
+    list.splice(j, 0, moved)
+    setRows(list.map((x, k) => ({ ...x, sort_order: k + 1 })))
+    setBusy(from)
     try {
       await Promise.all(list.map((x, k) => (x.sort_order === k + 1 ? null : saveSimple(table, tenant.id, { ...x, sort_order: k + 1 }))))
+      onNotice({ ok: `${moved.name} moved to ${j + 1}.` })
       load()
     } catch (e) {
       onNotice({ error: (e as Error).message })
+      load()
     } finally {
       setBusy(null)
     }
@@ -106,7 +117,7 @@ export function SimpleList({
           <table className="table master-table">
             <thead>
               <tr>
-                <th style={{ width: reorder ? 110 : 80 }}>Order</th>
+                <th style={{ width: 80 }}>Order</th>
                 <th>Name</th>
                 {hasKind && <th style={{ width: 170 }}>Kind</th>}
                 {hasColor && <th style={{ width: 80 }}>Colour</th>}
@@ -116,17 +127,40 @@ export function SimpleList({
             </thead>
             <tbody>
               {paged.map((r) => (
-                <tr key={r.id} className={r.is_active ? undefined : 'is-off'}>
+                <tr
+                  key={r.id}
+                  className={[r.is_active ? '' : 'is-off', reorder && dragId === r.id ? 'is-dragging' : '', reorder && overId === r.id && dragId !== r.id ? 'is-drop' : ''].join(' ').trim() || undefined}
+                  draggable={reorder && canEdit && busy === null && armed === r.id}
+                  onDragStart={(e) => {
+                    setDragId(r.id)
+                    e.dataTransfer.effectAllowed = 'move'
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragId) return
+                    e.preventDefault()
+                    if (overId !== r.id) setOverId(r.id)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    void drop(r.id)
+                  }}
+                  onDragEnd={() => {
+                    setDragId(null)
+                    setOverId(null)
+                    setArmed(null)
+                  }}
+                >
                   <td>
                     {reorder ? (
-                      <div className="row nowrap" style={{ gap: 2 }}>
-                        <span className="muted small" style={{ width: 18 }}>{(rows ?? []).indexOf(r) + 1}</span>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Move up" disabled={!canEdit || busy !== null || (rows ?? [])[0]?.id === r.id} onClick={() => void move(r, -1)}>
-                          <ArrowUp size={14} />
-                        </button>
-                        <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Move down" disabled={!canEdit || busy !== null || (rows ?? []).at(-1)?.id === r.id} onClick={() => void move(r, 1)}>
-                          <ArrowDown size={14} />
-                        </button>
+                      <div
+                        className="row nowrap drag-handle"
+                        style={{ gap: 6 }}
+                        title={canEdit ? 'Drag to reorder' : undefined}
+                        onMouseDown={() => canEdit && setArmed(r.id)}
+                        onMouseUp={() => setArmed(null)}
+                      >
+                        {canEdit && <GripVertical size={16} className="muted" />}
+                        <span className="muted small">{(rows ?? []).indexOf(r) + 1}</span>
                       </div>
                     ) : (
                     <input
