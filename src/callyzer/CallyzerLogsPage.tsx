@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PlayRecording } from './PlayRecording'
 import { useNavigate } from 'react-router'
 import { PhoneCall, RefreshCw } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
@@ -19,6 +20,7 @@ type CallLog = {
   emp_name: string | null
   agent_phone: string | null
   recording_url: string | null
+  recording_path: string | null
   lead_name: string | null
 }
 
@@ -178,13 +180,7 @@ export function CallyzerLogsPage() {
                           </td>
                           <td className="small nowrap">{by(r) || <span className="muted">—</span>}</td>
                           <td onClick={(e) => e.stopPropagation()}>
-                            {r.recording_url ? (
-                              <a href={r.recording_url} target="_blank" rel="noreferrer">
-                                Play
-                              </a>
-                            ) : (
-                              <span className="muted">—</span>
-                            )}
+                            <PlayRecording path={r.recording_path} url={r.recording_url} />
                           </td>
                         </tr>
                       )

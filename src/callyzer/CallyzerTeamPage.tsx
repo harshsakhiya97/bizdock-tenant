@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { PlayRecording } from './PlayRecording'
 import { Link } from 'react-router'
 import { Drawer } from '@/components/Drawer'
 import { CheckCircle2, MicOff, PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react'
@@ -173,6 +174,7 @@ type Call = {
   call_mode: string | null
   duration_sec: number
   recording_url: string | null
+  recording_path: string | null
   lead_id: string | null
   lead_name: string | null
 }
@@ -254,10 +256,8 @@ function StaffCalls({ staff, range, onClose }: { staff: Row; range: Range; onClo
                             <span className={cn('badge', ok ? 'badge-success' : 'badge-muted')}>{ok ? 'Connected' : 'Not connected'}</span>
                           </td>
                           <td>
-                            {c.recording_url ? (
-                              <a href={c.recording_url} target="_blank" rel="noreferrer">
-                                Play
-                              </a>
+                            {c.recording_url || c.recording_path ? (
+                              <PlayRecording path={c.recording_path} url={c.recording_url} />
                             ) : ok && c.call_method === 'PhoneCall' ? (
                               <span className="tone-danger small">Missing</span>
                             ) : (
