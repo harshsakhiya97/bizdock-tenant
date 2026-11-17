@@ -75,6 +75,7 @@ export type SimpleTable =
   | 'follow_up_outcomes'
   | 'event_types'
   | 'webinar_types'
+  | 'deal_steps'
 
 export const EVENT_KINDS = [
   { value: 'event', label: 'Event' },

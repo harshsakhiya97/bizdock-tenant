@@ -25,6 +25,7 @@ const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> =
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
   lead_sources: { title: 'Lead sources', purpose: 'Where a lead came from.' },
   follow_up_outcomes: { title: 'Follow-up outcomes', purpose: 'The result of a call or follow-up.' },
+  deal_steps: { title: 'Brand deal steps', purpose: 'The steps of a Brand Deal, in order (ticked in the deal and in the Brand Deals list).' },
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -35,6 +36,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'payment_modes', label: 'Payment modes' },
   { id: 'lead_sources', label: 'Lead sources' },
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
+  { id: 'deal_steps', label: 'Brand deal steps' },
   { id: 'goods', label: 'Products' },
   { id: 'webinar_hosts', label: 'Webinar hosts' },
   { id: 'whatsapp', label: 'WhatsApp messages' },
@@ -48,7 +50,9 @@ export function MastersPage() {
   const canEdit = can('masters', 'edit')
   const [params, setParams] = useSearchParams()
   const webinar = businesses.some((b) => b.type === BT.WEBINAR || b.subs.some((x) => x.type === BT.WEBINAR))
-  const tabs = TABS.filter((t) => webinar || !WEBINAR_TABS.includes(t.id))
+  // Brand deal steps: only with a Brand Deals business
+  const brandDeals = businesses.some((b) => b.type === BT.BRAND_DEALS || b.subs.some((x) => x.type === BT.BRAND_DEALS))
+  const tabs = TABS.filter((t) => (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps'))
   const tab = (tabs.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const go = (t: Tab) => {
@@ -73,7 +77,7 @@ export function MastersPage() {
             ))}
           </div>
         </div>
-        {tab === 'overview' && <Overview go={go} webinar={webinar} />}
+        {tab === 'overview' && <Overview go={go} webinar={webinar} brandDeals={brandDeals} />}
         {tab === 'companies' && <CompaniesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'products' && <ProductsTab key="services" canEdit={canEdit} onNotice={onNotice} />}
@@ -88,6 +92,7 @@ export function MastersPage() {
             description={SIMPLE[tab as SimpleTable]!.purpose}
             canEdit={canEdit}
             onNotice={onNotice}
+            reorder={tab === 'deal_steps'}
           />
         )}
       </div>
@@ -106,11 +111,11 @@ const ABOUT: Partial<Record<Tab, { table: string; purpose: string }>> = {
   ...Object.fromEntries((Object.keys(SIMPLE) as SimpleTable[]).map((t) => [t, { table: t, purpose: SIMPLE[t]!.purpose }])),
 }
 
-function Overview({ go, webinar }: { go: (t: Tab) => void; webinar: boolean }) {
+function Overview({ go, webinar, brandDeals }: { go: (t: Tab) => void; webinar: boolean; brandDeals: boolean }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   // the same lists, in the same order, as the tabs
-  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
+  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
   useEffect(() => {
     void Promise.all(
       Object.values(ABOUT).map(({ table: t }) => {

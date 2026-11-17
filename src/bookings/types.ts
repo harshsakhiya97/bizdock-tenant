@@ -56,7 +56,7 @@ export type BookingRow = {
   order_no: string | null
   order_status: OrderStatus | null
   /** Brand Deals: the steps ticked (see dealSteps.ts) */
-  deal_steps?: { step: number; at: string; by?: string | null }[]
+  deal_steps?: { step_id: string; at: string; by?: string | null }[]
   /** an order's invoice (Default / Brand Deals: one invoice can hold several orders of one client) */
   invoice_id: string | null
   /** that invoice's number (orders carry none of their own) */

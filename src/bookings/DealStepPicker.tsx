@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { DEAL_STEPS, latestStep, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
+import { latestStep, saveDealSteps, toggleStep, type DealStep, type StepDef } from './dealSteps'
 
 /** Brand Deals list → Step: the latest step; click to tick / untick steps right here (saved straight away) */
 export function DealStepPicker({
   bookingId,
+  defs,
   steps,
   canTick,
   me,
@@ -14,6 +15,8 @@ export function DealStepPicker({
   onError,
 }: {
   bookingId: string
+  /** Masters → Brand deal steps, in order */
+  defs: StepDef[]
   steps: DealStep[]
   canTick: boolean
   me: string | null
@@ -25,8 +28,8 @@ export function DealStepPicker({
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null)
   const btn = useRef<HTMLButtonElement>(null)
   const pop = useRef<HTMLDivElement>(null)
-  const ls = latestStep(steps)
-  const done = new Map(steps.map((s) => [s.step, s]))
+  const ls = latestStep(steps, defs)
+  const done = new Map(steps.map((s) => [s.step_id, s]))
 
   useEffect(() => {
     if (!open) return
@@ -49,12 +52,13 @@ export function DealStepPicker({
     setOpen((o) => !o)
   }
 
-  async function tick(n: number) {
-    const next = toggleStep(steps, n, me)
+  async function tick(id: string) {
+    const i = defs.findIndex((d) => d.id === id)
+    const next = toggleStep(steps, defs, id, me)
     setBusy(true)
     try {
       await saveDealSteps(bookingId, next)
-      onSaved(next, done.has(n) ? n > 1 ? `Back to step ${n - 1}: ${DEAL_STEPS[n - 2]}.` : 'All steps unticked.' : `Done up to step ${n}: ${DEAL_STEPS[n - 1]}.`)
+      onSaved(next, done.has(id) ? (i > 0 ? `Back to step ${i}: ${defs[i - 1].name}.` : 'All steps unticked.') : `Done up to step ${i + 1}: ${defs[i].name}.`)
     } catch (e) {
       onError((e as Error).message)
     }
@@ -67,10 +71,10 @@ export function DealStepPicker({
         {ls ? (
           <>
             <span className="badge badge-info">
-              {ls.step}/{DEAL_STEPS.length}
+              {ls.n}/{defs.length}
             </span>{' '}
-            <span className="small">{DEAL_STEPS[ls.step - 1]}</span>
-            <span className="muted small"> · {new Date(ls.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+            <span className="small">{ls.def.name}</span>
+            <span className="muted small"> · {new Date(ls.tick.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
           </>
         ) : (
           <span className="muted small">No step yet</span>
@@ -82,14 +86,13 @@ export function DealStepPicker({
         createPortal(
           <div ref={pop} className="step-pop" data-popover style={{ top: pos.top, left: pos.left }}>
             <div className="deal-steps">
-              {DEAL_STEPS.map((name, i) => {
-                const n = i + 1
-                const d = done.get(n)
+              {defs.map((def, i) => {
+                const d = done.get(def.id)
                 return (
-                  <label key={n} className={cn('deal-step', d && 'is-done')}>
-                    <input type="checkbox" checked={!!d} disabled={busy} onChange={() => void tick(n)} />
-                    <span className="deal-step-no">{d ? '✔' : n}</span>
-                    <span className="deal-step-name">{name}</span>
+                  <label key={def.id} className={cn('deal-step', d && 'is-done')}>
+                    <input type="checkbox" checked={!!d} disabled={busy} onChange={() => void tick(def.id)} />
+                    <span className="deal-step-no">{d ? '✔' : i + 1}</span>
+                    <span className="deal-step-name">{def.name}</span>
                   </label>
                 )
               })}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Paged } from '@/components/ui'
-import { Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, Plus } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { listSimple, saveSimple } from './api'
 import { EVENT_KINDS, type SimpleRow, type SimpleTable } from './types'
@@ -14,12 +14,15 @@ export function SimpleList({
   description,
   canEdit,
   onNotice,
+  reorder = false,
 }: {
   table: SimpleTable
   title: string
   description: string
   canEdit: boolean
   onNotice: (n: { ok?: string; error?: string }) => void
+  /** ↑ ↓ buttons instead of an order number (saved straight away) */
+  reorder?: boolean
 }) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Draft[] | null>(null)
@@ -44,6 +47,24 @@ export function SimpleList({
     try {
       await saveSimple(table, tenant.id, r)
       onNotice({ ok: `${r.name.trim()} saved.` })
+      load()
+    } catch (e) {
+      onNotice({ error: (e as Error).message })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** move a row up / down: it swaps places with its neighbour (the order is renumbered 1, 2, 3…) */
+  async function move(r: Draft, dir: -1 | 1) {
+    const list = [...(rows ?? [])]
+    const i = list.findIndex((x) => x.id === r.id)
+    const j = i + dir
+    if (j < 0 || j >= list.length) return
+    ;[list[i], list[j]] = [list[j], list[i]]
+    setBusy(r.id)
+    try {
+      await Promise.all(list.map((x, k) => (x.sort_order === k + 1 ? null : saveSimple(table, tenant.id, { ...x, sort_order: k + 1 }))))
       load()
     } catch (e) {
       onNotice({ error: (e as Error).message })
@@ -85,7 +106,7 @@ export function SimpleList({
           <table className="table master-table">
             <thead>
               <tr>
-                <th style={{ width: 80 }}>Order</th>
+                <th style={{ width: reorder ? 110 : 80 }}>Order</th>
                 <th>Name</th>
                 {hasKind && <th style={{ width: 170 }}>Kind</th>}
                 {hasColor && <th style={{ width: 80 }}>Colour</th>}
@@ -97,6 +118,17 @@ export function SimpleList({
               {paged.map((r) => (
                 <tr key={r.id} className={r.is_active ? undefined : 'is-off'}>
                   <td>
+                    {reorder ? (
+                      <div className="row nowrap" style={{ gap: 2 }}>
+                        <span className="muted small" style={{ width: 18 }}>{(rows ?? []).indexOf(r) + 1}</span>
+                        <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Move up" disabled={!canEdit || busy !== null || (rows ?? [])[0]?.id === r.id} onClick={() => void move(r, -1)}>
+                          <ArrowUp size={14} />
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Move down" disabled={!canEdit || busy !== null || (rows ?? []).at(-1)?.id === r.id} onClick={() => void move(r, 1)}>
+                          <ArrowDown size={14} />
+                        </button>
+                      </div>
+                    ) : (
                     <input
                       className="input input-sm"
                       type="number"
@@ -105,6 +137,7 @@ export function SimpleList({
                       onChange={(e) => edit(r.id, { sort_order: Number(e.target.value) })}
                       aria-label={`Order of ${r.name}`}
                     />
+                    )}
                   </td>
                   <td>
                     <input
