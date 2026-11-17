@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { ArrowLeft, CalendarDays, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
+import { ArrowLeft, CalendarDays, ChartLine, List, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty, Paged } from '@/components/ui'
 import { listEvents, type EventRow } from '@/calendar/api'
@@ -22,6 +22,9 @@ import { funnelCampaignCount } from '@/meta/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
+import { DateRangePicker, isoDay, presetRange, type Range } from '@/components/DateRange'
+import { SpendLines, type Line } from './SpendLines'
+import { TEMPERATURES } from '@/leads/labels'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -52,6 +55,29 @@ export function FunnelPage() {
   const [sheets, setSheets] = useState<FunnelSheet[] | null>(null)
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
+  // Leads tab: a date range (lead date), and Graph (leads per day, a line per category) or List
+  const [leadRange, setLeadRange] = useState<Range>(() => presetRange('max'))
+  const [leadView, setLeadView] = useState<'graph' | 'list'>('list')
+  const rangedLeads = useMemo(
+    () => (leads ?? []).filter((l) => { const d = isoDay(new Date(l.created_at)); return d >= leadRange.from && d <= leadRange.to }),
+    [leads, leadRange],
+  )
+  const leadChart = useMemo(() => {
+    if (!rangedLeads.length) return { days: [] as string[], lines: [] as Line[] }
+    const first = rangedLeads.reduce((m, l) => (isoDay(new Date(l.created_at)) < m ? isoDay(new Date(l.created_at)) : m), leadRange.to)
+    const days: string[] = []
+    for (let d = new Date(`${first > leadRange.from ? first : leadRange.from}T00:00:00`); isoDay(d) <= leadRange.to; d.setDate(d.getDate() + 1)) days.push(isoDay(d))
+    const at = new Map(days.map((d, i) => [d, i]))
+    const count = (keep: (l: LeadRow) => boolean) => {
+      const v = days.map(() => 0)
+      for (const l of rangedLeads) if (keep(l)) { const i = at.get(isoDay(new Date(l.created_at))); if (i != null) v[i]++ }
+      return v
+    }
+    const lines: Line[] = [{ key: 'all', name: 'All leads', values: count(() => true) }]
+    for (const t of TEMPERATURES) if (rangedLeads.some((l) => l.temperature === t.value)) lines.push({ key: t.value, name: t.label, values: count((l) => l.temperature === t.value) })
+    if (rangedLeads.some((l) => !l.temperature)) lines.push({ key: 'none', name: 'No category', values: count((l) => !l.temperature) })
+    return { days, lines }
+  }, [rangedLeads, leadRange])
   const [flowCount, setFlowCount] = useState<number | null>(null)
   // Facebook campaigns added to this funnel
   const [adCount, setAdCount] = useState<number | null>(null)
@@ -295,13 +321,38 @@ export function FunnelPage() {
               }} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
+          {tab === 'leads' && leads && leads.length > 0 && (
+            <div className="row-between" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              <span className="muted small">
+                {rangedLeads.length} lead{rangedLeads.length === 1 ? '' : 's'} in these dates (lead date)
+              </span>
+              <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                <DateRangePicker value={leadRange} onChange={setLeadRange} />
+                <div className="seg" role="group" aria-label="View">
+                  <button type="button" className={leadView === 'graph' ? 'is-active' : undefined} onClick={() => setLeadView('graph')} title="Graph">
+                    <ChartLine size={15} /> Graph
+                  </button>
+                  <button type="button" className={leadView === 'list' ? 'is-active' : undefined} onClick={() => setLeadView('list')} title="List">
+                    <List size={15} /> List
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {tab === 'leads' &&
             (!leads ? (
               <div className="empty">Loading leads…</div>
             ) : leads.length === 0 ? (
               <Empty icon={Users}>No leads in this funnel yet.</Empty>
+            ) : rangedLeads.length === 0 ? (
+              <Empty icon={Users}>No leads in these dates.</Empty>
+            ) : leadView === 'graph' ? (
+              <div className="stack" style={{ gap: 8 }}>
+                <span className="muted small">Leads per day, and by category (each lead’s category now) · click a name below to hide / show its line</span>
+                <SpendLines key={`${leadRange.from}|${leadRange.to}`} days={leadChart.days} lines={leadChart.lines} unit="count" />
+              </div>
             ) : (
-              <Paged rows={leads}>
+              <Paged rows={rangedLeads} reset={leadRange}>
 {(paged) => (
 <div className="table-wrap">
                 <table className="table">
