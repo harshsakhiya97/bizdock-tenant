@@ -11,6 +11,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
+import { ALL_DATES, DateRangePicker } from '@/components/DateRange'
 import { listLeads, listMemberOptions } from '@/leads/api'
 import { money } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
@@ -62,7 +63,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', status: '', pay: '', overdue: false, member: '', from: '', to: '' })
+  const [f, setF] = useState({ q: '', status: '', pay: '', overdue: false, member: '', range: ALL_DATES })
   const [open, setOpen] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
   const [invoices, setInvoices] = useState<Map<string, InvoiceRow>>(new Map())
   // orders ticked for one invoice
@@ -109,8 +110,8 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
       .filter((b) => !f.pay || payState(b) === f.pay)
       .filter((b) => !f.overdue || !!invoices.get(b.invoice_id ?? '')?.invoice_payments.some((p) => partState(p) === 'overdue'))
       .filter((b) => !f.member || b.owner_id === f.member)
-      .filter((b) => !f.from || b.booking_date >= f.from)
-      .filter((b) => !f.to || b.booking_date <= f.to)
+      .filter((b) => !f.range.from || b.booking_date >= f.range.from)
+      .filter((b) => !f.range.to || b.booking_date <= f.range.to)
       .filter((b) => !q || `${b.order_no ?? ''} ${invoiceNo(b) ?? ''} ${b.client_name} ${b.phone ?? ''} ${services(b)}`.toLowerCase().includes(q))
       .sort((a, b) => b.booking_date.localeCompare(a.booking_date) || (b.order_no ?? '').localeCompare(a.order_no ?? ''))
   }, [scoped, f, invoices, bookings])
@@ -143,7 +144,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
     setError(null)
     setInvoicing(pickedRows)
   }
-  const filtered = f.q || f.status || f.pay || f.overdue || f.member || f.from || f.to
+  const filtered = f.q || f.status || f.pay || f.overdue || f.member || f.range.key !== 'all'
 
   return (
     <>
@@ -204,14 +205,9 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
           <label className="row small" style={{ gap: 6 }}>
             <input type="checkbox" checked={f.overdue} onChange={(e) => setF((x) => ({ ...x, overdue: e.target.checked }))} /> Overdue parts
           </label>
-          <span className="row muted small" style={{ gap: 6 }}>
-            From
-            <input className="input input-sm filter-select" type="date" aria-label="From" value={f.from} max={f.to || undefined} onChange={(e) => setF((x) => ({ ...x, from: e.target.value }))} />
-            to
-            <input className="input input-sm filter-select" type="date" aria-label="To" value={f.to} min={f.from || undefined} onChange={(e) => setF((x) => ({ ...x, to: e.target.value }))} />
-          </span>
+          <DateRangePicker allDates future value={f.range} onChange={(range) => setF((x) => ({ ...x, range }))} />
           {filtered && (
-            <button type="button" className="clear-btn" onClick={() => setF({ q: '', status: '', pay: '', overdue: false, member: '', from: '', to: '' })}>
+            <button type="button" className="clear-btn" onClick={() => setF({ q: '', status: '', pay: '', overdue: false, member: '', range: ALL_DATES })}>
               Reset
             </button>
           )}

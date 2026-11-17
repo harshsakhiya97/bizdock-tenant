@@ -5,6 +5,7 @@ import { Hint, Label, TextInput } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
 import { templateOptions, useWatiTemplates, watiVars } from '@/workflows/WhatsAppFields'
 import { at, leadName, listChat, listWaLogs, nicePhone, sendWaTemplate, STATUS_META, type WaLog, type WaLogStatus } from './waLogs'
@@ -25,8 +26,8 @@ export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
   const tenant = useTenant()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const [from, setFrom] = useState(ago(view === 'chats' ? 90 : 30))
-  const [to, setTo] = useState(day(new Date()))
+  const [range, setRange] = useState<Range>(() => ({ key: 'custom', from: ago(view === 'chats' ? 90 : 30), to: day(new Date()) }))
+  const { from, to } = range
   const [rows, setRows] = useState<WaLog[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -48,7 +49,7 @@ export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
       />
       {error && <div className="alert alert-error">{error}</div>}
       {view === 'logs' ? (
-        <LogsTab rows={rows} from={from} to={to} setFrom={setFrom} setTo={setTo} reload={load} openChat={(p) => navigate(`/whatsapp/chats?phone=${p}`)} />
+        <LogsTab rows={rows} range={range} setRange={setRange} reload={load} openChat={(p) => navigate(`/whatsapp/chats?phone=${p}`)} />
       ) : (
         <ChatsTab rows={rows} phone={params.get('phone')} pick={(p) => setParams({ phone: p }, { replace: true })} reload={load} />
       )}
@@ -58,18 +59,14 @@ export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
 
 function LogsTab({
   rows,
-  from,
-  to,
-  setFrom,
-  setTo,
+  range,
+  setRange,
   reload,
   openChat,
 }: {
   rows: WaLog[] | null
-  from: string
-  to: string
-  setFrom: (v: string) => void
-  setTo: (v: string) => void
+  range: Range
+  setRange: (r: Range) => void
   reload: () => void
   openChat: (phone: string) => void
 }) {
@@ -118,8 +115,7 @@ function LogsTab({
             </option>
           ))}
         </select>
-        <input className="input input-sm filter-select" aria-label="From date" title="From date" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-        <input className="input input-sm filter-select" aria-label="To date" title="To date" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        <DateRangePicker value={range} onChange={setRange} />
         {(q || status || source || template) && (
           <button
             type="button"

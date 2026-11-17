@@ -7,6 +7,7 @@ import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { useBusiness } from '@/business/useBusiness'
+import { DateRangePicker, type Range } from '@/components/DateRange'
 import { at, nicePhone as waPhone } from '@/integrations/waLogs'
 
 type CallLog = {
@@ -42,8 +43,8 @@ export function CallyzerLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
   const { selected, sub } = useBusiness()
-  const [from, setFrom] = useState(ago(30))
-  const [to, setTo] = useState(day(new Date()))
+  const [range, setRange] = useState<Range>(() => ({ key: 'custom', from: ago(30), to: day(new Date()) }))
+  const { from, to } = range
   const [rows, setRows] = useState<CallLog[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
@@ -118,8 +119,7 @@ export function CallyzerLogsPage() {
               </option>
             ))}
           </select>
-          <input className="input input-sm filter-select" aria-label="From date" title="From date" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-          <input className="input input-sm filter-select" aria-label="To date" title="To date" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+          <DateRangePicker value={range} onChange={setRange} />
           {(q || method || dir || status || emp) && (
             <button
               type="button"

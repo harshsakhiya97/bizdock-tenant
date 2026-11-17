@@ -11,6 +11,7 @@ import { ScheduleModal } from './ScheduleModal'
 import type { FollowUpRow } from './types'
 import { useFollowUpData } from './useFollowUpData'
 import { Flash } from '@/components/Flash'
+import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 
 const TABS = [
   { id: 'pending', label: 'Pending' },
@@ -31,8 +32,8 @@ export function FollowUpsPage() {
   const [assigned, setAssigned] = useState('')
   const [mode, setMode] = useState('')
   const [cat, setCat] = useState('')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [range, setRange] = useState<Range>(ALL_DATES)
+  const { from, to } = range
   const [done, setDone] = useState<FollowUpRow | null>(null)
   const [schedule, setSchedule] = useState<{ f: FollowUpRow | null } | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -177,12 +178,7 @@ export function FollowUpsPage() {
               </option>
             ))}
           </select>
-          <span className="row muted small" style={{ gap: 6 }}>
-            Due from
-            <input type="date" className="input input-sm" style={{ width: 150 }} value={from} onChange={(e) => setFrom(e.target.value)} />
-            to
-            <input type="date" className="input input-sm" style={{ width: 150 }} value={to} onChange={(e) => setTo(e.target.value)} />
-          </span>
+          <DateRangePicker allDates future value={range} onChange={setRange} />
           {(q || assigned || mode || from || to) && (
             <button
               type="button"
@@ -191,8 +187,7 @@ export function FollowUpsPage() {
                 setQ('')
                 setAssigned('')
                 setMode('')
-                setFrom('')
-                setTo('')
+                setRange(ALL_DATES)
               }}
             >
               Reset

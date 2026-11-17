@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ArrowLeft, Megaphone, RefreshCw, X } from 'lucide-react'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { Flash } from '@/components/Flash'
+import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { disconnectIntegration, listIntegrations, type IntegrationRow } from '@/integrations/api'
@@ -15,18 +16,6 @@ import { AdPreviewDrawer } from './AdPreviewDrawer'
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const inr2 = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const num = (n: number) => Number(n || 0).toLocaleString('en-IN')
-const day = (d: Date) => d.toLocaleDateString('en-CA')
-const ago = (n: number) => day(new Date(Date.now() - n * 86400_000))
-const PRESETS = [
-  { key: 'today', label: 'Today', from: () => ago(0) },
-  { key: 'yesterday', label: 'Yesterday', from: () => ago(1), to: () => ago(1) },
-  { key: '7', label: 'Last 7 days', from: () => ago(6) },
-  { key: '30', label: 'Last 30 days', from: () => ago(29) },
-  { key: '90', label: 'Last 90 days', from: () => ago(89) },
-  { key: 'month', label: 'This month', from: () => `${day(new Date()).slice(0, 8)}01` },
-  { key: 'all', label: 'Everything', from: () => '2020-01-01' },
-] as const
-
 /** Facebook's delivery words */
 const STATUS: Record<string, [string, string]> = {
   ACTIVE: ['Active', 'badge-success'],
@@ -57,9 +46,8 @@ export function MetaLogsPage() {
   const [accounts, setAccounts] = useState<AdAccount[]>([])
   const [data, setData] = useState<Awaited<ReturnType<typeof metaLogs>> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [preset, setPreset] = useState<string>('30')
-  const [from, setFrom] = useState(ago(29))
-  const [to, setTo] = useState(day(new Date()))
+  const [range, setRange] = useState<Range>(() => presetRange('last30'))
+  const { from, to } = range
   const [account, setAccount] = useState('')
   const [level, setLevel] = useState<Level>('campaigns')
   const [campaign, setCampaign] = useState<MetaObj | null>(null)
@@ -88,14 +76,6 @@ export function MetaLogsPage() {
   }, [tenant.id, from, to])
   useEffect(load, [load])
 
-  function pickPreset(k: string) {
-    setPreset(k)
-    const p = PRESETS.find((x) => x.key === k)
-    if (p) {
-      setFrom(p.from())
-      setTo('to' in p ? p.to() : day(new Date()))
-    }
-  }
   function reconnect(id: string) {
     try {
       const c = connectMeta(tenant.id, id)
@@ -347,20 +327,7 @@ export function MetaLogsPage() {
           <label className="row small" style={{ gap: 6 }}>
             <input type="checkbox" checked={hadDelivery} onChange={(e) => setHadDelivery(e.target.checked)} /> Had delivery
           </label>
-          <select className="input input-sm filter-select" aria-label="Period" value={preset} onChange={(e) => pickPreset(e.target.value)}>
-            {PRESETS.map((p) => (
-              <option key={p.key} value={p.key}>
-                {p.label}
-              </option>
-            ))}
-            <option value="custom">Custom dates</option>
-          </select>
-          {preset === 'custom' && (
-            <>
-              <input className="input input-sm filter-select" type="date" aria-label="From" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-              <input className="input input-sm filter-select" type="date" aria-label="To" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-            </>
-          )}
+          <DateRangePicker value={range} onChange={setRange} />
           <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={load} title="Refresh" aria-label="Refresh" style={{ marginLeft: 'auto' }}>
             <RefreshCw size={14} />
           </button>
