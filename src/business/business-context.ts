@@ -11,6 +11,8 @@ export type BusinessSelection = {
   inScope: (businessId: string | null | undefined, subId?: string | null) => boolean
   /** true when the user can see more than one business (so "All businesses" makes sense) */
   canSeeAll: boolean
+  /** goes up each time the user picks another business / sub-business in the top bar */
+  switches: number
 }
 
 export const BusinessContext = createContext<BusinessSelection | undefined>(undefined)

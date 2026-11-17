@@ -30,6 +30,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
   const skey = subKey(tenant.id)
   const [selectedId, setSelectedId] = useState<string | null>(() => readStored(key))
   const [subId, setSubId] = useState<string | null>(() => readStored(skey))
+  const [switches, setSwitches] = useState(0)
 
   const canSeeAll = businesses.length > 1
   // fall back if the stored business is gone; with only one business, it's always selected
@@ -43,6 +44,7 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     (id: string | null, nextSub: string | null = null) => {
       setSelectedId(id)
       setSubId(nextSub)
+      setSwitches((n) => n + 1)
       store(key, id)
       store(skey, nextSub)
     },
@@ -55,6 +57,6 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
     [selected, sub],
   )
 
-  const value = useMemo(() => ({ selected, sub, select, inScope, canSeeAll }), [selected, sub, select, inScope, canSeeAll])
+  const value = useMemo(() => ({ selected, sub, select, inScope, canSeeAll, switches }), [selected, sub, select, inScope, canSeeAll, switches])
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>
 }
