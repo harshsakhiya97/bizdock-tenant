@@ -40,7 +40,9 @@ export async function scheduleFollowUp(
       .eq('status', 'pending')
     if (error) throw error
   }
-  const due = new Date(input.due_at)
+  // the picked date and time are India time, whatever time zone the computer is set to
+  const raw = input.due_at.trim()
+  const due = new Date(/(z|[+-]\d\d:?\d\d)$/i.test(raw) ? raw : `${raw.length === 16 ? `${raw}:00` : raw}+05:30`)
   const { error } = await db()
     .from('follow_ups')
     .insert({
