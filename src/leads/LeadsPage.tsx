@@ -781,7 +781,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         danger
         icon={Trash2}
         title={`Delete ${pickedIds.length} ${word}${pickedIds.length === 1 ? '' : 's'}?`}
-        message="They are removed for good, with their follow-ups, activity and form submissions. Bookings stay, without the link to the lead."
+        message="They are removed for good, with their follow-ups, activity and form submissions, and their bookings / orders / brand deals with those invoices and payments. This can’t be undone."
         confirmLabel="Delete"
         onCancel={() => setDeleting(false)}
         onConfirm={() => {

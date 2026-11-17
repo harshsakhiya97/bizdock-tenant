@@ -413,7 +413,7 @@ export function LeadPage() {
         danger
         icon={Trash2}
         title={`Delete ${name}?`}
-        message="The lead is removed for good, with its follow-ups, activity and form submissions. Its bookings stay, without the link to the lead."
+        message="The lead is removed for good, with its follow-ups, activity and form submissions, and its bookings / orders / brand deals with those invoices and payments. This can’t be undone."
         confirmLabel="Delete"
         onCancel={() => setRemoving(false)}
         onConfirm={async () => {
