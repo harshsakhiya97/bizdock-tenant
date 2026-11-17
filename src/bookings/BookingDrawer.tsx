@@ -16,7 +16,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
-import { DEAL_STEPS, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
+import { saveDealSteps, toggleStep, useDealSteps, type DealStep } from './dealSteps'
 import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
@@ -501,19 +501,21 @@ export function BookingDrawer({
 
 /** Brand Deals: tick the deal's steps (saved straight away, even on a fully paid deal) */
 function DealStepsSection({ booking, canTick, me, onChanged }: { booking: BookingRow; canTick: boolean; me: string | null; onChanged: (msg: string) => void }) {
+  const defs = useDealSteps()
   const [steps, setSteps] = useState<DealStep[]>(booking.deal_steps ?? [])
-  const [busy, setBusy] = useState<number | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const done = new Map(steps.map((s) => [s.step, s]))
+  const done = new Map(steps.map((s) => [s.step_id, s]))
 
-  async function toggle(n: number) {
-    const next = toggleStep(steps, n, me)
-    setBusy(n)
+  async function toggle(id: string) {
+    const i = defs.findIndex((d) => d.id === id)
+    const next = toggleStep(steps, defs, id, me)
+    setBusy(id)
     setError(null)
     try {
       await saveDealSteps(booking.id, next)
       setSteps(next)
-      onChanged(done.has(n) ? n > 1 ? `Back to step ${n - 1}: ${DEAL_STEPS[n - 2]}.` : 'All steps unticked.' : `Done up to step ${n}: ${DEAL_STEPS[n - 1]}.`)
+      onChanged(done.has(id) ? (i > 0 ? `Back to step ${i}: ${defs[i - 1].name}.` : 'All steps unticked.') : `Done up to step ${i + 1}: ${defs[i].name}.`)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -521,17 +523,16 @@ function DealStepsSection({ booking, canTick, me, onChanged }: { booking: Bookin
   }
 
   return (
-    <FormSection title="Steps" description="Tick a step and every step before it is done too; untick one and the steps after it go back. The Brand Deals list shows the latest.">
+    <FormSection title="Steps" description="Tick a step and every step before it is done too; untick one and the steps after it go back. Steps are set in Masters → Brand deal steps.">
       {error && <div className="alert alert-error small">{error}</div>}
       <div className="deal-steps">
-        {DEAL_STEPS.map((name, i) => {
-          const n = i + 1
-          const d = done.get(n)
+        {defs.map((def, i) => {
+          const d = done.get(def.id)
           return (
-            <label key={n} className={cn('deal-step', d && 'is-done')}>
-              <input type="checkbox" checked={!!d} disabled={!canTick || busy !== null} onChange={() => void toggle(n)} />
-              <span className="deal-step-no">{d ? '✔' : n}</span>
-              <span className="deal-step-name">{name}</span>
+            <label key={def.id} className={cn('deal-step', d && 'is-done')}>
+              <input type="checkbox" checked={!!d} disabled={!canTick || busy !== null} onChange={() => void toggle(def.id)} />
+              <span className="deal-step-no">{d ? '✔' : i + 1}</span>
+              <span className="deal-step-name">{def.name}</span>
               {d && <span className="muted small">{new Date(d.at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
             </label>
           )

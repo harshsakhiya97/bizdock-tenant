@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { DealStepPicker } from '@/bookings/DealStepPicker'
+import { useDealSteps } from '@/bookings/dealSteps'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
@@ -56,6 +57,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const one = noun.one.toLowerCase()
   // Brand Deals: the deal's latest ticked step
   const brand = !bookings && activeType(selected, sub) === BT.BRAND_DEALS
+  const stepDefs = useDealSteps()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -318,6 +320,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                             <td style={{ minWidth: 190 }} onClick={(e) => e.stopPropagation()}>
                               <DealStepPicker
                                 bookingId={b.id}
+                                defs={stepDefs}
                                 steps={b.deal_steps ?? []}
                                 canTick={can('bookings', 'edit')}
                                 me={membership?.id ?? null}
