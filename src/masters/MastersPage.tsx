@@ -92,7 +92,7 @@ export function MastersPage() {
             description={SIMPLE[tab as SimpleTable]!.purpose}
             canEdit={canEdit}
             onNotice={onNotice}
-            reorder={tab === 'deal_steps'}
+            reorder={tab === 'deal_steps' || tab === 'follow_up_outcomes'}
           />
         )}
       </div>
