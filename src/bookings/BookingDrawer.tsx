@@ -16,7 +16,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
-import { DEAL_STEPS, latestStep, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
+import { DEAL_STEPS, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
 import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
@@ -505,7 +505,6 @@ function DealStepsSection({ booking, canTick, me, onChanged }: { booking: Bookin
   const [busy, setBusy] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const done = new Map(steps.map((s) => [s.step, s]))
-  const latest = latestStep(steps)?.step ?? 0
 
   async function toggle(n: number) {
     const next = toggleStep(steps, n, me)
@@ -529,7 +528,7 @@ function DealStepsSection({ booking, canTick, me, onChanged }: { booking: Bookin
           const n = i + 1
           const d = done.get(n)
           return (
-            <label key={n} className={cn('deal-step', d && 'is-done', n === latest + 1 && !d && 'is-next')}>
+            <label key={n} className={cn('deal-step', d && 'is-done')}>
               <input type="checkbox" checked={!!d} disabled={!canTick || busy !== null} onChange={() => void toggle(n)} />
               <span className="deal-step-no">{d ? '✔' : n}</span>
               <span className="deal-step-name">{name}</span>
