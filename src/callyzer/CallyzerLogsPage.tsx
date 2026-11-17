@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { ArrowLeft, PhoneCall, RefreshCw } from 'lucide-react'
+import { useNavigate } from 'react-router'
+import { PhoneCall, RefreshCw } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
@@ -35,7 +35,7 @@ const DIR: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing'
 const name = (r: CallLog) => r.lead_name ?? ''
 const by = (r: CallLog) => r.emp_name || (r.agent_phone ? nicePhone(r.agent_phone) : '')
 
-/** System Connections → Callyzer → Logs: the calls to numbers that are leads in the top-bar business (and sub-business). */
+/** Callyzer → History logs: the calls to numbers that are leads in the top-bar business (and sub-business). */
 export function CallyzerLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
@@ -83,13 +83,8 @@ export function CallyzerLogsPage() {
   return (
     <>
       <PageHead
-        title="Callyzer logs"
+        title="History logs"
         subtitle={`Calls to numbers that are leads${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}, with type, duration and recording.`}
-        actions={
-          <Link to="/integrations" className="btn btn-outline">
-            <ArrowLeft size={16} /> System Connections
-          </Link>
-        }
       />
       {error && <div className="alert alert-error">{error}</div>}
       <section className="panel">

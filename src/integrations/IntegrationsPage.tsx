@@ -380,11 +380,6 @@ export function IntegrationsPage() {
                       {czBusy ? 'Checking…' : 'Sync now'}
                     </button>
                   )}
-                  {p.id === 'callyzer' && !off && r && (
-                    <Link to="/integrations/callyzer/logs" className="btn btn-outline btn-sm">
-                      <ScrollText size={14} /> Logs
-                    </Link>
-                  )}
                   {r && (
                     <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRemoving(r)}>
                       Disconnect
