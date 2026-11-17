@@ -86,7 +86,7 @@ export function DealStepPicker({
                 const n = i + 1
                 const d = done.get(n)
                 return (
-                  <label key={n} className={cn('deal-step', d && 'is-done', n === (ls?.step ?? 0) + 1 && !d && 'is-next')}>
+                  <label key={n} className={cn('deal-step', d && 'is-done')}>
                     <input type="checkbox" checked={!!d} disabled={busy} onChange={() => void tick(n)} />
                     <span className="deal-step-no">{d ? '✔' : n}</span>
                     <span className="deal-step-name">{name}</span>

@@ -1542,9 +1542,6 @@ a.db-card:hover { border-color: var(--brand); }
 .deal-step-name { flex: 1; font-size: 13.5px; }
 .deal-step.is-done .deal-step-no { background: var(--success); border-color: var(--success); color: #fff; }
 .deal-step.is-done .deal-step-name { color: var(--text-muted); }
-.deal-step.is-next { background: var(--brand-soft); }
-.deal-step.is-next .deal-step-no { background: var(--brand); border-color: var(--brand); color: #fff; }
-.deal-step.is-next .deal-step-name { font-weight: 600; }
 .deal-step input:focus-visible + .deal-step-no { outline: 2px solid var(--brand); outline-offset: 2px; }
 .step-cell { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 4px 6px; margin: -4px -6px; border: 0; border-radius: var(--radius); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
 .step-cell:hover:not(:disabled) { background: var(--surface-muted); }
