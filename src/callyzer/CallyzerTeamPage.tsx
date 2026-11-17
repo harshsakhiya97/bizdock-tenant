@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router'
+import { Drawer } from '@/components/Drawer'
 import { CheckCircle2, MicOff, PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { Empty, PageHead, Paged, StatCard } from '@/components/ui'
@@ -38,6 +40,14 @@ const gap = (iso: string | null) => {
   return m < 60 ? `${m}m` : m < 1440 ? `${Math.floor(m / 60)}h` : `${Math.floor(m / 1440)}d`
 }
 
+/** the picked days as times: from the first day's start to the day after the last */
+const bounds = (r: Range) => {
+  const from = new Date(`${r.from}T00:00:00`)
+  const to = new Date(`${r.to}T00:00:00`)
+  to.setDate(to.getDate() + 1)
+  return { from: from.toISOString(), to: to.toISOString() }
+}
+
 /** Callyzer → Team numbers: per staff number, are recordings reaching Callyzer? (every call, not only to leads) */
 export function CallyzerTeamPage() {
   const tenant = useTenant()
@@ -45,13 +55,12 @@ export function CallyzerTeamPage() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [open, setOpen] = useState<Row | null>(null)
   const load = useCallback(() => {
     setError(null)
-    const from = new Date(`${range.from}T00:00:00`)
-    const to = new Date(`${range.to}T00:00:00`)
-    to.setDate(to.getDate() + 1)
+    const { from, to } = bounds(range)
     db()
-      .rpc('callyzer_team_report', { p_tenant: tenant.id, p_from: from.toISOString(), p_to: to.toISOString() })
+      .rpc('callyzer_team_report', { p_tenant: tenant.id, p_from: from, p_to: to })
       .then(({ data, error: e }) => (e ? setError(e.message) : setRows((data ?? []) as Row[])))
   }, [tenant.id, range])
   useEffect(load, [load])
@@ -119,7 +128,7 @@ export function CallyzerTeamPage() {
                       const h = HEALTH[healthOf(r)]
                       const missing = r.normal_connected - r.on_callyzer
                       return (
-                        <tr key={r.emp_number}>
+                        <tr key={r.emp_number} className="is-clickable" title="See their calls" onClick={() => setOpen(r)}>
                           <td>
                             <b>{r.emp_name ?? '—'}</b>
                             <div className="muted small">{r.emp_number}</div>
@@ -150,6 +159,121 @@ export function CallyzerTeamPage() {
           </Paged>
         )}
       </div>
+      {open && <StaffCalls staff={open} range={range} onClose={() => setOpen(null)} />}
     </>
+  )
+}
+
+type Call = {
+  external_id: string
+  started_at: string
+  client_number: string | null
+  call_type: string | null
+  call_method: string | null
+  call_mode: string | null
+  duration_sec: number
+  recording_url: string | null
+  lead_id: string | null
+  lead_name: string | null
+}
+type CallFilter = '' | 'not' | 'normal' | 'whatsapp' | 'missing'
+const FILTERS: { id: CallFilter; label: string; test: (c: Call) => boolean }[] = [
+  { id: '', label: 'All', test: () => true },
+  { id: 'normal', label: 'Normal connected', test: (c) => c.duration_sec > 0 && c.call_method === 'PhoneCall' },
+  { id: 'whatsapp', label: 'WhatsApp', test: (c) => c.duration_sec > 0 && c.call_method === 'WhatsAppCall' },
+  { id: 'missing', label: 'Missing recording', test: (c) => c.duration_sec > 0 && c.call_method === 'PhoneCall' && !c.recording_url },
+  { id: 'not', label: 'Not connected', test: (c) => c.duration_sec === 0 },
+]
+const TYPE: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing', missed: 'Missed', rejected: 'Rejected' }
+const secs = (n: number) => (!n ? '0s' : n >= 3600 ? `${Math.floor(n / 3600)}h ${Math.floor((n % 3600) / 60)}m` : n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`)
+const nice = (p: string | null) => (p && p.length === 10 ? `+91 ${p.slice(0, 5)} ${p.slice(5)}` : (p ?? '—'))
+
+/** a staff number's calls in the picked dates */
+function StaffCalls({ staff, range, onClose }: { staff: Row; range: Range; onClose: () => void }) {
+  const tenant = useTenant()
+  const [calls, setCalls] = useState<Call[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [filter, setFilter] = useState<CallFilter>('')
+
+  useEffect(() => {
+    const { from, to } = bounds(range)
+    db()
+      .rpc('callyzer_team_calls_of', { p_tenant: tenant.id, p_emp: staff.emp_number, p_from: from, p_to: to })
+      .then(({ data, error: e }) => (e ? setError(e.message) : setCalls((data ?? []) as Call[])))
+  }, [tenant.id, staff.emp_number, range])
+
+  const shown = (calls ?? []).filter(FILTERS.find((f) => f.id === filter)!.test)
+  return (
+    <Drawer open onClose={onClose} title={`${staff.emp_name ?? nice(staff.emp_number)} · calls`} width={900}>
+      <div className="stack" style={{ gap: 12 }}>
+        <div className="muted small">{nice(staff.emp_number)}</div>
+        {error && <div className="alert alert-error">{error}</div>}
+        <div className="tabs" role="tablist">
+          {FILTERS.map((f) => (
+            <button key={f.id || 'all'} type="button" role="tab" className={cn('tab', filter === f.id && 'is-active')} onClick={() => setFilter(f.id)}>
+              {f.label} <span className="muted small">{(calls ?? []).filter(f.test).length}</span>
+            </button>
+          ))}
+        </div>
+        {!calls ? (
+          <div className="empty">Loading…</div>
+        ) : !shown.length ? (
+          <Empty icon={PhoneOff}>No calls here.</Empty>
+        ) : (
+          <Paged rows={shown} reset={filter}>
+            {(paged) => (
+              <div className="table-wrap">
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Number</th>
+                      <th>Call</th>
+                      <th>Type</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                      <th>Recording</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((c) => {
+                      const ok = c.duration_sec > 0
+                      return (
+                        <tr key={c.external_id}>
+                          <td className="small nowrap">{at(c.started_at)}</td>
+                          <td>
+                            {c.lead_id ? <Link to={`/leads/${c.lead_id}`}><b>{c.lead_name ?? 'Lead'}</b></Link> : <b>{nice(c.client_number)}</b>}
+                            {c.lead_id && <div className="muted small">{nice(c.client_number)}</div>}
+                          </td>
+                          <td className="nowrap">
+                            {c.call_method === 'WhatsAppCall' ? <span className="badge badge-success">WhatsApp{c.call_mode === 'Video' ? ' video' : ''}</span> : <span className="badge badge-muted">Normal call</span>}
+                          </td>
+                          <td>{TYPE[c.call_type ?? ''] ?? '—'}</td>
+                          <td className="num nowrap">{secs(c.duration_sec)}</td>
+                          <td>
+                            <span className={cn('badge', ok ? 'badge-success' : 'badge-muted')}>{ok ? 'Connected' : 'Not connected'}</span>
+                          </td>
+                          <td>
+                            {c.recording_url ? (
+                              <a href={c.recording_url} target="_blank" rel="noreferrer">
+                                Play
+                              </a>
+                            ) : ok && c.call_method === 'PhoneCall' ? (
+                              <span className="tone-danger small">Missing</span>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Paged>
+        )}
+      </div>
+    </Drawer>
   )
 }
