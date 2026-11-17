@@ -15,17 +15,30 @@ export const releases: Release[] = [
   {
     version: '0.20',
     date: '2026-11-17',
-    title: 'Callyzer in the side menu, team recording health and our own call recordings',
-    summary: 'Callyzer gets its own menu: History logs and Team numbers (is each staff number’s recording reaching Callyzer?). Every call recording is now copied to BizDock’s own storage. Bookings, orders and brand deals can be deleted.',
+    title: 'Meetings for the whole team, Brand Deal steps, Callyzer menu and our own call recordings',
+    summary: 'Meetings is now everyone’s calendar: lead or team (internal) meetings with several team members, showing who is free. Brand Deals get steps to tick. Callyzer gets its own menu with Team numbers, and every call recording is copied to BizDock’s own storage. Facebook-style date ranges on more pages.',
     new: [
       'Side menu → Callyzer (accordion): History logs (moved from System Connections) and Team numbers.',
       'Callyzer → Team numbers: per staff number — Total, Not connected, Normal connected, WhatsApp, On Callyzer (%), Missing, After last rec, Last connected, Last recording, Gap and Status (Active / Low-Stalled / No Recording), with cards and a warning for numbers sending no recordings. Every staff call counts, not only calls to leads.',
       'Team numbers: click a staff number for their calls — All, Normal connected, WhatsApp, Missing recording, Not connected — with lead names and Play.',
       'Call recordings are copied to BizDock’s own storage on every sync (and the last 90 days’ too); Play uses our copy (the Callyzer link until it’s copied).',
       'Bookings / Orders / Brand Deals: 🗑 Delete with a confirm (its own invoice and payments go too; off a shared invoice first). Role access → Delete bookings.',
+      'Meetings for every team member, in every business: like your own calendar, you see the meetings you are in (or added). A meeting is with a Lead or a Team (internal, company-level) meeting with a title.',
+      'Meetings: several team members per meeting, each shown Available or Busy (with the clashing time) once the date and time are picked.',
+      'Team meetings: Done (comments / description), Reschedule or Cancelled (with a reason); cancelling removes its Zoom meeting. Purple on the calendar, with a Lead / Team filter.',
+      'Brand Deals: steps to tick in each deal (ticking a step completes the ones before it); the Brand Deals list shows the latest step, with ticking and a Status dropdown right in the list.',
+      'Masters → Brand deal steps: name the steps and drag to reorder them.',
+    ],
+    improved: [
+      'Facebook-style date range (presets and a two-month calendar) on Orders / Bookings / Brand Deals, Follow-ups (with All dates), Meta logs, Callyzer History logs and WhatsApp logs.',
+      'Masters → Follow-up outcomes: drag to reorder.',
+      'Deleting a lead / customer also deletes their bookings, orders and brand deals with their invoices and payments, in every business.',
+      'Every lead has a Meetings tab, in every business. Role access → Meetings now means seeing every lead meeting (lead page, dashboard) and editing / deleting others’ meetings.',
+      'Follow-up date and time picked are saved as India time, whatever time zone the computer is set to.',
     ],
     fixed: [
       'The invoice side panel opened twice (a jerk) — it now opens once.',
+      'Calls logged from a computer set to the wrong time zone showed 13½ hours ahead: the done time now comes from the server, and the shifted calls were corrected.',
     ],
   },
   {
