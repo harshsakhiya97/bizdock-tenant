@@ -14,7 +14,7 @@ import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteLeads, listLeadCalls, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
+import { deleteLeads, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
 import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
@@ -90,7 +90,6 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const [extras, setExtras] = useState<Map<string, LeadExtras>>(new Map())
   // other businesses' lists: Callyzer calls per lead (by number)
-  const [callCounts, setCallCounts] = useState<Map<string, { total: number; connected: number }>>(new Map())
   const [outcomes, setOutcomes] = useState<Option[]>([])
   const [logFu, setLogFu] = useState<FollowUpRow | null>(null)
   const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
@@ -108,21 +107,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id, businesses])
   useEffect(load, [load])
+  // every business: last comment, follow-ups done (· connected calls), meeting
   const loadExtras = useCallback(() => {
-    if (studio && !customers) listOutcomes(tenant.id).then(setOutcomes)
-    if (!pp || !sub) return
-    listLeadExtras(tenant.id, sub.id)
+    if (customers) return
+    listLeadExtras(tenant.id, sub?.id ?? null)
       .then(setExtras)
       .catch((e: Error) => setNotice({ error: e.message }))
     listOutcomes(tenant.id).then(setOutcomes)
-  }, [pp, studio, customers, sub, tenant.id])
+  }, [customers, sub, tenant.id])
   useEffect(loadExtras, [loadExtras])
-  useEffect(() => {
-    if (pp || customers || !allLeads?.length) return
-    listLeadCalls(tenant.id, allLeads.map((l) => l.id))
-      .then(setCallCounts)
-      .catch(() => setCallCounts(new Map()))
-  }, [pp, customers, allLeads, tenant.id])
 
   /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
   async function openLogFollowUp(l: LeadRow) {
@@ -586,11 +579,20 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     />
                   </th>
                   <th>{Word}</th>
-                  {pp ? (
+                  {!customers ? (
+                    // the same columns in every business, plus Form (Paid Podcast) or Purpose / Time / Description (Studio Rental)
                     <>
                       <th>Category</th>
                       <th>Source</th>
-                      <th>Form</th>
+                      <th>Owner</th>
+                      {pp && <th>Form</th>}
+                      {studio && (
+                        <>
+                          <th>Purpose</th>
+                          <th>Time</th>
+                          <th>Description</th>
+                        </>
+                      )}
                       <th>Last comment</th>
                       <th>Follow-ups done</th>
                       <th>Next follow-up</th>
@@ -599,37 +601,20 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     </>
                   ) : (
                   <>
-                  {!customers && <th>Category</th>}
                   <th>Source</th>
-                  {studio && (
-                    <>
-                      <th>Purpose</th>
-                      <th>Time</th>
-                      <th>Describes</th>
-                    </>
-                  )}
                   {!funnel && !studio && <th>Funnel</th>}
                   <th>Owner</th>
                   <th>Next follow-up</th>
-                  {customers ? (
-                    <>
-                      <th style={{ textAlign: 'right' }}>Bookings</th>
-                      <th style={{ textAlign: 'right' }}>Revenue</th>
-                      <th style={{ textAlign: 'right' }}>Balance</th>
-                    </>
-                  ) : (
-                    !studio && <th style={{ textAlign: 'right' }}>Value</th>
-                  )}
-                  {!customers && <th>Calls</th>}
+                  <th style={{ textAlign: 'right' }}>Bookings</th>
+                  <th style={{ textAlign: 'right' }}>Revenue</th>
+                  <th style={{ textAlign: 'right' }}>Balance</th>
                   <th>{studio ? 'Lead date' : 'Created'}</th>
-                  {studio && !customers && <th />}
                   </>
                   )}
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((l) => {
-                  const t = tempOf(l.temperature)
                   const fu = followUp(l.next_follow_up_at)
                   return (
                     <tr key={l.id} className="is-clickable" onClick={() => openRow(l.id)}>
@@ -652,88 +637,45 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           </div>
                         )}
                       </td>
-                      {pp ? (
-                        <PpCells
+                      {!customers ? (
+                        <LeadCells
+                          kind={pp ? 'pp' : studio ? 'studio' : 'default'}
                           l={l}
                           x={extras.get(l.id)}
                           source={sourceName(l.source_id)}
+                          owner={ownerName(l.owner_id)}
                           stage={stageById.get(l.stage_id ?? '') ?? null}
                           fu={fu}
                           canFollowUp={can('follow_ups', 'add') || can('leads', 'edit')}
-                          canMeet={can('meetings', 'add')}
+                          canMeet={pp && can('meetings', 'add')}
                           canLose={can('leads', 'edit') && !!lostStageOf(l)}
                           onFollowUp={() => void openLogFollowUp(l)}
                           onMeeting={() => setMeetFor(l)}
-                          onLose={() => {
-                            const s = lostStageOf(l)
-                            if (s) requestMove([l.id], s)
-                          }}
-                        />
-                      ) : (
-                      <>
-                      {!customers && <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>}
-                      <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
-                      {studio && (
-                        <>
-                          <td>{l.purpose || extraOf(l, 'purpose') || <span className="muted">—</span>}</td>
-                          <td className="nowrap">{extraOf(l, 'time') || <span className="muted">—</span>}</td>
-                          <td>{extraOf(l, 'describes') || <span className="muted">—</span>}</td>
-                        </>
-                      )}
-                      {!funnel && !studio && <td className="muted">{funnelName(l.funnel_id)}</td>}
-                      <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
-                      <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
-                      {customers ? (
-                        <>
-                          <td className="num" style={{ textAlign: 'right' }}>
-                            {revenue?.get(l.id)?.count ?? 0}
-                          </td>
-                          <td className="num nowrap" style={{ textAlign: 'right' }}>
-                            {money(revenue?.get(l.id)?.billed ?? 0)}
-                          </td>
-                          <td className="num nowrap" style={{ textAlign: 'right' }}>
-                            {money(Math.max(0, (revenue?.get(l.id)?.billed ?? 0) - (revenue?.get(l.id)?.paid ?? 0)))}
-                          </td>
-                        </>
-                      ) : (
-                        !studio && (
-                          <td className="num" style={{ textAlign: 'right' }}>
-                            {money(l.estimated_amount)}
-                          </td>
-                        )
-                      )}
-                      {!customers && (
-                        <td className="nowrap">
-                          {callCounts.get(l.id) ? (
-                            <>
-                              <b>{callCounts.get(l.id)!.total}</b> <span className="muted small">· {callCounts.get(l.id)!.connected} connected</span>
-                            </>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </td>
-                      )}
-                      <td className="muted nowrap">
-                        {studio
-                          ? leadDate(l)
-                          : new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </td>
-                      {studio && !customers && (
-                        <RowActions
-                          closed={(() => {
-                            const k = stageById.get(l.stage_id ?? '')?.kind
-                            return k === 'won' || k === 'lost'
-                          })()}
-                          canFollowUp={can('follow_ups', 'add') || can('leads', 'edit')}
-                          canMeet={false}
-                          canLose={can('leads', 'edit') && !!lostStageOf(l)}
-                          onFollowUp={() => void openLogFollowUp(l)}
                           onLose={() => {
                             const st = lostStageOf(l)
                             if (st) requestMove([l.id], st)
                           }}
                         />
-                      )}
+                      ) : (
+                      <>
+                      <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
+                      {!funnel && !studio && <td className="muted">{funnelName(l.funnel_id)}</td>}
+                      <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
+                      <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
+                      <td className="num" style={{ textAlign: 'right' }}>
+                        {revenue?.get(l.id)?.count ?? 0}
+                      </td>
+                      <td className="num nowrap" style={{ textAlign: 'right' }}>
+                        {money(revenue?.get(l.id)?.billed ?? 0)}
+                      </td>
+                      <td className="num nowrap" style={{ textAlign: 'right' }}>
+                        {money(Math.max(0, (revenue?.get(l.id)?.billed ?? 0) - (revenue?.get(l.id)?.paid ?? 0)))}
+                      </td>
+                      <td className="muted nowrap">
+                        {studio
+                          ? leadDate(l)
+                          : new Date(l.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </td>
                       </>
                       )}
                     </tr>
@@ -838,11 +780,14 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   )
 }
 
-/** Paid Podcast row: the old CRM's columns and its Follow-up / Meeting / ✕ buttons */
-function PpCells({
+/** A lead row (every business): Category, Source, Owner, then Form (Paid Podcast) or Purpose / Time / Description
+ *  (Studio Rental), Last comment, Follow-ups done, Next follow-up, Lead date and the Follow-up / Meeting / ✕ buttons */
+function LeadCells({
+  kind,
   l,
   x,
   source,
+  owner,
   stage,
   fu,
   canFollowUp,
@@ -852,9 +797,11 @@ function PpCells({
   onMeeting,
   onLose,
 }: {
+  kind: 'pp' | 'studio' | 'default'
   l: LeadRow
   x: LeadExtras | undefined
   source: string | undefined
+  owner: string | undefined
   stage: StageRow | null
   fu: { text: string; state: string }
   canFollowUp: boolean
@@ -874,7 +821,15 @@ function PpCells({
     <>
       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
       <td>{source ?? <span className="muted">—</span>}</td>
-      <td className="nowrap">
+      <td className="nowrap">{owner ?? <span className="muted">Unassigned</span>}</td>
+      {kind === 'studio' && (
+        <>
+          <td>{l.purpose || extraOf(l, 'purpose') || <span className="muted">—</span>}</td>
+          <td className="nowrap">{extraOf(l, 'time') || <span className="muted">—</span>}</td>
+          <td>{extraOf(l, 'describes') || <span className="muted">—</span>}</td>
+        </>
+      )}
+      {kind === 'pp' && <td className="nowrap">
         {m ? (
           <span className="row" style={{ gap: 4 }}>
             <span className={cn('badge', m.tone)}>{m.label}</span>
@@ -889,7 +844,7 @@ function PpCells({
         ) : (
           <span className="badge badge-muted">Opt-in form</span>
         )}
-      </td>
+      </td>}
       <td style={{ maxWidth: 220 }}>
         {comment ? (
           <span className="clamp-2" title={comment}>
