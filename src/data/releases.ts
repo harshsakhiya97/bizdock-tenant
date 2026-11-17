@@ -13,6 +13,22 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.20',
+    date: '2026-11-17',
+    title: 'Callyzer in the side menu, team recording health and our own call recordings',
+    summary: 'Callyzer gets its own menu: History logs and Team numbers (is each staff number’s recording reaching Callyzer?). Every call recording is now copied to BizDock’s own storage. Bookings, orders and brand deals can be deleted.',
+    new: [
+      'Side menu → Callyzer (accordion): History logs (moved from System Connections) and Team numbers.',
+      'Callyzer → Team numbers: per staff number — Total, Not connected, Normal connected, WhatsApp, On Callyzer (%), Missing, After last rec, Last connected, Last recording, Gap and Status (Active / Low-Stalled / No Recording), with cards and a warning for numbers sending no recordings. Every staff call counts, not only calls to leads.',
+      'Team numbers: click a staff number for their calls — All, Normal connected, WhatsApp, Missing recording, Not connected — with lead names and Play.',
+      'Call recordings are copied to BizDock’s own storage on every sync (and the last 90 days’ too); Play uses our copy (the Callyzer link until it’s copied).',
+      'Bookings / Orders / Brand Deals: 🗑 Delete with a confirm (its own invoice and payments go too; off a shared invoice first). Role access → Delete bookings.',
+    ],
+    fixed: [
+      'The invoice side panel opened twice (a jerk) — it now opens once.',
+    ],
+  },
+  {
     version: '0.19',
     date: '2026-11-17',
     title: 'Funnel graphs, one Leads table for every business',
