@@ -40,6 +40,9 @@ const DONE: MeetingStatus[] = ['done']
 type SectionId = 'today' | 'funnel' | 'overdue' | 'tasks' | 'recordings'
 const HIDE_KEY = 'podcastDash.hidden'
 
+/** a meeting with a lead (team meetings aren't on the dashboard) */
+type LeadMeeting = MeetingRow & { lead_id: string; business_id: string }
+
 /** Paid Podcast dashboard: meetings with guests, the month's funnel, overdue meetings, tasks and recordings. */
 export function PodcastDashboard() {
   const tenant = useTenant()
@@ -53,7 +56,7 @@ export function PodcastDashboard() {
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [fus, setFus] = useState<FollowUpRow[]>([])
   const [bookings, setBookings] = useState<BookingRow[]>([])
-  const [meetings, setMeetings] = useState<MeetingRow[]>([])
+  const [meetings, setMeetings] = useState<LeadMeeting[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [adding, setAdding] = useState(false)
   const [book, setBook] = useState<{ lead: LeadRow | null; booking?: BookingRow } | null>(null)
@@ -84,7 +87,7 @@ export function PodcastDashboard() {
         ([b, inv]) => setBookings(withInvoicePayments(b, inv)),
         () => setBookings([]),
       )
-    if (can('meetings', 'view')) listMeetings(tenant.id).then(setMeetings, () => setMeetings([]))
+    if (can('meetings', 'view')) listMeetings(tenant.id).then((ms) => setMeetings(ms.filter((m): m is LeadMeeting => m.kind === 'lead' && !!m.lead_id && !!m.business_id)), () => setMeetings([]))
     listMemberOptions(tenant.id).then(setMembers, () => setMembers([]))
   }, [tenant.id, can])
   useEffect(load, [load])
@@ -123,9 +126,9 @@ export function PodcastDashboard() {
     // ---- funnel (this month) ----
     const contacted = monthLeads.filter((l) => F.some((f) => f.lead_id === l.id && f.status === 'done') || M.some((m) => m.lead_id === l.id)).length
     // each meeting of the month, by how it came about (earlier meetings of the same lead decide)
-    const byLead = new Map<string, MeetingRow[]>()
+    const byLead = new Map<string, LeadMeeting[]>()
     for (const m of [...M].sort((a, b) => (a.meeting_date + a.start_time).localeCompare(b.meeting_date + b.start_time))) byLead.set(m.lead_id, [...(byLead.get(m.lead_id) ?? []), m])
-    const kind = (m: MeetingRow) => {
+    const kind = (m: LeadMeeting) => {
       const before = (byLead.get(m.lead_id) ?? []).filter((x) => x.id !== m.id && x.meeting_date + x.start_time < m.meeting_date + m.start_time)
       if (before.some((x) => x.status === 'no_show')) return 'reattempt'
       if (before.some((x) => DONE.includes(x.status))) return 'followup'

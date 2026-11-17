@@ -3,7 +3,7 @@ import { Paged } from '@/components/ui'
 import { clock, fmtDay } from '@/components/SlotCalendar'
 import { MEETING_STATUS, MODE_LABEL, type MeetingRow } from './types'
 
-/** Meetings of one lead (Paid Podcast guest). */
+/** Meetings of one lead. */
 export function MeetingsTab({
   meetings,
   members = [],
@@ -57,7 +57,7 @@ export function MeetingsTab({
                   <tr key={m.id} className="is-clickable" onClick={() => onOpen(m)}>
                     <td className="nowrap">
                       {fmtDay(m.meeting_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {clock(m.start_time)} – {clock(m.end_time)}
-                      {m.assigned_to && <div className="muted small">With {members.find((x) => x.id === m.assigned_to)?.name ?? 'a team member'}</div>}
+                      {m.members.length > 0 && <div className="muted small">With {m.members.map((x) => members.find((y) => y.id === x)?.name ?? 'a team member').join(', ')}</div>}
                       {moved > 0 && <div className="muted small">Rescheduled {moved}×</div>}
                     </td>
                     <td>

@@ -81,10 +81,9 @@ export function LeadPage() {
     listPurchases({ leadId: id })
       .then(setPurchases)
       .catch(() => setPurchases([]))
-    if (can('meetings', 'view'))
-      listMeetings(tenant.id, { leadId: id })
-        .then(setMeetings)
-        .catch(() => setMeetings([]))
+    listMeetings(tenant.id, { leadId: id })
+      .then(setMeetings)
+      .catch(() => setMeetings([]))
   }, [id, tenant.id, can])
   useEffect(load, [load])
   useEffect(() => {
@@ -183,7 +182,7 @@ export function LeadPage() {
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
     { id: 'followups', label: 'Follow-ups' },
-    ...(isPodcast && can('meetings', 'view') ? [{ id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).length }] : []),
+    { id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).length },
     ...(isWebinar
       ? [
           { id: 'webinars' as Tab, label: 'Webinars' },
@@ -313,8 +312,8 @@ export function LeadPage() {
         {tab === 'followups' && (
           <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
         )}
-        {tab === 'meetings' && isPodcast && (
-          <MeetingsTab meetings={meetings} members={members} canAdd={can('meetings', 'add')} onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
+        {tab === 'meetings' && (
+          <MeetingsTab meetings={meetings} members={members} canAdd onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
         {tab === 'purchases' && isWebinar && (
@@ -372,11 +371,15 @@ export function LeadPage() {
             setMt(null)
             done(msg)
           }}
-          onBook={() => {
-            setMt(null)
-            setTab('bookings')
-            setBk({ booking: null })
-          }}
+          onBook={
+            isPodcast
+              ? () => {
+                  setMt(null)
+                  setTab('bookings')
+                  setBk({ booking: null })
+                }
+              : undefined
+          }
         />
       )}
       {pu && (
