@@ -58,9 +58,14 @@ export function FunnelPage() {
   // Leads tab: a date range (lead date), and Graph (leads per day, a line per category) or List
   const [leadRange, setLeadRange] = useState<Range>(() => presetRange('last30'))
   const [leadView, setLeadView] = useState<'graph' | 'list'>('list')
+  const [leadTemp, setLeadTemp] = useState('')
   const rangedLeads = useMemo(
-    () => (leads ?? []).filter((l) => { const d = isoDay(new Date(l.created_at)); return d >= leadRange.from && d <= leadRange.to }),
-    [leads, leadRange],
+    () =>
+      (leads ?? []).filter((l) => {
+        const d = isoDay(new Date(l.created_at))
+        return d >= leadRange.from && d <= leadRange.to && (!leadTemp || (leadTemp === 'none' ? !l.temperature : l.temperature === leadTemp))
+      }),
+    [leads, leadRange, leadTemp],
   )
   const leadChart = useMemo(() => {
     if (!rangedLeads.length) return { days: [] as string[], lines: [] as Line[] }
@@ -324,9 +329,17 @@ export function FunnelPage() {
           {tab === 'leads' && leads && leads.length > 0 && (
             <div className="row-between" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
               <span className="muted small">
-                {rangedLeads.length} lead{rangedLeads.length === 1 ? '' : 's'} in these dates (lead date)
+                {rangedLeads.length} lead{rangedLeads.length === 1 ? '' : 's'}{leadTemp ? ` (${TEMPERATURES.find((t) => t.value === leadTemp)?.label})` : ''} in these dates (lead date)
               </span>
               <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
+                <select className="input input-sm filter-select" value={leadTemp} onChange={(e) => setLeadTemp(e.target.value)} aria-label="Category">
+                  <option value="">Category</option>
+                  {TEMPERATURES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
                 <DateRangePicker value={leadRange} onChange={setLeadRange} />
                 <div className="seg" role="group" aria-label="View">
                   <button type="button" className={leadView === 'graph' ? 'is-active' : undefined} onClick={() => setLeadView('graph')} title="Graph">
@@ -345,14 +358,14 @@ export function FunnelPage() {
             ) : leads.length === 0 ? (
               <Empty icon={Users}>No leads in this funnel yet.</Empty>
             ) : rangedLeads.length === 0 ? (
-              <Empty icon={Users}>No leads in these dates.</Empty>
+              <Empty icon={Users}>No leads in these dates{leadTemp ? ' in this category' : ''}.</Empty>
             ) : leadView === 'graph' ? (
               <div className="stack" style={{ gap: 8 }}>
                 <span className="muted small">Leads per day, and by category (each lead’s category now) · click a name below to hide / show its line</span>
                 <SpendLines key={`${leadRange.from}|${leadRange.to}`} days={leadChart.days} lines={leadChart.lines} unit="count" />
               </div>
             ) : (
-              <Paged rows={rangedLeads} reset={leadRange}>
+              <Paged rows={rangedLeads} reset={[leadRange, leadTemp]}>
 {(paged) => (
 <div className="table-wrap">
                 <table className="table">
