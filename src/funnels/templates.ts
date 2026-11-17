@@ -5,7 +5,7 @@ export const STAGE_COLORS = ['#64748b', '#3b82f6', '#8b5cf6', '#0d9488', '#d9770
 export const KIND_LABEL: Record<StageKind, string> = { open: 'In progress', won: 'Won', lost: 'Lost' }
 
 export const FUNNEL_TYPES: { value: FunnelType; label: string; hint: string }[] = [
-  { value: 'lead_gen', label: 'Lead Gen', hint: 'Enquiries from ads, forms or calls, worked by the sales team.' },
+  { value: 'lead_gen', label: 'Lead Gen', hint: 'Leads from ads, forms or calls, worked by the sales team.' },
   { value: 'webinar', label: 'Webinar', hint: 'People register, attend a webinar, then are pitched.' },
   { value: 'vsl', label: 'VSL', hint: 'Video sales letter: opt in, watch, book a call, convert.' },
   { value: 'custom', label: 'Custom', hint: 'Start small and add your own stages.' },
@@ -18,7 +18,7 @@ type T = [name: string, color: string, kind: StageKind, note?: boolean]
 // Starter stages per type. Lead Gen follows Happy OS's sales pipeline.
 const TEMPLATES: Record<FunnelType, T[]> = {
   lead_gen: [
-    ['Enquiry', '#64748b', 'open'],
+    ['Lead', '#64748b', 'open'],
     ['Explain', '#3b82f6', 'open'],
     ['Proposal', '#8b5cf6', 'open'],
     ['Warm', '#d97706', 'open'],
