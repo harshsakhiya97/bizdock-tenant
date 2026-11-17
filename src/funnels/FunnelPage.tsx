@@ -57,7 +57,7 @@ export function FunnelPage() {
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   // Leads tab: a date range (lead date), and Graph (leads per day, a line per category) or List
   const [leadRange, setLeadRange] = useState<Range>(() => presetRange('last30'))
-  const [leadView, setLeadView] = useState<'graph' | 'list'>('list')
+  const [leadView, setLeadView] = useState<'graph' | 'list'>('graph')
   const [leadTemp, setLeadTemp] = useState('')
   const rangedLeads = useMemo(
     () =>
