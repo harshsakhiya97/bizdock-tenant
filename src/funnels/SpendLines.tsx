@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d', '#64748b']
 const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
@@ -13,12 +13,23 @@ export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; li
   const axis = unit === 'count' ? (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)) : short
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [hover, setHover] = useState<number | null>(null)
-  const W = 900
+  // drawn at the box's real width, so text stays the same size on wide and narrow pages (not scaled up)
+  const box = useRef<HTMLDivElement>(null)
+  const [W, setW] = useState(900)
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(([e]) => setW(Math.max(320, Math.round(e.contentRect.width))))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const H = 260
   const P = { l: 56, r: 16, t: 12, b: 28 }
   const shown = lines.filter((l) => !hidden.has(l.key))
   const max = useMemo(() => Math.max(unit === 'count' ? 4 : 1, ...shown.flatMap((l) => l.values)), [shown, unit])
   const nice = (() => {
+    // counts: the top is the next multiple of 4, so the 4 steps are whole numbers (24 → 0 6 12 18 24)
+    if (unit === 'count') return Math.max(4, Math.ceil(max / 4) * 4)
     const p = 10 ** Math.floor(Math.log10(max))
     const m = max / p
     return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p
@@ -26,13 +37,13 @@ export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; li
   const x = (i: number) => P.l + (days.length <= 1 ? (W - P.l - P.r) / 2 : (i * (W - P.l - P.r)) / (days.length - 1))
   const y = (v: number) => P.t + (H - P.t - P.b) * (1 - v / nice)
   const ticks = [0, 0.25, 0.5, 0.75, 1].map((f) => f * nice)
-  const every = Math.max(1, Math.ceil(days.length / 8))
+  const every = Math.max(1, Math.ceil(days.length / Math.max(4, Math.floor(W / 110))))
   const color = (k: string) => COLORS[lines.findIndex((l) => l.key === k) % COLORS.length]
 
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <div style={{ position: 'relative' }}>
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Per day" style={{ display: 'block' }} onMouseLeave={() => setHover(null)}>
+      <div ref={box} style={{ position: 'relative' }}>
+        <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} role="img" aria-label="Per day" style={{ display: 'block' }} onMouseLeave={() => setHover(null)}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={P.l} x2={W - P.r} y1={y(t)} y2={y(t)} stroke="var(--line)" strokeWidth={1} />
