@@ -188,7 +188,7 @@ function MonthDashboard() {
       <Flash msg={notice} />
 
       {selected && !sub && selected.subs.length > 0 && (
-        <SubBusinessCards business={selected} month={month} leads={leads} bookings={bookings} fus={fus} sources={refs.sources} />
+        <SubBusinessCards business={selected} month={month} leads={leads} bookings={bookings} fus={fus} />
       )}
 
       <div className="db-cards">

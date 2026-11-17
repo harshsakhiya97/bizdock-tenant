@@ -1,4 +1,4 @@
-import { ArrowRight, LayoutGrid, TrendingDown, TrendingUp, Trophy } from 'lucide-react'
+import { ArrowRight, LayoutGrid, TrendingDown, TrendingUp } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { BT, type Business } from '@/auth/auth-context'
 import { useBusiness } from '@/business/useBusiness'
@@ -24,14 +24,12 @@ export function SubBusinessCards({
   leads,
   bookings,
   fus,
-  sources,
 }: {
   business: Business
   month: string
   leads: LeadRow[]
   bookings: BookingRow[]
   fus: FollowUpRow[]
-  sources: { id: string; name: string }[]
 }) {
   const { businesses, typeName } = useAuth()
   const { select } = useBusiness()
@@ -52,12 +50,6 @@ export function SubBusinessCards({
     const collected = B.flatMap((b) => b.booking_payments).filter((p) => p.status === 'paid' && p.paid_on?.slice(0, 7) === month).reduce((n, p) => n + Number(p.amount), 0)
     const outstanding = B.filter((b) => makesCustomer(b, isPodcast)).reduce((n, b) => n + Math.max(0, b.total_amount - b.paid_amount), 0)
     const due = fus.filter((f) => ids.has(f.lead_id) && f.status === 'pending' && f.due_at <= now).length
-    const src = new Map<string, number>()
-    for (const l of monthLeads) {
-      const n = sources.find((x) => x.id === l.source_id)?.name ?? 'Other'
-      src.set(n, (src.get(n) ?? 0) + 1)
-    }
-    const top = [...src.entries()].sort((a, b) => b[1] - a[1])[0]
     // enquiries vs last month
     const trend = !prevLeads && !monthLeads.length ? 'steady' : monthLeads.length > prevLeads * 1.1 ? 'up' : monthLeads.length < prevLeads * 0.9 ? 'down' : 'steady'
     return {
@@ -71,7 +63,6 @@ export function SubBusinessCards({
       collected,
       outstanding,
       due,
-      top,
       trend,
       conv: monthLeads.length ? Math.round((customers / monthLeads.length) * 100) : 0,
       coll: billed ? Math.min(100, Math.round((collected / billed) * 100)) : 0,
@@ -98,11 +89,6 @@ export function SubBusinessCards({
               {c.trend === 'up' ? <TrendingUp size={14} /> : c.trend === 'down' ? <TrendingDown size={14} /> : <ArrowRight size={14} />}
               {c.trend === 'up' ? 'Growing' : c.trend === 'down' ? 'Slowing down' : 'Steady'}
             </span>
-            {c.top && (
-              <span className="muted small sb-top">
-                <Trophy size={13} /> {c.top[0]} · {c.top[1]}
-              </span>
-            )}
           </div>
           <div className="sb-tiles">
             <div>
