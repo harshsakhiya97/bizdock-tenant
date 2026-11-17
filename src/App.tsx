@@ -105,7 +105,7 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/meetings" element={<RequirePermission module="meetings"><MeetingsPage /></RequirePermission>} />
+                <Route path="/meetings" element={<MeetingsPage />} />
                 <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
                 <Route
                   path="/funnels"

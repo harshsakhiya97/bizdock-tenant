@@ -1,5 +1,5 @@
 import { db } from '@/lib/supabase'
-import type { MeetingMode, MeetingRow, MeetingStatus, Reschedule } from './types'
+import type { MeetingKind, MeetingMode, MeetingRow, MeetingStatus, Reschedule } from './types'
 
 export async function listMeetings(tenantId: string, f: { leadId?: string } = {}): Promise<MeetingRow[]> {
   let q = db().from('meetings').select('*').eq('tenant_id', tenantId)
@@ -10,6 +10,8 @@ export async function listMeetings(tenantId: string, f: { leadId?: string } = {}
 }
 
 export type MeetingInput = {
+  kind: MeetingKind
+  title: string
   lead_id: string
   business_id: string
   sub_business_id: string | null
@@ -21,7 +23,8 @@ export type MeetingInput = {
   location: string
   status: MeetingStatus
   outcome_note: string
-  assigned_to: string
+  /** the team members, in order */
+  members: string[]
   /** '' = no Zoom (a pasted link) */
   zoom_account_id: string
 }
@@ -30,10 +33,13 @@ const clean = (v: string) => v.trim() || null
 
 /** Adds or updates a meeting. A changed date or time on a saved meeting is a reschedule: the old slot is kept in its history. */
 export async function saveMeeting(tenantId: string, memberId: string | undefined, existing: MeetingRow | null, input: MeetingInput, reason: string) {
+  const team = input.kind === 'team'
   const row = {
-    lead_id: input.lead_id,
-    business_id: input.business_id,
-    sub_business_id: input.sub_business_id,
+    kind: input.kind,
+    title: team ? clean(input.title) : null,
+    lead_id: team ? null : input.lead_id,
+    business_id: team ? null : input.business_id,
+    sub_business_id: team ? null : input.sub_business_id,
     meeting_date: input.meeting_date,
     start_time: input.start_time,
     end_time: input.end_time,
@@ -42,7 +48,8 @@ export async function saveMeeting(tenantId: string, memberId: string | undefined
     location: input.mode === 'in_person' ? clean(input.location) : null,
     status: input.status,
     outcome_note: clean(input.outcome_note),
-    assigned_to: input.assigned_to || null,
+    members: input.members,
+    assigned_to: input.members[0] ?? null,
     zoom_account_id: input.mode === 'online' ? input.zoom_account_id || null : null,
   }
   if (!existing) {
@@ -67,8 +74,8 @@ export async function deleteMeeting(id: string) {
   if (error) throw error
 }
 
-/** Done (with a comment) or No-show (with a reason): the note is the meeting's outcome note */
-export async function closeMeeting(id: string, status: 'done' | 'no_show', note: string) {
+/** Done (with a comment), No-show or Cancelled (with a reason): the note is the meeting's outcome note */
+export async function closeMeeting(id: string, status: 'done' | 'no_show' | 'cancelled', note: string) {
   const { error } = await db().from('meetings').update({ status, outcome_note: note.trim() || null }).eq('id', id)
   if (error) throw error
 }
@@ -81,4 +88,12 @@ export async function rescheduleMeeting(m: MeetingRow, memberId: string | undefi
   ]
   const { error } = await db().from('meetings').update({ meeting_date: date, start_time: start, end_time: end, status: 'scheduled', reschedules }).eq('id', m.id)
   if (error) throw error
+}
+
+export type Busy = { member_id: string; start_time: string; end_time: string; label: string }
+/** who is busy at that time: their meetings (other than this one) and booking-calendar slots */
+export async function meetingBusy(tenantId: string, date: string, start: string, end: string, except?: string | null): Promise<Busy[]> {
+  const { data, error } = await db().rpc('meeting_busy', { p_tenant: tenantId, p_date: date, p_start: start, p_end: end, p_except: except ?? null })
+  if (error) throw error
+  return (data ?? []) as Busy[]
 }

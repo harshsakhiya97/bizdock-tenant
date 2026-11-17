@@ -1552,3 +1552,20 @@ a.db-card:hover { border-color: var(--brand); }
 .drag-handle { cursor: grab; }
 tr.is-dragging { opacity: 0.45; }
 tr.is-drop td { box-shadow: inset 0 2px 0 var(--brand); }
+
+/* meetings: team members with availability */
+.mp { display: flex; flex-direction: column; gap: 8px; }
+.mp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mp-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 12.5px; font-weight: 500; }
+.mp-chip.is-busy { background: #fef3c7; color: #92400e; }
+.mp-chip button { display: inline-flex; border: 0; background: none; color: inherit; cursor: pointer; padding: 2px; border-radius: 999px; }
+.mp-chip button:hover { background: rgba(0, 0, 0, .08); }
+.mp-list { max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.mp-row { display: flex; align-items: center; gap: 10px; padding: 7px 10px; cursor: pointer; font-size: 13.5px; border-bottom: 1px solid var(--line); }
+.mp-row:last-child { border-bottom: 0; }
+.mp-row:hover { background: var(--surface-muted); }
+.mp-row.is-on { background: var(--brand-soft); }
+.mp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mp-state { font-size: 12px; white-space: nowrap; }
+.mp-state.is-free { color: #16a34a; }
+.mp-state.is-busy { color: #b45309; }

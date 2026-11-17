@@ -73,11 +73,10 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       {
         key: 'meetings',
         label: 'Meetings',
-        open: { kind: 'action', module: 'meetings', action: 'view', hint: 'Guest meetings (Paid Podcast)' },
+        open: { kind: 'action', module: 'meetings', action: 'view', hint: 'Every lead meeting (lead page, dashboard). Without it, people still see and add their own meetings.' },
         actions: [
-          { module: 'meetings', action: 'add', label: 'Schedule meetings' },
-          { module: 'meetings', action: 'edit', label: 'Edit meetings', hint: 'Reschedule, mark qualified / not qualified' },
-          { module: 'meetings', action: 'delete', label: 'Delete meetings' },
+          { module: 'meetings', action: 'edit', label: 'Edit others’ lead meetings', hint: 'Reschedule, mark done / no-show' },
+          { module: 'meetings', action: 'delete', label: 'Delete others’ meetings' },
         ],
       },
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Booking / Podcast Calendar' }, actions: [] },

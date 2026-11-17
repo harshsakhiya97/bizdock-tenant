@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { CalendarClock, CircleCheck, Handshake, Plus, UserX } from 'lucide-react'
+import { BT } from '@/auth/auth-context'
 import { useAuth } from '@/auth/useAuth'
+import { activeType } from '@/business/activeType'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { useBusiness } from '@/business/useBusiness'
@@ -16,23 +18,28 @@ import { listMeetings } from './api'
 import { db } from '@/lib/supabase'
 import { listWidgets, type WidgetRow } from '@/widgets/api'
 import { MeetingDrawer } from './MeetingDrawer'
-import { MEETING_STATUS, MODE_LABEL, type MeetingRow, type MeetingStatus } from './types'
+import { KIND_LABEL, MEETING_STATUS, MODE_LABEL, TEAM_COLOR, type MeetingKind, type MeetingRow, type MeetingStatus } from './types'
 
-/** Paid Podcast: meetings with guests to decide if they qualify. Calendar like the shoot calendar. */
+/** Meetings: like a personal calendar, each person sees the meetings they are in (or added): with leads of the
+ *  business picked in the header, and team (internal, company-level) meetings. Calendar like the shoot calendar. */
 export function MeetingsPage() {
   const tenant = useTenant()
-  const { can, membership } = useAuth()
+  const { membership } = useAuth()
   // the team member / booking calendar filters: Owner and Tech Support only
   const isAdmin = !!membership && (membership.is_support || membership.role.level <= 1)
-  const { inScope } = useBusiness()
+  const { inScope, selected, sub } = useBusiness()
+  // Paid Podcast: a done meeting can book the podcast
+  const podcast = activeType(selected, sub) === BT.PAID_PODCAST
   const refs = useBookingRefs()
-  const canAdd = can('meetings', 'add')
+  // anyone in the team can add a meeting
+  const canAdd = true
   const today = isoDay(new Date())
   const [anchor, setAnchor] = useState(today)
   const [meetings, setMeetings] = useState<MeetingRow[] | null>(null)
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [status, setStatus] = useState<'' | MeetingStatus>('')
+  const [kindF, setKindF] = useState<'' | MeetingKind>('')
   const [memberF, setMemberF] = useState('')
   const [catF, setCatF] = useState('')
   const [widgetF, setWidgetF] = useState('')
@@ -75,21 +82,34 @@ export function MeetingsPage() {
   }, [tenant.id, isAdmin])
 
   const leadById = useMemo(() => new Map(leads.map((l) => [l.id, l])), [leads])
-  const name = useCallback((m: MeetingRow) => {
-    const l = leadById.get(m.lead_id)
-    return l ? fullName(l) : 'Guest'
-  }, [leadById])
-  const scoped = useMemo(() => (meetings ?? []).filter((m) => inScope(m.business_id, m.sub_business_id)), [meetings, inScope])
+  const name = useCallback(
+    (m: MeetingRow) => {
+      if (m.kind === 'team') return m.title || 'Team meeting'
+      const l = m.lead_id ? leadById.get(m.lead_id) : null
+      return l ? fullName(l) : 'Lead'
+    },
+    [leadById],
+  )
+  const me = membership?.id
+  // my calendar: the meetings I am in or added; lead meetings of the business in the header, team meetings always
+  const scoped = useMemo(
+    () =>
+      (meetings ?? []).filter(
+        (m) => !!me && (m.members.includes(me) || m.created_by === me) && (m.kind === 'team' || inScope(m.business_id ?? '', m.sub_business_id)),
+      ),
+    [meetings, inScope, me],
+  )
   const visible = useMemo(
     () =>
       scoped.filter(
         (m) =>
           (!status || m.status === status) &&
-          (!memberF || m.assigned_to === memberF) &&
-          (!catF || leadById.get(m.lead_id)?.temperature === catF) &&
+          (!kindF || m.kind === kindF) &&
+          (!memberF || m.members.includes(memberF)) &&
+          (!catF || (!!m.lead_id && leadById.get(m.lead_id)?.temperature === catF)) &&
           (!widgetF || !!booked.get(widgetF)?.has(`${m.assigned_to}|${m.meeting_date} ${String(m.start_time ?? '').slice(0, 5)}`)),
       ),
-    [scoped, status, memberF, catF, leadById, widgetF, booked],
+    [scoped, status, kindF, memberF, catF, leadById, widgetF, booked],
   )
   const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
@@ -110,19 +130,22 @@ export function MeetingsPage() {
     () =>
       meetings
         ? visible.map((m) => {
-            const l = leadById.get(m.lead_id)
+            const l = m.lead_id ? leadById.get(m.lead_id) : null
+            const team = m.kind === 'team'
             const where = m.mode === 'online' ? MODE_LABEL.online : m.location ? `In person · ${m.location}` : MODE_LABEL.in_person
             const moved = (m.reschedules ?? []).length
-            const host = m.assigned_to ? members.find((x) => x.id === m.assigned_to)?.name : null
+            const names = m.members.map((id) => members.find((x) => x.id === id)?.name).filter(Boolean)
+            const host = names.length ? (names.length > 2 ? `${names.slice(0, 2).join(', ')} +${names.length - 2}` : names.join(', ')) : null
             return {
               id: m.id,
               date: m.meeting_date,
               start: m.start_time,
               end: m.end_time,
-              title: name(m),
+              title: team ? `${name(m)} · Team` : name(m),
               detail: where,
-              meta: `${clock(m.start_time)} – ${clock(m.end_time)} · ${where} · ${MEETING_STATUS[m.status].label}${host ? ` · with ${host}` : ''}${moved ? ` · rescheduled ${moved}×` : ''}`,
-              color: MEETING_STATUS[m.status].color,
+              meta: `${KIND_LABEL[m.kind]} · ${clock(m.start_time)} – ${clock(m.end_time)} · ${where} · ${MEETING_STATUS[m.status].label}${host ? ` · with ${host}` : ''}${moved ? ` · rescheduled ${moved}×` : ''}`,
+              color: team && m.status === 'scheduled' ? TEAM_COLOR : MEETING_STATUS[m.status].color,
+              faded: m.status === 'cancelled',
               side: l?.phone,
               actions: (
                 <>
@@ -131,11 +154,13 @@ export function MeetingsPage() {
                       Join
                     </a>
                   )}
-                  <Link className="btn btn-outline btn-sm" to={`/leads/${m.lead_id}`}>
-                    Lead
-                  </Link>
+                  {m.lead_id && (
+                    <Link className="btn btn-outline btn-sm" to={`/leads/${m.lead_id}`}>
+                      Lead
+                    </Link>
+                  )}
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setDrawer({ meeting: m })}>
-                    {m.status === 'scheduled' ? 'Done / Reschedule / No-show' : 'Open'}
+                    {m.status === 'scheduled' ? (team ? 'Done / Reschedule / Cancel' : 'Done / Reschedule / No-show') : 'Open'}
                   </button>
                 </>
               ),
@@ -149,7 +174,7 @@ export function MeetingsPage() {
     <>
       <PageHead
         title="Meetings"
-        subtitle="Meetings with guests: Upcoming, then Done (with a comment) or No-show; Reschedule moves the same meeting. Drag over free time to schedule one."
+        subtitle="Your meetings: with leads and team (internal) meetings. Upcoming, then Done (with a comment), No-show or Cancelled; Reschedule moves the same meeting. Drag over free time to schedule one."
         actions={
           canAdd && (
             <button type="button" className="btn btn-primary" onClick={() => setDrawer({ meeting: null, date: anchor })}>
@@ -202,6 +227,11 @@ export function MeetingsPage() {
                 ))}
               </select>
             )}
+            <select className="input input-sm filter-select" value={kindF} onChange={(e) => setKindF(e.target.value as MeetingKind | '')} aria-label="Lead or team">
+              <option value="">Lead &amp; team</option>
+              <option value="lead">Lead meetings</option>
+              <option value="team">Team meetings</option>
+            </select>
             <select className="input input-sm filter-select" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
               <option value="">All categories</option>
               {TEMPERATURES.map((t) => (
@@ -228,6 +258,9 @@ export function MeetingsPage() {
             {MEETING_STATUS[s].label}
           </span>
         ))}
+        <span className="stage-pill" style={{ ['--c' as string]: TEAM_COLOR }}>
+          Team meeting (upcoming)
+        </span>
       </div>
 
       {drawer && (
@@ -243,10 +276,14 @@ export function MeetingsPage() {
             setNotice({ ok: msg })
             load()
           }}
-          onBook={(l) => {
-            setDrawer(null)
-            setBook(l)
-          }}
+          onBook={
+            podcast
+              ? (l) => {
+                  setDrawer(null)
+                  setBook(l)
+                }
+              : undefined
+          }
         />
       )}
 
