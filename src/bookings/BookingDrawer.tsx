@@ -16,7 +16,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
-import { DEAL_STEPS, latestStep, saveDealSteps, type DealStep } from './dealSteps'
+import { DEAL_STEPS, latestStep, saveDealSteps, toggleStep, type DealStep } from './dealSteps'
 import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
@@ -508,13 +508,13 @@ function DealStepsSection({ booking, canTick, me, onChanged }: { booking: Bookin
   const latest = latestStep(steps)?.step ?? 0
 
   async function toggle(n: number) {
-    const next = done.has(n) ? steps.filter((s) => s.step !== n) : [...steps, { step: n, at: new Date().toISOString(), by: me }]
+    const next = toggleStep(steps, n, me)
     setBusy(n)
     setError(null)
     try {
       await saveDealSteps(booking.id, next)
       setSteps(next)
-      onChanged(done.has(n) ? `Unticked: ${DEAL_STEPS[n - 1]}.` : `Done: ${DEAL_STEPS[n - 1]}.`)
+      onChanged(done.has(n) ? n > 1 ? `Back to step ${n - 1}: ${DEAL_STEPS[n - 2]}.` : 'All steps unticked.' : `Done up to step ${n}: ${DEAL_STEPS[n - 1]}.`)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -522,7 +522,7 @@ function DealStepsSection({ booking, canTick, me, onChanged }: { booking: Bookin
   }
 
   return (
-    <FormSection title="Steps" description="Tick each step as it’s done; the Brand Deals list shows the latest.">
+    <FormSection title="Steps" description="Tick a step and every step before it is done too; untick one and the steps after it go back. The Brand Deals list shows the latest.">
       {error && <div className="alert alert-error small">{error}</div>}
       <div className="deal-steps">
         {DEAL_STEPS.map((name, i) => {
