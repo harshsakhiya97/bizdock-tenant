@@ -106,7 +106,7 @@ export function SubBusinessCards({
           </div>
           <div className="sb-tiles">
             <div>
-              <small>Enquiries</small>
+              <small>Leads</small>
               <b>{c.enquiries}</b>
             </div>
             <div>

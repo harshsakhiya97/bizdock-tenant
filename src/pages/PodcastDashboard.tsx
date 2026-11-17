@@ -259,7 +259,7 @@ export function PodcastDashboard() {
         <div className="row" style={{ gap: 8 }}>
           {can('leads', 'add') && (
             <button type="button" className="btn btn-outline" onClick={() => setAdding(true)}>
-              <Plus size={15} /> New enquiry
+              <Plus size={15} /> New lead
             </button>
           )}
           {can('meetings', 'add') && (
@@ -285,7 +285,7 @@ export function PodcastDashboard() {
         </Link>
         <Link to="/leads" className="db-card">
           <b>{d.monthLeads.length}</b>
-          <span>Inquiries · {ml}</span>
+          <span>Leads · {ml}</span>
           <small>{d.openNow} open right now</small>
         </Link>
         <Link to="/bookings" className="db-card">
@@ -432,7 +432,7 @@ export function PodcastDashboard() {
             How many remain at each stage. The biggest drop is where the most is to be gained.
           </p>
           <div className="pd-funnel">
-            {bar('Leads received', 'Inquiries that came in', f.received)}
+            {bar('Leads received', 'Leads that came in', f.received)}
             {bar('Contacted', 'A follow-up logged, or a meeting set', f.contacted, { lost: lostPct(f.received, f.contacted) })}
             {bar('Meetings scheduled', `Every meeting in ${ml}`, f.scheduled, { tone: 'is-orange', lost: lostPct(f.contacted, f.scheduled) })}
             {bar('Booked by team', 'First meeting with the guest', f.kinds.team, { indent: true })}

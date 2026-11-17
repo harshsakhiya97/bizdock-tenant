@@ -175,7 +175,7 @@ function MonthDashboard() {
         <div className="row" style={{ gap: 8 }}>
           {can('leads', 'add') && (
             <button type="button" className="btn btn-outline" onClick={() => setAdding(true)}>
-              <Plus size={15} /> New enquiry
+              <Plus size={15} /> New lead
             </button>
           )}
           {can('bookings', 'add') && (
@@ -194,7 +194,7 @@ function MonthDashboard() {
       <div className="db-cards">
         <Link to="/leads" className="db-card">
           <b>{d.monthLeads.length}</b>
-          <span>Enquiries · {ml}</span>
+          <span>Leads · {ml}</span>
           <small>
             {d.converted} converted to customers · {d.open} open · {d.lost} lost
           </small>
@@ -233,9 +233,9 @@ function MonthDashboard() {
         </div>
         <Link to="/customers" className="db-card">
           <b>{pct}%</b>
-          <span>Enquiry to customer</span>
+          <span>Lead to customer</span>
           <small>
-            {d.converted} of {d.monthLeads.length} enquiries this month became customers
+            {d.converted} of {d.monthLeads.length} leads this month became customers
           </small>
         </Link>
       </div>
@@ -275,7 +275,7 @@ function MonthDashboard() {
           <div className="db-head card-pad" style={{ paddingBottom: 8 }}>
             <h3>Action required</h3>
             <span className="muted small">
-              {d.action.length} enquir{d.action.length === 1 ? 'y needs' : 'ies need'} a call
+              {d.action.length} lead{d.action.length === 1 ? ' needs' : 's need'} a call
             </span>
           </div>
           {!d.action.length ? (
@@ -285,7 +285,7 @@ function MonthDashboard() {
               <table className="table db-table">
                 <thead>
                   <tr>
-                    <th>Enquiry</th>
+                    <th>Lead</th>
                     <th>Source</th>
                     <th>Follow-up</th>
                     <th>Status</th>
@@ -371,11 +371,11 @@ function MonthDashboard() {
           <section className="card card-pad db-section">
             <div className="db-head">
               <h3>
-                Enquiry sources <span className="muted small">· {ml}</span>
+                Lead sources <span className="muted small">· {ml}</span>
               </h3>
             </div>
             {!d.sources.length ? (
-              <div className="muted">No enquiries this month.</div>
+              <div className="muted">No leads this month.</div>
             ) : (
               <div className="stack" style={{ gap: 8 }}>
                 {d.sources.map(([name, n]) => (

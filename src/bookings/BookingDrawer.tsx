@@ -117,7 +117,7 @@ export function BookingDrawer({
 
   const leadOptions = useMemo(
     () => [
-      { value: '', label: '— Direct booking (not from an enquiry) —' },
+      { value: '', label: '— Direct booking (not from a lead) —' },
       ...(leads ?? []).filter((l) => !l.is_archived).map((l) => ({ value: l.id, label: `${fullName(l)} · ${l.phone}` })),
     ],
     [leads],
@@ -254,17 +254,17 @@ export function BookingDrawer({
       <div className="stack">
         <FormSection
           title={service ? `${noun} details` : 'Booking details'}
-          description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; GST, payments and the invoice come later, from the ${noun}s list → Generate invoice.` : 'Pick the enquiry and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+          description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; GST, payments and the invoice come later, from the ${noun}s list → Generate invoice.` : 'Pick the lead and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
             <div className="span-2">
-              <Label htmlFor="bk-lead">Linked enquiry</Label>
+              <Label htmlFor="bk-lead">Linked lead</Label>
               {fixed ? (
                 <div className="bk-who">
-                  <b>{input.lead_id ? (lead?.name ?? input.client_name) : 'Direct booking (not from an enquiry)'}</b>
+                  <b>{input.lead_id ? (lead?.name ?? input.client_name) : 'Direct booking (not from a lead)'}</b>
                 </div>
               ) : (
-                <SearchSelect id="bk-lead" value={pickedLead} onChange={pickLead} options={leadOptions} placeholder="— Direct booking (not from an enquiry) —" />
+                <SearchSelect id="bk-lead" value={pickedLead} onChange={pickLead} options={leadOptions} placeholder="— Direct booking (not from a lead) —" />
               )}
             </div>
             <div>
