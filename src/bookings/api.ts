@@ -254,3 +254,9 @@ export function studioClash(busy: BusySlot[], slot: { id?: string; date: string;
   }
   return busy.find((b) => b.id !== slot.id && b.booking_date === slot.date && m(b.start_time) < m(slot.end) && m(b.end_time) > m(slot.start)) ?? null
 }
+
+/** delete a booking / order / brand deal (with its own invoice, or off a shared one) */
+export async function deleteBooking(id: string) {
+  const { error } = await db().rpc('booking_delete', { p_id: id })
+  if (error) throw error
+}

@@ -67,6 +67,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         actions: [
           { module: 'bookings', action: 'add', label: 'Book slots', hint: 'New bookings, services and payment plan' },
           { module: 'bookings', action: 'edit', label: 'Edit bookings', hint: 'Change, cancel, mark payment parts paid' },
+          { module: 'bookings', action: 'delete', label: 'Delete bookings', hint: 'Delete a booking / order / brand deal (and its own invoice)' },
         ],
       },
       {
