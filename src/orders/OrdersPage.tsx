@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
-import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
+import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
 import { listLeads, listMemberOptions } from '@/leads/api'
 import { money } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { listBookings } from '@/bookings/api'
+import { deleteBooking, listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { ORDER_STATUS, STATUS_META, invoiceNo, partState, type BookingRow, type BookingStatus, type OrderStatus } from '@/bookings/types'
@@ -60,6 +60,8 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   // orders ticked for one invoice
   const [picked, setPicked] = useState<Set<string>>(new Set())
   const [invoicing, setInvoicing] = useState<BookingRow[] | null>(null)
+  const [removing, setRemoving] = useState<BookingRow | null>(null)
+  const [busy, setBusy] = useState(false)
   // the invoice side panel
   const [invoiceOpen, setInvoiceOpen] = useState<string | null>(null)
   // New booking / order: pick the client (a lead or customer) from this list
@@ -328,6 +330,11 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                                 <Repeat size={13} /> Repeat
                               </button>
                             )}
+                            {can('bookings', 'delete') && (
+                              <button type="button" className="btn btn-ghost btn-sm btn-icon" title={`Delete this ${one}`} aria-label={`Delete ${bookingRef(b)}`} onClick={() => setRemoving(b)}>
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </td>
                         </tr>
                       )
@@ -400,6 +407,36 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
           }}
         />
       )}
+      <ConfirmModal
+        open={!!removing}
+        icon={Trash2}
+        danger
+        title={`Delete ${removing ? bookingRef(removing) : ''}?`}
+        message={
+          removing?.invoice_id
+            ? (rows ?? []).some((x) => x.invoice_id === removing.invoice_id && x.id !== removing.id)
+              ? `It comes off invoice ${invoiceNo(removing) ?? ''} (the invoice total drops), then it’s deleted with its services. This can’t be undone.`
+              : `Its invoice ${invoiceNo(removing) ?? ''} and that invoice’s payments are deleted too. This can’t be undone.`
+            : 'It’s deleted with its services and payments. This can’t be undone.'
+        }
+        confirmLabel="Delete"
+        busy={busy}
+        onConfirm={async () => {
+          if (!removing) return
+          setBusy(true)
+          try {
+            await deleteBooking(removing.id)
+            setNotice(`${bookingRef(removing)} deleted.`)
+            setRemoving(null)
+            load()
+          } catch (e) {
+            setError((e as Error).message)
+            setRemoving(null)
+          }
+          setBusy(false)
+        }}
+        onCancel={() => setRemoving(null)}
+      />
     </>
   )
 }
