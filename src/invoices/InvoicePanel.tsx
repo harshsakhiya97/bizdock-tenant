@@ -29,11 +29,12 @@ export function InvoicePanel({ invoiceId, refs, onClose, onChanged }: { invoiceI
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(() => {
+  // the form is rebuilt (key) only after a change here, not on the first load — that remount made it open twice
+  const load = useCallback((bump = false) => {
     getInvoice(invoiceId).then(
       (i) => {
         setInv(i)
-        setVersion((v) => v + 1)
+        if (bump) setVersion((v) => v + 1)
       },
       (e: Error) => {
         setError(e.message)
@@ -41,14 +42,14 @@ export function InvoicePanel({ invoiceId, refs, onClose, onChanged }: { invoiceI
       },
     )
   }, [invoiceId])
-  useEffect(load, [load])
+  useEffect(() => load(), [load])
   // not found / not allowed: nothing to show
   useEffect(() => {
     if (inv === null) onClose()
   }, [inv, onClose])
   const changed = (msg: string) => {
     onChanged?.(msg)
-    load()
+    load(true)
   }
 
   if (!inv) return null
