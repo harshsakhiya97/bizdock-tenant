@@ -35,6 +35,7 @@ import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { WaLogsPage } from '@/integrations/WaLogsPage'
 import { CampaignsPage } from '@/whatsapp/CampaignsPage'
 import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
+import { CallyzerTeamPage } from '@/callyzer/CallyzerTeamPage'
 import { MetaLogsPage } from '@/meta/MetaLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
@@ -139,13 +140,22 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/integrations/callyzer/logs"
+                  path="/callyzer/logs"
                   element={
                     <RequirePermission module="call_logs" orModule="settings" orAction="edit">
                       <CallyzerLogsPage />
                     </RequirePermission>
                   }
                 />
+                <Route
+                  path="/callyzer/team"
+                  element={
+                    <RequirePermission module="call_logs" orModule="settings" orAction="edit">
+                      <CallyzerTeamPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route path="/integrations/callyzer/logs" element={<Navigate to="/callyzer/logs" replace />} />
                 <Route
                   path="/integrations/facebook-ads/logs"
                   element={
