@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ChevronDown, LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
@@ -40,7 +40,7 @@ function Shell() {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const { selected, sub } = useBusiness()
+  const { selected, sub, switches } = useBusiness()
   const type = activeType(selected, sub)
   const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
   const meta = pathname === '/bookings' ? { ...base, title: calendarName(type) } : pathname === '/orders' ? { ...base, title: orderNoun(type).many } : base
@@ -68,6 +68,27 @@ function Shell() {
   const tabs = [...sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i])), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],
   )
+
+  // switching the business in the top bar: a page that isn't in the new one's menu goes to Dashboards,
+  // and a detail page (a funnel, a lead, a workflow…) goes back to its list (it belongs to the old business)
+  const navigate = useNavigate()
+  const lastSwitch = useRef(switches)
+  useEffect(() => {
+    if (lastSwitch.current === switches) return
+    lastSwitch.current = switches
+    const items = sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i]))
+    const match = items
+      .filter((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
+      .sort((a, b) => b.to.length - a.to.length)[0]
+    if (match) {
+      if (pathname !== match.to) navigate(match.to, { replace: true })
+      return
+    }
+    // a menu page hidden in this business → Dashboards (or the first page it has)
+    const all = navSections.flatMap((s) => s.items.flatMap((i) => [i, ...(i.children ?? [])]))
+    const isMenuPage = all.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`))
+    if (isMenuPage) navigate(items.find((i) => i.to === '/dashboard')?.to ?? items[0]?.to ?? '/my-day', { replace: true })
+  }, [switches]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggle() {
     setCollapsed((c) => {
