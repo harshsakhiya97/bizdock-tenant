@@ -28,6 +28,9 @@ const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', f
 
 type PendingMove = { ids: string[]; stage: StageRow }
 
+/** ✕ on a lead in no funnel: it has no Lost stage, so this stands in for one (lost reason + Not interested) */
+const NO_FUNNEL_LOST = { id: '', funnel_id: '', name: 'Lost', kind: 'lost', note_required: false, color: '#dc2626', position: 999 } as unknown as StageRow
+
 /** an extra form field by name (any case / spacing) */
 const extraOf = (l: LeadRow, key: string) => {
   const hit = Object.entries(l.extra ?? {}).find(([k]) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_') === key)
@@ -140,7 +143,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       },
     )
   }
-  const lostStageOf = (l: LeadRow) => funnels.find((f) => f.id === l.funnel_id)?.funnel_stages.find((s) => s.kind === 'lost') ?? null
+  // ✕ = Lost: the funnel's Lost stage; a lead in no funnel (e.g. Brand Deal) is marked lost with a reason instead
+  const lostStageOf = (l: LeadRow): StageRow | null =>
+    l.funnel_id ? (funnels.find((f) => f.id === l.funnel_id)?.funnel_stages.find((s) => s.kind === 'lost') ?? null) : NO_FUNNEL_LOST
 
   // /leads?open=<id> (from Follow-ups / My Day) opens that lead once the list is loaded
   const [importing, setImporting] = useState(false)
@@ -285,6 +290,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   }
   async function doMove(ids: string[], stage: StageRow, note: string, lostReasonId: string | null) {
     const from = new Map((leads ?? []).map((l) => [l.id, l.stage_id]))
+    if (stage === NO_FUNNEL_LOST) {
+      // no funnel: the lost reason, category Not interested, and a note in its activity
+      const why = lostReasons.find((r) => r.id === lostReasonId)?.name
+      await run(async () => {
+        await updateLeads(ids, { lost_reason_id: lostReasonId, temperature: 'not_interested' })
+        await logActivity(tenant.id, me, ids, { kind: 'note', note: ['Marked lost', why, note.trim()].filter(Boolean).join(' · ') })
+      }, `${ids.length === 1 ? Word : `${ids.length} ${word}s`} marked lost.`)
+      return
+    }
     await run(async () => {
       await updateLeads(ids, { stage_id: stage.id, lost_reason_id: stage.kind === 'lost' ? lostReasonId : null })
       for (const id of ids)
@@ -815,7 +829,8 @@ export function LeadCells({
   const step = formStep(l, x)
   const t = tempOf(l.temperature)
   const comment = x?.last_note || l.notes || ''
-  const closed = stage?.kind === 'won' || stage?.kind === 'lost'
+  // closed: Won / Lost stage, or (no funnel) already marked lost
+  const closed = stage?.kind === 'won' || stage?.kind === 'lost' || (!l.funnel_id && !!l.lost_reason_id)
   const stop = (e: React.MouseEvent) => e.stopPropagation()
   return (
     <>
