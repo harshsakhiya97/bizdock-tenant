@@ -1635,3 +1635,21 @@ tr.is-drop td { box-shadow: inset 0 2px 0 var(--brand); }
 .form-grid.fc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .form-grid.fc-grid .fc-full { grid-column: 1 / -1; }
 @media (max-width: 900px) { .form-grid.fc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Funnel report: lead trend vs the row before */
+.trend-up,
+.trend-down {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+}
+.trend-up {
+  color: var(--success, #15803d);
+}
+.trend-down {
+  color: var(--danger, #b91c1c);
+}
+tfoot td {
+  font-weight: 600;
+}
