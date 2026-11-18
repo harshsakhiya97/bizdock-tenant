@@ -120,7 +120,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       r.showed += made.get(day)?.s ?? 0
       out.set(key, r)
     }
-    return [...out.values()]
+    // newest first
+    return [...out.values()].reverse()
   }, [report, leads, meet, from, to, by])
   const total = rows.reduce(
     (t, r) => ({ spend: t.spend + r.spend, gst: t.gst + r.gst, leads: t.leads + r.leads, booked: t.booked + r.booked, showed: t.showed + r.showed }),
