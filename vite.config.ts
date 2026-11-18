@@ -43,11 +43,28 @@ export default defineConfig(({ mode }) => {
   } catch {
     branch = ''
   }
+  // dev: the branch right now (after a git checkout, without restarting the dev server)
+  const liveBranch = {
+    name: 'bizdock-git-branch',
+    configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: { setHeader: (k: string, v: string) => void; end: (s: string) => void }, next: () => void) => void) => void } }) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.split('?')[0].endsWith('/__git_branch')) return next()
+        let b = ''
+        try {
+          b = execSync('git branch --show-current', { cwd: import.meta.dirname }).toString().trim()
+        } catch {
+          b = ''
+        }
+        res.setHeader('Content-Type', 'text/plain')
+        res.end(b)
+      })
+    },
+  }
   return {
     define: { __GIT_BRANCH__: JSON.stringify(branch) },
     // the app can live in a sub-folder, e.g. https://pride.viralsakhiya.com/pride/ (VITE_BASE_PATH=/pride/)
     base: env.VITE_BASE_PATH || '/',
-    plugins: [react(), tailwindcss(), embedScripts],
+    plugins: [react(), tailwindcss(), embedScripts, liveBranch],
     server: { port: 5174, proxy: api }, // owner app uses 5173
     preview: { proxy: api },
     resolve: {
