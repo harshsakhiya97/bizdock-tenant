@@ -25,6 +25,7 @@ export const releases: Release[] = [
     improved: [
       'Leads card: the count of every category (new · hot · warm · cold · not interested · closed).',
       'Lead / customer: counts on the Follow-ups and Payments tabs, and on the Invoice sub-tab.',
+      'Funnel → Facebook Ads → Spend per day: click an ad to see it (the same preview as System Connections → Facebook → Ads).',
       'Funnel report: the Total row has one background; numbers with a hover show the pointer cursor.',
     ],
     fixed: [
