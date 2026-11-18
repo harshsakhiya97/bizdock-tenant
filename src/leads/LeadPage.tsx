@@ -34,8 +34,9 @@ import { makesCustomer, podcastCheck } from './customers'
 import { listPurchases, type Purchase } from '@/webinars/api'
 import { LeadWebinarsTab, PurchasesTab } from '@/webinars/LeadWebinarTabs'
 import { PurchaseDrawer } from '@/webinars/PurchaseDrawer'
+import { LeadPaymentsTab, listLeadPayments, type LeadPay } from '@/payments/LeadPaymentsTab'
 
-type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases'
+type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -54,7 +55,7 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' ? t : 'details'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
@@ -62,6 +63,9 @@ export function LeadPage() {
   const [mt, setMt] = useState<{ meeting: MeetingRow | null } | null>(null)
   const [purchases, setPurchases] = useState<Purchase[] | null>(null)
   const [pu, setPu] = useState<{ purchase: Purchase | null } | null>(null)
+  // Razorpay payments with this lead's phone / email (Role access → Payments → view)
+  const [payments, setPayments] = useState<LeadPay[] | null>(null)
+  const [payError, setPayError] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -86,6 +90,20 @@ export function LeadPage() {
       .catch(() => setMeetings([]))
   }, [id, tenant.id, can])
   useEffect(load, [load])
+  const canPay = can('payments', 'view')
+  const payPhone = lead?.phone ?? null
+  const payEmail = lead?.email ?? null
+  const hasLead = !!lead
+  useEffect(() => {
+    if (!canPay || !hasLead) return
+    setPayError(null)
+    listLeadPayments(tenant.id, { phone: payPhone, email: payEmail })
+      .then(setPayments)
+      .catch((e: Error) => {
+        setPayments([])
+        setPayError(e.message)
+      })
+  }, [canPay, hasLead, tenant.id, payPhone, payEmail])
   useEffect(() => {
     void Promise.all([listMemberOptions(tenant.id), listLostReasons(tenant.id)]).then(([m, r]) => {
       setMembers(m)
@@ -191,6 +209,7 @@ export function LeadPage() {
       : can('bookings', 'view')
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
+    ...(canPay ? [{ id: 'payments' as Tab, label: 'Payments', count: (payments ?? []).filter((p) => p.status === 'captured' || p.status === 'refunded').length }] : []),
   ]
 
   return (
@@ -316,6 +335,7 @@ export function LeadPage() {
           <MeetingsTab meetings={meetings} members={members} canAdd onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
+        {tab === 'payments' && canPay && <LeadPaymentsTab payments={payments} error={payError} />}
         {tab === 'purchases' && isWebinar && (
           <PurchasesTab purchases={purchases} canAdd={canEdit} onAdd={() => setPu({ purchase: null })} onOpen={(p) => setPu({ purchase: p })} onChanged={done} />
         )}
