@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Modal } from '@/components/Modal'
 import { Filter, List, TrendingDown, TrendingUp } from 'lucide-react'
@@ -14,6 +14,8 @@ const iso = (d: Date) => d.toLocaleDateString('en-CA')
 const at = (s: string) => new Date(`${s}T00:00:00`)
 const short = (s: string) => at(s).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 /** a lead's day: its creation date in India time */
+/** '14:30' → '2:30 pm' */
+const clockOf = (t: string) => (t ? new Date(2000, 0, 1, Number(t.slice(0, 2)), Number(t.slice(3, 5))).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
 const leadDay = (ts: string) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 
 type By = 'day' | 'week' | 'month'
@@ -62,24 +64,26 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const [show, setShow] = useState<{ r: Row; k: 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // the funnel's leads with a meeting (Booking) and with a meeting done (Showup)
-  const [meet, setMeet] = useState<{ booked: Set<string>; showed: Set<string> }>({ booked: new Set(), showed: new Set() })
+  const [meet, setMeet] = useState<{ booked: Map<string, string>; showed: Map<string, string> }>({ booked: new Map(), showed: new Map() })
   const ids = useMemo(() => (leads ?? []).map((l) => l.id), [leads])
   useEffect(() => {
     if (!ids.length) return
     let live = true
     void (async () => {
-      const booked = new Set<string>()
-      const showed = new Set<string>()
+      // per lead: its first meeting (Booking) and its last meeting done (Show up), as 'YYYY-MM-DD HH:MM'
+      const booked = new Map<string, string>()
+      const showed = new Map<string, string>()
       for (let i = 0; i < ids.length; i += 300) {
         const { data } = await db()
           .from('meetings')
-          .select('lead_id, status')
+          .select('lead_id, status, meeting_date, start_time')
           .eq('tenant_id', tenant.id)
           .in('lead_id', ids.slice(i, i + 300))
-        for (const m of (data ?? []) as { lead_id: string; status: string }[]) {
+        for (const m of (data ?? []) as { lead_id: string; status: string; meeting_date: string; start_time: string }[]) {
           if (m.status === 'cancelled') continue
-          booked.add(m.lead_id)
-          if (m.status === 'done') showed.add(m.lead_id)
+          const at = `${m.meeting_date} ${String(m.start_time).slice(0, 5)}`
+          if (!booked.has(m.lead_id) || at < booked.get(m.lead_id)!) booked.set(m.lead_id, at)
+          if (m.status === 'done' && (!showed.has(m.lead_id) || at > showed.get(m.lead_id)!)) showed.set(m.lead_id, at)
         }
       }
       if (live) setMeet({ booked, showed })
@@ -90,7 +94,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   }, [ids, tenant.id, reload])
 
   // per lead: Razorpay payments (the funnel's products, else all) by phone / email, and invoice totals (bookings)
-  const [money2, setMoney2] = useState<{ pays: Map<string, { n: number; amt: number }>; billed: Map<string, number> }>({ pays: new Map(), billed: new Map() })
+  const [money2, setMoney2] = useState<{ pays: Map<string, { n: number; amt: number; last: string }>; billed: Map<string, number> }>({ pays: new Map(), billed: new Map() })
   useEffect(() => {
     if (!ids.length) return
     let live = true
@@ -107,7 +111,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       }
       const { data: f } = await db().from('funnels').select('payment_descriptions').eq('id', funnelId).maybeSingle()
       const products = ((f?.payment_descriptions ?? []) as string[]).filter(Boolean)
-      let q = db().from('razorpay_payments').select('phone, email, amount, amount_refunded, description').eq('tenant_id', tenant.id).in('status', ['captured', 'refunded'])
+      let q = db().from('razorpay_payments').select('phone, email, amount, amount_refunded, description, paid_at').eq('tenant_id', tenant.id).in('status', ['captured', 'refunded'])
       if (products.length) q = q.in('description', products)
       const { data: rz } = await q.limit(20000)
       const byPhone = new Map<string, string>()
@@ -118,12 +122,13 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         const m = mail(l.email)
         if (m && !byEmail.has(m)) byEmail.set(m, l.id)
       }
-      const pays = new Map<string, { n: number; amt: number }>()
-      for (const x of (rz ?? []) as { phone: string | null; email: string | null; amount: number; amount_refunded: number }[]) {
+      const pays = new Map<string, { n: number; amt: number; last: string }>()
+      for (const x of (rz ?? []) as { phone: string | null; email: string | null; amount: number; amount_refunded: number; paid_at: string }[]) {
         const id = byPhone.get(last10(x.phone)) ?? byEmail.get(mail(x.email))
         if (!id) continue
-        const c = pays.get(id) ?? { n: 0, amt: 0 }
+        const c = pays.get(id) ?? { n: 0, amt: 0, last: '' }
         c.n++
+        if (x.paid_at > c.last) c.last = x.paid_at
         c.amt += Number(x.amount || 0) - Number(x.amount_refunded || 0)
         pays.set(id, c)
       }
@@ -436,45 +441,86 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
             const ls = show.r.ls.filter(pickOf(show.k))
             if (!ls.length) return <div className="muted small">No leads.</div>
             const sum = ls.reduce((t, l) => t + rev(l), 0)
+            const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+            const meetAt = (v?: string) =>
+              v ? `${new Date(`${v.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${clockOf(v.slice(11))}` : '—'
+            const none = <span className="muted">—</span>
+            // the columns that matter for what was clicked
+            type C = { label: string; num?: boolean; cell: (l: Lead) => ReactNode; foot?: ReactNode }
+            const lead: C = {
+              label: 'Lead',
+              cell: (l) => (
+                <>
+                  <b>{who(l)}</b>
+                  {(l.phone || l.email) && <div className="muted small">{[l.phone, l.email].filter(Boolean).join(' · ')}</div>}
+                </>
+              ),
+              foot: `${ls.length} lead${ls.length === 1 ? '' : 's'}`,
+            }
+            const leadDate: C = { label: 'Lead date', cell: (l) => <span className="nowrap">{dt(l.created_at)}</span> }
+            const revenue: C = { label: 'Revenue', num: true, cell: (l) => (rev(l) ? <b>{inr(rev(l))}</b> : none), foot: sum ? inr(sum) : '—' }
+            const cols: C[] = {
+              leads: [lead, leadDate],
+              booked: [lead, leadDate, { label: 'Booking date', cell: (l: Lead) => <span className="nowrap">{meetAt(meet.booked.get(l.id))}</span> }],
+              showed: [
+                lead,
+                leadDate,
+                { label: 'Booking date', cell: (l: Lead) => <span className="nowrap">{meetAt(meet.booked.get(l.id))}</span> },
+                { label: 'Show up date', cell: (l: Lead) => <span className="nowrap">{meetAt(meet.showed.get(l.id))}</span> },
+              ],
+              paid: [
+                lead,
+                leadDate,
+                { label: 'Payment date', cell: (l: Lead) => <span className="nowrap">{money2.pays.get(l.id)?.last ? dt(money2.pays.get(l.id)!.last) : '—'}</span> },
+                {
+                  label: 'Paid',
+                  num: true,
+                  cell: (l: Lead) => {
+                    const p = money2.pays.get(l.id)
+                    return p?.n ? `${inr(p.amt)}${p.n > 1 ? ` · ${p.n}` : ''}` : none
+                  },
+                  foot: inr(ls.reduce((t, l) => t + (money2.pays.get(l.id)?.amt ?? 0), 0)),
+                },
+              ],
+              closed: [lead, leadDate, revenue],
+              revenue: [
+                lead,
+                leadDate,
+                { label: 'Razorpay', num: true, cell: (l: Lead) => (money2.pays.get(l.id)?.n ? inr(money2.pays.get(l.id)!.amt) : none) },
+                { label: 'Invoices', num: true, cell: (l: Lead) => (money2.billed.get(l.id) ? inr(money2.billed.get(l.id)!) : none) },
+                revenue,
+              ],
+            }[show.k]
             return (
               <div className="table-wrap" style={{ maxHeight: '60vh', overflow: 'auto' }}>
                 <table className="table table-compact">
                   <thead>
                     <tr>
-                      <th>Lead</th>
-                      <th>Lead date</th>
-                      <th className="num">Razorpay</th>
-                      <th className="num">Invoices</th>
-                      <th className="num">Revenue</th>
+                      {cols.map((c) => (
+                        <th key={c.label} className={c.num ? 'num' : undefined}>
+                          {c.label}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {ls.map((l) => {
-                      const p = money2.pays.get(l.id)
-                      const inv = money2.billed.get(l.id) ?? 0
-                      return (
-                        <tr key={l.id} className="is-clickable" onClick={() => navigate(`/leads/${l.id}`)} title="Open the lead">
-                          <td>
-                            <b>{who(l)}</b>
-                            {l.phone && <div className="muted small">{l.phone}</div>}
+                    {ls.map((l) => (
+                      <tr key={l.id} className="is-clickable" onClick={() => navigate(`/leads/${l.id}`)} title="Open the lead">
+                        {cols.map((c) => (
+                          <td key={c.label} className={c.num ? 'num nowrap' : undefined}>
+                            {c.cell(l)}
                           </td>
-                          <td className="nowrap">{new Date(l.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
-                          <td className="num nowrap">{p?.n ? `${inr(p.amt)} · ${p.n}` : <span className="muted">—</span>}</td>
-                          <td className="num nowrap">{inv ? inr(inv) : <span className="muted">—</span>}</td>
-                          <td className="num nowrap">{rev(l) ? <b>{inr(rev(l))}</b> : <span className="muted">—</span>}</td>
-                        </tr>
-                      )
-                    })}
+                        ))}
+                      </tr>
+                    ))}
                   </tbody>
                   <tfoot>
                     <tr>
-                      <th>
-                        {ls.length} lead{ls.length === 1 ? '' : 's'}
-                      </th>
-                      <th />
-                      <th />
-                      <th />
-                      <th className="num">{sum ? inr(sum) : '—'}</th>
+                      {cols.map((c) => (
+                        <th key={c.label} className={c.num ? 'num' : undefined}>
+                          {c.foot}
+                        </th>
+                      ))}
                     </tr>
                   </tfoot>
                 </table>
