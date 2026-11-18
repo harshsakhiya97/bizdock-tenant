@@ -335,6 +335,10 @@ export function IntegrationsPage() {
                       : r.config.last_sync_at
                         ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
                         : 'Connected · first check in a minute'
+                    : p.id === 'razorpay' && r && !off
+                    ? r.config.last_sync_at
+                      ? `Payments checked ${ago(r.config.last_sync_at)} · every 5 min`
+                      : 'Connected · first check within 5 minutes'
                     : p.id === 'facebook_ads' && !off && accounts.length
                       ? 'Numbers every 3 hours · last 7 days again every night'
                     : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
@@ -527,6 +531,13 @@ function ConnectDrawer({
     setBusy(true)
     try {
       const id = await saveIntegration(tenant.id, membership?.id, existing ?? (replaceId ? ({ id: replaceId } as IntegrationRow) : null), provider.id, config, provider.multiple ? label.trim() : null)
+      // Razorpay keys: checked straight away
+      if (provider.id === 'razorpay' && id) {
+        const { data, error: e } = await db().functions.invoke('razorpay', { body: { action: 'test', id } })
+        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        onSaved(why ? `Razorpay saved, but it refused the keys: ${why}` : 'Razorpay connected. Payments come in within 5 minutes (the last 90 days first).')
+        return
+      }
       // Zoom keys: checked straight away
       if (provider.id === 'zoom' && id) {
         try {

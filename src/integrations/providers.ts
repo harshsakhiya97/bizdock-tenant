@@ -1,4 +1,4 @@
-import { Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
+import { CreditCard, Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
 
 /** the scopes a Zoom Server-to-Server app needs for BizDock (Add with keys) */
 export const ZOOM_KEYS_SCOPES: { label: string; items: string[] }[] = [
@@ -27,7 +27,7 @@ ${ZOOM_KEYS_SCOPES.flatMap((g) => g.items).join('\n')}
 5. Activation → Activate your app.
 6. Open "App Credentials" and tell me only: "Credentials page is open", plus which scopes you couldn't find, and whether activation succeeded.`
 
-export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw'
+export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay'
 export type ProviderField = {
   key: string
   label: string
@@ -89,6 +89,23 @@ export const PROVIDERS: Provider[] = [
     usedFor: 'Call history on leads, caller reports',
     fields: [
       { key: 'api_key', label: 'API access key', secret: true, required: true, hint: 'Callyzer → Connectors → API & Webhook → API Config' },
+    ],
+  },
+  {
+    id: 'razorpay',
+    name: 'Razorpay',
+    icon: CreditCard,
+    color: '#0c2451',
+    description: 'Your Razorpay account’s payments, brought in every 5 minutes and matched to leads by phone / email.',
+    usedFor: 'Payments → History logs',
+    guide: [
+      'Sign in at dashboard.razorpay.com. Pick Test or Live mode at the top (the keys differ).',
+      'Account & Settings → API keys → Generate key (or Regenerate). Razorpay shows the Key ID and the Key Secret once — copy both into the boxes below.',
+      'Press Connect: BizDock checks the keys straight away, then brings in the last 90 days of payments.',
+    ],
+    fields: [
+      { key: 'key_id', label: 'Key ID', required: true, placeholder: 'rzp_live_…', hint: 'The public key (starts with rzp_live_ or rzp_test_).' },
+      { key: 'key_secret', label: 'Key Secret', secret: true, required: true, hint: 'The secret key, shown once when the key is generated.' },
     ],
   },
   {

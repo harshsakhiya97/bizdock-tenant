@@ -1,4 +1,4 @@
-import { PackageCheck, Phone, PhoneCall, Users2, MessageCircle, MessagesSquare, Megaphone, ScrollText, MessageSquareText, Blocks, Building2, Contact, FileText, CalendarClock, Clock3, Database, Sun, LayoutGrid, ShieldCheck, Sparkles, User, Users, Workflow, Network, CalendarCheck, Plug, Handshake, type LucideIcon } from 'lucide-react'
+import { Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { BT, type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -48,6 +48,12 @@ export const navSections: { title: string; /** no heading shown in the side menu
           { to: '/whatsapp/logs', label: 'History logs', icon: ScrollText, area: 'whatsapp' },
           { to: '/whatsapp/templates', label: 'Templates', icon: MessageSquareText, module: 'whatsapp', action: 'templates', or: { module: 'whatsapp', action: 'campaign' } },
         ],
+      },
+      {
+        to: '/payments',
+        label: 'Payments',
+        icon: CreditCard,
+        children: [{ to: '/payments/logs', label: 'History logs', icon: ScrollText, module: 'payments' }],
       },
       {
         to: '/callyzer',
@@ -106,6 +112,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/whatsapp/campaigns': { title: 'WhatsApp', crumb: 'Campaigns', icon: Megaphone },
   '/whatsapp/logs': { title: 'WhatsApp', crumb: 'History logs', icon: ScrollText },
   '/whatsapp/templates': { title: 'WhatsApp', crumb: 'Templates', icon: MessageSquareText },
+  '/payments/logs': { title: 'Payments', crumb: 'History logs', icon: CreditCard },
   '/callyzer/logs': { title: 'Callyzer', crumb: 'History logs', icon: PhoneCall },
   '/callyzer/team': { title: 'Callyzer', crumb: 'Team numbers', icon: Users2 },
   '/whatsapp': { title: 'WhatsApp', crumb: 'Chats & campaigns', icon: MessageCircle },

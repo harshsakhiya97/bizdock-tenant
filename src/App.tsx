@@ -36,6 +36,7 @@ import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
 import { WaLogsPage } from '@/integrations/WaLogsPage'
 import { CampaignsPage } from '@/whatsapp/CampaignsPage'
 import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
+import { PaymentsLogsPage } from '@/payments/PaymentsLogsPage'
 import { CallyzerTeamPage } from '@/callyzer/CallyzerTeamPage'
 import { MetaLogsPage } from '@/meta/MetaLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
@@ -140,6 +141,15 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route
+                  path="/payments/logs"
+                  element={
+                    <RequirePermission module="payments">
+                      <PaymentsLogsPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route path="/payments" element={<Navigate to="/payments/logs" replace />} />
                 <Route
                   path="/callyzer/logs"
                   element={

@@ -101,6 +101,12 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         ],
       },
       {
+        key: 'payments',
+        label: 'Payments',
+        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments → History logs: Razorpay payments' },
+        actions: [],
+      },
+      {
         key: 'whatsapp',
         label: 'WhatsApp',
         open: { kind: 'scope', area: 'whatsapp', hint: 'Whose chats and history logs they see (Own: messages they sent or to their own leads)' },
