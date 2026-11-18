@@ -13,6 +13,23 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.21',
+    date: '2026-11-18',
+    title: 'Switch Else path, meeting agenda, invoice regenerate on print',
+    summary: 'Workflows’ Switch gets an Else path for leads matching none of the others. Meetings get an optional agenda. Printing an invoice regenerates it with the latest details. The Support login shows in the team.',
+    new: [
+      'Workflows → Switch: “Add Else (none of the above)” — leads that match none of the paths go down Else (always the last path).',
+      'Meetings: an optional Agenda, for lead and team meetings; shown on the lead’s Meetings tab.',
+    ],
+    improved: [
+      'Invoice → Print / PDF regenerates the invoice first: what’s in the drawer (Bill to, GST, payment parts) is saved and the company details are taken again from Masters, then the PDF opens.',
+      'Access Control → Team shows the Support login (Harsh, role Support; it can’t be changed there), and every team-member list includes it.',
+    ],
+    fixed: [
+      'Workflows: after a refresh, every workflow showed for a moment before the business filter applied.',
+    ],
+  },
+  {
     version: '0.20',
     date: '2026-11-17',
     title: 'Meetings for the whole team, Brand Deal steps, Callyzer menu and our own call recordings',
