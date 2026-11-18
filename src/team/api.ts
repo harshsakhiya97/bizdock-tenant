@@ -12,7 +12,7 @@ export async function listRoles(tenantId: string): Promise<RoleRow[]> {
   return (data ?? []) as RoleRow[]
 }
 
-/** Everyone in the workspace except the hidden Tech Support Team. */
+/** Everyone in the workspace, the Tech Support Team member too (shown as Support, can't be changed here). */
 export async function listMembers(tenantId: string): Promise<MemberRow[]> {
   const { data, error } = await db()
     .from('tenant_members')
@@ -20,7 +20,6 @@ export async function listMembers(tenantId: string): Promise<MemberRow[]> {
       'id, user_id, role_id, status, is_support, all_businesses, reports_to, department, designation, joined_on, permissions, created_at, member_businesses(business_id, branch_id, sub_business_ids)',
     )
     .eq('tenant_id', tenantId)
-    .eq('is_support', false)
     .order('created_at')
   if (error) throw error
   const rows = data ?? []

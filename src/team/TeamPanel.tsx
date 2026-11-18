@@ -130,7 +130,7 @@ export function TeamPanel() {
         const r = roleById.get(m.role_id)
         return (
           <>
-            <span className="badge badge-brand">{r?.name ?? '—'}</span>
+            <span className="badge badge-brand">{m.is_support ? 'Support' : (r?.name ?? '—')}</span>
             {m.permissions && <span className="chip-tag badge-warning">Custom</span>}
             {(m.department || m.designation) && (
               <div className="muted small" style={{ marginTop: 3 }}>
@@ -211,7 +211,7 @@ export function TeamPanel() {
         m.name,
         m.email,
         m.phone ?? '',
-        roleById.get(m.role_id)?.name ?? '',
+        m.is_support ? 'Support' : (roleById.get(m.role_id)?.name ?? ''),
         m.department ?? '',
         m.designation ?? '',
         m.reports_to ? (memberById.get(m.reports_to)?.name ?? '') : '',
