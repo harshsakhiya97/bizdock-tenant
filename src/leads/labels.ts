@@ -10,6 +10,10 @@ export const TEMPERATURES: { value: Temperature; label: string; tone: string }[]
   { value: 'closed', label: 'Closed', tone: 'badge-success' },
 ]
 export const tempOf = (t: Temperature | null) => TEMPERATURES.find((x) => x.value === t)
+/** picked when a call / follow-up is logged */
+export const CALL_CATEGORIES = TEMPERATURES.filter((t) => t.value !== 'new')
+/** these end the follow-ups: no next call needed (any pending one is cancelled) */
+export const ENDS_FOLLOW_UPS: Temperature[] = ['not_interested', 'closed']
 
 export const fullName = (l: { first_name: string; last_name: string | null }) =>
   [l.first_name, l.last_name].filter(Boolean).join(' ')

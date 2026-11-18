@@ -4,9 +4,11 @@ import { Paged } from '@/components/ui'
 import { MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
-import { listOutcomes, scheduleFollowUp } from '@/followups/api'
+import { clearLeadFollowUps, listOutcomes, scheduleFollowUp } from '@/followups/api'
 import { logActivity } from '@/leads/api'
-import type { MemberOption, Option } from '@/leads/types'
+import { setLeadCategory } from '@/leads/CategorySelect'
+import { CALL_CATEGORIES, ENDS_FOLLOW_UPS } from '@/leads/labels'
+import type { MemberOption, Option, Temperature } from '@/leads/types'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
@@ -85,6 +87,10 @@ export function FollowUpsTab({
   const [summary, setSummary] = useState('')
   const [next, setNext] = useState('')
   const [nextTime, setNextTime] = useState('11:00')
+  // the lead's category with the call: Hot / Warm / Cold need the next call; Not interested / Closed end the follow-ups
+  const [leadCat, setLeadCat] = useState<Temperature | null>(null)
+  const [cat, setCat] = useState<Temperature | ''>('')
+  const ends = !!cat && ENDS_FOLLOW_UPS.includes(cat)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -98,7 +104,10 @@ export function FollowUpsTab({
     listLeadMessages(leadId).then(setMsgs).catch(() => setMsgs([]))
     // Callyzer calls: every call with the lead's number
     void (async () => {
-      const { data: l } = await db().from('leads').select('phone').eq('id', leadId).maybeSingle()
+      const { data: l } = await db().from('leads').select('phone, temperature').eq('id', leadId).maybeSingle()
+      const t = (l?.temperature ?? null) as Temperature | null
+      setLeadCat(t)
+      setCat(t && CALL_CATEGORIES.some((c) => c.value === t) ? t : '')
       const ph = String(l?.phone ?? '').replace(/\D/g, '').slice(-10)
       if (ph.length < 10) return setPhoneCalls([])
       // WhatsApp (WATI) messages: every message with the lead's number
@@ -134,6 +143,8 @@ export function FollowUpsTab({
   async function logCall() {
     if (!summary.trim()) return setError('Write what was discussed.')
     if (!outcome) return setError('Pick the call outcome.')
+    if (!cat) return setError('Pick the lead’s category.')
+    if (!ends && !next) return setError('Pick the next call date.')
     setBusy(true)
     setError(null)
     try {
@@ -144,13 +155,16 @@ export function FollowUpsTab({
         : await db().from('follow_ups').insert({ ...patch, tenant_id: tenant.id, lead_id: leadId, due_at: now, mode: 'call', assigned_to: me ?? null, created_by: me ?? null })
       if (e) throw new Error(e.message)
       await logActivity(tenant.id, me, [leadId], { kind: 'note', note: `Call · ${outcomeName(outcome) ?? ''} · ${summary.trim()}` })
-      if (next) await scheduleFollowUp(tenant.id, me, { lead_id: leadId, due_at: `${next}T${nextTime || '11:00'}`, mode: 'call', purpose: '', assigned_to: me ?? '' }, true)
+      if (!ends) await scheduleFollowUp(tenant.id, me, { lead_id: leadId, due_at: `${next}T${nextTime || '11:00'}`, mode: 'call', purpose: '', assigned_to: me ?? '' }, true)
+      if (cat !== leadCat) await setLeadCategory(tenant.id, me, leadId, cat)
+      // Not interested / Closed: no more follow-ups
+      if (ends) await clearLeadFollowUps(leadId)
       setSummary('')
       setOutcome('')
       setNext('')
       setCompleting(null)
       load()
-      onChanged(next ? 'Call logged and next follow-up set.' : 'Call logged.')
+      onChanged(ends ? 'Call logged; no more follow-ups for this lead.' : 'Call logged and next follow-up set.')
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -211,8 +225,26 @@ export function FollowUpsTab({
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="fc-next">Next follow-up</Label>
-                  <div className="row" style={{ flexWrap: 'nowrap' }}>
+                  <Label htmlFor="fc-cat" required>
+                    Lead category
+                  </Label>
+                  <Select id="fc-cat" value={cat} onChange={(e) => setCat(e.target.value as Temperature | '')}>
+                    <option value="">— select —</option>
+                    {CALL_CATEGORIES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {ends ? (
+                  <div className="span-2 muted small">No next call is needed; any pending follow-up for this lead is cancelled.</div>
+                ) : (
+                <div className="span-2">
+                  <Label htmlFor="fc-next" required>
+                    Next call
+                  </Label>
+                  <div className="row" style={{ flexWrap: 'nowrap', maxWidth: 420 }}>
                     <input id="fc-next" className="input" type="date" value={next} onChange={(e) => setNext(e.target.value)} />
                     <input className="input" type="time" aria-label="Time" style={{ width: 120 }} value={nextTime} onChange={(e) => setNextTime(e.target.value)} />
                   </div>
@@ -220,13 +252,9 @@ export function FollowUpsTab({
                     <button type="button" onClick={() => setNext(dayPlus(1))}>Tomorrow</button>·
                     <button type="button" onClick={() => setNext(dayPlus(3))}>+3 days</button>·
                     <button type="button" onClick={() => setNext(dayPlus(7))}>+7 days</button>
-                    {next && (
-                      <>
-                        ·<button type="button" onClick={() => setNext('')}>None</button>
-                      </>
-                    )}
                   </div>
                 </div>
+                )}
                 <div className="span-2">
                   <Label htmlFor="fc-sum" required>
                     Conversation summary
@@ -240,7 +268,7 @@ export function FollowUpsTab({
                   {busy ? 'Saving…' : 'Save call'}
                 </button>
               </div>
-              <Hint>Setting a next follow-up replaces the pending one, so the lead always has one next date.</Hint>
+              <Hint>Hot / Warm / Cold need the next call date (it replaces the pending one, so the lead always has one next date). Not interested / Closed end the follow-ups.</Hint>
             </section>
           )}
 
