@@ -78,13 +78,14 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
     (w.event_id ? (refData?.funnels ?? []).filter((f) => f.event_id === w.event_id).map((f) => f.name).join(', ') || null : null)
   const scoped = useMemo(
     () =>
-      (rows ?? []).filter((w) => {
+      // until the funnels are in, nothing is shown (else every workflow would flash before the business filter applies)
+      (refData ? (rows ?? []) : []).filter((w) => {
         if (funnelId) return w.funnel_id === funnelId || (!!eventId && w.event_id === eventId)
         if (!w.funnel_id) return true
         const f = funnelOf.get(w.funnel_id)
         return !f || inScope(f.business_id, f.sub_business_id)
       }),
-    [rows, funnelOf, inScope, funnelId, eventId],
+    [rows, refData, funnelOf, inScope, funnelId, eventId],
   )
   const visible = useMemo(
     () =>
@@ -156,7 +157,7 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
           </div>
         </div>
 
-        {!rows ? (
+        {!rows || !refData ? (
           <div className="empty">Loading workflows…</div>
         ) : visible.length === 0 ? (
           <Empty icon={Network}>
