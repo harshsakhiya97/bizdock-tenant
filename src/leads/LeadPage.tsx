@@ -35,6 +35,7 @@ import { listPurchases, type Purchase } from '@/webinars/api'
 import { LeadWebinarsTab, PurchasesTab } from '@/webinars/LeadWebinarTabs'
 import { PurchaseDrawer } from '@/webinars/PurchaseDrawer'
 import { LeadPaymentsTab, listLeadPayments, type LeadPay } from '@/payments/LeadPaymentsTab'
+import { LeadInvoices } from '@/invoices/LeadInvoices'
 
 type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments'
 
@@ -66,6 +67,7 @@ export function LeadPage() {
   // Razorpay payments with this lead's phone / email (Role access → Payments → view)
   const [payments, setPayments] = useState<LeadPay[] | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
+  const [paySub, setPaySub] = useState<'invoice' | 'direct'>('invoice')
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -91,6 +93,8 @@ export function LeadPage() {
   }, [id, tenant.id, can])
   useEffect(load, [load])
   const canPay = can('payments', 'view')
+  // Payments tab: Invoice (with Bookings) and Direct payments (Razorpay)
+  const canInv = can('bookings', 'view')
   const payPhone = lead?.phone ?? null
   const payEmail = lead?.email ?? null
   const hasLead = !!lead
@@ -209,7 +213,7 @@ export function LeadPage() {
       : can('bookings', 'view')
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
-    ...(canPay ? [{ id: 'payments' as Tab, label: 'Payments', count: (payments ?? []).filter((p) => p.status === 'captured' || p.status === 'refunded').length }] : []),
+    ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments' }] : []),
   ]
 
   return (
@@ -335,7 +339,22 @@ export function LeadPage() {
           <MeetingsTab meetings={meetings} members={members} canAdd onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
-        {tab === 'payments' && canPay && <LeadPaymentsTab payments={payments} error={payError} />}
+        {tab === 'payments' && (canPay || canInv) && (
+          <div className="stack">
+            {canPay && canInv && (
+              <div className="seg" role="group" aria-label="Payments">
+                <button type="button" className={paySub === 'invoice' ? 'is-active' : undefined} onClick={() => setPaySub('invoice')}>
+                  Invoice
+                </button>
+                <button type="button" className={paySub === 'direct' ? 'is-active' : undefined} onClick={() => setPaySub('direct')}>
+                  Direct Payments
+                  {payments && <span className="muted small"> {payments.filter((p) => p.status === 'captured' || p.status === 'refunded').length}</span>}
+                </button>
+              </div>
+            )}
+            {canInv && (!canPay || paySub === 'invoice') ? <LeadInvoices leadId={lead.id} refs={refs} onChanged={done} /> : <LeadPaymentsTab payments={payments} error={payError} />}
+          </div>
+        )}
         {tab === 'purchases' && isWebinar && (
           <PurchasesTab purchases={purchases} canAdd={canEdit} onAdd={() => setPu({ purchase: null })} onOpen={(p) => setPu({ purchase: p })} onChanged={done} />
         )}
