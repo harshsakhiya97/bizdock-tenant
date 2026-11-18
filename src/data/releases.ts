@@ -13,6 +13,22 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.22',
+    date: '2026-11-18',
+    title: 'Funnel list view, lead category with every call, Customers = Closed leads',
+    summary: 'A funnel’s Overview gets a List: amount spent, leads, CPL, bookings and show-ups per day / week / month. Every logged call asks for the lead’s category; Hot / Warm / Cold need the next call. New leads become Hot on the first call or meeting, and Customers lists the leads marked Closed.',
+    new: [
+      'Funnel → Overview: Funnel / List toggle. The List shows Amount spent (with GST), Leads (by the date they were created), CPL, Booking (leads with a meeting) and Showup (meeting done) — day, week or month wise, newest first, with a Total row and no paging.',
+      'Log a call and Log follow-up ask for the Lead category (Hot / Warm / Cold / Not interested / Closed). Hot / Warm / Cold need the next call date; Not interested / Closed need none and cancel any pending follow-up.',
+    ],
+    improved: [
+      'Log a call: Outcome, Lead category, Next call date and Time in one row.',
+      'A New lead becomes Hot on its first logged call or meeting (existing leads updated too).',
+      'Customers lists every lead marked Closed; an order no longer makes the lead Closed — it’s marked at the follow-up.',
+      'Funnel → Facebook Ads → Spend per day list: every day shown, no paging.',
+    ],
+  },
+  {
     version: '0.21',
     date: '2026-11-18',
     title: 'Switch Else path, meeting agenda, invoice regenerate on print',
