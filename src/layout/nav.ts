@@ -96,7 +96,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/widgets': { title: 'Widgets', crumb: 'Overview', icon: Blocks },
   '/leads': { title: 'Leads', crumb: 'Pipeline', icon: Users },
-  '/customers': { title: 'Customers', crumb: 'Booked clients & revenue', icon: Contact },
+  '/customers': { title: 'Customers', crumb: 'Closed leads & revenue', icon: Contact },
   '/invoices': { title: 'Invoices', crumb: 'Invoices & payments', icon: FileText },
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },

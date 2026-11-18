@@ -13,7 +13,7 @@ import { useBookingRefs } from '@/bookings/useBookingRefs'
 import type { BookingRow } from '@/bookings/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listLeads, listMemberOptions, listSources } from './api'
-import { listCustomerRevenue, type Revenue } from './customers'
+import { empty, listCustomerRevenue, type Revenue } from './customers'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 
@@ -36,7 +36,7 @@ type Row = { l: LeadRow; r: Revenue; balance: number }
 type Pay = '' | 'paid' | 'due'
 type Sort = 'newest' | 'balance' | 'billed' | 'name'
 
-/** Customers: leads with a booking / order / purchase — since when, how many, last and next, billed, received and balance. */
+/** Customers: every lead whose category is Closed — since when, bookings / orders, last and next, billed, received and balance. */
 export function CustomersPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
@@ -75,9 +75,10 @@ export function CustomersPage() {
   const rows = useMemo<Row[]>(
     () =>
       (leads ?? [])
-        .filter((l) => !l.is_archived && revenue?.has(l.id) && inScope(l.business_id, l.sub_business_id))
+        // a customer = a lead marked Closed (bookings don't make one; the person marks Closed at the follow-up)
+        .filter((l) => !l.is_archived && l.temperature === 'closed' && !!revenue && inScope(l.business_id, l.sub_business_id))
         .map((l) => {
-          const r = revenue!.get(l.id)!
+          const r = revenue!.get(l.id) ?? empty()
           return { l, r, balance: Math.max(0, r.billed - r.paid) }
         }),
     [leads, revenue, inScope],
@@ -96,7 +97,7 @@ export function CustomersPage() {
             ? b.r.billed - a.r.billed
             : f.sort === 'name'
               ? fullName(a.l).localeCompare(fullName(b.l))
-              : b.r.first.localeCompare(a.r.first),
+              : (b.r.first || b.l.created_at.slice(0, 10)).localeCompare(a.r.first || a.l.created_at.slice(0, 10)),
       )
   }, [rows, f])
 

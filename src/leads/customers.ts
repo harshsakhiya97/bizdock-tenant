@@ -39,7 +39,7 @@ export type Revenue = {
   /** studio time booked (bookings with a time) */
   hours: number
 }
-const empty = (): Revenue => ({ count: 0, billed: 0, paid: 0, last: '', first: '', lastPast: '', next: '', gst: 0, hours: 0 })
+export const empty = (): Revenue => ({ count: 0, billed: 0, paid: 0, last: '', first: '', lastPast: '', next: '', gst: 0, hours: 0 })
 const mins = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
 
 /** Customers (see makesCustomer) and what they were billed and paid. */
