@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import tailwindcss from '@tailwindcss/vite'
@@ -35,7 +36,15 @@ export default defineConfig(({ mode }) => {
       })
     },
   }
+  // the git branch this app was built / started from (What's new → Git graph marks it as Current)
+  let branch = ''
+  try {
+    branch = execSync('git branch --show-current', { cwd: import.meta.dirname }).toString().trim()
+  } catch {
+    branch = ''
+  }
   return {
+    define: { __GIT_BRANCH__: JSON.stringify(branch) },
     // the app can live in a sub-folder, e.g. https://pride.viralsakhiya.com/pride/ (VITE_BASE_PATH=/pride/)
     base: env.VITE_BASE_PATH || '/',
     plugins: [react(), tailwindcss(), embedScripts],
