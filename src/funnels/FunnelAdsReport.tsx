@@ -6,6 +6,7 @@ import { MetaSync } from './MetaSync'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
+import { db } from '@/lib/supabase'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const iso = (d: Date) => d.toLocaleDateString('en-CA')
@@ -15,13 +16,13 @@ const short = (s: string) => at(s).toLocaleDateString('en-IN', { day: 'numeric',
 const leadDay = (ts: string) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 
 type By = 'day' | 'week' | 'month'
-type Row = { key: string; label: string; sub?: string; spend: number; gst: number; leads: number }
+type Row = { key: string; label: string; sub?: string; spend: number; gst: number; leads: number; booked: number; showed: number }
 
 /**
  * Funnel → Overview: the 3D funnel (Facebook reach → clicks → page views → leads → stages → revenue) and its numbers, for a
  * period; or the List: spend (with GST), leads (by their creation date) and CPL per day / week / month.
  */
-export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?: { created_at: string; is_archived?: boolean }[] | null }) {
+export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?: { id: string; created_at: string; is_archived?: boolean }[] | null }) {
   const tenant = useTenant()
   // same presets as Facebook Ads Manager (Last 30 days ends yesterday), so the numbers match
   const [range, setRange] = useState<Range>(() => presetRange('last30'))
@@ -34,6 +35,29 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   // with GST ÷ without, from Facebook's days (each ad account has its own GST %)
   const [gst, setGst] = useState(1.18)
   const [error, setError] = useState<string | null>(null)
+  // the funnel's leads with a meeting (Booking) and with a meeting done (Showup)
+  const [meet, setMeet] = useState<{ booked: Set<string>; showed: Set<string> }>({ booked: new Set(), showed: new Set() })
+  const ids = useMemo(() => (leads ?? []).map((l) => l.id), [leads])
+  useEffect(() => {
+    if (!ids.length) return
+    let live = true
+    void (async () => {
+      const booked = new Set<string>()
+      const showed = new Set<string>()
+      for (let i = 0; i < ids.length; i += 300) {
+        const { data } = await db().from('meetings').select('lead_id, status').eq('tenant_id', tenant.id).in('lead_id', ids.slice(i, i + 300))
+        for (const m of (data ?? []) as { lead_id: string; status: string }[]) {
+          if (m.status === 'cancelled') continue
+          booked.add(m.lead_id)
+          if (m.status === 'done') showed.add(m.lead_id)
+        }
+      }
+      if (live) setMeet({ booked, showed })
+    })()
+    return () => {
+      live = false
+    }
+  }, [ids, tenant.id, reload])
 
   useEffect(() => {
     setFlow(undefined)
@@ -56,11 +80,16 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const rows = useMemo(() => {
     if (!from || !to) return [] as Row[]
     const spend = new Map((report?.days ?? []).map((d) => [d.day, { s: Number(d.spend) || 0, g: Number(d.spend_gst) || 0 }]))
-    const made = new Map<string, number>()
+    const made = new Map<string, { n: number; b: number; s: number }>()
     for (const l of leads ?? []) {
       if (l.is_archived) continue
       const d = leadDay(l.created_at)
-      if (d >= from && d <= to) made.set(d, (made.get(d) ?? 0) + 1)
+      if (d < from || d > to) continue
+      const c = made.get(d) ?? { n: 0, b: 0, s: 0 }
+      c.n++
+      if (meet.booked.has(l.id)) c.b++
+      if (meet.showed.has(l.id)) c.s++
+      made.set(d, c)
     }
     const out = new Map<string, Row>()
     for (let d = at(from); iso(d) <= to; d.setDate(d.getDate() + 1)) {
@@ -83,15 +112,20 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         label = at(day).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
         sub = undefined
       }
-      const r = out.get(key) ?? { key, label, sub, spend: 0, gst: 0, leads: 0 }
+      const r = out.get(key) ?? { key, label, sub, spend: 0, gst: 0, leads: 0, booked: 0, showed: 0 }
       r.spend += spend.get(day)?.s ?? 0
       r.gst += spend.get(day)?.g ?? 0
-      r.leads += made.get(day) ?? 0
+      r.leads += made.get(day)?.n ?? 0
+      r.booked += made.get(day)?.b ?? 0
+      r.showed += made.get(day)?.s ?? 0
       out.set(key, r)
     }
     return [...out.values()]
-  }, [report, leads, from, to, by])
-  const total = rows.reduce((t, r) => ({ spend: t.spend + r.spend, gst: t.gst + r.gst, leads: t.leads + r.leads }), { spend: 0, gst: 0, leads: 0 })
+  }, [report, leads, meet, from, to, by])
+  const total = rows.reduce(
+    (t, r) => ({ spend: t.spend + r.spend, gst: t.gst + r.gst, leads: t.leads + r.leads, booked: t.booked + r.booked, showed: t.showed + r.showed }),
+    { spend: 0, gst: 0, leads: 0, booked: 0, showed: 0 },
+  )
   const money = (gstAmt: number, ex: number) => (
     <span title={ex ? `${inr(ex)} without GST + ${inr(gstAmt - ex)} GST` : undefined}>{gstAmt ? inr(gstAmt) : '—'}</span>
   )
@@ -140,7 +174,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
           <div className="muted small">Loading…</div>
         ) : (
           <>
-            <div className="muted small">Amount spent with GST (hover: without GST + GST) · Leads by the date they were created · CPL = amount spent ÷ leads.</div>
+            <div className="muted small">Amount spent with GST (hover: without GST + GST) · Leads by the date they were created · CPL = amount spent ÷ leads · Booking = those leads with a meeting · Showup = those leads whose meeting was done.</div>
             <Paged rows={rows} reset={[from, to, by]}>
               {(page) => (
                 <div className="table-wrap">
@@ -151,6 +185,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                         <th className="num">Amount spent</th>
                         <th className="num">Leads</th>
                         <th className="num">CPL</th>
+                        <th className="num">Booking</th>
+                        <th className="num">Showup</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -163,6 +199,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                           <td className="num">{money(r.gst, r.spend)}</td>
                           <td className="num">{r.leads || <span className="muted">0</span>}</td>
                           <td className="num">{cpl(r.gst, r.spend, r.leads)}</td>
+                          <td className="num">{r.booked || <span className="muted">0</span>}</td>
+                          <td className="num">{r.showed || <span className="muted">0</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -172,6 +210,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                         <th className="num">{money(total.gst, total.spend)}</th>
                         <th className="num">{total.leads}</th>
                         <th className="num">{cpl(total.gst, total.spend, total.leads)}</th>
+                        <th className="num">{total.booked}</th>
+                        <th className="num">{total.showed}</th>
                       </tr>
                     </tfoot>
                   </table>
