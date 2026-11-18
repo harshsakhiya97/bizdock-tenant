@@ -39,6 +39,8 @@ export const releases: Release[] = [
     fixed: [
       'The invoice side panel opened twice (a jerk) — it now opens once.',
       'Calls logged from a computer set to the wrong time zone showed 13½ hours ahead: the done time now comes from the server, and the shifted calls were corrected.',
+      'Owner / support on Meetings: My meetings, All team members or one team member’s calendar again (it showed only their own).',
+      'Workflows → Create Zoom meeting, “Team member from the webhook”: the meeting goes to the team member the Booking Calendar booking was with (member_email), not the lead’s owner.',
     ],
   },
   {
