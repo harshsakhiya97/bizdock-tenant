@@ -16,7 +16,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { connectZoom, testZoom } from '@/zoom/api'
 import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
@@ -402,7 +402,7 @@ export function IntegrationsPage() {
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
-                        <PlugZap size={14} /> Connect
+                        <PlugZap size={14} /> {p.id === 'razorpay' ? 'Add with keys' : 'Connect'}
                       </>
                     )}
                   </button>
@@ -555,8 +555,8 @@ function ConnectDrawer({
     }
   }
 
-  // Zoom keys and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
-  const tabbed = provider.id === 'zoom' || (provider.id === 'whatsapp' && vendor === 'wati')
+  // Zoom keys, Razorpay and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
+  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || (provider.id === 'whatsapp' && vendor === 'wati')
   const [tab, setTab] = useState<'keys' | 'prompt'>('keys')
   const showForm = !tabbed || tab === 'keys'
   const [hookUrl, setHookUrl] = useState<string | null>(null)
@@ -610,6 +610,13 @@ function ConnectDrawer({
             title="Let Claude in Chrome make the Zoom app"
             note="Log in at marketplace.zoom.us as the Zoom account’s owner or admin, open Claude in Chrome, paste this, and it makes the app with every permission BizDock needs. Then copy the three keys from its App Credentials page into the Keys tab."
             text={zoomKeysPrompt()}
+          />
+        )}
+        {tabbed && tab === 'prompt' && provider.id === 'razorpay' && (
+          <PromptBox
+            title="Let Claude in Chrome open Razorpay’s API keys"
+            note="Log in at dashboard.razorpay.com as the account’s owner or admin, open Claude in Chrome and paste this. It opens API keys and generates them; you copy the Key ID and Key Secret into the Keys tab yourself."
+            text={razorpayKeysPrompt()}
           />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'whatsapp' && (

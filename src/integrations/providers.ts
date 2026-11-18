@@ -27,6 +27,15 @@ ${ZOOM_KEYS_SCOPES.flatMap((g) => g.items).join('\n')}
 5. Activation → Activate your app.
 6. Open "App Credentials" and tell me only: "Credentials page is open", plus which scopes you couldn't find, and whether activation succeeded.`
 
+/** a prompt for Claude in Chrome that opens Razorpay's API keys (the person is logged in to the Razorpay Dashboard) */
+export const razorpayKeysPrompt = () => `In Chrome I'm logged in at https://dashboard.razorpay.com as an owner / admin of the Razorpay account I want to connect to BizDock CRM. Help me get its API keys. Never read out, copy or paste the Key Secret (or the Key ID) into this chat; I'll copy them myself. Don't change any other setting. If something on screen doesn't match, stop and tell me what you see.
+
+1. Top bar: check whether the dashboard is in Test mode or Live mode and tell me which. Don't switch it; I'll tell you if I want the other one.
+2. Open Account & Settings (left menu, or the profile menu) → API keys (under "Website and app settings").
+3. If a key is already listed: tell me its Key ID's first 9 characters only (e.g. rzp_live_) and its created date, and ask me before pressing Regenerate — regenerating stops the old key working wherever it's used.
+   If no key is listed: press "Generate key".
+4. When Razorpay shows the Key ID and Key Secret, stop and tell me only: "Keys are on screen — copy them now (the secret is shown once)". Don't close that window.`
+
 export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay'
 export type ProviderField = {
   key: string
