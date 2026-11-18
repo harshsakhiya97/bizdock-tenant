@@ -13,6 +13,25 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.24',
+    date: '2026-11-19',
+    title: 'Funnel report columns, clickable stat cards',
+    summary: 'The funnel report’s List has the full set of ad numbers per day / week / month, and every count opens the leads behind it. Every stat card in the app now opens its records.',
+    new: [
+      'Funnel → Overview → List: Lead trend (vs the row before), Payments (Razorpay, the funnel’s products), CPP, Cost per booking, Cost per show up, Converted (marked Closed), Revenue (invoices + Razorpay received) and Lead to payment / Payment to booking / Booking to show up %.',
+      'Funnel report: hover a count or amount for the leads behind it; click it for a list of those leads with the dates that matter (lead date, booking date, show up date, payment date) and their amounts.',
+      'Stat cards on every page open their records in a list (Leads, Customers, Follow-ups, Meetings, Invoices, Orders, Booking calendar, Payments, My Day, Webinars, Callyzer team numbers, WhatsApp campaigns); a lead’s cards open its Podcasts / Payments tab.',
+    ],
+    improved: [
+      'Leads card: the count of every category (new · hot · warm · cold · not interested · closed).',
+      'Lead / customer: counts on the Follow-ups and Payments tabs, and on the Invoice sub-tab.',
+      'Funnel report: the Total row has one background; numbers with a hover show the pointer cursor.',
+    ],
+    fixed: [
+      'Leads: leads with a booking were hidden, so the Closed filter showed none; every lead is listed now.',
+    ],
+  },
+  {
     version: '0.23',
     date: '2026-11-18',
     title: 'Razorpay: payments history, funnel payments, lead payments',
