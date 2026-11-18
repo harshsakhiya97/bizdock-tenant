@@ -35,7 +35,8 @@ import { listPurchases, type Purchase } from '@/webinars/api'
 import { LeadWebinarsTab, PurchasesTab } from '@/webinars/LeadWebinarTabs'
 import { PurchaseDrawer } from '@/webinars/PurchaseDrawer'
 import { LeadPaymentsTab, listLeadPayments, type LeadPay } from '@/payments/LeadPaymentsTab'
-import { LeadInvoices } from '@/invoices/LeadInvoices'
+import { LeadInvoices, countLeadInvoices } from '@/invoices/LeadInvoices'
+import { db } from '@/lib/supabase'
 
 type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments'
 
@@ -68,6 +69,9 @@ export function LeadPage() {
   const [payments, setPayments] = useState<LeadPay[] | null>(null)
   const [payError, setPayError] = useState<string | null>(null)
   const [paySub, setPaySub] = useState<'invoice' | 'direct'>('invoice')
+  // tab counts: calls (pending + done, as the Calls list) and invoices
+  const [fuCount, setFuCount] = useState<number | null>(null)
+  const [invCount, setInvCount] = useState<number | null>(null)
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
   const [refresh, setRefresh] = useState(0)
@@ -95,6 +99,18 @@ export function LeadPage() {
   const canPay = can('payments', 'view')
   // Payments tab: Invoice (with Bookings) and Direct payments (Razorpay)
   const canInv = can('bookings', 'view')
+  useEffect(() => {
+    if (!id) return
+    db()
+      .from('follow_ups')
+      .select('id', { count: 'exact', head: true })
+      .eq('lead_id', id)
+      .eq('mode', 'call')
+      .in('status', ['pending', 'done'])
+      .then(({ count }) => setFuCount(count ?? 0))
+    if (canInv) countLeadInvoices(tenant.id, id).then(setInvCount, () => setInvCount(null))
+  }, [id, tenant.id, canInv, refresh])
+  const directCount = (payments ?? []).filter((p) => p.status === 'captured' || p.status === 'refunded').length
   const payPhone = lead?.phone ?? null
   const payEmail = lead?.email ?? null
   const hasLead = !!lead
@@ -203,7 +219,7 @@ export function LeadPage() {
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
-    { id: 'followups', label: 'Follow-ups' },
+    { id: 'followups', label: 'Follow-ups', count: fuCount ?? undefined },
     { id: 'meetings' as Tab, label: 'Meetings', count: (meetings ?? []).length },
     ...(isWebinar
       ? [
@@ -213,7 +229,7 @@ export function LeadPage() {
       : can('bookings', 'view')
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
-    ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments' }] : []),
+    ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments', count: (canInv ? (invCount ?? 0) : 0) + (canPay ? directCount : 0) }] : []),
   ]
 
   return (
@@ -345,10 +361,11 @@ export function LeadPage() {
               <div className="seg" role="group" aria-label="Payments">
                 <button type="button" className={paySub === 'invoice' ? 'is-active' : undefined} onClick={() => setPaySub('invoice')}>
                   Invoice
+                  {invCount != null && <span className="muted small"> {invCount}</span>}
                 </button>
                 <button type="button" className={paySub === 'direct' ? 'is-active' : undefined} onClick={() => setPaySub('direct')}>
                   Direct Payments
-                  {payments && <span className="muted small"> {payments.filter((p) => p.status === 'captured' || p.status === 'refunded').length}</span>}
+                  {payments && <span className="muted small"> {directCount}</span>}
                 </button>
               </div>
             )}

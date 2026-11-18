@@ -26,6 +26,12 @@ function payState(b: BookingRow): PayState {
   return b.paid_amount > 0 ? 'part' : 'due'
 }
 
+/** how many invoices the lead has (as the list below counts them) */
+export async function countLeadInvoices(tenantId: string, leadId: string) {
+  const [b, inv] = await Promise.all([listBookings(tenantId, { leadId }), listInvoices(tenantId, { leadId })])
+  return b.filter((x) => x.status !== 'cancelled' && x.invoice_no && !x.invoice_id && !x.order_no).length + inv.length
+}
+
 /** Lead / customer → Payments → Invoice: this lead's invoices, as on the Invoices page (one per booking, or one per group of orders) */
 export function LeadInvoices({ leadId, refs, onChanged }: { leadId: string; refs: BookingRefs; onChanged?: (msg: string) => void }) {
   const tenant = useTenant()
