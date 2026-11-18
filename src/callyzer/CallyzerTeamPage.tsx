@@ -5,6 +5,7 @@ import { Drawer } from '@/components/Drawer'
 import { CheckCircle2, MicOff, PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { Empty, PageHead, Paged, StatCard } from '@/components/ui'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
@@ -72,6 +73,29 @@ export function CallyzerTeamPage() {
     return { active: of('active'), low: of('low'), none: of('none'), missing: list.reduce((n, r) => n + (r.normal_connected - r.on_callyzer), 0) }
   }, [rows])
 
+  // a stat card's records: those staff numbers (click one for its calls)
+  const [statShow, setStatShow] = useState<StatShow<Row> | null>(null)
+  const showNums = (title: string, f: (r: Row) => boolean) => () =>
+    setStatShow({
+      title,
+      rows: (rows ?? []).filter(f),
+      cols: [
+        {
+          label: 'Staff number',
+          render: (r) => (
+            <>
+              <b>{r.emp_name || r.emp_number}</b>
+              {r.emp_name && <div className="muted small">{r.emp_number}</div>}
+            </>
+          ),
+        },
+        { label: 'Connected', num: true, render: (r) => r.normal_connected },
+        { label: 'Recorded', num: true, render: (r) => r.on_callyzer },
+        { label: 'Missing', num: true, render: (r) => Math.max(0, r.normal_connected - r.on_callyzer) || <span className="muted">0</span> },
+        { label: 'Last recording', render: (r) => `${at(r.last_recording)} · ${gap(r.last_recording)} ago` },
+        { label: 'Status', render: (r) => <span className={cn('badge', HEALTH[healthOf(r)].cls)}>{HEALTH[healthOf(r)].label}</span> },
+      ],
+    })
   return (
     <>
       <PageHead
@@ -88,11 +112,12 @@ export function CallyzerTeamPage() {
       />
       {error && <div className="alert alert-error">{error}</div>}
       <div className="stat-grid">
-        <StatCard icon={CheckCircle2} tone="success" value={counts.active} label="Recording active" hint="Arriving on Callyzer" />
-        <StatCard icon={TriangleAlert} tone="warning" value={counts.low} label="Low / Stalled" hint="Under half recorded, or 3+ since the last one" />
-        <StatCard icon={MicOff} tone="danger" value={counts.none} label="No recording" hint="Nothing received on Callyzer" />
-        <StatCard icon={PhoneOff} tone="purple" value={counts.missing} label="Missing recordings" hint="Normal connected calls without a recording" />
+        <StatCard icon={CheckCircle2} tone="success" value={counts.active} label="Recording active" hint="Arriving on Callyzer" onClick={showNums('Recording active', (r) => healthOf(r) === 'active')} />
+        <StatCard icon={TriangleAlert} tone="warning" value={counts.low} label="Low / Stalled" hint="Under half recorded, or 3+ since the last one" onClick={showNums('Low / Stalled', (r) => healthOf(r) === 'low')} />
+        <StatCard icon={MicOff} tone="danger" value={counts.none} label="No recording" hint="Nothing received on Callyzer" onClick={showNums('No recording', (r) => healthOf(r) === 'none')} />
+        <StatCard icon={PhoneOff} tone="purple" value={counts.missing} label="Missing recordings" hint="Normal connected calls without a recording" onClick={showNums('Missing recordings', (r) => r.normal_connected - r.on_callyzer > 0)} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(r) => r.emp_number} onRow={(r) => setOpen(r)} />
       <div className="panel">
         {counts.none > 0 && (
           <div className="alert alert-error" style={{ margin: 16 }}>

@@ -21,6 +21,8 @@ import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
+import { leadCols } from './statCols'
 import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listCustomerRevenue, type Revenue } from './customers'
 
@@ -238,6 +240,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       : funnel
         ? base.filter((l) => l.stage_id === stageTab)
         : base.filter((l) => kindOf(l) === stageTab)
+  // a stat card's records
+  const [statShow, setStatShow] = useState<StatShow<LeadRow> | null>(null)
+  const showLeads = (title: string, f: (l: LeadRow) => boolean) => () => setStatShow({ title, rows: base.filter(f), cols: leadCols(members) })
   const stats = useMemo(() => {
     const now = new Date()
     const weekAgo = new Date(now.getTime() - 7 * 864e5).toISOString()
@@ -385,19 +390,20 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
 
       {customers ? (
         <div className="stat-grid">
-          <StatCard icon={Users} tone="brand" value={stats.total} label="Customers" hint={`${stats.newWeek} new this week`} />
-          <StatCard icon={CalendarCheck} tone="info" value={stats.bookings} label="Bookings" hint="Confirmed & completed" />
-          <StatCard icon={BadgeIndianRupee} tone="success" value={money(stats.billed)} label="Revenue" hint="Billed, with GST" />
-          <StatCard icon={Wallet} tone="warning" value={money(stats.paid)} label="Received" hint={`${money(Math.max(0, stats.billed - stats.paid))} balance`} />
+          <StatCard icon={Users} tone="brand" value={stats.total} label="Customers" hint={`${stats.newWeek} new this week`} onClick={showLeads('Customers', () => true)} />
+          <StatCard icon={CalendarCheck} tone="info" value={stats.bookings} label="Bookings" hint="Confirmed & completed" onClick={showLeads('With bookings', (l) => !!revenue?.get(l.id)?.count)} />
+          <StatCard icon={BadgeIndianRupee} tone="success" value={money(stats.billed)} label="Revenue" hint="Billed, with GST" onClick={showLeads('Revenue', (l) => !!revenue?.get(l.id)?.billed)} />
+          <StatCard icon={Wallet} tone="warning" value={money(stats.paid)} label="Received" hint={`${money(Math.max(0, stats.billed - stats.paid))} balance`} onClick={showLeads('Received', (l) => !!revenue?.get(l.id)?.paid)} />
         </div>
       ) : (
       <div className="stat-grid">
-        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={stats.cats} />
-        <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" />
-        <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} />
-        <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} />
+        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={stats.cats} onClick={showLeads('Leads', () => true)} />
+        <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" onClick={showLeads('New this week', (l) => l.created_at >= new Date(Date.now() - 7 * 864e5).toISOString())} />
+        <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} onClick={showLeads('Follow-ups due today', (l) => !!l.next_follow_up_at && new Date(l.next_follow_up_at) < new Date(new Date().setHours(24, 0, 0, 0)))} />
+        <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} onClick={showLeads('Won', (l) => kindOf(l) === 'won')} />
       </div>
       )}
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(l) => l.id} onRow={(l) => openRow(l.id)} />
 
       <div className="panel">
         <div className="panel-filters">

@@ -16,6 +16,7 @@ import { BookingDrawer } from './BookingDrawer'
 import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { BT } from '@/auth/auth-context'
 import { WebinarCalendarPage } from '@/webinars/WebinarCalendarPage'
 
@@ -78,6 +79,22 @@ function BookingsCalendar() {
     return { count: inMonth.length, tentative: inMonth.filter((b) => b.status === 'tentative').length, hours, value, due: Math.max(0, value - paid), todays: todays.length }
   }, [visible, month, today])
 
+  // a stat card's records: those bookings (click one to open it)
+  const [statShow, setStatShow] = useState<StatShow<BookingRow> | null>(null)
+  const showBk = (title: string, f: (b: BookingRow) => boolean) => () =>
+    setStatShow({
+      title,
+      rows: visible.filter(f).sort((a, b) => (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time)),
+      cols: [
+        { label: 'When', render: (b) => <span className="nowrap">{`${fmt(b.booking_date, { day: 'numeric', month: 'short', year: 'numeric' })} · ${clock(b.start_time)} – ${clock(b.end_time)}`}</span> },
+        { label: 'Client', render: (b) => <b>{b.client_name}</b> },
+        { label: 'Status', render: (b) => <span className={`badge ${STATUS_META[b.status].tone}`}>{STATUS_META[b.status].label}</span> },
+        { label: 'Hours', num: true, render: (b) => Math.round(((minutes(b.end_time) - minutes(b.start_time)) / 60) * 10) / 10 },
+        { label: 'Value', num: true, render: (b) => money(b.total_amount) },
+        { label: 'Balance', num: true, render: (b) => money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount))) },
+      ],
+    })
+  const inMon = (b: BookingRow) => b.booking_date.slice(0, 7) === month
   const open = (id: string) => {
     const b = bookings?.find((x) => x.id === id)
     const o = others.find((x) => x.id === id)
@@ -154,11 +171,12 @@ function BookingsCalendar() {
       <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={CalendarCheck} tone="brand" value={stats.count} label={`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`} hint={stats.tentative ? `${stats.tentative} tentative` : undefined} />
-        <StatCard icon={Clock3} tone="info" value={`${Math.round(stats.hours * 10) / 10} h`} label="Hours booked" hint={`${stats.todays} today`} />
-        <StatCard icon={IndianRupee} tone="success" value={money(stats.value)} label="Booked value" hint="incl. GST" />
-        <StatCard icon={Wallet} tone="danger" value={money(stats.due)} label="Balance to collect" />
+        <StatCard icon={CalendarCheck} tone="brand" value={stats.count} label={`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`} hint={stats.tentative ? `${stats.tentative} tentative` : undefined} onClick={showBk(`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`, inMon)} />
+        <StatCard icon={Clock3} tone="info" value={`${Math.round(stats.hours * 10) / 10} h`} label="Hours booked" hint={`${stats.todays} today`} onClick={showBk('Hours booked', inMon)} />
+        <StatCard icon={IndianRupee} tone="success" value={money(stats.value)} label="Booked value" hint="incl. GST" onClick={showBk('Booked value', (b) => inMon(b) && Number(b.total_amount) > 0)} />
+        <StatCard icon={Wallet} tone="danger" value={money(stats.due)} label="Balance to collect" onClick={showBk('Balance to collect', (b) => inMon(b) && Number(b.total_amount) - Number(b.paid_amount) > 0.01)} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(b) => b.id} onRow={(b) => setDrawer({ booking: b })} />
 
       <SlotCalendar
         items={allItems}

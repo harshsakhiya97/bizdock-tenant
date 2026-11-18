@@ -4,6 +4,7 @@ import { Ban, CheckCheck, Eye, Megaphone, MessageCircleReply, Plus, RefreshCw, S
 import { useAuth } from '@/auth/useAuth'
 import { Drawer } from '@/components/Drawer'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
@@ -75,6 +76,34 @@ export function CampaignsPage() {
     return { sent: sum('sent'), delivered: sum('delivered'), seen: sum('seen'), replied: sum('replied'), failed: sum('failed') }
   }, [visible, stats])
 
+  // a stat card's records: the campaigns with that count (click one for its report)
+  type K = 'sent' | 'delivered' | 'seen' | 'replied' | 'failed'
+  const [statShow, setStatShow] = useState<StatShow<Campaign> | null>(null)
+  const st = (c: Campaign) => stats.get(c.id) ?? EMPTY_STATS(c)
+  const showCamps = (title: string, k: K) => () =>
+    setStatShow({
+      title,
+      rows: visible.filter((c) => st(c)[k] > 0).sort((a, b) => st(b)[k] - st(a)[k]),
+      cols: [
+        {
+          label: 'Campaign',
+          render: (c) => (
+            <>
+              <b>{c.name}</b>
+              <div className="muted small">{c.template}</div>
+            </>
+          ),
+        },
+        { label: 'Sent on', render: (c) => <span className="nowrap">{at(c.scheduled_at)}</span> },
+        { label: 'Sent', num: true, render: (c: Campaign) => st(c).sent },
+        ...(k === 'sent'
+          ? []
+          : [
+              { label: title, num: true, render: (c: Campaign) => <b>{st(c)[k]}</b> },
+              { label: '%', num: true, render: (c: Campaign) => pct(st(c)[k], st(c).sent) },
+            ]),
+      ],
+    })
   const { membership } = useAuth()
   // Tech Support isn't in the team list
   const byName = (id: string | null) => (!id ? '—' : (members.find((m) => m.id === id)?.name ?? (id === membership?.id ? 'You' : 'Tech Support')))
@@ -113,12 +142,13 @@ export function CampaignsPage() {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={Send} tone="brand" value={totals.sent} label="Sent" hint={`${visible.length} campaign${visible.length === 1 ? '' : 's'}`} />
-        <StatCard icon={CheckCheck} tone="info" value={totals.delivered} label="Delivered" hint={pct(totals.delivered, totals.sent)} />
-        <StatCard icon={Eye} tone="success" value={totals.seen} label="Seen" hint={pct(totals.seen, totals.sent)} />
-        <StatCard icon={MessageCircleReply} tone="purple" value={totals.replied} label="Replied" hint={pct(totals.replied, totals.sent)} />
-        <StatCard icon={XCircle} tone="danger" value={totals.failed} label="Failed" />
+        <StatCard icon={Send} tone="brand" value={totals.sent} label="Sent" hint={`${visible.length} campaign${visible.length === 1 ? '' : 's'}`} onClick={showCamps('Sent', 'sent')} />
+        <StatCard icon={CheckCheck} tone="info" value={totals.delivered} label="Delivered" hint={pct(totals.delivered, totals.sent)} onClick={showCamps('Delivered', 'delivered')} />
+        <StatCard icon={Eye} tone="success" value={totals.seen} label="Seen" hint={pct(totals.seen, totals.sent)} onClick={showCamps('Seen', 'seen')} />
+        <StatCard icon={MessageCircleReply} tone="purple" value={totals.replied} label="Replied" hint={pct(totals.replied, totals.sent)} onClick={showCamps('Replied', 'replied')} />
+        <StatCard icon={XCircle} tone="danger" value={totals.failed} label="Failed" onClick={showCamps('Failed', 'failed')} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(c) => c.id} onRow={(c) => setOpen(c)} />
 
       <div className="panel">
         <div className="panel-filters">
@@ -279,11 +309,11 @@ function CampaignReport({ campaign: c, stats: s, by, onClose }: { campaign: Camp
           Template <b>{c.template}</b> · {c.audience.label ?? '—'} · {c.status === 'scheduled' ? 'Scheduled for' : 'Sent'} {at(c.scheduled_at)} · By {by}
         </div>
         <div className="stat-grid">
-          <StatCard icon={Send} tone="brand" value={s.sent} label="Sent" hint={`of ${c.total}`} />
-          <StatCard icon={CheckCheck} tone="info" value={s.delivered} label="Delivered" hint={pct(s.delivered, s.sent)} />
-          <StatCard icon={Eye} tone="success" value={s.seen} label="Seen" hint={pct(s.seen, s.sent)} />
-          <StatCard icon={MessageCircleReply} tone="purple" value={s.replied} label="Replied" hint={pct(s.replied, s.sent)} />
-          <StatCard icon={XCircle} tone="danger" value={s.failed} label="Failed" hint={`${s.sent - s.delivered} not delivered`} />
+          <StatCard icon={Send} tone="brand" value={s.sent} label="Sent" hint={`of ${c.total}`} onClick={() => setFilter('')} />
+          <StatCard icon={CheckCheck} tone="info" value={s.delivered} label="Delivered" hint={pct(s.delivered, s.sent)} onClick={() => setFilter('delivered')} />
+          <StatCard icon={Eye} tone="success" value={s.seen} label="Seen" hint={pct(s.seen, s.sent)} onClick={() => setFilter('read')} />
+          <StatCard icon={MessageCircleReply} tone="purple" value={s.replied} label="Replied" hint={pct(s.replied, s.sent)} onClick={() => setFilter('replied')} />
+          <StatCard icon={XCircle} tone="danger" value={s.failed} label="Failed" hint={`${s.sent - s.delivered} not delivered`} onClick={() => setFilter('failed')} />
         </div>
         {error && <div className="alert alert-error">{error}</div>}
         <div className="tabs" role="tablist">

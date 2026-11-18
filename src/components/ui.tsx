@@ -35,16 +35,26 @@ export function StatCard({
   label,
   hint,
   tone = 'ink',
+  onClick,
 }: {
   icon: LucideIcon
   value: ReactNode
   label: string
   hint?: string
   tone?: Tone
+  /** click: the records behind the number (a pointer cursor) */
+  onClick?: () => void
 }) {
   const [bg, fg] = TONES[tone]
   return (
-    <div className="stat">
+    <div
+      className={onClick ? 'stat is-clickable' : 'stat'}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      title={onClick ? `See the ${label.toLowerCase()}` : undefined}
+      onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick()) : undefined}
+    >
       <div className="stat-icon" style={{ background: bg, color: fg }}>
         <Icon size={16} strokeWidth={2} />
       </div>

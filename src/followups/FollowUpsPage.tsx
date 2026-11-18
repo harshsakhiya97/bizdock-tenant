@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { AlarmClock, CalendarCheck, CalendarDays, Download, ListTodo, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
@@ -81,6 +83,29 @@ export function FollowUpsPage() {
     .filter((f) => inTab(f, tab))
     .sort((a, b) => (tab === 'done' ? (b.completed_at ?? '').localeCompare(a.completed_at ?? '') : a.due_at.localeCompare(b.due_at)))
   const count = (t: Tab) => filtered.filter((f) => inTab(f, t)).length
+  // a stat card's records: those follow-ups
+  const navigate = useNavigate()
+  const [statShow, setStatShow] = useState<StatShow<FollowUpRow> | null>(null)
+  const showTab = (title: string, t: Tab) => () =>
+    setStatShow({
+      title,
+      rows: filtered.filter((f) => inTab(f, t)).sort((a, b) => a.due_at.localeCompare(b.due_at)),
+      cols: [
+        { label: 'Due', render: (f) => <span className="nowrap">{new Date(f.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span> },
+        {
+          label: 'Lead',
+          render: (f) => (
+            <>
+              <b>{f.leads ? fullName(f.leads) : '—'}</b>
+              <div className="muted small">{f.leads?.phone}</div>
+            </>
+          ),
+        },
+        { label: 'Mode', render: (f) => modeOf(f.mode).label },
+        { label: 'Purpose', render: (f) => f.purpose || <span className="muted">—</span> },
+        { label: 'Assigned to', render: (f) => data.members.find((m) => m.id === f.assigned_to)?.name ?? <span className="muted">—</span> },
+      ],
+    })
 
   function exportCsv() {
     const out = [
@@ -135,11 +160,12 @@ export function FollowUpsPage() {
       {data.error && <div className="alert alert-error">{data.error}</div>}
 
       <div className="stat-grid">
-        <StatCard icon={AlarmClock} tone="danger" value={count('overdue')} label="Overdue" />
-        <StatCard icon={CalendarCheck} tone="warning" value={count('today')} label="Due today" />
-        <StatCard icon={CalendarDays} tone="info" value={count('week')} label="Next 7 days" />
-        <StatCard icon={ListTodo} tone="purple" value={count('pending')} label="All pending" />
+        <StatCard icon={AlarmClock} tone="danger" value={count('overdue')} label="Overdue" onClick={showTab('Overdue', 'overdue')} />
+        <StatCard icon={CalendarCheck} tone="warning" value={count('today')} label="Due today" onClick={showTab('Due today', 'today')} />
+        <StatCard icon={CalendarDays} tone="info" value={count('week')} label="Next 7 days" onClick={showTab('Next 7 days', 'week')} />
+        <StatCard icon={ListTodo} tone="purple" value={count('pending')} label="All pending" onClick={showTab('All pending', 'pending')} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(f) => f.id} onRow={(f) => navigate(`/leads/${f.lead_id}`)} />
 
       <div className="panel">
         <div className="panel-bar">

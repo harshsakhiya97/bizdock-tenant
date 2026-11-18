@@ -13,6 +13,9 @@ import { useFollowUpData } from '@/followups/useFollowUpData'
 import { fullName } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
+import { leadCols } from '@/leads/statCols'
+import type { LeadRow } from '@/leads/types'
 
 function greeting() {
   const h = new Date().getHours()
@@ -41,6 +44,30 @@ export function MyDayPage() {
   const noFollowUp = openLeads.filter((l) => !l.next_follow_up_at)
   const stale = noFollowUp.filter((l) => Date.now() - new Date(l.updated_at).getTime() > 7 * 864e5)
   const newToday = myLeads.filter((l) => new Date(l.created_at) >= start)
+  // a stat card's records: follow-ups or leads (click one to open the lead)
+  const [fuShow, setFuShow] = useState<StatShow<FollowUpRow> | null>(null)
+  const [leadShow, setLeadShow] = useState<StatShow<LeadRow> | null>(null)
+  const showFus = (title: string, rows: FollowUpRow[]) => () =>
+    setFuShow({
+      title,
+      rows: [...rows].sort((a, b) => a.due_at.localeCompare(b.due_at)),
+      cols: [
+        { label: 'Due', render: (f) => <span className="nowrap">{new Date(f.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span> },
+        {
+          label: 'Lead',
+          render: (f) => (
+            <>
+              <b>{f.leads ? fullName(f.leads) : '—'}</b>
+              <div className="muted small">{f.leads?.phone}</div>
+            </>
+          ),
+        },
+        { label: 'Mode', render: (f) => modeOf(f.mode).label },
+        { label: 'Purpose', render: (f) => f.purpose || <span className="muted">—</span> },
+        { label: 'Assigned to', render: (f) => data.members.find((m) => m.id === f.assigned_to)?.name ?? <span className="muted">—</span> },
+      ],
+    })
+  const showLeads = (title: string, rows: LeadRow[]) => () => setLeadShow({ title, rows, cols: leadCols(data.members) })
 
   const byDay = useMemo(() => {
     const m = new Map<string, FollowUpRow[]>()
@@ -87,17 +114,20 @@ export function MyDayPage() {
       {data.error && <div className="alert alert-error">{data.error}</div>}
 
       <div className="stat-grid">
-        <StatCard icon={AlarmClock} tone="danger" value={overdue.length} label="Overdue follow-ups" />
-        <StatCard icon={CalendarCheck} tone="warning" value={today.length} label="Follow-ups today" />
+        <StatCard icon={AlarmClock} tone="danger" value={overdue.length} label="Overdue follow-ups" onClick={showFus('Overdue follow-ups', overdue)} />
+        <StatCard icon={CalendarCheck} tone="warning" value={today.length} label="Follow-ups today" onClick={showFus('Follow-ups today', today)} />
         <StatCard
           icon={CalendarX}
           tone="orange"
           value={noFollowUp.length}
           label="No follow-up set"
           hint={stale.length ? `${stale.length} with no action for 7+ days` : 'Open leads without a next step'}
+          onClick={showLeads('No follow-up set', noFollowUp)}
         />
-        <StatCard icon={Sparkles} tone="info" value={newToday.length} label="New leads today" />
+        <StatCard icon={Sparkles} tone="info" value={newToday.length} label="New leads today" onClick={showLeads('New leads today', newToday)} />
       </div>
+      <StatRecords show={fuShow} onClose={() => setFuShow(null)} rowKey={(f) => f.id} onRow={(f) => navigate(`/leads/${f.lead_id}`)} />
+      <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
 
       <div className="myday-grid">
         <div className="stack">

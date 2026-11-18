@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { BadgeIndianRupee, CircleX, CreditCard, RefreshCw, Undo2 } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { DateRangePicker, type Range } from '@/components/DateRange'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
@@ -128,6 +129,35 @@ export function PaymentsLogsPage() {
   const total = captured.reduce((t, r) => t + Number(r.amount), 0)
   const refunded = shown.reduce((t, r) => t + Number(r.amount_refunded || 0), 0)
   const failed = shown.filter((r) => r.status === 'failed').length
+  // a stat card's records: those payments (click one with a lead to open it)
+  const [statShow, setStatShow] = useState<StatShow<Pay> | null>(null)
+  const showPay = (title: string, f: (r: Pay) => boolean) => () =>
+    setStatShow({
+      title,
+      rows: shown.filter(f),
+      cols: [
+        { label: 'Paid on', render: (r) => <span className="nowrap">{when(r.paid_at)}</span> },
+        {
+          label: 'Payer',
+          render: (r) => (
+            <>
+              <b>{name(r) || nicePhone(r.phone) || r.email || '—'}</b>
+              {name(r) && r.phone && <div className="muted small">{nicePhone(r.phone)}</div>}
+            </>
+          ),
+        },
+        { label: 'Product', render: (r) => r.description || <span className="muted">—</span> },
+        { label: 'Amount', num: true, render: (r) => inr(r.amount) },
+        { label: 'Refunded', num: true, render: (r) => (Number(r.amount_refunded) > 0 ? inr(r.amount_refunded) : <span className="muted">—</span>) },
+        {
+          label: 'Status',
+          render: (r) => {
+            const st = STATUS[r.status ?? ''] ?? { label: r.status ?? '—', cls: 'badge-muted' }
+            return <span className={cn('badge', st.cls)}>{st.label}</span>
+          },
+        },
+      ],
+    })
 
   return (
     <>
@@ -143,11 +173,12 @@ export function PaymentsLogsPage() {
       {error && <div className="alert alert-error">{error}</div>}
       {notice && <div className="alert alert-success">{notice}</div>}
       <div className="stat-grid">
-        <StatCard icon={BadgeIndianRupee} tone="success" value={inr(total)} label="Received" hint={`${captured.length} payment${captured.length === 1 ? '' : 's'} captured`} />
-        <StatCard icon={CreditCard} tone="info" value={shown.length} label="Payments" hint="All statuses, with these filters" />
-        <StatCard icon={CircleX} tone="danger" value={failed} label="Failed" />
-        <StatCard icon={Undo2} tone="warning" value={inr(refunded)} label="Refunded" />
+        <StatCard icon={BadgeIndianRupee} tone="success" value={inr(total)} label="Received" hint={`${captured.length} payment${captured.length === 1 ? '' : 's'} captured`} onClick={showPay('Received', (r) => r.status === 'captured' || r.status === 'refunded')} />
+        <StatCard icon={CreditCard} tone="info" value={shown.length} label="Payments" hint="All statuses, with these filters" onClick={showPay('Payments', () => true)} />
+        <StatCard icon={CircleX} tone="danger" value={failed} label="Failed" onClick={showPay('Failed', (r) => r.status === 'failed')} />
+        <StatCard icon={Undo2} tone="warning" value={inr(refunded)} label="Refunded" onClick={showPay('Refunded', (r) => Number(r.amount_refunded) > 0)} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(r) => r.id} onRow={(r) => r.lead_id && navigate(`/leads/${r.lead_id}`)} />
       <section className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or payment ID" value={q} onChange={setQ} width={260} />

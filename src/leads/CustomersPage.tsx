@@ -7,6 +7,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow, type StatCol } from '@/components/StatRecords'
 import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
@@ -104,6 +105,25 @@ export function CustomersPage() {
       )
   }, [rows, f])
 
+  // a stat card's records: the customers with their billed / received / balance
+  const [statShow, setStatShow] = useState<StatShow<Row> | null>(null)
+  const custCols: StatCol<Row>[] = [
+    {
+      label: 'Customer',
+      render: (x) => (
+        <>
+          <b>{fullName(x.l)}</b>
+          <div className="muted small">{x.l.phone}</div>
+        </>
+      ),
+    },
+    { label: 'Owner', render: (x) => members.find((m) => m.id === x.l.owner_id)?.name ?? <span className="muted">—</span> },
+    { label: w.many, num: true, render: (x) => x.r.count || <span className="muted">0</span> },
+    { label: 'Billed', num: true, render: (x) => money(x.r.billed) },
+    { label: 'Received', num: true, render: (x) => money(x.r.paid) },
+    { label: 'Balance', num: true, render: (x) => (x.balance > 0.01 ? <b>{money(x.balance)}</b> : <span className="muted">{money(0)}</span>) },
+  ]
+  const showCust = (title: string, f: (x: Row) => boolean) => () => setStatShow({ title, rows: visible.filter(f), cols: custCols })
   // the cards follow the filters
   const stats = useMemo(() => {
     const billed = visible.reduce((n, x) => n + x.r.billed, 0)
@@ -179,11 +199,12 @@ export function CustomersPage() {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={Users} tone="brand" value={stats.count} label="Customers" hint={`Booked at least one ${w.one}`} />
-        <StatCard icon={CalendarCheck} tone="info" value={stats.bookings} label={w.many} hint={stats.hours ? `${hrs(stats.hours)} of studio time` : undefined} />
-        <StatCard icon={Wallet} tone="success" value={money(stats.paid)} label="Received" hint={`Billed ${money(stats.billed)}`} />
-        <StatCard icon={AlertTriangle} tone="warning" value={money(stats.due)} label="Balance due" hint={`${stats.owing} customer${stats.owing === 1 ? '' : 's'} with payment pending`} />
+        <StatCard icon={Users} tone="brand" value={stats.count} label="Customers" hint={`Booked at least one ${w.one}`} onClick={showCust('Customers', () => true)} />
+        <StatCard icon={CalendarCheck} tone="info" value={stats.bookings} label={w.many} hint={stats.hours ? `${hrs(stats.hours)} of studio time` : undefined} onClick={showCust(w.many, (x) => x.r.count > 0)} />
+        <StatCard icon={Wallet} tone="success" value={money(stats.paid)} label="Received" hint={`Billed ${money(stats.billed)}`} onClick={showCust('Received', (x) => x.r.paid > 0)} />
+        <StatCard icon={AlertTriangle} tone="warning" value={money(stats.due)} label="Balance due" hint={`${stats.owing} customer${stats.owing === 1 ? '' : 's'} with payment pending`} onClick={showCust('Balance due', (x) => x.balance > 0.01)} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(x) => x.l.id} onRow={(x) => navigate(`/customers/${x.l.id}`)} />
 
       <div className="panel">
         <div className="panel-filters">

@@ -11,6 +11,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { ALL_DATES, DateRangePicker } from '@/components/DateRange'
 import { listLeads, listMemberOptions } from '@/leads/api'
 import { money } from '@/leads/labels'
@@ -123,6 +124,28 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const due = live.reduce((n, b) => n + Math.max(0, Number(b.total_amount) - Number(b.paid_amount)), 0)
   const liveInvoices = [...new Set(live.map((b) => b.invoice_id).filter(Boolean))].map((id) => invoices.get(id!)).filter(Boolean) as InvoiceRow[]
   const overdueParts = liveInvoices.flatMap((i) => i.invoice_payments).filter((p) => partState(p) === 'overdue')
+  // a stat card's records: those orders (click one to open it)
+  const [statShow, setStatShow] = useState<StatShow<BookingRow> | null>(null)
+  const showOrders = (title: string, f: (b: BookingRow) => boolean) => () =>
+    setStatShow({
+      title,
+      rows: live.filter(f),
+      cols: [
+        {
+          label: noun.one,
+          render: (b) => (
+            <>
+              <b>{bookingRef(b)}</b>
+              <div className="muted small">{new Date(`${b.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+            </>
+          ),
+        },
+        { label: 'Customer', render: (b) => b.client_name },
+        { label: 'Value', num: true, render: (b) => money(b.total_amount) },
+        { label: 'Collected', num: true, render: (b) => money(b.paid_amount) },
+        { label: 'Due', num: true, render: (b) => money(Math.max(0, Number(b.total_amount) - Number(b.paid_amount))) },
+      ],
+    })
   const canInvoice = can('bookings', 'add') || can('bookings', 'edit')
   const pickable = (b: BookingRow) => canInvoice && !b.invoice_id && !cancelled(b)
   const pickedRows = scoped.filter((b) => picked.has(b.id) && pickable(b))
@@ -163,11 +186,12 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={PackageCheck} tone="brand" value={live.length} label={noun.many} hint={filtered ? 'Matching the filters' : 'All, not cancelled'} />
-        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label={`${noun.one} value`} hint="With GST" />
-        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint={value ? `${Math.round((collected / value) * 100)}% of the value` : undefined} />
-        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} />
+        <StatCard icon={PackageCheck} tone="brand" value={live.length} label={noun.many} hint={filtered ? 'Matching the filters' : 'All, not cancelled'} onClick={showOrders(noun.many, () => true)} />
+        <StatCard icon={BadgeIndianRupee} tone="info" value={money(value)} label={`${noun.one} value`} hint="With GST" onClick={showOrders(`${noun.one} value`, (b) => Number(b.total_amount) > 0)} />
+        <StatCard icon={Wallet} tone="success" value={money(collected)} label="Collected" hint={value ? `${Math.round((collected / value) * 100)}% of the value` : undefined} onClick={showOrders('Collected', (b) => Number(b.paid_amount) > 0)} />
+        <StatCard icon={AlertTriangle} tone="danger" value={money(due)} label="Still due" hint={`${overdueParts.length} part${overdueParts.length === 1 ? '' : 's'} overdue`} onClick={showOrders('Still due', (b) => Number(b.total_amount) - Number(b.paid_amount) > 0.01)} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(b) => b.id} onRow={(b) => setOpen({ booking: b })} />
 
       <div className="panel">
         <div className="panel-filters">

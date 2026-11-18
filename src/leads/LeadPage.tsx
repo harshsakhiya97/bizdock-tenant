@@ -173,6 +173,13 @@ export function LeadPage() {
   // a confirmed / completed booking makes the lead a customer (Paid Podcast: any payment received)
   const podcastBk = podcastCheck(businesses)
   const won = (bookings ?? []).filter((b) => makesCustomer(b, podcastBk))
+  // the money cards open the records: Payments → Invoice (else the bookings tab)
+  const toMoneyTab = () => {
+    if (canInv) {
+      setPaySub('invoice')
+      setTab('payments')
+    } else setTab('bookings')
+  }
   // …or a purchase with a paid part
   const bought = (purchases ?? []).filter((p) => p.status === 'active' && Number(p.paid_amount) > 0)
   const isCustomer = won.length > 0 || bought.length > 0
@@ -300,18 +307,19 @@ export function LeadPage() {
       {isCustomer && (
         <div className="stat-grid">
           {isWebinar ? (
-            <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} />
+            <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} onClick={() => setTab('purchases')} />
           ) : (
-            <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} />
+            <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} onClick={() => setTab('bookings')} />
           )}
-          <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" />
-          <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" />
+          <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" onClick={toMoneyTab} />
+          <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" onClick={toMoneyTab} />
           <StatCard
             icon={Receipt}
             tone="warning"
             value={money(Math.max(0, billed - received))}
             label="Balance"
             hint={overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : undefined}
+            onClick={toMoneyTab}
           />
         </div>
       )}

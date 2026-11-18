@@ -14,6 +14,7 @@ import { invoiceAsBooking } from '@/invoices/asBooking'
 import { InvoicePanel } from '@/invoices/InvoicePanel'
 import { useBookingRefs } from './useBookingRefs'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow, type StatCol } from '@/components/StatRecords'
 
 type PayState = 'paid' | 'part' | 'due' | 'overdue'
 const PAY_META: Record<PayState, { label: string; tone: string }> = {
@@ -73,6 +74,32 @@ export function InvoicesPage() {
   const billed = visible.reduce((n, b) => n + Number(b.total_amount), 0)
   const received = visible.reduce((n, b) => n + Number(b.paid_amount), 0)
   const overdue = visible.flatMap((b) => b.booking_payments).filter((p) => partState(p) === 'overdue')
+  // a stat card's records: those invoices (click one to open it)
+  const [statShow, setStatShow] = useState<StatShow<BookingRow> | null>(null)
+  const invCols: StatCol<BookingRow>[] = [
+    {
+      label: 'Invoice',
+      render: (b) => (
+        <>
+          <b>{b.invoice_no}</b>
+          <div className="muted small">{b.invoice_date ? new Date(`${b.invoice_date.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</div>
+        </>
+      ),
+    },
+    { label: 'Client', render: (b) => b.client_name },
+    { label: 'Total', num: true, render: (b) => money(b.total_amount) },
+    { label: 'Received', num: true, render: (b) => money(b.paid_amount) },
+    { label: 'Balance', num: true, render: (b) => money(Math.max(0, b.total_amount - b.paid_amount)) },
+    {
+      label: 'Overdue',
+      num: true,
+      render: (b) => {
+        const o = b.booking_payments.filter((p) => partState(p) === 'overdue').reduce((n, p) => n + Number(p.amount), 0)
+        return o ? <b style={{ color: 'var(--danger)' }}>{money(o)}</b> : <span className="muted">—</span>
+      },
+    },
+  ]
+  const showInv = (title: string, f: (b: BookingRow) => boolean) => () => setStatShow({ title, rows: visible.filter(f), cols: invCols })
 
   return (
     <>
@@ -81,11 +108,12 @@ export function InvoicesPage() {
       <Flash msg={notice} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={FileText} tone="brand" value={visible.length} label="Invoices" />
-        <StatCard icon={BadgeIndianRupee} tone="info" value={money(billed)} label="Billed" hint="With GST" />
-        <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" hint={`${money(Math.max(0, billed - received))} balance`} />
-        <StatCard icon={AlertTriangle} tone="danger" value={money(overdue.reduce((n, p) => n + Number(p.amount), 0))} label="Overdue" hint={`${overdue.length} part${overdue.length === 1 ? '' : 's'}`} />
+        <StatCard icon={FileText} tone="brand" value={visible.length} label="Invoices" onClick={showInv('Invoices', () => true)} />
+        <StatCard icon={BadgeIndianRupee} tone="info" value={money(billed)} label="Billed" hint="With GST" onClick={showInv('Billed', (b) => Number(b.total_amount) > 0)} />
+        <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" hint={`${money(Math.max(0, billed - received))} balance`} onClick={showInv('Received', (b) => Number(b.paid_amount) > 0)} />
+        <StatCard icon={AlertTriangle} tone="danger" value={money(overdue.reduce((n, p) => n + Number(p.amount), 0))} label="Overdue" hint={`${overdue.length} part${overdue.length === 1 ? '' : 's'}`} onClick={showInv('Overdue', (b) => b.booking_payments.some((p) => partState(p) === 'overdue'))} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(b) => b.id} onRow={(b) => (orderNos.has(b.id) ? setOpen(b.id) : window.open(invoiceHref(b.id), '_blank', 'noopener'))} />
 
       <div className="panel">
         <div className="panel-filters">

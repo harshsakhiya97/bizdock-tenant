@@ -1657,3 +1657,15 @@ tfoot td {
 .funnel-list [title] {
   cursor: pointer;
 }
+/* a stat card that opens its records */
+.stat.is-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.stat.is-clickable:hover {
+  border-color: var(--brand);
+}
+.stat.is-clickable:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

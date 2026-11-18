@@ -4,6 +4,7 @@ import { BT } from '@/auth/auth-context'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Flash } from '@/components/Flash'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { SlotCalendar, clock, fmtDay, isoDay } from '@/components/SlotCalendar'
 import { ConfirmModal, Empty, PageHead, Paged, StatCard } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -115,6 +116,30 @@ export function WebinarCalendarPage() {
     }
   }, [myDates, mine, month, regCount])
 
+  // a stat card's records: the webinars, or the month's dates with their registrations (click to open)
+  const [wShow, setWShow] = useState<StatShow<WebinarRow> | null>(null)
+  const [dShow, setDShow] = useState<StatShow<WebinarDate> | null>(null)
+  const showWebinars = () =>
+    setWShow({
+      title: 'Active webinars',
+      rows: mine.filter((w) => w.is_active),
+      cols: [
+        { label: 'Webinar', render: (w) => <b>{w.title}</b> },
+        { label: 'Repeats', render: (w) => repeatText(w) },
+        { label: 'Dates in the month', num: true, render: (w) => myDates.filter((d) => d.webinar_id === w.id && d.event_date.slice(0, 7) === month).length },
+      ],
+    })
+  const showDates = (title: string, onlyRegistered: boolean) => () =>
+    setDShow({
+      title,
+      rows: myDates.filter((d) => d.event_date.slice(0, 7) === month && (!onlyRegistered || (regCount[d.id] ?? 0) > 0)).sort((a, b) => (a.event_date + a.start_time).localeCompare(b.event_date + b.start_time)),
+      cols: [
+        { label: 'Date', render: (d) => <span className="nowrap">{`${fmtDay(d.event_date, { day: 'numeric', month: 'short', year: 'numeric' })} · ${clock(d.start_time)}`}</span> },
+        { label: 'Webinar', render: (d) => <b>{d.title}</b> },
+        { label: 'Registered', num: true, render: (d) => regCount[d.id] ?? 0 },
+        { label: 'Status', render: (d) => (d.is_cancelled ? <span className="badge badge-muted">Cancelled</span> : d.zoom_error ? <span className="badge badge-danger">Zoom error</span> : <span className="badge badge-success">Set</span>) },
+      ],
+    })
   const nextDate = (w: WebinarRow) => myDates.filter((d) => d.webinar_id === w.id && d.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date))[0]
 
   async function toggle(w: WebinarRow) {
@@ -145,10 +170,12 @@ export function WebinarCalendarPage() {
       <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={Presentation} tone="brand" value={stats.webinars} label="Active webinars" />
-        <StatCard icon={CalendarCheck} tone="info" value={stats.dates} label={`Dates in ${fmtDay(`${month}-01`, { month: 'short' })}`} />
-        <StatCard icon={Users} tone="success" value={stats.registered} label="Registered" hint={`For ${fmtDay(`${month}-01`, { month: 'short' })}'s dates`} />
+        <StatCard icon={Presentation} tone="brand" value={stats.webinars} label="Active webinars" onClick={showWebinars} />
+        <StatCard icon={CalendarCheck} tone="info" value={stats.dates} label={`Dates in ${fmtDay(`${month}-01`, { month: 'short' })}`} onClick={showDates(`Dates in ${fmtDay(`${month}-01`, { month: 'short' })}`, false)} />
+        <StatCard icon={Users} tone="success" value={stats.registered} label="Registered" hint={`For ${fmtDay(`${month}-01`, { month: 'short' })}'s dates`} onClick={showDates('Registered', true)} />
       </div>
+      <StatRecords show={wShow} onClose={() => setWShow(null)} rowKey={(w) => w.id} onRow={(w) => setDrawer({ webinar: w })} />
+      <StatRecords show={dShow} onClose={() => setDShow(null)} rowKey={(d) => d.id} onRow={(d) => setOpened(d)} />
 
       <SlotCalendar
         items={items}

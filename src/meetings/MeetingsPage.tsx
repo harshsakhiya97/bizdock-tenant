@@ -10,6 +10,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { Flash } from '@/components/Flash'
 import { SlotCalendar, clock, fmtDay, isoDay } from '@/components/SlotCalendar'
 import { PageHead, StatCard } from '@/components/ui'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { listLeads, listMemberOptions } from '@/leads/api'
 import { fullName, TEMPERATURES } from '@/leads/labels'
 import type { LeadRow, MemberOption } from '@/leads/types'
@@ -132,6 +133,20 @@ export function MeetingsPage() {
     return { count: inMonth.length, done, noShow, rate: decided ? Math.round((done / decided) * 100) : 0, upcoming, todays: visible.filter((m) => m.status === 'scheduled' && m.meeting_date === today).length, rescheduled }
   }, [visible, month, today])
 
+  // a stat card's records: those meetings (click one to open it)
+  const [statShow, setStatShow] = useState<StatShow<MeetingRow> | null>(null)
+  const showMeet = (title: string, f: (m: MeetingRow) => boolean) => () =>
+    setStatShow({
+      title,
+      rows: visible.filter(f).sort((a, b) => (a.meeting_date + a.start_time).localeCompare(b.meeting_date + b.start_time)),
+      cols: [
+        { label: 'When', render: (m) => <span className="nowrap">{`${fmtDay(m.meeting_date, { day: 'numeric', month: 'short', year: 'numeric' })} · ${clock(m.start_time)}`}</span> },
+        { label: 'Meeting', render: (m) => <b>{name(m)}</b> },
+        { label: 'Type', render: (m) => KIND_LABEL[m.kind] },
+        { label: 'With', render: (m) => m.members.map((id) => members.find((x) => x.id === id)?.name).filter(Boolean).join(', ') || <span className="muted">—</span> },
+        { label: 'Status', render: (m) => <span className={`badge ${MEETING_STATUS[m.status].tone}`}>{MEETING_STATUS[m.status].label}</span> },
+      ],
+    })
   const items = useMemo(
     () =>
       meetings
@@ -193,11 +208,12 @@ export function MeetingsPage() {
       <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={Handshake} tone="brand" value={stats.count} label={`Meetings in ${fmtDay(`${month}-01`, { month: 'short' })}`} hint={stats.rescheduled ? `${stats.rescheduled} rescheduled` : undefined} />
-        <StatCard icon={CalendarClock} tone="info" value={stats.upcoming} label="Upcoming" hint={`${stats.todays} today`} />
-        <StatCard icon={CircleCheck} tone="success" value={stats.done} label="Done" hint={stats.done + stats.noShow ? `${stats.rate}% showed up` : undefined} />
-        <StatCard icon={UserX} tone="danger" value={stats.noShow} label="No-show" />
+        <StatCard icon={Handshake} tone="brand" value={stats.count} label={`Meetings in ${fmtDay(`${month}-01`, { month: 'short' })}`} hint={stats.rescheduled ? `${stats.rescheduled} rescheduled` : undefined} onClick={showMeet(`Meetings in ${fmtDay(`${month}-01`, { month: 'short' })}`, (m) => m.meeting_date.slice(0, 7) === month)} />
+        <StatCard icon={CalendarClock} tone="info" value={stats.upcoming} label="Upcoming" hint={`${stats.todays} today`} onClick={showMeet('Upcoming', (m) => m.status === 'scheduled' && m.meeting_date >= today)} />
+        <StatCard icon={CircleCheck} tone="success" value={stats.done} label="Done" hint={stats.done + stats.noShow ? `${stats.rate}% showed up` : undefined} onClick={showMeet('Done', (m) => m.meeting_date.slice(0, 7) === month && m.status === 'done')} />
+        <StatCard icon={UserX} tone="danger" value={stats.noShow} label="No-show" onClick={showMeet('No-show', (m) => m.meeting_date.slice(0, 7) === month && m.status === 'no_show')} />
       </div>
+      <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(m) => m.id} onRow={(m) => setDrawer({ meeting: m })} />
 
       <SlotCalendar
         items={items}
