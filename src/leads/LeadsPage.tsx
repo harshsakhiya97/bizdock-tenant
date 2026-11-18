@@ -74,9 +74,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
-  // a lead becomes a customer once it has a confirmed / completed booking
+  // Leads: every lead (Closed ones too; Customers lists the Closed leads). customers mode: leads with a booking
   const leads = useMemo(
-    () => (allLeads && revenue ? allLeads.filter((l) => revenue.has(l.id) === customers) : null),
+    () => (allLeads && revenue ? (customers ? allLeads.filter((l) => revenue.has(l.id)) : allLeads) : null),
     [allLeads, revenue, customers],
   )
   const word = customers ? 'customer' : 'lead'
