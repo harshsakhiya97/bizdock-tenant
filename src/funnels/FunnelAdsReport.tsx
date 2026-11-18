@@ -343,7 +343,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
             {/* every row, no paging */}
             {
               <div className="table-wrap">
-                <table className="table table-compact">
+                <table className="table table-compact funnel-list">
                   <thead>
                     <tr>
                       <th>{by === 'day' ? 'Date' : by === 'week' ? 'Week' : 'Month'}</th>
