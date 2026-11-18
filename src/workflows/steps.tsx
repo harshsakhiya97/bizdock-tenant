@@ -176,6 +176,8 @@ export function triggerSummary(t: TriggerData, ctx: FlowContext): string {
 
 export { conditionText }
 export const casesOf = (d: Record<string, unknown>) => ((d.cases ?? []) as SwitchCase[])
+/** a new path goes before the Else path (Else stays last) */
+export const addCase = (cases: SwitchCase[], c: SwitchCase) => [...cases.filter((x) => !x.else), c, ...cases.filter((x) => x.else)]
 /** the variable a Generate link step fills ("generated_link" unless named) */
 /** the values a step makes for later steps (Generate link: its link; Create Zoom meeting: the meeting's) */
 export function stepVarKeys(n: StepNode): string[] {
@@ -273,7 +275,7 @@ export const rowsOf = (d: Record<string, unknown>) => ((d.rows ?? []) as BulkRow
 const UNIT_MIN = { minutes: 1, hours: 60, days: 1440 } as const
 /** minutes after the trigger */
 export const rowMinutes = (r: Pick<BulkRow, 'amount' | 'unit'>) => (Number(r.amount) || 0) * (UNIT_MIN[r.unit] ?? 1)
-export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (conditionProblem(c) ? `Path ${i + 1}` : conditionText(c, ctx))
+export const caseLabel = (c: SwitchCase, i: number, ctx: FlowContext) => c.label.trim() || (c.else ? 'Else' : conditionProblem(c) ? `Path ${i + 1}` : conditionText(c, ctx))
 const toWho = (d: Record<string, unknown>, ctx: FlowContext) =>
   d.to === 'team'
     ? `To ${ctx.members.find((m) => m.id === d.member_id)?.name ?? 'team'} · `
@@ -434,7 +436,7 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'condition':
       return conditionProblem(d as unknown as ConditionData) ? 'Finish the condition' : null
     case 'switch':
-      return casesOf(d).some((c) => conditionProblem(c)) ? 'Finish every path’s condition' : null
+      return casesOf(d).some((c) => !c.else && conditionProblem(c)) ? 'Finish every path’s condition' : null
     case 'register_webinar':
       return d.webinar_id || ctx.webinar ? null : 'Pick the webinar'
     case 'wait_zoom':

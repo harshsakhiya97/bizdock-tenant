@@ -27,7 +27,7 @@ import { AddCtx } from './addCtx'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { useCopiedStep } from './stepClipboard'
-import { PALETTE, STEP_META, WEBINAR_STEPS, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
+import { PALETTE, STEP_META, WEBINAR_STEPS, addCase, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -278,7 +278,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       onAddPath: (nodeId: string) => {
         const caseId = `c${Date.now().toString(36)}`
         setNodes((ns) =>
-          ns.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, cases: [...casesOf(n.data), { id: caseId, label: '', field: 'stage', op: 'is', value: '' }] } } : n)),
+          ns.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, cases: addCase(casesOf(n.data), { id: caseId, label: '', field: 'stage', op: 'is', value: '' }) } } : n)),
         )
         setFrom({ source: nodeId, handle: caseId, fresh: true })
         setSelectedId(null)

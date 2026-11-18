@@ -1323,8 +1323,11 @@ function ValueChips({ values, onChange, disabled }: { values: string[]; onChange
 
 /** Switch: several paths, each with its own condition, checked top to bottom. */
 function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean }) {
-  const cases = casesOf(d)
-  const put = (next: SwitchCase[]) => set('cases', next)
+  const all = casesOf(d)
+  const cases = all.filter((c) => !c.else)
+  const other = all.find((c) => c.else) ?? null
+  // the Else path always stays last
+  const put = (next: SwitchCase[], els: SwitchCase | null = other) => set('cases', els ? [...next, els] : next)
   return (
     <>
       {cases.map((c, i) => (
@@ -1344,12 +1347,33 @@ function SwitchFields({ d, ctx, set, disabled }: { d: Record<string, unknown>; c
           <CondEditor id={`cb-${c.id}`} c={c} ctx={ctx} disabled={disabled} onChange={(n) => put(cases.map((x) => (x.id === c.id ? { ...x, ...n } : x)))} />
         </div>
       ))}
-      {!disabled && (
-        <button type="button" className="add-chip" style={{ alignSelf: 'flex-start' }} onClick={() => put([...cases, { id: `c${Date.now().toString(36)}`, label: '', field: 'stage', op: 'is', value: '' }])}>
-          <Plus size={14} /> Add path
-        </button>
+      {other && (
+        <div className="cb-case">
+          <div className="row-between">
+            <b className="small">Else</b>
+            <button type="button" className="btn btn-ghost btn-icon btn-sm danger-text" aria-label="Remove the Else path" disabled={disabled} onClick={() => put(cases, null)}>
+              <Trash2 size={13} />
+            </button>
+          </div>
+          <TextInput aria-label="Else path name" placeholder="Name (optional), e.g. Everyone else" value={other.label} onChange={(e) => put(cases, { ...other, label: e.target.value })} disabled={disabled} />
+          <Hint>Leads that match none of the paths above go down this path.</Hint>
+        </div>
       )}
-      <Hint>Each lead goes down the first path it matches; a lead matching none, or a path with no line, ends the workflow there.</Hint>
+      {!disabled && (
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="add-chip" onClick={() => put([...cases, { id: `c${Date.now().toString(36)}`, label: '', field: 'stage', op: 'is', value: '' }])}>
+            <Plus size={14} /> Add path
+          </button>
+          {!other && (
+            <button type="button" className="add-chip" onClick={() => put(cases, { id: `else${Date.now().toString(36)}`, label: '', field: '', op: 'is', value: '', else: true })}>
+              <Plus size={14} /> Add Else (none of the above)
+            </button>
+          )}
+        </div>
+      )}
+      <Hint>
+        Each lead goes down the first path it matches{other ? '; one matching none goes down Else' : '; a lead matching none ends the workflow there'}. A path with no line ends the workflow there.
+      </Hint>
     </>
   )
 }

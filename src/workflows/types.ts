@@ -30,7 +30,8 @@ export type TriggerData = {
 export type ConditionData = { field: string; op: string; value: string }
 
 /** one path of a Switch box: leads matching it go down its line (checked top to bottom) */
-export type SwitchCase = ConditionData & { id: string; label: string }
+/** a Switch path; else: the path for leads matching none of the others (no condition, always last) */
+export type SwitchCase = ConditionData & { id: string; label: string; else?: boolean }
 
 /** one message of a Bulk WhatsApp step: sent this long after the trigger */
 export type BulkRow = {
