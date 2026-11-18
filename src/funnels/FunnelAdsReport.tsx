@@ -15,8 +15,23 @@ const short = (s: string) => at(s).toLocaleDateString('en-IN', { day: 'numeric',
 const leadDay = (ts: string) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 
 type By = 'day' | 'week' | 'month'
-type Row = { key: string; label: string; sub?: string; spend: number; gst: number; leads: number; booked: number; showed: number; paid: number; closed: number; invoiced: number; received: number }
-type Lead = { id: string; created_at: string; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null }
+type Row = {
+  key: string
+  label: string
+  sub?: string
+  spend: number
+  gst: number
+  leads: number
+  booked: number
+  showed: number
+  paid: number
+  closed: number
+  invoiced: number
+  received: number
+  ls: Lead[]
+}
+type Lead = { id: string; created_at: string; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+const who = (l: Lead) => [l.first_name, l.last_name].filter(Boolean).join(' ') || l.phone || 'Lead'
 const last10 = (p: string | null | undefined) => {
   const d = (p ?? '').replace(/\D/g, '')
   return d.length >= 10 ? d.slice(-10) : ''
@@ -135,13 +150,14 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const rows = useMemo(() => {
     if (!from || !to) return [] as Row[]
     const spend = new Map((report?.days ?? []).map((d) => [d.day, { s: Number(d.spend) || 0, g: Number(d.spend_gst) || 0 }]))
-    const made = new Map<string, { n: number; b: number; s: number; p: number; c: number; inv: number; rec: number }>()
+    const made = new Map<string, { n: number; b: number; s: number; p: number; c: number; inv: number; rec: number; ls: Lead[] }>()
     for (const l of leads ?? []) {
       if (l.is_archived) continue
       const d = leadDay(l.created_at)
       if (d < from || d > to) continue
-      const c = made.get(d) ?? { n: 0, b: 0, s: 0, p: 0, c: 0, inv: 0, rec: 0 }
+      const c = made.get(d) ?? { n: 0, b: 0, s: 0, p: 0, c: 0, inv: 0, rec: 0, ls: [] as Lead[] }
       c.n++
+      c.ls.push(l)
       c.p += money2.pays.get(l.id)?.n ?? 0
       c.rec += money2.pays.get(l.id)?.amt ?? 0
       c.inv += money2.billed.get(l.id) ?? 0
@@ -171,7 +187,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         label = at(day).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
         sub = undefined
       }
-      const r = out.get(key) ?? { key, label, sub, spend: 0, gst: 0, leads: 0, booked: 0, showed: 0, paid: 0, closed: 0, invoiced: 0, received: 0 }
+      const r = out.get(key) ?? { key, label, sub, spend: 0, gst: 0, leads: 0, booked: 0, showed: 0, paid: 0, closed: 0, invoiced: 0, received: 0, ls: [] }
       r.spend += spend.get(day)?.s ?? 0
       r.gst += spend.get(day)?.g ?? 0
       r.leads += made.get(day)?.n ?? 0
@@ -181,6 +197,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       r.closed += made.get(day)?.c ?? 0
       r.invoiced += made.get(day)?.inv ?? 0
       r.received += made.get(day)?.rec ?? 0
+      r.ls = r.ls.concat(made.get(day)?.ls ?? [])
       out.set(key, r)
     }
     // newest first
@@ -198,8 +215,9 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       closed: t.closed + r.closed,
       invoiced: t.invoiced + r.invoiced,
       received: t.received + r.received,
+      ls: t.ls.concat(r.ls),
     }),
-    { key: 'total', label: 'Total', spend: 0, gst: 0, leads: 0, booked: 0, showed: 0, paid: 0, closed: 0, invoiced: 0, received: 0 } as Row,
+    { key: 'total', label: 'Total', spend: 0, gst: 0, leads: 0, booked: 0, showed: 0, paid: 0, closed: 0, invoiced: 0, received: 0, ls: [] } as Row,
   )
   // leads vs the row before it in time (the next row down, newest first)
   const trend = (i: number) => {
@@ -221,19 +239,51 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       </span>
     )
   }
-  const n = (v: number) => v || <span className="muted">0</span>
+  // hover: the leads behind a count / amount (with their amount where there is one)
+  const MAX = 40
+  const list = (lines: string[]) => (lines.length > MAX ? [...lines.slice(0, MAX), `… and ${lines.length - MAX} more`] : lines).join('\n')
+  const rev = (l: Lead) => (money2.billed.get(l.id) ?? 0) + (money2.pays.get(l.id)?.amt ?? 0)
+  const tip = (r: Row, k: 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue') => {
+    const pick = {
+      leads: () => true,
+      paid: (l: Lead) => !!money2.pays.get(l.id)?.n,
+      booked: (l: Lead) => meet.booked.has(l.id),
+      showed: (l: Lead) => meet.showed.has(l.id),
+      closed: (l: Lead) => l.temperature === 'closed',
+      revenue: (l: Lead) => rev(l) > 0,
+    }[k]
+    return list(
+      r.ls.filter(pick).map((l) => {
+        if (k === 'paid') {
+          const p = money2.pays.get(l.id)!
+          return `${who(l)} — ${p.n} payment${p.n === 1 ? '' : 's'}, ${inr(p.amt)}`
+        }
+        if (k === 'revenue') {
+          const inv = money2.billed.get(l.id) ?? 0
+          const rz = money2.pays.get(l.id)?.amt ?? 0
+          return `${who(l)} — ${inr(inv + rz)}${inv && rz ? ` (${inr(inv)} invoices + ${inr(rz)} Razorpay)` : rz ? ' (Razorpay)' : ' (invoices)'}`
+        }
+        return rev(l) ? `${who(l)} — ${inr(rev(l))}` : who(l)
+      }),
+    )
+  }
+  const n = (v: number, title?: string) => (v ? <span title={title}>{v}</span> : <span className="muted">0</span>)
   const cells = (r: Row) => (
     <>
       <td className="num">{cpl(r.gst, r.spend, r.leads)}</td>
-      <td className="num">{n(r.paid)}</td>
+      <td className="num">{n(r.paid, tip(r, 'paid'))}</td>
       <td className="num">{cpl(r.gst, r.spend, r.paid)}</td>
-      <td className="num">{n(r.booked)}</td>
+      <td className="num">{n(r.booked, tip(r, 'booked'))}</td>
       <td className="num">{cpl(r.gst, r.spend, r.booked)}</td>
-      <td className="num">{n(r.showed)}</td>
+      <td className="num">{n(r.showed, tip(r, 'showed'))}</td>
       <td className="num">{cpl(r.gst, r.spend, r.showed)}</td>
-      <td className="num">{n(r.closed)}</td>
+      <td className="num">{n(r.closed, tip(r, 'closed'))}</td>
       <td className="num">
-        {r.invoiced + r.received ? <span title={`${inr(r.invoiced)} invoices + ${inr(r.received)} Razorpay`}>{inr(r.invoiced + r.received)}</span> : <span className="muted">—</span>}
+        {r.invoiced + r.received ? (
+          <span title={`${inr(r.invoiced)} invoices + ${inr(r.received)} Razorpay\n\n${tip(r, 'revenue')}`}>{inr(r.invoiced + r.received)}</span>
+        ) : (
+          <span className="muted">—</span>
+        )}
       </td>
       <td className="num">{pct(r.paid, r.leads)}</td>
       <td className="num">{pct(r.booked, r.paid)}</td>
@@ -322,7 +372,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                           {r.sub && <div className="muted small">{r.sub}</div>}
                         </td>
                         <td className="num">{money(r.gst, r.spend)}</td>
-                        <td className="num">{n(r.leads)}</td>
+                        <td className="num">{n(r.leads, tip(r, 'leads'))}</td>
                         <td className="num nowrap">{trend(i)}</td>
                         {cells(r)}
                       </tr>
@@ -332,7 +382,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                     <tr>
                       <th>Total</th>
                       <th className="num">{money(total.gst, total.spend)}</th>
-                      <th className="num">{total.leads}</th>
+                      <th className="num">{n(total.leads, tip(total, 'leads'))}</th>
                       <th />
                       {cells(total)}
                     </tr>
