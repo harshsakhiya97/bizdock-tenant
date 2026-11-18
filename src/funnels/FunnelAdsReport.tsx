@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
+import { Modal } from '@/components/Modal'
 import { Filter, List, TrendingDown, TrendingUp } from 'lucide-react'
 import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
 import { FunnelFlow } from './FunnelFlow'
@@ -56,6 +58,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const [report, setReport] = useState<AdsReport | null>(null)
   // with GST ÷ without, from Facebook's days (each ad account has its own GST %)
   const [gst, setGst] = useState(1.18)
+  const navigate = useNavigate()
+  const [show, setShow] = useState<{ r: Row; k: 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // the funnel's leads with a meeting (Booking) and with a meeting done (Showup)
   const [meet, setMeet] = useState<{ booked: Set<string>; showed: Set<string> }>({ booked: new Set(), showed: new Set() })
@@ -244,7 +248,17 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const MAX = 40
   const list = (lines: string[]) => (lines.length > MAX ? [...lines.slice(0, MAX), `… and ${lines.length - MAX} more`] : lines).join('\n')
   const rev = (l: Lead) => (money2.billed.get(l.id) ?? 0) + (money2.pays.get(l.id)?.amt ?? 0)
-  const tip = (r: Row, k: 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue') => {
+  type K = 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue'
+  const pickOf = (k: K) =>
+    ({
+      leads: () => true,
+      paid: (l: Lead) => !!money2.pays.get(l.id)?.n,
+      booked: (l: Lead) => meet.booked.has(l.id),
+      showed: (l: Lead) => meet.showed.has(l.id),
+      closed: (l: Lead) => l.temperature === 'closed',
+      revenue: (l: Lead) => rev(l) > 0,
+    })[k]
+  const tip = (r: Row, k: K) => {
     const pick = {
       leads: () => true,
       paid: (l: Lead) => !!money2.pays.get(l.id)?.n,
@@ -268,20 +282,31 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       }),
     )
   }
-  const n = (v: number, title?: string) => (v ? <span title={title}>{v}</span> : <span className="muted">0</span>)
+  // click: the same leads in a list
+  const open = (r: Row, k: K) => () => setShow({ r, k })
+  const n = (v: number, r: Row, k: K) =>
+    v ? (
+      <span title={tip(r, k)} onClick={open(r, k)}>
+        {v}
+      </span>
+    ) : (
+      <span className="muted">0</span>
+    )
   const cells = (r: Row) => (
     <>
-      <td className="num">{cpl(r.gst, r.spend, r.leads)}</td>
-      <td className="num">{n(r.paid, tip(r, 'paid'))}</td>
-      <td className="num">{cpl(r.gst, r.spend, r.paid)}</td>
-      <td className="num">{n(r.booked, tip(r, 'booked'))}</td>
-      <td className="num">{cpl(r.gst, r.spend, r.booked)}</td>
-      <td className="num">{n(r.showed, tip(r, 'showed'))}</td>
-      <td className="num">{cpl(r.gst, r.spend, r.showed)}</td>
-      <td className="num">{n(r.closed, tip(r, 'closed'))}</td>
+      <td className="num">{cpl(r.gst, r.spend, r.leads, open(r, 'leads'))}</td>
+      <td className="num">{n(r.paid, r, 'paid')}</td>
+      <td className="num">{cpl(r.gst, r.spend, r.paid, open(r, 'paid'))}</td>
+      <td className="num">{n(r.booked, r, 'booked')}</td>
+      <td className="num">{cpl(r.gst, r.spend, r.booked, open(r, 'booked'))}</td>
+      <td className="num">{n(r.showed, r, 'showed')}</td>
+      <td className="num">{cpl(r.gst, r.spend, r.showed, open(r, 'showed'))}</td>
+      <td className="num">{n(r.closed, r, 'closed')}</td>
       <td className="num">
         {r.invoiced + r.received ? (
-          <span title={`${inr(r.invoiced)} invoices + ${inr(r.received)} Razorpay\n\n${tip(r, 'revenue')}`}>{inr(r.invoiced + r.received)}</span>
+          <span title={`${inr(r.invoiced)} invoices + ${inr(r.received)} Razorpay\n\n${tip(r, 'revenue')}`} onClick={open(r, 'revenue')}>
+            {inr(r.invoiced + r.received)}
+          </span>
         ) : (
           <span className="muted">—</span>
         )}
@@ -292,7 +317,14 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
     </>
   )
   const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(ex)} without GST + ${inr(gstAmt - ex)} GST` : undefined}>{gstAmt ? inr(gstAmt) : '—'}</span>
-  const cpl = (gstAmt: number, ex: number, n: number) => (n && gstAmt ? <span title={`${inr(ex / n)} without GST`}>{inr(gstAmt / n)}</span> : <span className="muted">—</span>)
+  const cpl = (gstAmt: number, ex: number, n: number, onClick?: () => void) =>
+    n && gstAmt ? (
+      <span title={`${inr(ex / n)} without GST`} onClick={onClick}>
+        {inr(gstAmt / n)}
+      </span>
+    ) : (
+      <span className="muted">—</span>
+    )
 
   return (
     <section className="card card-pad stack" style={{ gap: 14 }}>
@@ -373,7 +405,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                           {r.sub && <div className="muted small">{r.sub}</div>}
                         </td>
                         <td className="num">{money(r.gst, r.spend)}</td>
-                        <td className="num">{n(r.leads, tip(r, 'leads'))}</td>
+                        <td className="num">{n(r.leads, r, 'leads')}</td>
                         <td className="num nowrap">{trend(i)}</td>
                         {cells(r)}
                       </tr>
@@ -383,7 +415,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                     <tr>
                       <th>Total</th>
                       <th className="num">{money(total.gst, total.spend)}</th>
-                      <th className="num">{n(total.leads, tip(total, 'leads'))}</th>
+                      <th className="num">{n(total.leads, total, 'leads')}</th>
                       <th />
                       {cells(total)}
                     </tr>
@@ -393,6 +425,64 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
             }
           </>
         ))}
+      {show && (
+        <Modal
+          open
+          onClose={() => setShow(null)}
+          width={820}
+          title={`${{ leads: 'Leads', paid: 'Payments', booked: 'Booking', showed: 'Show up', closed: 'Converted', revenue: 'Revenue' }[show.k]} · ${show.r.label}`}
+        >
+          {(() => {
+            const ls = show.r.ls.filter(pickOf(show.k))
+            if (!ls.length) return <div className="muted small">No leads.</div>
+            const sum = ls.reduce((t, l) => t + rev(l), 0)
+            return (
+              <div className="table-wrap" style={{ maxHeight: '60vh', overflow: 'auto' }}>
+                <table className="table table-compact">
+                  <thead>
+                    <tr>
+                      <th>Lead</th>
+                      <th>Lead date</th>
+                      <th className="num">Razorpay</th>
+                      <th className="num">Invoices</th>
+                      <th className="num">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ls.map((l) => {
+                      const p = money2.pays.get(l.id)
+                      const inv = money2.billed.get(l.id) ?? 0
+                      return (
+                        <tr key={l.id} className="is-clickable" onClick={() => navigate(`/leads/${l.id}`)} title="Open the lead">
+                          <td>
+                            <b>{who(l)}</b>
+                            {l.phone && <div className="muted small">{l.phone}</div>}
+                          </td>
+                          <td className="nowrap">{new Date(l.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</td>
+                          <td className="num nowrap">{p?.n ? `${inr(p.amt)} · ${p.n}` : <span className="muted">—</span>}</td>
+                          <td className="num nowrap">{inv ? inr(inv) : <span className="muted">—</span>}</td>
+                          <td className="num nowrap">{rev(l) ? <b>{inr(rev(l))}</b> : <span className="muted">—</span>}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <th>
+                        {ls.length} lead{ls.length === 1 ? '' : 's'}
+                      </th>
+                      <th />
+                      <th />
+                      <th />
+                      <th className="num">{sum ? inr(sum) : '—'}</th>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            )
+          })()}
+        </Modal>
+      )}
     </section>
   )
 }
