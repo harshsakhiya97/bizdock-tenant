@@ -210,7 +210,7 @@ export function FollowUpsTab({
                   </button>
                 )}
               </div>
-              <div className="form-grid">
+              <div className="form-grid fc-grid">
                 <div>
                   <Label htmlFor="fc-out" required>
                     Outcome
@@ -238,24 +238,31 @@ export function FollowUpsTab({
                   </Select>
                 </div>
                 {ends ? (
-                  <div className="span-2 muted small">No next call is needed; any pending follow-up for this lead is cancelled.</div>
+                  <div className="span-2 muted small" style={{ alignSelf: 'center' }}>
+                    No next call is needed; any pending follow-up for this lead is cancelled.
+                  </div>
                 ) : (
-                <div className="span-2">
-                  <Label htmlFor="fc-next" required>
-                    Next call
-                  </Label>
-                  <div className="row" style={{ flexWrap: 'nowrap', maxWidth: 420 }}>
-                    <input id="fc-next" className="input" type="date" value={next} onChange={(e) => setNext(e.target.value)} />
-                    <input className="input" type="time" aria-label="Time" style={{ width: 120 }} value={nextTime} onChange={(e) => setNextTime(e.target.value)} />
-                  </div>
-                  <div className="quick-links">
-                    <button type="button" onClick={() => setNext(dayPlus(1))}>Tomorrow</button>·
-                    <button type="button" onClick={() => setNext(dayPlus(3))}>+3 days</button>·
-                    <button type="button" onClick={() => setNext(dayPlus(7))}>+7 days</button>
-                  </div>
-                </div>
+                  <>
+                    <div>
+                      <Label htmlFor="fc-next" required>
+                        Next call date
+                      </Label>
+                      <input id="fc-next" className="input" type="date" value={next} onChange={(e) => setNext(e.target.value)} />
+                      <div className="quick-links">
+                        <button type="button" onClick={() => setNext(dayPlus(1))}>Tomorrow</button>·
+                        <button type="button" onClick={() => setNext(dayPlus(3))}>+3 days</button>·
+                        <button type="button" onClick={() => setNext(dayPlus(7))}>+7 days</button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="fc-time" required>
+                        Time
+                      </Label>
+                      <input id="fc-time" className="input" type="time" value={nextTime} onChange={(e) => setNextTime(e.target.value)} />
+                    </div>
+                  </>
                 )}
-                <div className="span-2">
+                <div className="fc-full">
                   <Label htmlFor="fc-sum" required>
                     Conversation summary
                   </Label>

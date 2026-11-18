@@ -1630,3 +1630,8 @@ tr.is-drop td { box-shadow: inset 0 2px 0 var(--brand); }
 .gt-up .gt-kid::before { top: auto; bottom: 0; }
 .gt-up .gt-kid::after { top: auto; bottom: 0; }
 .gt-others { border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 16px; align-self: stretch; }
+
+/* Log a call: Outcome · Lead category · Next call date · Time in one row */
+.form-grid.fc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.form-grid.fc-grid .fc-full { grid-column: 1 / -1; }
+@media (max-width: 900px) { .form-grid.fc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
