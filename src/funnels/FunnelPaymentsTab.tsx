@@ -8,8 +8,8 @@ import { useTenant } from '@/tenant/useTenant'
 import type { LeadRow } from '@/leads/types'
 
 /**
- * Funnel → Payments: save the funnel's price; lists the Razorpay payments of exactly that amount whose phone (last 10
- * digits) or email matches one of this funnel's leads.
+ * Funnel → Payments: pick the Razorpay product names (the payment's description) this funnel sells and Save; lists those
+ * payments whose phone (last 10 digits) or email matches one of this funnel's leads.
  */
 type Pay = {
   id: string
@@ -20,6 +20,7 @@ type Pay = {
   method: string | null
   email: string | null
   phone: string | null
+  description: string | null
   paid_at: string
 }
 
@@ -38,12 +39,13 @@ const last10 = (p: string | null | undefined) => {
   return d.length >= 10 ? d.slice(-10) : ''
 }
 const mail = (e: string | null | undefined) => (e ?? '').trim().toLowerCase()
+const same = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x))
 
 export function FunnelPaymentsTab({ funnelId, leads, canEdit }: { funnelId: string; leads: LeadRow[] | null; canEdit: boolean }) {
   const tenant = useTenant()
   const navigate = useNavigate()
-  const [saved, setSaved] = useState<number | null | undefined>(undefined)
-  const [draft, setDraft] = useState('')
+  const [saved, setSaved] = useState<string[] | undefined>(undefined)
+  const [draft, setDraft] = useState<string[]>([])
   const [rows, setRows] = useState<Pay[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -52,52 +54,56 @@ export function FunnelPaymentsTab({ funnelId, leads, canEdit }: { funnelId: stri
   useEffect(() => {
     db()
       .from('funnels')
-      .select('payment_amount')
+      .select('payment_descriptions')
       .eq('id', funnelId)
       .maybeSingle()
       .then(({ data, error: e }) => {
         if (e) setError(e.message)
-        const v = data?.payment_amount == null ? null : Number(data.payment_amount)
+        const v = ((data?.payment_descriptions ?? []) as string[]).filter(Boolean)
         setSaved(v)
-        setDraft(v == null ? '' : String(v))
+        setDraft(v)
       })
   }, [funnelId])
 
+  // every Razorpay payment with a description (the product names to pick from, and the list)
   const load = useCallback(() => {
-    if (saved == null) {
-      setRows([])
-      return
-    }
     setRows(null)
     db()
       .from('razorpay_payments')
-      .select('id, payment_id, order_id, amount, status, method, email, phone, paid_at')
+      .select('id, payment_id, order_id, amount, status, method, email, phone, description, paid_at')
       .eq('tenant_id', tenant.id)
-      .eq('amount', saved)
+      .not('description', 'is', null)
       .order('paid_at', { ascending: false })
       .limit(10000)
       .then(({ data, error: e }) => {
         if (e) setError(e.message)
         setRows((data ?? []) as Pay[])
       })
-  }, [tenant.id, saved])
+  }, [tenant.id])
   useEffect(load, [load])
 
-  async function save() {
-    const v = draft.trim() === '' ? null : Number(draft)
-    if (v != null && (!Number.isFinite(v) || v <= 0)) {
-      setError('Enter an amount in ₹, more than 0.')
-      return
+  // product names, most payments first (a saved one stays listed even with no payments now)
+  const options = useMemo(() => {
+    const n = new Map<string, number>()
+    for (const r of rows ?? []) {
+      const d = (r.description ?? '').trim()
+      if (d) n.set(d, (n.get(d) ?? 0) + 1)
     }
+    for (const d of saved ?? []) if (!n.has(d)) n.set(d, 0)
+    return [...n.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+  }, [rows, saved])
+
+  async function save() {
     setBusy(true)
     setError(null)
     setNotice(null)
-    const { error: e } = await db().from('funnels').update({ payment_amount: v }).eq('id', funnelId)
+    const { error: e } = await db().from('funnels').update({ payment_descriptions: draft }).eq('id', funnelId)
     setBusy(false)
     if (e) return setError(e.message)
-    setSaved(v)
-    setNotice(v == null ? 'Amount cleared.' : `Saved · showing payments of ${inr(v)}.`)
+    setSaved(draft)
+    setNotice(draft.length ? 'Saved.' : 'Cleared.')
   }
+  const toggle = (d: string) => setDraft((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))
 
   // this funnel's leads by phone (last 10 digits) and email
   const { byPhone, byEmail } = useMemo(() => {
@@ -114,52 +120,61 @@ export function FunnelPaymentsTab({ funnelId, leads, canEdit }: { funnelId: stri
   const matched = useMemo(
     () =>
       (rows ?? [])
+        .filter((p) => (saved ?? []).includes((p.description ?? '').trim()))
         .map((p) => ({ p, lead: byPhone.get(last10(p.phone)) ?? byEmail.get(mail(p.email)) ?? null }))
         .filter((x): x is { p: Pay; lead: LeadRow } => !!x.lead),
-    [rows, byPhone, byEmail],
+    [rows, saved, byPhone, byEmail],
   )
 
   return (
     <section className="panel">
-      <div className="panel-filters">
-        <label className="muted small" htmlFor="funnel-pay-amount">
-          Amount (₹)
-        </label>
-        <input
-          id="funnel-pay-amount"
-          className="input input-sm"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="e.g. 999"
-          style={{ width: 140 }}
-          value={draft}
-          disabled={!canEdit || saved === undefined}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && canEdit && void save()}
-        />
+      <div className="panel-filters" style={{ flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 260 }}>
+          <div className="muted small" style={{ marginBottom: 6 }}>
+            Razorpay product (payment description) this funnel sells — pick one or more
+          </div>
+          {!rows || saved === undefined ? (
+            <span className="muted small">Loading…</span>
+          ) : !options.length ? (
+            <span className="muted small">No Razorpay payments with a description yet.</span>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {options.map(([d, c]) => (
+                <button
+                  key={d}
+                  type="button"
+                  className={cn('btn btn-sm', draft.includes(d) ? 'btn-primary' : 'btn-outline')}
+                  disabled={!canEdit}
+                  onClick={() => toggle(d)}
+                  title={canEdit ? undefined : 'You can’t edit this funnel'}
+                >
+                  {d} <span className={draft.includes(d) ? undefined : 'muted'}>({c})</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {canEdit && (
-          <button type="button" className="btn btn-primary btn-sm" onClick={() => void save()} disabled={busy || saved === undefined || draft.trim() === (saved == null ? '' : String(saved))}>
+          <button type="button" className="btn btn-primary btn-sm" onClick={() => void save()} disabled={busy || saved === undefined || same(draft, saved)}>
             {busy ? 'Saving…' : 'Save'}
           </button>
         )}
-        {saved != null && rows && (
-          <span className="muted small" style={{ marginLeft: 'auto' }}>
-            {matched.length} payment{matched.length === 1 ? '' : 's'} of {inr(saved)} from this funnel’s leads
-          </span>
-        )}
       </div>
+      {!!saved?.length && rows && (
+        <div className="muted small" style={{ padding: '0 16px 8px' }}>
+          {matched.length} payment{matched.length === 1 ? '' : 's'} from this funnel’s leads (matched by phone or email)
+        </div>
+      )}
       {error && <div className="alert alert-error">{error}</div>}
       {notice && <div className="alert alert-success">{notice}</div>}
-      {saved === undefined || (saved != null && (!rows || !leads)) ? (
+      {saved === undefined || !rows || !leads ? (
         <div className="empty">Loading…</div>
-      ) : saved == null ? (
-        <Empty icon={CreditCard}>Add the amount this funnel sells at and Save — its Razorpay payments of that amount, from this funnel’s leads, show here.</Empty>
+      ) : !saved.length ? (
+        <Empty icon={CreditCard}>Pick the Razorpay product this funnel sells and Save — its payments from this funnel’s leads show here.</Empty>
       ) : !matched.length ? (
-        <Empty icon={CreditCard}>No Razorpay payments of {inr(saved)} from this funnel’s leads (matched by phone or email).</Empty>
+        <Empty icon={CreditCard}>No payments for {saved.join(', ')} from this funnel’s leads (matched by phone or email).</Empty>
       ) : (
-        <Paged rows={matched} reset={[saved]}>
+        <Paged rows={matched} reset={[saved.join('|')]}>
           {(paged) => (
             <div className="table-wrap">
               <table className="table">
@@ -168,6 +183,7 @@ export function FunnelPaymentsTab({ funnelId, leads, canEdit }: { funnelId: stri
                     <th>Paid on</th>
                     <th>Lead</th>
                     <th>Phone / email</th>
+                    <th>Product</th>
                     <th className="num">Amount</th>
                     <th>Status</th>
                     <th>Method</th>
@@ -187,6 +203,7 @@ export function FunnelPaymentsTab({ funnelId, leads, canEdit }: { funnelId: stri
                           {p.phone && <div>{p.phone}</div>}
                           {p.email && <div className="muted">{p.email}</div>}
                         </td>
+                        <td className="small">{p.description}</td>
                         <td className="num nowrap">{inr(p.amount)}</td>
                         <td>
                           <span className={cn('badge', st.cls)}>{st.label}</span>
