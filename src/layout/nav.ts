@@ -114,6 +114,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/access-control': { title: 'Access Control', crumb: 'Team & roles', icon: ShieldCheck },
   '/profile': { title: 'My Profile', crumb: 'Overview', icon: User },
   '/whats-new': { title: "What's New", crumb: 'Version history', icon: Sparkles },
+  '/whats-new/git': { title: "What's New", crumb: 'Git graph', icon: Sparkles },
 }
 
 /** Phone tab bar: short names for the main pages. */
