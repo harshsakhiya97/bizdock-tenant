@@ -37,7 +37,8 @@ const last10 = (p: string | null | undefined) => {
   return d.length >= 10 ? d.slice(-10) : ''
 }
 const mail = (e: string | null | undefined) => (e ?? '').trim().toLowerCase()
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—')
+/** a % with its hover: a ÷ b */
+const pct = (a: number, b: number, what: string) => <span title={`${what}: ${a} ÷ ${b}`}>{b ? `${((a / b) * 100).toFixed(1)}%` : '—'}</span>
 
 /**
  * Funnel → Overview: the 3D funnel (Facebook reach → clicks → page views → leads → stages → revenue) and its numbers, for a
@@ -285,9 +286,9 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
           <span className="muted">—</span>
         )}
       </td>
-      <td className="num">{pct(r.paid, r.leads)}</td>
-      <td className="num">{pct(r.booked, r.paid)}</td>
-      <td className="num">{pct(r.showed, r.booked)}</td>
+      <td className="num">{pct(r.paid, r.leads, 'Payments ÷ leads')}</td>
+      <td className="num">{pct(r.booked, r.paid, 'Bookings ÷ payments')}</td>
+      <td className="num">{pct(r.showed, r.booked, 'Show ups ÷ bookings')}</td>
     </>
   )
   const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(ex)} without GST + ${inr(gstAmt - ex)} GST` : undefined}>{gstAmt ? inr(gstAmt) : '—'}</span>
