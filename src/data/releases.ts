@@ -30,6 +30,7 @@ export const releases: Release[] = [
       'Masters → Brand deal steps: name the steps and drag to reorder them.',
     ],
     improved: [
+      'What’s new → Git graph (owner / support): each branch, who works on it and how far it is ahead / behind deploy/pride and main, the last 30 days’ commits with merges and version tags, and each commit’s files — live from GitHub.',
       'Facebook-style date range (presets and a two-month calendar) on Orders / Bookings / Brand Deals, Follow-ups (with All dates), Meta logs, Callyzer History logs and WhatsApp logs.',
       'Masters → Follow-up outcomes: drag to reorder.',
       'Deleting a lead / customer also deletes their bookings, orders and brand deals with their invoices and payments, in every business.',
