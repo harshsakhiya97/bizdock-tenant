@@ -96,6 +96,12 @@ export async function removeInvoiceOrder(orderId: string) {
   if (error) throw new Error(error.message)
 }
 
+/** regenerate: the invoice's "From (company)" details again from the company in Masters (before printing) */
+export async function refreshInvoiceSeller(invoiceId: string) {
+  const { error } = await db().rpc('invoice_refresh_seller', { p_invoice: invoiceId })
+  if (error) throw new Error(error.message)
+}
+
 /** the invoice's page in the app */
 export const invoicePath = (id: string) => `/invoices?open=${id}`
 /** the printable invoice, opened in a new tab */

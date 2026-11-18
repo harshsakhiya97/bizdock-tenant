@@ -12,7 +12,7 @@ import { useTenant } from '@/tenant/useTenant'
 import type { BookingRow, PartDraft } from '@/bookings/types'
 import type { BookingRefs } from '@/bookings/useBookingRefs'
 import { formatInvoiceNo } from '@/masters/types'
-import { createInvoice, invoicePrintHref, saveInvoice } from './api'
+import { createInvoice, invoicePrintHref, refreshInvoiceSeller, saveInvoice } from './api'
 import { BuyerFields, buyerError, buyerOfJson, buyerOfLead, emptyBuyer } from './Billing'
 import { PaymentPlan, planError } from './PaymentPlan'
 import { isFullyPaid, type InvoiceInput, type InvoiceRow } from './types'
@@ -126,6 +126,38 @@ export function InvoiceDrawer({
     setInput((d) => ({ ...d, kind, billing_company_id: links ? companyFor(kind, links.biz, links.sub) || d.billing_company_id : d.billing_company_id }))
   }
 
+  /**
+   * Print / PDF regenerates the invoice first: what's in the drawer is saved (Bill to, GST, payment parts) and the
+   * company details are taken again from Masters; then the PDF opens. Without edit rights it just opens.
+   */
+  async function printNow() {
+    if (!invoice) return
+    // the tab opens now (on the click), so the browser doesn't block it; it gets the PDF once saved
+    const tab = window.open('', '_blank')
+    const href = invoicePrintHref(invoice.id)
+    if (canEdit) {
+      const err = planError(input.parts, t.total) ?? buyerError(input.buyer) ?? (gst && !(Number(input.gst_rate) > 0) ? 'Enter the GST rate.' : null)
+      if (err) {
+        tab?.close()
+        return setError(err)
+      }
+      setBusy(true)
+      setError(null)
+      try {
+        await saveInvoice(tenant.id, membership?.id, invoice, input)
+        await refreshInvoiceSeller(invoice.id)
+      } catch (e) {
+        tab?.close()
+        setError((e as Error).message)
+        setBusy(false)
+        return
+      }
+    }
+    if (tab) tab.location.href = href
+    else window.open(href, '_blank')
+    if (canEdit) onSaved(`Invoice ${invoice.invoice_no} regenerated with the latest details.`, invoice.id)
+  }
+
   async function save() {
     const err = planError(input.parts, t.total) ?? buyerError(input.buyer)
     if (err) return setError(err)
@@ -164,9 +196,9 @@ export function InvoiceDrawer({
           <div className="foot-end">
             {(error || outerError) && <p className="err-text">{error || outerError}</p>}
             {invoice && (
-              <a className="btn btn-outline" href={invoicePrintHref(invoice.id)} target="_blank" rel="noreferrer">
-                <Printer size={15} /> Print / PDF
-              </a>
+              <Button variant="outline" onClick={printNow} disabled={busy} title={canEdit ? 'Saves this invoice, takes the company details again from Masters, then opens the PDF' : undefined}>
+                <Printer size={15} /> {busy ? 'Regenerating…' : 'Print / PDF'}
+              </Button>
             )}
             {canEdit && (
               <Button onClick={save} disabled={busy}>
