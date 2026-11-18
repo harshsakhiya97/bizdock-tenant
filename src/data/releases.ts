@@ -24,6 +24,9 @@ export const releases: Release[] = [
       'Lead / customer → Payments tab: Invoice (this lead’s invoices, as on the Invoices page) and Direct Payments (Razorpay payments with the lead’s phone or email).',
       'Role access → Payments (view) decides who sees Payments.',
     ],
+    improved: [
+      'Leads and Customers: a date range filter on the lead’s creation date (All dates by default); the cards follow it.',
+    ],
     fixed: [
       'Callyzer no longer stops for the day when Callyzer briefly refuses the key (“Invalid access token”, around 7 AM): it tries again every 5 minutes and shows Error only if refused for an hour.',
     ],
