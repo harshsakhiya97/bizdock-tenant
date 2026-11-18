@@ -3,6 +3,7 @@ import { ChartLine, ChevronDown, ChevronRight, List } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
 import { SpendLines, type Line } from './SpendLines'
+import { AdPreviewDrawer } from '@/meta/AdPreviewDrawer'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -27,6 +28,8 @@ export function FunnelDaySpend({
   // same presets as Facebook Ads Manager (Last 30 days ends yesterday)
   const [range, setRange] = useState<Range>(() => presetRange('last30'))
   const { from, to } = range
+  // an ad's preview (side drawer), as in System Connections → Facebook → Ads
+  const [preview, setPreview] = useState<{ id: string; name: string | null; sub: string } | null>(null)
   // graph (the lines) or list (each day, with its ads)
   const [view, setView] = useState<'graph' | 'list'>('graph')
   const [data, setData] = useState<Awaited<ReturnType<typeof funnelDaySpend>> | null>(null)
@@ -181,7 +184,7 @@ export function FunnelDaySpend({
                         </tr>
                         {isOpen &&
                           d.ads.map((a) => (
-                            <tr key={`${d.day}-${a.ad_id}`}>
+                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })}>
                               <td />
                               <td>
                                 {a.name}
@@ -201,6 +204,7 @@ export function FunnelDaySpend({
         )}
         </>
       )}
+      {preview && <AdPreviewDrawer ad={preview} onClose={() => setPreview(null)} />}
     </section>
   )
 }
