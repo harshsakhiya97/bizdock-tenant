@@ -13,6 +13,8 @@ export type MeetingRow = {
   kind: MeetingKind
   /** team meeting: what it is about */
   title: string | null
+  /** optional: what the meeting is about */
+  agenda: string | null
   business_id: string | null
   sub_business_id: string | null
   lead_id: string | null

@@ -74,6 +74,7 @@ export function MeetingDrawer({
   const [f, setF] = useState<MeetingInput>(() => ({
     kind: meeting?.kind ?? 'lead',
     title: meeting?.title ?? '',
+    agenda: meeting?.agenda ?? '',
     lead_id: meeting?.lead_id ?? lead?.id ?? '',
     business_id: meeting?.business_id ?? lead?.business_id ?? '',
     sub_business_id: meeting?.sub_business_id ?? lead?.sub_business_id ?? sub?.id ?? null,
@@ -329,6 +330,10 @@ export function MeetingDrawer({
                 End time
               </Label>
               <TextInput id="mt-end" type="time" step={900} value={f.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit || !!meeting} />
+            </div>
+            <div className="span-2">
+              <Label htmlFor="mt-agenda">Agenda</Label>
+              <TextArea id="mt-agenda" rows={2} placeholder="Optional — what the meeting is about, points to cover" value={f.agenda} onChange={(e) => set('agenda', e.target.value)} disabled={!canEdit} />
             </div>
             <div className="span-2">
               <Label required>Team members</Label>

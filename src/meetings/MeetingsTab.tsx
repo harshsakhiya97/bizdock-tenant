@@ -58,6 +58,7 @@ export function MeetingsTab({
                     <td className="nowrap">
                       {fmtDay(m.meeting_date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {clock(m.start_time)} – {clock(m.end_time)}
                       {m.members.length > 0 && <div className="muted small">With {m.members.map((x) => members.find((y) => y.id === x)?.name ?? 'a team member').join(', ')}</div>}
+                      {m.agenda && <div className="muted small">Agenda: {m.agenda}</div>}
                       {moved > 0 && <div className="muted small">Rescheduled {moved}×</div>}
                     </td>
                     <td>

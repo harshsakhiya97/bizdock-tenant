@@ -12,6 +12,7 @@ export async function listMeetings(tenantId: string, f: { leadId?: string } = {}
 export type MeetingInput = {
   kind: MeetingKind
   title: string
+  agenda: string
   lead_id: string
   business_id: string
   sub_business_id: string | null
@@ -37,6 +38,7 @@ export async function saveMeeting(tenantId: string, memberId: string | undefined
   const row = {
     kind: input.kind,
     title: team ? clean(input.title) : null,
+    agenda: clean(input.agenda),
     lead_id: team ? null : input.lead_id,
     business_id: team ? null : input.business_id,
     sub_business_id: team ? null : input.sub_business_id,
