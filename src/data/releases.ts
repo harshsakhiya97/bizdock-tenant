@@ -24,9 +24,11 @@ export const releases: Release[] = [
     improved: [
       'Invoice → Print / PDF regenerates the invoice first: what’s in the drawer (Bill to, GST, payment parts) is saved and the company details are taken again from Masters, then the PDF opens.',
       'Access Control → Team shows the Support login (Harsh, role Support; it can’t be changed there), and every team-member list includes it.',
+      'What’s new → Git graph: a branch tree (each developer’s branch → merge → Pride → auto copy → main), with ↑ to merge / ↓ to pull for each developer and the branch this app runs from marked Current.',
     ],
     fixed: [
       'Workflows: after a refresh, every workflow showed for a moment before the business filter applied.',
+      'Git graph: an older merge line was labelled “main” a second time; it is named after its branch now.',
     ],
   },
   {
