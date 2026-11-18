@@ -1,4 +1,6 @@
-import { Bug, MinusCircle, Sparkles, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router'
+import { Bug, GitBranch, MinusCircle, Sparkles, TrendingUp } from 'lucide-react'
+import { useAuth } from '@/auth/useAuth'
 import { PageHead } from '@/components/ui'
 import { releases, type Release } from '@/data/releases'
 import { useTenant } from '@/tenant/useTenant'
@@ -15,9 +17,22 @@ const fmt = (d: string) =>
 
 export function WhatsNewPage() {
   const tenant = useTenant()
+  const { membership } = useAuth()
+  // owner / support: the developers' Git graph
+  const dev = !!membership && (membership.is_support || membership.role.level <= 1)
   return (
     <>
-      <PageHead title="What's New" subtitle={`Every version of the ${tenant.app_name} app and what it added.`} />
+      <PageHead
+        title="What's New"
+        subtitle={`Every version of the ${tenant.app_name} app and what it added.`}
+        actions={
+          dev ? (
+            <Link to="/whats-new/git" className="btn btn-outline btn-sm">
+              <GitBranch size={15} /> Git graph
+            </Link>
+          ) : undefined
+        }
+      />
       <div className="wn-timeline">
         {releases.map((r, i) => (
           <article key={r.version} className="wn-item">

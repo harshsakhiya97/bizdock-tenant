@@ -13,6 +13,7 @@ import { MetaConnectPage } from '@/pages/MetaConnect'
 import { PrivacyPage, SupportPage, TermsPage } from '@/pages/Legal'
 import { ProfilePage } from '@/pages/Profile'
 import { WhatsNewPage } from '@/pages/WhatsNew'
+import { GitGraphPage } from '@/pages/GitGraph'
 import { AccessControlPage } from '@/access/AccessControlPage'
 import { FunnelsPage } from '@/funnels/FunnelsPage'
 import { FunnelPage } from '@/funnels/FunnelPage'
@@ -237,6 +238,7 @@ export default function App() {
                 <Route path="/widgets/webinar-date/:id?" element={<RequirePermission module="widgets"><WebinarDateWidgetsPage /></RequirePermission>} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/whats-new" element={<WhatsNewPage />} />
+                <Route path="/whats-new/git" element={<GitGraphPage />} />
               </Route>
             </Route>
             <Route path="*" element={<Navigate to="/my-day" replace />} />
