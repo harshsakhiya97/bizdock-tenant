@@ -40,7 +40,8 @@ export function MeetingsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [status, setStatus] = useState<'' | MeetingStatus>('')
   const [kindF, setKindF] = useState<'' | MeetingKind>('')
-  const [memberF, setMemberF] = useState('')
+  // 'mine' (my calendar), '' (every team member's, admins), or one team member's id
+  const [memberF, setMemberF] = useState('mine')
   const [catF, setCatF] = useState('')
   const [widgetF, setWidgetF] = useState('')
   const [widgets, setWidgets] = useState<WidgetRow[]>([])
@@ -91,13 +92,18 @@ export function MeetingsPage() {
     [leadById],
   )
   const me = membership?.id
-  // my calendar: the meetings I am in or added; lead meetings of the business in the header, team meetings always
+  // my calendar: the meetings I am in or added; owner / support can also see every team member's (or one person's) calendar.
+  // Lead meetings of the business in the header, team meetings always.
+  const mineOnly = !isAdmin || memberF === 'mine'
   const scoped = useMemo(
     () =>
       (meetings ?? []).filter(
-        (m) => !!me && (m.members.includes(me) || m.created_by === me) && (m.kind === 'team' || inScope(m.business_id ?? '', m.sub_business_id)),
+        (m) =>
+          !!me &&
+          (!mineOnly || m.members.includes(me) || m.created_by === me) &&
+          (m.kind === 'team' || inScope(m.business_id ?? '', m.sub_business_id)),
       ),
-    [meetings, inScope, me],
+    [meetings, inScope, me, mineOnly],
   )
   const visible = useMemo(
     () =>
@@ -105,7 +111,7 @@ export function MeetingsPage() {
         (m) =>
           (!status || m.status === status) &&
           (!kindF || m.kind === kindF) &&
-          (!memberF || m.members.includes(memberF)) &&
+          (!memberF || memberF === 'mine' || m.members.includes(memberF)) &&
           (!catF || (!!m.lead_id && leadById.get(m.lead_id)?.temperature === catF)) &&
           (!widgetF || !!booked.get(widgetF)?.has(`${m.assigned_to}|${m.meeting_date} ${String(m.start_time ?? '').slice(0, 5)}`)),
       ),
@@ -209,6 +215,7 @@ export function MeetingsPage() {
           <>
             {isAdmin && (
               <select className="input input-sm filter-select" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
+                <option value="mine">My meetings</option>
                 <option value="">All team members</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
