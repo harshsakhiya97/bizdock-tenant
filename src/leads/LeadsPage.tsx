@@ -249,6 +249,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       due: due.length,
       overdue: due.filter((l) => new Date(l.next_follow_up_at!) < now).length,
       hot: base.filter((l) => l.temperature === 'hot').length,
+      // every category's count (the Leads card)
+      cats: [...TEMPERATURES.map((t) => `${base.filter((l) => l.temperature === t.value).length} ${t.label.toLowerCase()}`), ...(base.some((l) => !l.temperature) ? [`${base.filter((l) => !l.temperature).length} no category`] : [])].join(' · '),
       won: base.filter((l) => kindOf(l) === 'won').length,
       bookings: base.reduce((n, l) => n + (revenue?.get(l.id)?.count ?? 0), 0),
       billed: base.reduce((n, l) => n + (revenue?.get(l.id)?.billed ?? 0), 0),
@@ -390,7 +392,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         </div>
       ) : (
       <div className="stat-grid">
-        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={`${stats.hot} hot`} />
+        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={stats.cats} />
         <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" />
         <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} />
         <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} />
