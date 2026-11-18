@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { ChartLine, ChevronDown, ChevronRight, List } from 'lucide-react'
-import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
 import { SpendLines, type Line } from './SpendLines'
@@ -139,8 +138,7 @@ export function FunnelDaySpend({
           </div>
           <SpendLines key={by} days={chart.days} lines={chart.lines} />
         </div>}
-        {view === 'list' && <Paged rows={days} reset={[from, to]}>
-          {(rows) => (
+        {view === 'list' && (
             <div className="table-wrap">
               <table className="table table-compact">
                 <thead>
@@ -153,7 +151,7 @@ export function FunnelDaySpend({
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((d) => {
+                  {days.map((d) => {
                     const isOpen = open.has(d.day)
                     return (
                       <Fragment key={d.day}>
@@ -200,8 +198,7 @@ export function FunnelDaySpend({
                 </tbody>
               </table>
             </div>
-          )}
-        </Paged>}
+        )}
         </>
       )}
     </section>

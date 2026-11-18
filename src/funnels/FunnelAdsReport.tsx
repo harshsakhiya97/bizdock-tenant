@@ -4,7 +4,6 @@ import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } 
 import { FunnelFlow } from './FunnelFlow'
 import { MetaSync } from './MetaSync'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
-import { Paged } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { db } from '@/lib/supabase'
 
@@ -176,8 +175,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         ) : (
           <>
             <div className="muted small">Amount spent with GST (hover: without GST + GST) · Leads by the date they were created · CPL = amount spent ÷ leads · Booking = those leads with a meeting · Showup = those leads whose meeting was done.</div>
-            <Paged rows={rows} reset={[from, to, by]}>
-              {(page) => (
+            {/* every row, no paging */}
+            {(
                 <div className="table-wrap">
                   <table className="table table-compact">
                     <thead>
@@ -191,7 +190,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                       </tr>
                     </thead>
                     <tbody>
-                      {page.map((r) => (
+                      {rows.map((r) => (
                         <tr key={r.key}>
                           <td>
                             {r.label}
@@ -217,8 +216,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
                     </tfoot>
                   </table>
                 </div>
-              )}
-            </Paged>
+            )}
           </>
         ))}
     </section>
