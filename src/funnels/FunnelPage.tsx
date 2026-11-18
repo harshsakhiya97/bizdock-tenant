@@ -17,6 +17,7 @@ import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
+import { FunnelPaymentsTab } from './FunnelPaymentsTab'
 import { FunnelAdsReport } from './FunnelAdsReport'
 import { listWorkflows } from '@/workflows/api'
 import { funnelCampaignCount } from '@/meta/api'
@@ -31,6 +32,7 @@ const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'leads', label: 'Leads' },
   { key: 'ads', label: 'Facebook Ads' },
+  { key: 'payments', label: 'Payments' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'workflows', label: 'Workflows' },
   { key: 'pages', label: 'Landing pages' },
@@ -186,7 +188,7 @@ export function FunnelPage() {
       <div className="panel">
         <div className="panel-bar">
           <div className="tabs">
-            {TABS.map((t) => (
+            {TABS.filter((t) => t.key !== 'payments' || can('payments', 'view')).map((t) => (
               <button key={t.key} type="button" className={cn('tab', tab === t.key && 'is-active')} onClick={() => setTab(t.key)}>
                 {t.label}
                 {t.key === 'pages' && pages && <span className="muted small"> {pages.length}</span>}
@@ -325,6 +327,7 @@ export function FunnelPage() {
                 setNotice({ ok: msg })
                 loadAds()
               }} />}
+          {tab === 'payments' && can('payments', 'view') && <FunnelPaymentsTab funnelId={funnel.id} leads={leads} canEdit={can('funnels', 'edit')} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' && leads && leads.length > 0 && (
