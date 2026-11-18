@@ -7,6 +7,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType, orderNoun } from '@/business/activeType'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { Flash } from '@/components/Flash'
+import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
@@ -49,7 +50,7 @@ export function CustomersPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [f, setF] = useState<{ q: string; owner: string; source: string; pay: Pay; sort: Sort }>({ q: '', owner: '', source: '', pay: '', sort: 'newest' })
+  const [f, setF] = useState<{ q: string; owner: string; source: string; pay: Pay; sort: Sort; range: Range }>({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })
   const [book, setBook] = useState<{ lead: LeadRow; service: boolean; copy: BookingRow | null } | null>(null)
 
   const load = useCallback(() => {
@@ -89,6 +90,8 @@ export function CustomersPage() {
       .filter(({ l }) => !q || `${fullName(l)} ${l.phone} ${l.email ?? ''} ${l.city ?? ''}`.toLowerCase().includes(q))
       .filter(({ l }) => !f.owner || (f.owner === 'none' ? !l.owner_id : l.owner_id === f.owner))
       .filter(({ l }) => !f.source || l.source_id === f.source)
+      // the lead's creation date
+      .filter(({ l }) => f.range.key === 'all' || ((d) => d >= f.range.from && d <= f.range.to)(isoDay(new Date(l.created_at))))
       .filter(({ balance }) => !f.pay || (f.pay === 'paid' ? balance <= 0.01 : balance > 0.01))
       .sort((a, b) =>
         f.sort === 'balance'
@@ -157,7 +160,7 @@ export function CustomersPage() {
   }
 
   const scopeText = { all: 'all customers', team: 'your and your team’s customers', own: 'your own customers', none: 'no customers' }[scope('leads')]
-  const filtered = f.q || f.owner || f.source || f.pay || f.sort !== 'newest'
+  const filtered = f.q || f.owner || f.source || f.pay || f.sort !== 'newest' || f.range.key !== 'all'
 
   return (
     <>
@@ -213,8 +216,9 @@ export function CustomersPage() {
             <option value="billed">Most billed</option>
             <option value="name">Name A–Z</option>
           </select>
+          <DateRangePicker value={f.range} onChange={(r) => setF((x) => ({ ...x, range: r }))} allDates />
           {filtered && (
-            <button type="button" className="clear-btn" onClick={() => setF({ q: '', owner: '', source: '', pay: '', sort: 'newest' })}>
+            <button type="button" className="clear-btn" onClick={() => setF({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })}>
               Reset
             </button>
           )}

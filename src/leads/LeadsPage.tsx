@@ -21,10 +21,13 @@ import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
 import { Flash } from '@/components/Flash'
+import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listCustomerRevenue, type Revenue } from './customers'
 
-type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string }
-const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest' }
+type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string; range: Range }
+const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest', range: ALL_DATES }
+// the lead's creation date in the picked range
+const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
 
 type PendingMove = { ids: string[]; stage: StageRow }
 
@@ -207,6 +210,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       )
       .filter((l) => studio || !filters.source || l.source_id === filters.source)
       .filter((l) => !filters.temp || l.temperature === filters.temp)
+      .filter((l) => inRange(l.created_at, filters.range))
       .filter((l) => !pp || !filters.form || formStep(l, extras.get(l.id)) === filters.form)
       .filter((l) => !filters.owner || (filters.owner === 'none' ? !l.owner_id : l.owner_id === filters.owner))
       .filter((l) => {
@@ -334,7 +338,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     URL.revokeObjectURL(a.href)
   }
 
-  const setF = (k: keyof Filters, v: string | boolean) => {
+  const setF = (k: keyof Filters, v: string | boolean | Range) => {
     setFilters((f) => ({ ...f, [k]: v }))
     setPicked(new Set())
   }
@@ -439,6 +443,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             <option value="updated">Recently updated</option>
             <option value="name">Name</option>
           </select>
+          <DateRangePicker value={filters.range} onChange={(r) => setF('range', r)} allDates />
           {JSON.stringify({ ...filters, sort: 'newest' }) !== JSON.stringify(EMPTY) && (
             <button type="button" className="clear-btn" onClick={() => setFilters(EMPTY)}>
               Reset
