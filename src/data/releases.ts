@@ -13,6 +13,19 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.23',
+    date: '2026-11-18',
+    title: 'Razorpay: payments history, funnel payments, lead payments',
+    summary: 'Connect Razorpay with its Key ID and Key Secret; its payments come in every 5 minutes into Payments → History logs. A funnel’s Payments tab counts the payments for its Razorpay products from its leads, and a lead / customer’s Payments tab shows its invoices and direct Razorpay payments.',
+    new: [
+      'System Connections → Razorpay: Add with keys (Key ID + Key Secret, checked on save), with a Prompt & steps tab for Claude in Chrome to open Razorpay’s API keys.',
+      'Side menu → Payments → History logs: every Razorpay payment (checked every 5 minutes, Sync now too) — Received, Payments, Failed and Refunded cards; search, status, method, lead and date filters; matched to a lead by phone, else email.',
+      'Funnel → Payments tab (after Facebook Ads): Add more → pick a Razorpay product (the payment description) from a dropdown; lists its payments from this funnel’s leads (phone or email), with the count and amount received per product. Remove asks first.',
+      'Lead / customer → Payments tab: Invoice (this lead’s invoices, as on the Invoices page) and Direct Payments (Razorpay payments with the lead’s phone or email).',
+      'Role access → Payments (view) decides who sees Payments.',
+    ],
+  },
+  {
     version: '0.22',
     date: '2026-11-18',
     title: 'Funnel list view, lead category with every call, Customers = Closed leads',
