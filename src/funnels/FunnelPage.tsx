@@ -222,7 +222,7 @@ export function FunnelPage() {
                 </div>
               </div>
 
-              <FunnelAdsReport funnelId={funnel.id} />
+              <FunnelAdsReport funnelId={funnel.id} leads={leads} />
 
               <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>
