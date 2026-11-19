@@ -170,14 +170,14 @@ export const PROVIDERS: Provider[] = [
     usedFor: 'Ad spend & cost per lead on funnels (Funnel → Google Ads, Overview)',
     guide: [
       'BizDock’s Google login owns one manager (MCC) account; each client’s ad account links under it (BizDock sends the request, the client accepts it in Admin → Access and security → Managers).',
-      'Developer token: in the BizDock manager → Admin → API Center. It needs Basic access to read real accounts (Test access only reads test accounts).',
+      'Access: Google now ties Google Ads API access to the Google Cloud project (Explorer or Basic access reads real accounts; Test Account access only reads test accounts). The developer token is optional.',
       'Google Cloud project → enable “Google Ads API” → OAuth consent screen → Publish app (In production; Testing tokens expire after 7 days) → Credentials → OAuth client ID (Web application) with the redirect https://developers.google.com/oauthplayground.',
       'OAuth Playground → use your own client ID / secret → scope https://www.googleapis.com/auth/adwords → Authorize with BizDock’s login → Exchange for tokens → copy the Refresh token.',
       'Manager ID: the BizDock manager. Customer IDs: the client’s 10-digit IDs (several: separate with commas).',
       'Press Connect: BizDock logs in, lists the ad accounts and brings in the last 90 days.',
     ],
     fields: [
-      { key: 'developer_token', label: 'Developer token', secret: true, required: true, hint: 'Manager account → Admin → API Center.' },
+      { key: 'developer_token', label: 'Developer token', secret: true, hint: 'Optional: Google now ties access to the Google Cloud project (Explorer / Basic), so you can leave this empty.' },
       { key: 'client_id', label: 'OAuth Client ID', required: true, placeholder: '…apps.googleusercontent.com' },
       { key: 'client_secret', label: 'OAuth Client Secret', secret: true, required: true },
       { key: 'refresh_token', label: 'Refresh token', secret: true, required: true, hint: 'From the OAuth Playground, with the adwords scope.' },
