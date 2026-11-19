@@ -36,16 +36,49 @@ export const razorpayKeysPrompt = () => `In Chrome I'm logged in at https://dash
    If no key is listed: press "Generate key".
 4. When Razorpay shows the Key ID and Key Secret, stop and tell me only: "Keys are on screen — copy them now (the secret is shown once)". Don't close that window.`
 
-/** a prompt for Claude in Chrome that gathers the Google Ads API keys (the person is logged in to Google) */
-export const googleAdsKeysPrompt = () => `In Chrome I'm logged in to Google with the account that manages my Google Ads. Help me get the keys BizDock CRM needs to read my Google Ads spend (read only). Never read out, copy or paste any secret (developer token, client secret, refresh token) into this chat; I'll copy each one myself. Don't change any campaign or billing setting. If a screen doesn't match, stop and tell me what you see.
+const G_RULES = `Never read out, copy or paste any secret (developer token, client secret, refresh token) into this chat — stop and let me copy each one myself. Ask me before any final Create / Send / Accept / Submit / Publish click. Don't change any campaign, budget or billing setting. If a screen doesn't match these steps, stop and tell me what you see.`
 
-1. Customer ID: open https://ads.google.com. Tell me the 10-digit customer ID shown at the top right (like 123-456-7890) of each ad account I run ads from, and whether they sit under a manager account (MCC). If there's a manager account, tell me its ID too.
-2. Developer token: it lives in a manager account only. In the manager account open Admin → API Center (https://ads.google.com/aw/apicenter). If there's no manager account, stop and tell me (I'll create one at https://ads.google.com/home/tools/manager-accounts/ and link my ad account). If the API Center asks for an application, help me fill it in (company: my business; use: internal reporting of our own ad spend into our CRM, read only) and stop before submitting. Tell me the token's access level (Test / Basic / Standard). Then stop so I copy the token.
-3. Google Cloud: open https://console.cloud.google.com, create (or pick) a project named "BizDock Ads", and enable "Google Ads API" (APIs & Services → Library).
-4. OAuth consent screen (APIs & Services → OAuth consent screen / Google Auth Platform): app name "BizDock Ads", my email as support and developer contact, audience External, and add my Google login as a test user. Save.
-5. Credentials → Create credentials → OAuth client ID → type "Web application", name "BizDock". Under Authorized redirect URIs add https://developers.google.com/oauthplayground . Create, then stop so I copy the Client ID and Client Secret.
-6. Refresh token: open https://developers.google.com/oauthplayground . Gear icon (top right) → tick "Use your own OAuth credentials" → I paste the Client ID and Secret myself. In "Input your own scopes" type https://www.googleapis.com/auth/adwords → Authorize APIs → pick my Google login → Allow → "Exchange authorization code for tokens". Stop so I copy the Refresh token.
-7. Finally tell me which of the 5 boxes in BizDock each value goes in: Developer token, Client ID, Client Secret, Refresh token, Manager ID (if any) and Customer IDs.`
+/**
+ * Google Ads through one BizDock manager (MCC) account: four prompts for Claude in Chrome, in order, each on the right
+ * login (the client's or BizDock's)
+ */
+export const googleAdsPrompts = (): { title: string; who: string; text: string }[] => [
+  {
+    title: '1. Client: find the Customer ID',
+    who: 'On the client’s Google login (the one that runs their Google Ads)',
+    text: `In Chrome I'm logged in to Google with the login that runs our Google Ads. ${G_RULES}
+
+Open https://ads.google.com. Tell me the name and 10-digit customer ID (xxx-xxx-xxxx, top right / account picker) of every Google Ads account this login can see, and for each one whether a manager account is already linked (Admin → Access and security → Managers). Don't change anything.`,
+  },
+  {
+    title: '2. BizDock: create the manager and send the link request',
+    who: 'On BizDock’s Google login',
+    text: `In Chrome I'm logged in to Google with BizDock's login. BizDock is a CRM that reads its clients' Google Ads spend (read only) through ONE BizDock manager (MCC) account. ${G_RULES}
+
+1. If this login has no Google Ads manager account yet: open https://ads.google.com/home/tools/manager-accounts/ and create one. Name: BizDock. Use: "Manage other people's accounts". Country: India. Time zone: (GMT+05:30) India Standard Time. Currency: Indian Rupee (INR). Ask me before the final Create. If Google refuses this email, stop and tell me. If a BizDock manager already exists, just open it.
+2. Tell me the BizDock manager's 10-digit ID.
+3. In the manager → Accounts → blue + → "Link existing account" → ask me for the client's customer ID → ask me, then send the link request. Tell me it's sent.`,
+  },
+  {
+    title: '3. Client: accept BizDock’s request',
+    who: 'On the client’s Google login again',
+    text: `In Chrome I'm logged in to Google with the login that runs our Google Ads. ${G_RULES}
+
+Open https://ads.google.com in the ad account BizDock asked to link → Admin → Access and security → Managers. Find the pending request from the manager account "BizDock", tell me its manager ID, and ask me before pressing Accept (or Approve). After accepting, confirm BizDock shows under Managers. Don't change any other access.`,
+  },
+  {
+    title: '4. BizDock: developer token and keys (once)',
+    who: 'On BizDock’s Google login (the same login as the manager)',
+    text: `In Chrome I'm logged in to Google with BizDock's login, which owns the BizDock Google Ads manager (MCC) account. Get the keys BizDock CRM needs to read the linked accounts' spend (read only). ${G_RULES}
+
+1. Developer token: in the BizDock manager → Admin (Tools) → API Center (https://ads.google.com/aw/apicenter). If it asks for the API terms / application, fill it in: company BizDock; contact email = this login; use: internal CRM reporting of ad spend for our own and our clients' linked accounts, read only, no campaign changes; ask me for the website. Stop before Submit. Tell me the access level (Test / Basic / Standard) and stop so I copy the token myself. If it's Test, open "Apply for Basic access", fill it the same way and stop before Submit.
+2. Google Cloud: https://console.cloud.google.com → create a project "BizDock Ads" (ask me before Create) → APIs & Services → Library → enable "Google Ads API".
+3. OAuth consent screen (Google Auth Platform): app name "BizDock Ads", support and developer email = this login, Audience: External. Save. Then Audience → "Publish app" → In production (ask me before Publish). Don't leave it in Testing: Testing refresh tokens expire after 7 days. "Unverified app" is fine (only this login uses it).
+4. Credentials → Create credentials → OAuth client ID → Web application, name "BizDock", Authorized redirect URI https://developers.google.com/oauthplayground → Create → stop so I copy the Client ID and Client Secret myself.
+5. https://developers.google.com/oauthplayground → gear icon → tick "Use your own OAuth credentials" → wait while I paste the Client ID and Secret → close. In "Input your own scopes" type https://www.googleapis.com/auth/adwords → Authorize APIs → pick this login → if Google says the app isn't verified: Advanced → Go to BizDock Ads → Allow → "Exchange authorization code for tokens" → stop so I copy the Refresh token myself.
+6. Finish with where each value goes in BizDock → System Connections → Google Ads (field names only, no secrets): Developer token, OAuth Client ID, OAuth Client Secret, Refresh token, Manager (MCC) ID = the BizDock manager ID, Customer IDs = the client's customer ID(s).`,
+  },
+]
 
 export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads'
 export type ProviderField = {
@@ -136,10 +169,11 @@ export const PROVIDERS: Provider[] = [
     description: 'Your Google Ads accounts’ spend per campaign, ad group and ad, brought in every 3 hours.',
     usedFor: 'Ad spend & cost per lead on funnels (Funnel → Google Ads, Overview)',
     guide: [
-      'Developer token: in your Google Ads manager (MCC) account → Admin → API Center. It needs Basic access to read real accounts (Test access only reads test accounts).',
-      'Google Cloud project → enable “Google Ads API” → OAuth consent screen (add your login as a test user) → Credentials → OAuth client ID (Web application) with the redirect https://developers.google.com/oauthplayground.',
-      'OAuth Playground → use your own client ID / secret → scope https://www.googleapis.com/auth/adwords → Authorize → Exchange for tokens → copy the Refresh token.',
-      'Customer IDs: the 10-digit IDs at the top of Google Ads (several: separate with commas). Leave empty to bring in every account the login (or manager) can see.',
+      'BizDock’s Google login owns one manager (MCC) account; each client’s ad account links under it (BizDock sends the request, the client accepts it in Admin → Access and security → Managers).',
+      'Developer token: in the BizDock manager → Admin → API Center. It needs Basic access to read real accounts (Test access only reads test accounts).',
+      'Google Cloud project → enable “Google Ads API” → OAuth consent screen → Publish app (In production; Testing tokens expire after 7 days) → Credentials → OAuth client ID (Web application) with the redirect https://developers.google.com/oauthplayground.',
+      'OAuth Playground → use your own client ID / secret → scope https://www.googleapis.com/auth/adwords → Authorize with BizDock’s login → Exchange for tokens → copy the Refresh token.',
+      'Manager ID: the BizDock manager. Customer IDs: the client’s 10-digit IDs (several: separate with commas).',
       'Press Connect: BizDock logs in, lists the ad accounts and brings in the last 90 days.',
     ],
     fields: [

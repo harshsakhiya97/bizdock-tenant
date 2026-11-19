@@ -16,7 +16,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, googleAdsKeysPrompt, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -730,11 +730,14 @@ function ConnectDrawer({
           />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'google_ads' && (
-          <PromptBox
-            title="Let Claude in Chrome gather the Google Ads keys"
-            note="Log in to Google with the account that runs your ads, open Claude in Chrome and paste this. It walks through the developer token, the Google Cloud OAuth client and the refresh token; you copy each value into the Keys tab yourself."
-            text={googleAdsKeysPrompt()}
-          />
+          <>
+            <p className="muted small" style={{ margin: 0 }}>
+              One BizDock manager (MCC) account reads every client’s Google Ads. Run these four prompts in Claude in Chrome, in order, each on the login it names. Steps 1–3 are per client; step 4 is once.
+            </p>
+            {googleAdsPrompts().map((g) => (
+              <PromptBox key={g.title} title={g.title} note={g.who} text={g.text} />
+            ))}
+          </>
         )}
         {tabbed && tab === 'prompt' && provider.id === 'razorpay' && (
           <PromptBox
