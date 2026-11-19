@@ -13,6 +13,29 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.25',
+    date: '2026-11-19',
+    title: 'Invoice with the booking, Google Ads, invoices list Print',
+    summary: 'A booking or order can make its invoice and payment plan as it is saved (or Pay later). Google Ads joins System Connections, with its logs, a funnel Google Ads tab and an Overall / Facebook / Google filter on the funnel report.',
+    new: [
+      'Booking / order form → Invoice & payments: With / Without GST, company, Bill to and the payment plan (mark parts Paid), made with the booking on save. Tick Pay later to generate the invoice from the list later, as before. Tentative bookings are Pay later.',
+      'System Connections → Google Ads (Add with keys, with four Claude in Chrome prompts: client Customer ID, BizDock manager + link request, client accepts, developer token and keys). Its ad accounts with on/off switches, Sync now, numbers every 3 hours.',
+      'Google Ads logs: campaigns, ad groups and ads with spend (with GST), impressions, clicks, CTR, CPC, conversions; click an ad for its headlines, descriptions and landing page.',
+      'Funnel → Google Ads tab (after Facebook Ads): add Google campaigns, their spend, and spend per day (graph / list).',
+      'Funnel → Overview → List: Overall (Facebook + Google), Facebook or Google; leads by their UTM source.',
+      'Invoices list: a Print button on every row (latest company details, then the print page).',
+    ],
+    improved: [
+      'Invoices list: newest created first.',
+      'System Connections: Facebook ad accounts and Zoom accounts as a one-line summary on the card; click for the full list.',
+      'An invoiced booking shows its invoice, paid and balance, with Open invoice.',
+    ],
+    fixed: [
+      'Print / PDF of an invoice made before Company Master: the From details come from the business’s company for that type (not just the business name).',
+    ],
+    removed: ['“Add another date” on a booking: make one booking and repeat it.'],
+  },
+  {
     version: '0.24',
     date: '2026-11-19',
     title: 'Funnel report columns, clickable stat cards',
