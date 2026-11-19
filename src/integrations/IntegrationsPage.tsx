@@ -172,7 +172,7 @@ export function IntegrationsPage() {
       <Flash msg={notice.ok} dep={notice} />
 
       {allow && !visible.length && <div className="empty">No connections are turned on for your workspace yet. Ask BizDock to enable the ones you need.</div>}
-      <div className="int-grid int-masonry">
+      <div className="int-grid">
         {visible.map((p) => {
           const r = p.multiple ? undefined : byProvider.get(p.id)
           const accounts = p.multiple ? allOf(p.id) : []

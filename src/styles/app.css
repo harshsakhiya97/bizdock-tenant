@@ -1670,6 +1670,3 @@ tfoot td {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
-/* System Connections: cards stack in columns by their own height (a card with more accounts is just taller) */
-.int-grid.int-masonry { display: block; columns: 3 300px; column-gap: 14px; }
-.int-grid.int-masonry > .int-card { break-inside: avoid; margin-bottom: 14px; width: 100%; }
