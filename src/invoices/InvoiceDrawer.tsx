@@ -95,6 +95,19 @@ export function InvoiceDrawer({
       : [],
   }))
   const [links, setLinks] = useState<{ biz: Links | null; sub: Links | null } | null>(null)
+  // edit: the invoice number can be changed (must stay unique in the workspace)
+  const [invNo, setInvNo] = useState(invoice?.invoice_no ?? '')
+  async function saveNumber() {
+    if (!invoice) return
+    const no = invNo.trim()
+    if (no === invoice.invoice_no) return
+    if (!no) throw new Error('Enter the invoice number.')
+    const { data: same, error: e1 } = await db().from('invoices').select('id').eq('tenant_id', tenant.id).eq('invoice_no', no).neq('id', invoice.id).limit(1)
+    if (e1) throw new Error(e1.message)
+    if (same?.length) throw new Error(`Invoice number ${no} is already used by another invoice.`)
+    const { error } = await db().from('invoices').update({ invoice_no: no }).eq('id', invoice.id)
+    if (error) throw new Error(error.message)
+  }
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -144,6 +157,7 @@ export function InvoiceDrawer({
       setBusy(true)
       setError(null)
       try {
+        await saveNumber()
         await saveInvoice(tenant.id, membership?.id, invoice, input)
         await refreshInvoiceSeller(invoice.id)
       } catch (e) {
@@ -167,8 +181,9 @@ export function InvoiceDrawer({
     setError(null)
     try {
       if (invoice) {
+        await saveNumber()
         await saveInvoice(tenant.id, membership?.id, invoice, input)
-        onSaved(`Invoice ${invoice.invoice_no} updated.`, invoice.id)
+        onSaved(`Invoice ${invNo.trim() || invoice.invoice_no} updated.`, invoice.id)
       } else {
         const id = await createInvoice(
           list.map((o) => o.id),
@@ -231,6 +246,15 @@ export function InvoiceDrawer({
         )}
         <FormSection title="Invoice">
           <div className="form-grid">
+            {invoice && (
+              <div>
+                <Label htmlFor="inv-no" required>
+                  Invoice no.
+                </Label>
+                <TextInput id="inv-no" value={invNo} onChange={(e) => setInvNo(e.target.value)} disabled={!canEdit} />
+              </div>
+            )}
+            {invoice && <div />}
             <div className="span-2">
               <Label>Type</Label>
               {invoice ? (
