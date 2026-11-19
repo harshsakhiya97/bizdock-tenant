@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { Modal } from '@/components/Modal'
 import { Filter, List, TrendingDown, TrendingUp } from 'lucide-react'
 import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
+import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { MetaSync } from './MetaSync'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
@@ -34,7 +35,12 @@ type Row = {
   received: number
   ls: Lead[]
 }
-type Lead = { id: string; created_at: string; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+type Lead = { id: string; created_at: string; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+/** where a lead came from, by its UTM source: Facebook / Instagram (fb, ig…) or Google (google, adwords, youtube…) */
+const FB_UTM = new Set(['fb', 'ig', 'facebook', 'instagram', 'meta', 'an', 'msg', 'messenger', 'threads', 'th'])
+const GOOGLE_UTM = new Set(['google', 'adwords', 'gads', 'googleads', 'google_ads', 'youtube', 'yt', 'gdn'])
+type Src = 'all' | 'fb' | 'google'
+const fromSrc = (l: Lead, s: Src) => s === 'all' || (s === 'fb' ? FB_UTM : GOOGLE_UTM).has(String(l.utm_source ?? '').trim().toLowerCase())
 const who = (l: Lead) => [l.first_name, l.last_name].filter(Boolean).join(' ') || l.phone || 'Lead'
 const last10 = (p: string | null | undefined) => {
   const d = (p ?? '').replace(/\D/g, '')
@@ -56,6 +62,15 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   const [reload, setReload] = useState(0)
   const [view, setView] = useState<'funnel' | 'list'>('funnel')
   const [by, setBy] = useState<By>('day')
+  // List: Overall (Facebook + Google spend, every lead), Facebook or Google (their spend, the leads with that UTM source)
+  const [src, setSrc] = useState<Src>('all')
+  const [gDays, setGDays] = useState<{ day: string; spend: number; spend_gst: number }[]>([])
+  useEffect(() => {
+    funnelGoogleDays(tenant.id, funnelId, from, to).then(
+      (g) => setGDays(g.days),
+      () => setGDays([]),
+    )
+  }, [tenant.id, funnelId, from, to, reload])
   const [flow, setFlow] = useState<Flow | null | undefined>(undefined)
   const [report, setReport] = useState<AdsReport | null>(null)
   // with GST ÷ without, from Facebook's days (each ad account has its own GST %)
@@ -159,10 +174,18 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
   // every day / week (Mon–Sun) / month in the dates picked, with its spend and the leads created in it
   const rows = useMemo(() => {
     if (!from || !to) return [] as Row[]
-    const spend = new Map((report?.days ?? []).map((d) => [d.day, { s: Number(d.spend) || 0, g: Number(d.spend_gst) || 0 }]))
+    const spend = new Map<string, { s: number; g: number }>()
+    const addSpend = (day: string, s: number, g: number) => {
+      const x = spend.get(day) ?? { s: 0, g: 0 }
+      x.s += s
+      x.g += g
+      spend.set(day, x)
+    }
+    if (src !== 'google') for (const d of report?.days ?? []) addSpend(d.day, Number(d.spend) || 0, Number(d.spend_gst) || 0)
+    if (src !== 'fb') for (const d of gDays) addSpend(d.day, d.spend, d.spend_gst)
     const made = new Map<string, { n: number; b: number; s: number; p: number; c: number; inv: number; rec: number; ls: Lead[] }>()
     for (const l of leads ?? []) {
-      if (l.is_archived) continue
+      if (l.is_archived || !fromSrc(l, src)) continue
       const d = leadDay(l.created_at)
       if (d < from || d > to) continue
       const c = made.get(d) ?? { n: 0, b: 0, s: 0, p: 0, c: 0, inv: 0, rec: 0, ls: [] as Lead[] }
@@ -212,7 +235,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
     }
     // newest first
     return [...out.values()].reverse()
-  }, [report, leads, meet, money2, from, to, by])
+  }, [report, gDays, src, leads, meet, money2, from, to, by])
   const total = rows.reduce(
     (t, r) => ({
       ...t,
@@ -338,6 +361,13 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <MetaSync tenantId={tenant.id} onDone={() => setReload((n) => n + 1)} />
           {view === 'list' && (
+            <select className="input input-sm filter-select" value={src} onChange={(e) => setSrc(e.target.value as Src)} aria-label="Ads">
+              <option value="all">Overall (Facebook + Google)</option>
+              <option value="fb">Facebook</option>
+              <option value="google">Google</option>
+            </select>
+          )}
+          {view === 'list' && (
             <select className="input input-sm filter-select" value={by} onChange={(e) => setBy(e.target.value as By)} aria-label="Group by">
               <option value="day">Day wise</option>
               <option value="week">Week wise</option>
@@ -374,6 +404,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         ) : (
           <>
             <div className="muted small">
+              {src === 'all' ? 'Overall: Facebook + Google spend, every lead. ' : src === 'fb' ? 'Facebook: Facebook spend, the leads whose UTM source is fb / ig / facebook / instagram. ' : 'Google: Google spend, the leads whose UTM source is google / adwords / youtube. '}
               By the leads created in each row: Amount spent with GST (hover: without GST) · Lead trend = leads vs the row below · CPL / CPP / Cost per booking / Cost per show up = amount spent ÷
               leads / payments / bookings / show ups · Payments = Razorpay payments (the funnel’s products in the Payments tab, else all) by those leads’ phone or email · Booking = those leads with a
               meeting · Show up = meeting done · Converted = marked Closed · Revenue = their invoices’ total + Razorpay received.

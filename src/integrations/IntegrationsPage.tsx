@@ -16,7 +16,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, googleAdsKeysPrompt, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -25,6 +25,7 @@ import { syncCallyzer } from '@/callyzer/api'
 import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
 import { MetaTokenConnect } from '@/meta/MetaTokenConnect'
 import { FundsLine } from '@/meta/FundsLine'
+import { cidText, listGoogleAccounts, syncGoogle, testGoogle, updateGoogleAccount, type GAccount } from '@/google/api'
 
 /** System Connections: third-party services (WhatsApp, Callyzer, Zoom, voice calls, Perisclaw). */
 export function IntegrationsPage() {
@@ -69,11 +70,15 @@ export function IntegrationsPage() {
 
   // Facebook Ads: the ad accounts of each Facebook connection
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
+  // Google Ads: the ad accounts found with the saved keys
+  const [gAccounts, setGAccounts] = useState<GAccount[]>([])
+  const [gBusy, setGBusy] = useState(false)
   // a card's accounts: a one-line summary on the card, the full list in a modal
   const [listFor, setListFor] = useState<string | null>(null)
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
     listAdAccounts(tenant.id).then(setAdAccounts, () => setAdAccounts([]))
+    listGoogleAccounts(tenant.id).then(setGAccounts, () => setGAccounts([]))
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -131,6 +136,26 @@ export function IntegrationsPage() {
       setNotice({ error: (e as Error).message })
     } finally {
       setMetaBusy(false)
+    }
+  }
+  async function gSync() {
+    setGBusy(true)
+    try {
+      await syncGoogle(tenant.id)
+      setNotice({ ok: 'Bringing in the latest numbers from Google Ads. They show in a minute.' })
+      window.setTimeout(load, 20000)
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
+    } finally {
+      setGBusy(false)
+    }
+  }
+  async function toggleGAccount(a: GAccount) {
+    try {
+      await updateGoogleAccount(a.id, { is_enabled: !a.is_enabled })
+      load()
+    } catch (e) {
+      setNotice({ error: (e as Error).message })
     }
   }
   async function toggleAdAccount(a: AdAccount) {
@@ -269,6 +294,44 @@ export function IntegrationsPage() {
                 </div>
                 </Modal>
               )}
+              {p.id === 'google_ads' && r && gAccounts.filter((x) => !x.is_manager).length > 0 && (() => {
+                const ga = gAccounts.filter((x) => !x.is_manager)
+                return (
+                  <button type="button" className="int-summary" onClick={() => setListFor(p.id)}>
+                    <span>
+                      <b>
+                        {ga.length} ad account{ga.length === 1 ? '' : 's'}
+                      </b>{' '}
+                      · {ga.filter((x) => x.is_enabled).length} bringing in numbers
+                      {ga.some((x) => x.last_error) && <span className="int-summary-err"> · {ga.filter((x) => x.last_error).length} with an error</span>}
+                    </span>
+                    <span className="int-summary-link">View accounts</span>
+                  </button>
+                )
+              })()}
+              {p.id === 'google_ads' && listFor === p.id && (
+                <Modal open onClose={() => setListFor(null)} width={640} title={`Google Ads · ${gAccounts.filter((x) => !x.is_manager).length} ad accounts`}>
+                  <div className="int-accounts">
+                    {gAccounts
+                      .filter((x) => !x.is_manager)
+                      .map((x) => (
+                        <div key={x.id} className="int-account">
+                          <label className="switch" title={x.is_enabled ? 'Stop bringing in this account’s numbers' : 'Bring in this account’s numbers'}>
+                            <input type="checkbox" checked={x.is_enabled} disabled={off} onChange={() => void toggleGAccount(x)} />
+                          </label>
+                          <div className="int-account-main">
+                            <b>{x.name || cidText(x.customer_id)}</b>
+                            <span className="muted small">
+                              {cidText(x.customer_id)}
+                              {x.currency ? ` · ${x.currency}` : ''}
+                              {x.last_error ? ` · ${x.last_error}` : x.last_sync_at ? ` · numbers ${ago(x.last_sync_at)}` : ' · first pull in a minute'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </Modal>
+              )}
               {p.id === 'facebook_ads' && accounts.some((a) => a.status === 'error') && (
                 <div className="int-note">A Facebook connection needs attention: open Logs → Connections.</div>
               )}
@@ -373,7 +436,7 @@ export function IntegrationsPage() {
                     ? r.config.last_sync_at
                       ? `Payments checked ${ago(r.config.last_sync_at)} · every 5 min`
                       : 'Connected · first check within 5 minutes'
-                    : p.id === 'facebook_ads' && !off && accounts.length
+                    : (p.id === 'facebook_ads' && !off && accounts.length) || (p.id === 'google_ads' && !off && r && r.status === 'connected')
                       ? 'Numbers every 3 hours · last 7 days again every night'
                     : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
@@ -413,6 +476,16 @@ export function IntegrationsPage() {
                       <PlugZap size={14} /> {accounts.length ? 'Add account' : 'Connect'}
                     </button>
                   )}
+                  {p.id === 'google_ads' && !off && r && gAccounts.length > 0 && (
+                    <button type="button" className="btn btn-outline btn-sm" disabled={gBusy} onClick={() => void gSync()}>
+                      {gBusy ? 'Starting…' : 'Sync now'}
+                    </button>
+                  )}
+                  {p.id === 'google_ads' && !off && r && gAccounts.length > 0 && (
+                    <Link to="/integrations/google-ads/logs" className="btn btn-outline btn-sm">
+                      <ScrollText size={14} /> Logs
+                    </Link>
+                  )}
                   {p.id === 'callyzer' && !off && r && (
                     <button type="button" className="btn btn-outline btn-sm" disabled={czBusy || !r.is_enabled} onClick={() => void czSync()}>
                       {czBusy ? 'Checking…' : 'Sync now'}
@@ -436,7 +509,7 @@ export function IntegrationsPage() {
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
-                        <PlugZap size={14} /> {p.id === 'razorpay' ? 'Add with keys' : 'Connect'}
+                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' ? 'Add with keys' : 'Connect'}
                       </>
                     )}
                   </button>
@@ -572,6 +645,16 @@ function ConnectDrawer({
         onSaved(why ? `Razorpay saved, but it refused the keys: ${why}` : 'Razorpay connected. Payments come in within 5 minutes (the last 90 days first).')
         return
       }
+      // Google Ads keys: log in, list the ad accounts, start the first pull
+      if (provider.id === 'google_ads' && id) {
+        try {
+          const g = await testGoogle(id)
+          onSaved(`Google Ads connected: ${g.saved} ad account${g.saved === 1 ? '' : 's'} found. The last 90 days come in over the next few minutes.${g.problems.length ? ` Not read: ${g.problems.join('; ')}` : ''}`)
+        } catch (e) {
+          onSaved(`Google Ads saved, but Google refused: ${(e as Error).message}`)
+        }
+        return
+      }
       // Zoom keys: checked straight away
       if (provider.id === 'zoom' && id) {
         try {
@@ -590,7 +673,7 @@ function ConnectDrawer({
   }
 
   // Zoom keys, Razorpay and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
-  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || (provider.id === 'whatsapp' && vendor === 'wati')
+  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || (provider.id === 'whatsapp' && vendor === 'wati')
   const [tab, setTab] = useState<'keys' | 'prompt'>('keys')
   const showForm = !tabbed || tab === 'keys'
   const [hookUrl, setHookUrl] = useState<string | null>(null)
@@ -644,6 +727,13 @@ function ConnectDrawer({
             title="Let Claude in Chrome make the Zoom app"
             note="Log in at marketplace.zoom.us as the Zoom account’s owner or admin, open Claude in Chrome, paste this, and it makes the app with every permission BizDock needs. Then copy the three keys from its App Credentials page into the Keys tab."
             text={zoomKeysPrompt()}
+          />
+        )}
+        {tabbed && tab === 'prompt' && provider.id === 'google_ads' && (
+          <PromptBox
+            title="Let Claude in Chrome gather the Google Ads keys"
+            note="Log in to Google with the account that runs your ads, open Claude in Chrome and paste this. It walks through the developer token, the Google Cloud OAuth client and the refresh token; you copy each value into the Keys tab yourself."
+            text={googleAdsKeysPrompt()}
           />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'razorpay' && (

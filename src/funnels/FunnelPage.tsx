@@ -17,6 +17,8 @@ import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
+import { FunnelGoogleTab } from './FunnelGoogleTab'
+import { db } from '@/lib/supabase'
 import { FunnelPaymentsTab } from './FunnelPaymentsTab'
 import { FunnelAdsReport } from './FunnelAdsReport'
 import { listWorkflows } from '@/workflows/api'
@@ -32,6 +34,7 @@ const TABS = [
   { key: 'overview', label: 'Overview' },
   { key: 'leads', label: 'Leads' },
   { key: 'ads', label: 'Facebook Ads' },
+  { key: 'google', label: 'Google Ads' },
   { key: 'payments', label: 'Payments' },
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'workflows', label: 'Workflows' },
@@ -89,8 +92,15 @@ export function FunnelPage() {
   const [flowCount, setFlowCount] = useState<number | null>(null)
   // Facebook campaigns added to this funnel
   const [adCount, setAdCount] = useState<number | null>(null)
+  // Google campaigns added to this funnel
+  const [gCount, setGCount] = useState<number | null>(null)
   const loadAds = useCallback(() => {
     funnelCampaignCount(id).then(setAdCount, () => setAdCount(null))
+    db()
+      .from('funnel_google_links')
+      .select('id', { count: 'exact', head: true })
+      .eq('funnel_id', id)
+      .then(({ count }) => setGCount(count ?? 0))
   }, [id])
   const [sources, setSources] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
@@ -196,6 +206,7 @@ export function FunnelPage() {
                 {t.key === 'whatsapp' && sheets && <span className="muted small"> {sheets.length}</span>}
                 {t.key === 'leads' && leads && <span className="muted small"> {leads.length}</span>}
                 {t.key === 'ads' && adCount != null && <span className="muted small"> {adCount}</span>}
+                {t.key === 'google' && gCount != null && <span className="muted small"> {gCount}</span>}
                 {t.key === 'workflows' && flowCount != null && <span className="muted small"> {flowCount}</span>}
               </button>
             ))}
@@ -327,6 +338,16 @@ export function FunnelPage() {
                 setNotice({ ok: msg })
                 loadAds()
               }} />}
+          {tab === 'google' && (
+            <FunnelGoogleTab
+              funnelId={funnel.id}
+              canEdit={can('funnels', 'edit')}
+              onSaved={(msg) => {
+                setNotice({ ok: msg })
+                loadAds()
+              }}
+            />
+          )}
           {tab === 'payments' && can('payments', 'view') && <FunnelPaymentsTab funnelId={funnel.id} leads={leads} canEdit={can('funnels', 'edit')} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 

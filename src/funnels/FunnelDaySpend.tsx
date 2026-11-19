@@ -4,6 +4,8 @@ import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
 import { SpendLines, type Line } from './SpendLines'
 import { AdPreviewDrawer } from '@/meta/AdPreviewDrawer'
+import { GoogleAdDrawer } from '@/google/GoogleAdDrawer'
+import { funnelGoogleAdDays, type GAd } from '@/google/api'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -18,12 +20,16 @@ export function FunnelDaySpend({
   accounts,
   campaigns,
   adsets,
+  google,
 }: {
   links: { campaign_id: string; adset_id: string | null }[]
-  accounts: AdAccount[]
-  campaigns: Campaign[]
-  adsets: AdSet[]
+  accounts: Pick<AdAccount, 'id' | 'gst_rate'>[]
+  campaigns: Pick<Campaign, 'campaign_id' | 'name'>[]
+  adsets: Pick<AdSet, 'adset_id' | 'name'>[]
+  /** Google Ads (Funnel → Google Ads): its ads (for the preview); else Facebook */
+  google?: { ads: GAd[] }
 }) {
+  const platform = google ? 'Google' : 'Facebook'
   const tenant = useTenant()
   // same presets as Facebook Ads Manager (Last 30 days ends yesterday)
   const [range, setRange] = useState<Range>(() => presetRange('last30'))
@@ -32,7 +38,8 @@ export function FunnelDaySpend({
   const [preview, setPreview] = useState<{ id: string; name: string | null; sub: string } | null>(null)
   // graph (the lines) or list (each day, with its ads)
   const [view, setView] = useState<'graph' | 'list'>('graph')
-  const [data, setData] = useState<Awaited<ReturnType<typeof funnelDaySpend>> | null>(null)
+  const [data, setData] = useState<{ days: { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }[]; ads: Map<string, string>; objs?: Map<string, GAd> } | null>(null)
+  const [gPreview, setGPreview] = useState<{ ad: GAd; sub: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(new Set())
   const key = JSON.stringify(links)
@@ -40,8 +47,13 @@ export function FunnelDaySpend({
   useEffect(() => {
     setData(null)
     setError(null)
-    funnelDaySpend(tenant.id, JSON.parse(key), from, to).then(setData, (e: Error) => setError(e.message))
-  }, [tenant.id, key, from, to])
+    const ls = JSON.parse(key) as { campaign_id: string }[]
+    const ask = google
+      ? funnelGoogleAdDays(tenant.id, [...new Set(ls.map((l) => l.campaign_id))], from, to, google.ads, new Map(campaigns.map((c) => [c.campaign_id, c.name ?? c.campaign_id])))
+      : funnelDaySpend(tenant.id, JSON.parse(key), from, to)
+    ask.then(setData, (e: Error) => setError(e.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenant.id, key, from, to, !!google])
 
   const days = useMemo(() => {
     const gst = new Map(accounts.map((a) => [a.id, Number(a.gst_rate)]))
@@ -104,7 +116,7 @@ export function FunnelDaySpend({
         <div>
           <b>Spend per day</b>
           <div className="muted small">
-            The linked campaigns’ Facebook spend, with GST (hover: without GST + GST).{days.length ? ` ${days.length} day${days.length === 1 ? '' : 's'} · ` : ' '}
+            The linked campaigns’ {platform} spend, with GST (hover: without GST + GST).{days.length ? ` ${days.length} day${days.length === 1 ? '' : 's'} · ` : ' '}
             {days.length ? <>total {money(total.spend, total.gst)}</> : null}
           </div>
         </div>
@@ -184,7 +196,11 @@ export function FunnelDaySpend({
                         </tr>
                         {isOpen &&
                           d.ads.map((a) => (
-                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })}>
+                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => {
+                              if (!google) return setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })
+                              const o = data?.objs?.get(a.ad_id)
+                              if (o) setGPreview({ ad: o, sub: `${a.campaign} · ${a.adset}` })
+                            }}>
                               <td />
                               <td>
                                 {a.name}
@@ -205,6 +221,7 @@ export function FunnelDaySpend({
         </>
       )}
       {preview && <AdPreviewDrawer ad={preview} onClose={() => setPreview(null)} />}
+      {gPreview && <GoogleAdDrawer ad={gPreview.ad} sub={gPreview.sub} onClose={() => setGPreview(null)} />}
     </section>
   )
 }

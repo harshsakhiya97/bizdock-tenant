@@ -39,6 +39,7 @@ import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
 import { PaymentsLogsPage } from '@/payments/PaymentsLogsPage'
 import { CallyzerTeamPage } from '@/callyzer/CallyzerTeamPage'
 import { MetaLogsPage } from '@/meta/MetaLogsPage'
+import { GoogleLogsPage } from '@/google/GoogleLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
 import { WidgetsPage } from '@/widgets/WidgetsPage'
 import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
@@ -167,6 +168,14 @@ export default function App() {
                   }
                 />
                 <Route path="/integrations/callyzer/logs" element={<Navigate to="/callyzer/logs" replace />} />
+                <Route
+                  path="/integrations/google-ads/logs"
+                  element={
+                    <RequirePermission module="settings" action="edit">
+                      <GoogleLogsPage />
+                    </RequirePermission>
+                  }
+                />
                 <Route
                   path="/integrations/facebook-ads/logs"
                   element={
