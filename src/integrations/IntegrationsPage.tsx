@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { CheckCircle2, CircleAlert, PlugZap, ScrollText } from 'lucide-react'
+import { CheckCircle2, CircleAlert, ExternalLink, PlugZap, ScrollText } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -16,7 +16,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, geminiKeyPrompt, googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -73,12 +73,17 @@ export function IntegrationsPage() {
   // Google Ads: the ad accounts found with the saved keys
   const [gAccounts, setGAccounts] = useState<GAccount[]>([])
   const [gBusy, setGBusy] = useState(false)
+  // Gemini AI: this month's tokens (BizDock's own AI calls)
+  const [aiUse, setAiUse] = useState<{ model: string; calls: number; input: number; output: number }[]>([])
   // a card's accounts: a one-line summary on the card, the full list in a modal
   const [listFor, setListFor] = useState<string | null>(null)
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
     listAdAccounts(tenant.id).then(setAdAccounts, () => setAdAccounts([]))
     listGoogleAccounts(tenant.id).then(setGAccounts, () => setGAccounts([]))
+    db()
+      .rpc('ai_usage_month', { p_tenant: tenant.id })
+      .then(({ data }) => setAiUse((data ?? []) as typeof aiUse))
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -294,6 +299,34 @@ export function IntegrationsPage() {
                 </div>
                 </Modal>
               )}
+              {p.id === 'gemini' && r && !off && (() => {
+                const calls = aiUse.reduce((t, x) => t + Number(x.calls), 0)
+                const tin = aiUse.reduce((t, x) => t + Number(x.input), 0)
+                const tout = aiUse.reduce((t, x) => t + Number(x.output), 0)
+                const pin = Number(r.config.price_in) || 0
+                const pout = Number(r.config.price_out) || 0
+                const est = (tin / 1e6) * pin + (tout / 1e6) * pout
+                const k = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n))
+                return (
+                  <div className="int-summary" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <span>
+                      Model <b>{r.config.model || '— pick one in Settings'}</b>
+                    </span>
+                    <span className="muted">
+                      This month: {calls} call{calls === 1 ? '' : 's'} · {k(tin)} in / {k(tout)} out tokens
+                      {pin || pout ? ` · ≈ ₹${est.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : ' · add prices in Settings for an estimate'}
+                    </span>
+                    <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                      <a className="link-btn" href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">
+                        AI Studio usage <ExternalLink size={12} />
+                      </a>
+                      <a className="link-btn" href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer">
+                        Billing / pay <ExternalLink size={12} />
+                      </a>
+                    </span>
+                  </div>
+                )
+              })()}
               {p.id === 'google_ads' && r && gAccounts.filter((x) => !x.is_manager).length > 0 && (() => {
                 const ga = gAccounts.filter((x) => !x.is_manager)
                 return (
@@ -432,6 +465,10 @@ export function IntegrationsPage() {
                       : r.config.last_sync_at
                         ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
                         : 'Connected · first check in a minute'
+                    : p.id === 'gemini' && r && !off
+                    ? r.config.checked_at
+                      ? `Key checked ${ago(r.config.checked_at)}`
+                      : 'Connected'
                     : p.id === 'razorpay' && r && !off
                     ? r.config.last_sync_at
                       ? `Payments checked ${ago(r.config.last_sync_at)} · every 5 min`
@@ -509,7 +546,7 @@ export function IntegrationsPage() {
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
-                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' ? 'Add with keys' : 'Connect'}
+                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' || p.id === 'gemini' ? 'Add with keys' : 'Connect'}
                       </>
                     )}
                   </button>
@@ -645,6 +682,13 @@ function ConnectDrawer({
         onSaved(why ? `Razorpay saved, but it refused the keys: ${why}` : 'Razorpay connected. Payments come in within 5 minutes (the last 90 days first).')
         return
       }
+      // Gemini: check the key, list the models (for the Model dropdown), pick a default model
+      if (provider.id === 'gemini' && id) {
+        const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'test', id } })
+        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        onSaved(why ? `Gemini saved, but Google refused the key: ${why}` : `Gemini AI connected · model ${data?.model} (${data?.models} models available; change it in Settings).`)
+        return
+      }
       // Google Ads keys: log in, list the ad accounts, start the first pull
       if (provider.id === 'google_ads' && id) {
         try {
@@ -673,7 +717,7 @@ function ConnectDrawer({
   }
 
   // Zoom keys, Razorpay and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
-  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || (provider.id === 'whatsapp' && vendor === 'wati')
+  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || provider.id === 'gemini' || (provider.id === 'whatsapp' && vendor === 'wati')
   const [tab, setTab] = useState<'keys' | 'prompt'>('keys')
   const showForm = !tabbed || tab === 'keys'
   const [hookUrl, setHookUrl] = useState<string | null>(null)
@@ -738,6 +782,13 @@ function ConnectDrawer({
               <PromptBox key={g.title} title={g.title} note={g.who} text={g.text} />
             ))}
           </>
+        )}
+        {tabbed && tab === 'prompt' && provider.id === 'gemini' && (
+          <PromptBox
+            title="Let Claude in Chrome make the Gemini API key"
+            note="Log in to Google, open Claude in Chrome and paste this. It opens Google AI Studio, creates the key and tells you the plan (Free / Paid); you copy the key into the Keys tab yourself."
+            text={geminiKeyPrompt()}
+          />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'razorpay' && (
           <PromptBox
@@ -809,7 +860,23 @@ function ConnectDrawer({
             <Label htmlFor={`int-${f.key}`} required={f.required && !(f.secret && existing?.config[f.key])}>
               {f.label}
             </Label>
-            {f.options ? (
+            {provider.id === 'gemini' && f.key === 'model' && existing?.config.models ? (
+              <Select id={`int-${f.key}`} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
+                {(() => {
+                  let list: { id: string; name: string }[] = []
+                  try {
+                    list = JSON.parse(existing.config.models)
+                  } catch {
+                    list = []
+                  }
+                  return list.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name} ({m.id})
+                    </option>
+                  ))
+                })()}
+              </Select>
+            ) : f.options ? (
               <Select id={`int-${f.key}`} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
                 {f.options.map((o) => (
                   <option key={o}>{o}</option>

@@ -1,4 +1,4 @@
-import { ChartNoAxesColumn, CreditCard, Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
+import { ChartNoAxesColumn, CreditCard, Sparkles, Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
 
 /** the scopes a Zoom Server-to-Server app needs for BizDock (Add with keys) */
 export const ZOOM_KEYS_SCOPES: { label: string; items: string[] }[] = [
@@ -80,7 +80,15 @@ Open https://ads.google.com in the ad account BizDock asked to link → Admin �
   },
 ]
 
-export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads'
+/** a prompt for Claude in Chrome that makes a Gemini API key in Google AI Studio */
+export const geminiKeyPrompt = () => `In Chrome I'm logged in to Google with the account that should own our Gemini AI key. Help me get a Gemini API key for my CRM "BizDock". Never read out, copy or paste the API key into this chat — when it's on screen, stop and tell me to copy it myself. Ask me before any final Create / Save / Upgrade click. Don't change billing or anything else. If a screen doesn't match, stop and tell me what you see.
+
+1. Open https://aistudio.google.com/apikey (Google AI Studio → Get API key). Accept the terms only if I say so.
+2. Press "Create API key". If it asks for a Google Cloud project, create or pick one named "BizDock AI" (ask me first).
+3. When the key is shown, stop and tell me "Copy the API key now".
+4. Then tell me (no secrets): the project name, and whether it's on the Free tier or the Paid tier (the "Plan" / "Billing" column next to the key, or https://aistudio.google.com/usage). Don't set up billing; if I want the Paid tier I'll do it myself.`
+
+export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini'
 export type ProviderField = {
   key: string
   label: string
@@ -183,6 +191,26 @@ export const PROVIDERS: Provider[] = [
       { key: 'refresh_token', label: 'Refresh token', secret: true, required: true, hint: 'From the OAuth Playground, with the adwords scope.' },
       { key: 'login_customer_id', label: 'Manager (MCC) ID', placeholder: '123-456-7890', hint: 'If the ad accounts sit under a manager account.' },
       { key: 'customer_ids', label: 'Customer IDs', placeholder: '123-456-7890, 234-567-8901', hint: 'The ad accounts to bring in. Empty: every account the login sees.' },
+    ],
+  },
+  {
+    id: 'gemini',
+    name: 'Gemini AI',
+    icon: Sparkles,
+    color: '#1a73e8',
+    description: 'Your Google Gemini API key and the model BizDock’s AI features (AI Insights) use.',
+    usedFor: 'AI Insights (coming)',
+    guide: [
+      'Open Google AI Studio → Get API key (aistudio.google.com/apikey) → Create API key (in a project, e.g. “BizDock AI”). Copy the key.',
+      'Free tier: no bill, but daily limits, and Google may use the data to improve its models. Paid tier: billed by Google Cloud for what you use.',
+      'Press Connect: BizDock checks the key and lists the models it can use; pick one under Model (Flash is fast and cheap, Pro is smarter and costs more).',
+      'Prices (optional): your ₹ per 1M input / output tokens for the model, so the card can estimate this month’s amount.',
+    ],
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Google AI Studio → Get API key.' },
+      { key: 'model', label: 'Model', placeholder: 'Picked after the key is checked', hint: 'The models this key can use appear here once it’s connected.' },
+      { key: 'price_in', label: 'Input price (₹ per 1M tokens)', placeholder: 'e.g. 25', hint: 'Optional: for the estimated amount on the card.' },
+      { key: 'price_out', label: 'Output price (₹ per 1M tokens)', placeholder: 'e.g. 210' },
     ],
   },
   {
