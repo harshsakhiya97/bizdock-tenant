@@ -1670,3 +1670,8 @@ tfoot td {
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+/* System Connections: a card's accounts in one line; click for the list */
+.int-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-muted); color: var(--text); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.int-summary:hover { border-color: var(--brand); }
+.int-summary-link { color: var(--brand); font-weight: 600; white-space: nowrap; }
+.int-summary-err { color: var(--danger); }

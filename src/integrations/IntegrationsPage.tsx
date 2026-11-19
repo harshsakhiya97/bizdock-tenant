@@ -18,6 +18,7 @@ import { disconnectIntegration, listIntegrations, saveIntegration, setIntegratio
 import { db } from '@/lib/supabase'
 import { mask, PROVIDERS, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
+import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
 import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
 import { syncCallyzer } from '@/callyzer/api'
@@ -68,6 +69,8 @@ export function IntegrationsPage() {
 
   // Facebook Ads: the ad accounts of each Facebook connection
   const [adAccounts, setAdAccounts] = useState<AdAccount[]>([])
+  // a card's accounts: a one-line summary on the card, the full list in a modal
+  const [listFor, setListFor] = useState<string | null>(null)
   const load = useCallback(() => {
     listIntegrations(tenant.id).then(setRows, (e: Error) => setNotice({ error: e.message }))
     listAdAccounts(tenant.id).then(setAdAccounts, () => setAdAccounts([]))
@@ -225,6 +228,19 @@ export function IntegrationsPage() {
                 <span>Used for</span> {p.usedFor}
               </div>
               {p.id === 'facebook_ads' && adAccounts.length > 0 && (
+                <button type="button" className="int-summary" onClick={() => setListFor(p.id)}>
+                  <span>
+                    <b>
+                      {adAccounts.length} ad account{adAccounts.length === 1 ? '' : 's'}
+                    </b>{' '}
+                    · {adAccounts.filter((x) => x.is_enabled).length} bringing in numbers
+                    {adAccounts.some((x) => x.last_error) && <span className="int-summary-err"> · {adAccounts.filter((x) => x.last_error).length} with an error</span>}
+                  </span>
+                  <span className="int-summary-link">View accounts</span>
+                </button>
+              )}
+              {p.id === 'facebook_ads' && adAccounts.length > 0 && listFor === p.id && (
+                <Modal open onClose={() => setListFor(null)} width={640} title={`${p.name} · ${adAccounts.length} ad account${adAccounts.length === 1 ? '' : 's'}`}>
                 <div className="int-accounts">
                   {adAccounts.map((x) => (
                     <div key={x.id} className="int-account">
@@ -251,6 +267,7 @@ export function IntegrationsPage() {
                     </div>
                   ))}
                 </div>
+                </Modal>
               )}
               {p.id === 'facebook_ads' && accounts.some((a) => a.status === 'error') && (
                 <div className="int-note">A Facebook connection needs attention: open Logs → Connections.</div>
@@ -264,6 +281,19 @@ export function IntegrationsPage() {
                 </div>
               )}
               {p.multiple && p.id !== 'facebook_ads' && accounts.length > 0 && (
+                <button type="button" className="int-summary" onClick={() => setListFor(p.id)}>
+                  <span>
+                    <b>
+                      {accounts.length} {p.id === 'zoom' ? 'Zoom' : ''} account{accounts.length === 1 ? '' : 's'}
+                    </b>
+                    {p.id === 'zoom' && accounts.find((a) => a.config.is_default === 'Yes') && <> · default: {accounts.find((a) => a.config.is_default === 'Yes')?.label}</>}
+                    {accounts.some((a) => a.status === 'error') && <span className="int-summary-err"> · {accounts.filter((a) => a.status === 'error').length} need attention</span>}
+                  </span>
+                  <span className="int-summary-link">View accounts</span>
+                </button>
+              )}
+              {p.multiple && p.id !== 'facebook_ads' && accounts.length > 0 && listFor === p.id && (
+                <Modal open onClose={() => setListFor(null)} width={640} title={`${p.name} · ${accounts.length} account${accounts.length === 1 ? '' : 's'}`}>
                 <div className="int-accounts">
                   {accounts.map((a) => (
                     <div key={a.id} className="int-account">
@@ -300,7 +330,10 @@ export function IntegrationsPage() {
                         </button>
                       )}
                       {!off && (p.id !== 'zoom' || a.config.auth !== 'oauth') && (
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen({ p: p.id === 'zoom' ? zoomKeys(p) : p, row: a })}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
+                          setListFor(null)
+                          setOpen({ p: p.id === 'zoom' ? zoomKeys(p) : p, row: a })
+                        }}>
                           Settings
                         </button>
                       )}
@@ -311,6 +344,7 @@ export function IntegrationsPage() {
                     </div>
                   ))}
                 </div>
+                </Modal>
               )}
               {p.id === 'zoom' && zoomWait && (
                 <div className="int-note row-between">
