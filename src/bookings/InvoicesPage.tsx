@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { AlertTriangle, BadgeIndianRupee, FileText, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeIndianRupee, FileText, Printer, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
 import { Empty, PageHead, SearchInput, StatCard, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -9,7 +9,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { listBookings } from './api'
 import { invoiceHref } from './BookingsTab'
 import { partState, type BookingRow } from './types'
-import { listInvoices } from '@/invoices/api'
+import { invoicePrintHref, listInvoices, refreshInvoiceSeller } from '@/invoices/api'
 import { invoiceAsBooking } from '@/invoices/asBooking'
 import { InvoicePanel } from '@/invoices/InvoicePanel'
 import { useBookingRefs } from './useBookingRefs'
@@ -42,6 +42,18 @@ export function InvoicesPage() {
   const [f, setF] = useState({ q: '', state: '', month: '' })
   // invoices of orders (Default / Brand Deals): their order numbers, by invoice id
   const [orderNos, setOrderNos] = useState<Map<string, string>>(new Map())
+  // Print: the company details again from Masters (as the invoice's Print / PDF), then the print page in a new tab
+  async function print(id: string) {
+    if (!orderNos.has(id)) return void window.open(invoiceHref(id), '_blank', 'noopener')
+    const tab = window.open('about:blank', '_blank')
+    try {
+      await refreshInvoiceSeller(id)
+    } catch {
+      // no edit access: print as saved
+    }
+    if (tab) tab.location.href = invoicePrintHref(id)
+    else window.open(invoicePrintHref(id), '_blank')
+  }
 
   const refs = useBookingRefs()
   // the invoice side panel (?open=<id>, e.g. from a booking)
@@ -160,6 +172,7 @@ export function InvoicesPage() {
                   <th style={{ textAlign: 'right' }}>Received</th>
                   <th style={{ textAlign: 'right' }}>Balance</th>
                   <th>Status</th>
+                  <th />
                 </tr>
               </thead>
               <tbody>
@@ -195,6 +208,11 @@ export function InvoicesPage() {
                       </td>
                       <td>
                         <span className={cn('badge', st.tone)}>{st.label}</span>
+                      </td>
+                      <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                        <button type="button" className="btn btn-outline btn-sm" title="Print / PDF with the latest company details" onClick={() => void print(b.id)}>
+                          <Printer size={14} /> Print
+                        </button>
                       </td>
                     </tr>
                   )
