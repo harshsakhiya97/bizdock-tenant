@@ -81,7 +81,8 @@ export function InvoicesPage() {
       const q = f.q.trim().toLowerCase()
       return !q || b.client_name.toLowerCase().includes(q) || (b.invoice_no ?? '').toLowerCase().includes(q) || (b.phone ?? '').includes(q) || (orderNos.get(b.id) ?? '').toLowerCase().includes(q)
     })
-    .sort((a, b) => (b.invoice_no ?? '').localeCompare(a.invoice_no ?? ''))
+    // newest first: by when it was created (then the invoice number)
+    .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? '') || (b.invoice_no ?? '').localeCompare(a.invoice_no ?? ''))
 
   const billed = visible.reduce((n, b) => n + Number(b.total_amount), 0)
   const received = visible.reduce((n, b) => n + Number(b.paid_amount), 0)
