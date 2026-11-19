@@ -11,25 +11,31 @@ type Step = { stage: Stage; rate?: string }
 
 /** Funnel → Overview: the 3D funnel — Facebook reach → clicks → page views → leads → each stage reached → revenue — then profit and the ad numbers */
 export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
-  const spendGst = Number(f.spend) * gst
+  const spendGst = f.spend_gst != null ? Number(f.spend_gst) : Number(f.spend) * gst
+  const src = f.source ?? 'fb'
+  const where = src === 'fb' ? 'Facebook / Instagram' : src === 'google' ? 'Google Ads' : 'Facebook / Instagram + Google Ads'
+  // landing page views are Facebook's (Google doesn't count them): only on the Facebook view
+  const withLpv = src === 'fb'
+  const base = withLpv ? f.lpv : f.link_clicks
+  const baseWord = withLpv ? 'views' : 'clicks'
   const steps: Step[] = []
   let i = 0
   const color = () => COLORS[i++ % COLORS.length]
   const ads = f.linked > 0 && Number(f.impressions) > 0
   if (ads) {
-    steps.push({ stage: { tag: 'Ad reach', value: num(f.impressions), title: 'Ad impressions', sub: `Shown on Facebook / Instagram · CPM ${inr((spendGst / f.impressions) * 1000)}`, color: color() } })
+    steps.push({ stage: { tag: 'Ad reach', value: num(f.impressions), title: 'Ad impressions', sub: `Shown on ${where} · CPM ${inr((spendGst / f.impressions) * 1000)}`, color: color() } })
     steps.push({
       rate: `${pct(f.link_clicks, f.impressions)} CTR · ${num(f.link_clicks)} clicks from ${num(f.impressions)} impressions`,
       stage: { tag: 'Traffic', value: num(f.link_clicks), title: 'Link clicks', sub: `Cost per click ${inr(f.link_clicks ? spendGst / f.link_clicks : 0)}`, color: color() },
     })
-    steps.push({
+    if (withLpv) steps.push({
       rate: `${pct(f.lpv, f.link_clicks)} click-to-view rate · ${num(f.lpv)} page views from ${num(f.link_clicks)} clicks`,
       stage: { tag: 'Landing page', value: num(f.lpv), title: 'Landing page views', sub: `Cost per view ${inr(f.lpv ? spendGst / f.lpv : 0)}`, color: color() },
     })
   }
   const organic = f.leads - f.leads_ads
   steps.push({
-    rate: ads ? `${pct(f.leads_ads, f.lpv)} page conversion · ${num(f.leads_ads)} ad leads from ${num(f.lpv)} views (+${num(organic)} organic)` : undefined,
+    rate: ads ? `${pct(f.leads_ads, base)} ${withLpv ? 'page' : 'click'} conversion · ${num(f.leads_ads)} ad leads from ${num(base)} ${baseWord} (+${num(organic)} organic)` : undefined,
     stage: { tag: 'Leads', value: num(f.leads), title: 'Leads', sub: `Ads ${num(f.leads_ads)} · Organic ${num(organic)}`, color: color() },
   })
   // the funnel's own stages after the first (the first is every lead)
@@ -110,17 +116,26 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
 
       {ads && (
         <div>
-          <b>Ad performance breakdown</b> <span className="muted small">(Facebook / Instagram, the linked campaigns, these dates)</span>
+          <b>Ad performance breakdown</b> <span className="muted small">({where}, the linked campaigns, these dates)</span>
           <div className="flow-cards">
             {[
               [num(f.impressions), 'Impressions', 'Total ads shown'],
               [inr((spendGst / f.impressions) * 1000), 'CPM', 'Cost per 1,000 impressions'],
-              [num(f.link_clicks), 'Link clicks', `CTR ${pct(f.link_clicks, f.impressions)} · ${inr(f.link_clicks ? spendGst / f.link_clicks : 0)} per click`],
-              [num(f.lpv), 'Landing page views', `Click-to-view rate ${pct(f.lpv, f.link_clicks)}`],
-              [inr(f.lpv ? spendGst / f.lpv : 0), 'Cost per page view', 'Ad spend ÷ landing page views'],
-              [pct(f.leads_ads, f.lpv), 'Page conversion', `${num(f.leads_ads)} ad leads from ${num(f.lpv)} views`],
-              [num(f.meta_leads), 'Facebook leads', f.meta_leads ? `${inr(spendGst / f.meta_leads)} per lead (Facebook’s count)` : 'Facebook’s count'],
-              [num(f.purchases), 'Purchases (Pixel)', f.purchases ? `${inr(spendGst / f.purchases)} per purchase` : 'No purchase events'],
+              [num(f.link_clicks), withLpv ? 'Link clicks' : 'Clicks', `CTR ${pct(f.link_clicks, f.impressions)} · ${inr(f.link_clicks ? spendGst / f.link_clicks : 0)} per click`],
+              ...(withLpv
+                ? [
+                    [num(f.lpv), 'Landing page views', `Click-to-view rate ${pct(f.lpv, f.link_clicks)}`],
+                    [inr(f.lpv ? spendGst / f.lpv : 0), 'Cost per page view', 'Ad spend ÷ landing page views'],
+                  ]
+                : []),
+              [pct(f.leads_ads, base), withLpv ? 'Page conversion' : 'Click conversion', `${num(f.leads_ads)} ad leads from ${num(base)} ${baseWord}`],
+              ...(src !== 'google'
+                ? [
+                    [num(f.meta_leads), 'Facebook leads', f.meta_leads ? `${inr(spendGst / f.meta_leads)} per lead (Facebook’s count)` : 'Facebook’s count'],
+                    [num(f.purchases), 'Purchases (Pixel)', f.purchases ? `${inr(spendGst / f.purchases)} per purchase` : 'No purchase events'],
+                  ]
+                : []),
+              ...(src !== 'fb' ? [[num(Number(f.conversions ?? 0)), 'Google conversions', f.conversions ? `${inr(spendGst / Number(f.conversions))} per conversion (Google’s count)` : 'Google’s count']] : []),
             ].map(([v, l, s]) => (
               <div key={l} className="flow-card">
                 <b>{v}</b>

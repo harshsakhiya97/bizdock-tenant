@@ -158,7 +158,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
     setFlow(undefined)
     setReport(null)
     setError(null)
-    funnelFlow(funnelId, from, to).then(setFlow, (e: Error) => setError(e.message))
+    funnelFlow(funnelId, from, to, src).then(setFlow, (e: Error) => setError(e.message))
     funnelAdsReport(funnelId, from, to).then(
       (r) => {
         setReport(r)
@@ -169,7 +169,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       },
       () => setGst(1.18),
     )
-  }, [funnelId, from, to, reload])
+  }, [funnelId, from, to, reload, src])
 
   // every day / week (Mon–Sun) / month in the dates picked, with its spend and the leads created in it
   const rows = useMemo(() => {
@@ -360,7 +360,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
         <b>Funnel report</b>
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <MetaSync tenantId={tenant.id} onDone={() => setReload((n) => n + 1)} />
-          {view === 'list' && (
+          {(
             <select className="input input-sm filter-select" value={src} onChange={(e) => setSrc(e.target.value as Src)} aria-label="Ads">
               <option value="all">Overall (Facebook + Google)</option>
               <option value="fb">Facebook</option>
@@ -392,7 +392,8 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
           {flow === null && <div className="muted small">You can’t see this funnel’s report.</div>}
           {flow && (
             <>
-              {!flow.linked && <div className="muted small">No Facebook campaigns are added to this funnel yet (Facebook Ads tab), so there’s no ad reach or spend.</div>}
+              {!flow.linked && <div className="muted small">No {src === 'fb' ? 'Facebook' : src === 'google' ? 'Google' : 'Facebook or Google'} campaigns are added to this funnel yet ({src === 'google' ? 'Google Ads' : src === 'fb' ? 'Facebook Ads' : 'Facebook Ads / Google Ads'} tab), so there’s no ad reach or spend.</div>}
+              {src !== 'all' && <div className="muted small">{src === 'fb' ? 'Facebook' : 'Google'}: the leads whose UTM source is {src === 'fb' ? 'fb / ig / facebook / instagram' : 'google / adwords / youtube'}.</div>}
               <FunnelFlow f={flow} gst={gst} />
             </>
           )}

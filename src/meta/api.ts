@@ -326,10 +326,14 @@ export type FunnelFlow = {
   revenue_ads: number
   collected: number
   linked: number
+  /** funnel_flow_src: which ads (fb / google / all), spend with GST, Google conversions */
+  source?: 'fb' | 'google' | 'all'
+  spend_gst?: number
+  conversions?: number
 }
-/** the funnel's flow for the Overview: impressions → clicks → page views → leads → each stage reached → revenue */
-export async function funnelFlow(funnelId: string, from: string, to: string): Promise<FunnelFlow | null> {
-  const { data, error } = await db().rpc('funnel_flow', { p_funnel: funnelId, p_from: from, p_to: to })
+/** the funnel's flow for the Overview: impressions → clicks → page views → leads → each stage reached → revenue (Facebook, Google or both) */
+export async function funnelFlow(funnelId: string, from: string, to: string, source: 'fb' | 'google' | 'all' = 'fb'): Promise<FunnelFlow | null> {
+  const { data, error } = await db().rpc('funnel_flow_src', { p_funnel: funnelId, p_from: from, p_to: to, p_source: source })
   if (error) throw new Error(error.message)
   return (data ?? null) as FunnelFlow | null
 }
