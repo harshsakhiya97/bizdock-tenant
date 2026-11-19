@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
+import { db } from '@/lib/supabase'
+import { formatInvoiceNo } from '@/masters/types'
+import { createInvoice } from '@/invoices/api'
+import { BuyerFields, buyerError, buyerOfLead, emptyBuyer } from '@/invoices/Billing'
+import { PaymentPlan, planError } from '@/invoices/PaymentPlan'
+import type { InvoiceInput } from '@/invoices/types'
 import { BT } from '@/auth/auth-context'
 import { cn } from '@/lib/cn'
 import { useAuth } from '@/auth/useAuth'
@@ -17,7 +23,7 @@ import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
 import { saveDealSteps, toggleStep, useDealSteps, type DealStep } from './dealSteps'
-import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
+import { ORDER_STATUS, STATUS_META, invoiceNo, type PartDraft, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -73,8 +79,6 @@ export function BookingDrawer({
   const fixed = !!lead || !!booking
   // calendar: a lead to link, or '' for a direct booking (no enquiry)
   const [pickedLead, setPickedLead] = useState<string>('')
-  // multi-day: more dates for the same client (saved as separate bookings)
-  const [extra, setExtra] = useState<{ date: string; start: string; end: string; amount: string }[]>([])
   const [input, setInput] = useState<BookingInput>(() => ({
     business_id: booking?.business_id ?? lead?.business_id ?? selected?.id ?? businesses[0]?.id ?? '',
     sub_business_id: booking ? (booking.sub_business_id ?? '') : (lead ? (lead.sub_business_id ?? '') : (sub?.id ?? '')),
@@ -131,10 +135,6 @@ export function BookingDrawer({
     ],
     [leads],
   )
-  const minutes = (t: string) => {
-    const [h, m] = t.split(':').map(Number)
-    return h * 60 + m
-  }
   // the booking amount is the sum of its services
   const amount = input.items.reduce((s2, i) => s2 + num(i.price), 0)
   const hours = (() => {
@@ -170,7 +170,6 @@ export function BookingDrawer({
     studio && input.status !== 'cancelled'
       ? [
           studioClash(taken, { id: booking?.id, date: input.booking_date, start: input.start_time, end: input.end_time }),
-          ...extra.map((x) => (x.date && x.start && x.end ? studioClash(taken, { date: x.date, start: x.start, end: x.end }) : null)),
         ]
       : []
   const clash = clashes.find(Boolean) ?? null
@@ -178,6 +177,46 @@ export function BookingDrawer({
   const services = refs.products.filter(
     (p) => p.is_active && p.business_id === input.business_id && (!p.sub_business_id || !input.sub_business_id || p.sub_business_id === input.sub_business_id),
   )
+  // ---- Invoice & payments: on save the booking gets its invoice and payment plan, unless Pay later ----
+  type Links = { company_id: string | null; nongst_company_id: string | null }
+  const companyFor = (kind: 'gst' | 'nongst', biz: Links | null, sb: Links | null) => {
+    const pick = (l: Links | null) => (l?.company_id ? (kind === 'nongst' ? l.nongst_company_id || l.company_id : l.company_id) : '')
+    return pick(sb) || pick(biz)
+  }
+  // a new one: pay now (unticked); an existing one without an invoice: as it was (pay later) until unticked
+  const [payLater, setPayLater] = useState(!!booking)
+  const tentative = !service && input.status === 'tentative'
+  const cancelled = !service && input.status === 'cancelled'
+  const canInvoice = !booking?.invoice_id && !cancelled && !locked
+  const invoiceNow = canInvoice && !payLater && !tentative
+  const [inv, setInv] = useState<InvoiceInput>({ kind: 'gst', billing_company_id: '', gst_rate: '18', buyer: emptyBuyer, parts: [] as PartDraft[] })
+  const [links, setLinks] = useState<{ biz: Links | null; sub: Links | null } | null>(null)
+  const leadForBill = fixed ? input.lead_id : pickedLead || null
+  useEffect(() => {
+    if (!canInvoice || !input.business_id) return
+    let live = true
+    void Promise.all([
+      db().from('businesses').select('company_id, nongst_company_id').eq('id', input.business_id).maybeSingle(),
+      input.sub_business_id ? db().from('sub_businesses').select('company_id, nongst_company_id').eq('id', input.sub_business_id).maybeSingle() : Promise.resolve({ data: null }),
+      leadForBill ? db().from('leads').select('bill_company, bill_address, bill_state, bill_state_code, bill_gstin').eq('id', leadForBill).maybeSingle() : Promise.resolve({ data: null }),
+    ]).then(([b, sb, l]) => {
+      if (!live) return
+      const L = { biz: b.data as Links | null, sub: sb.data as Links | null }
+      setLinks(L)
+      setInv((d) => ({ ...d, billing_company_id: companyFor(d.kind, L.biz, L.sub), buyer: buyerOfLead(l.data as Parameters<typeof buyerOfLead>[0]) }))
+    })
+    return () => {
+      live = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canInvoice, input.business_id, input.sub_business_id, leadForBill])
+  const invGst = inv.kind === 'gst'
+  const invRate = Number(inv.gst_rate) || 0
+  const invTax = invGst ? Math.round(amount * invRate) / 100 : 0
+  const invTotal = amount + invTax
+  const invCompany = refs.companies.find((c) => c.id === inv.billing_company_id) ?? null
+  const pickKind = (kind: 'gst' | 'nongst') => setInv((d) => ({ ...d, kind, billing_company_id: links ? companyFor(kind, links.biz, links.sub) || d.billing_company_id : d.billing_company_id }))
+
   function pickLead(id: string | null) {
     setPickedLead(id ?? '')
     const l = leads?.find((x) => x.id === id)
@@ -196,31 +235,38 @@ export function BookingDrawer({
     if (service && !input.items.length) return setError('Add at least one service.')
     if (clash) return setError(clashText(clash))
     if (input.items.some((i) => !i.name.trim())) return setError('Pick or name every service, or remove it.')
-    for (const x of extra) {
-      if (!x.date) return setError('Pick a date for every extra day, or remove it.')
-      if (!x.start || !x.end || minutes(x.end) <= minutes(x.start)) return setError(`On ${x.date} the end time must be after the start time.`)
+    if (invoiceNow) {
+      if (!(amount > 0)) return setError('Add a service with a price for the invoice, or tick Pay later.')
+      const e = planError(inv.parts, invTotal) ?? buyerError(inv.buyer) ?? (invGst && !(invRate > 0) ? 'Enter the GST rate.' : null)
+      if (e) return setError(e)
     }
     setBusy(true)
     setError(null)
     try {
       const clean = { ...data, sub_business_id: subOf(subs, data.sub_business_id) }
-      await saveBooking(tenant.id, me, booking, clean, null)
-      // extra dates: same client, GST, status and note; the advance stays on the first date
-      // extra dates: the same services (or one line with that date's amount); payment parts stay on the first date
-      for (const x of extra) {
-        const same = Math.abs(num(x.amount) - amount) < 0.01
-        const items = same ? clean.items : [{ key: key(), product_id: '', name: clean.items.map((i) => i.name).join(' + ') || clean.purpose || 'Booking', price: x.amount }]
-        await saveBooking(tenant.id, me, null, { ...clean, booking_date: x.date, start_time: x.start, end_time: x.end, amount: x.amount, items, parts: [] }, null)
+      const id = await saveBooking(tenant.id, me, booking, clean, null)
+      // not Pay later: its invoice and payment plan now
+      let invoiced = false
+      if (invoiceNow) {
+        try {
+          await createInvoice([id], inv)
+          invoiced = true
+        } catch (e) {
+          // the booking is saved; the invoice can still be generated from the list
+          onSaved(`${booking ? `${service ? noun : 'Booking'} updated` : `${service ? noun : 'Booking'} saved`}, but the invoice wasn’t made: ${(e as Error).message} Generate it from the ${service ? noun : 'Booking'}s list.`)
+          return
+        }
       }
       const day = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+      const later = invoiced ? ' Its invoice is made.' : ` Generate its invoice from the ${service ? noun : 'Booking'}s list.`
       onSaved(
         service
           ? booking
-            ? `${noun} updated.`
-            : `New ${word} for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}. Generate its invoice from the ${noun}s list.`
+            ? `${noun} updated.${invoiced ? later : ''}`
+            : `New ${word} for ${data.client_name.trim()}: ${input.items.map((i) => i.name).join(', ')}.${later}`
           : booking
-          ? 'Booking updated.'
-          : `Booked ${data.client_name.trim()} on ${[data.booking_date, ...extra.map((x) => x.date)].map(day).join(', ')}.`,
+          ? `Booking updated.${invoiced ? later : ''}`
+          : `Booked ${data.client_name.trim()} on ${day(data.booking_date)}.${tentative ? ' Tentative: invoice it once confirmed.' : later}`,
       )
     } catch (e) {
       setError((e as Error).message)
@@ -253,7 +299,7 @@ export function BookingDrawer({
             {error && <p className="err-text">{error}</p>}
             {canEdit && (
               <Button onClick={save} disabled={busy || !!clash}>
-                {busy ? 'Saving…' : booking ? `Save ${word}` : service ? `Save ${word}` : extra.length ? `Save ${extra.length + 1} bookings` : 'Book slot'}
+                {busy ? 'Saving…' : booking ? `Save ${word}` : service ? `Save ${word}` : 'Book slot'}
               </Button>
             )}
           </div>
@@ -263,7 +309,7 @@ export function BookingDrawer({
       <div className="stack">
         <FormSection
           title={service ? `${noun} details` : 'Booking details'}
-          description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; GST, payments and the invoice come later, from the ${noun}s list → Generate invoice.` : 'Pick the lead and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
+          description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; its invoice and payments are made below, or later with Pay later.` : 'Pick the lead and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
             <div className="span-2">
@@ -357,62 +403,6 @@ export function BookingDrawer({
             </div>
           </div>
 
-          {!booking && !service && (
-            <div className="stack" style={{ gap: 8 }}>
-              {extra.map((x, i) => {
-                const upd = (k: 'date' | 'start' | 'end' | 'amount', v: string) => setExtra((l) => l.map((y, j) => (j === i ? { ...y, [k]: v } : y)))
-                return (
-                  <div key={i} className="stack" style={{ gap: 6 }}>
-                  <div className="bk-extra">
-                    <div>
-                      <Label htmlFor={`bx-d-${i}`} required>
-                        Date
-                      </Label>
-                      <TextInput id={`bx-d-${i}`} type="date" value={x.date} onChange={(e) => upd('date', e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`bx-s-${i}`} required>
-                        Start time
-                      </Label>
-                      <TextInput id={`bx-s-${i}`} type="time" step={900} value={x.start} onChange={(e) => upd('start', e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`bx-e-${i}`} required>
-                        End time
-                      </Label>
-                      <TextInput id={`bx-e-${i}`} type="time" step={900} value={x.end} onChange={(e) => upd('end', e.target.value)} />
-                    </div>
-                    <div>
-                      <Label htmlFor={`bx-a-${i}`}>Amount (₹)</Label>
-                      <TextInput id={`bx-a-${i}`} type="number" min={0} placeholder="Charge before GST" value={x.amount} onChange={(e) => upd('amount', e.target.value)} />
-                    </div>
-                    <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove this date" onClick={() => setExtra((l) => l.filter((_, j) => j !== i))}>
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                  {clashes[i + 1] && <div className="alert alert-error small">{clashText(clashes[i + 1])}</div>}
-                  </div>
-                )
-              })}
-              <div className="row" style={{ gap: 10 }}>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const last = extra[extra.length - 1]?.date || input.booking_date
-                    // the day after the last date (local date, no time-zone shift)
-                    const [y, m, d] = last.split('-').map(Number)
-                    const next = new Date(y, m - 1, d + 1)
-                    const iso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`
-                    setExtra((l) => [...l, { date: iso, start: input.start_time, end: input.end_time, amount: String(amount) }])
-                  }}
-                >
-                  <Plus /> Add another date
-                </Button>
-                <Hint>For multi-day shoots: each date is saved as a separate booking for this client. Services, status and note are copied. GST and payments go on the invoice (Bookings list → Generate invoice).</Hint>
-              </div>
-            </div>
-          )}
         </FormSection>
 
         <FormSection title="Services" description="Pick the services for this booking; the price comes from Masters → Services and can be changed here.">
@@ -463,10 +453,78 @@ export function BookingDrawer({
             </div>
           )}
             <div className="bk-total" style={{ alignItems: 'flex-end' }}>
-              <span className="muted small">{service ? noun : 'Booking'} amount (before GST · GST and payments are on its invoice)</span>
+              <span className="muted small">{service ? noun : 'Booking'} amount (before GST)</span>
               <b>{amount ? money(amount) : '—'}</b>
             </div>
         </FormSection>
+
+        {canEdit && canInvoice && (
+          <FormSection title="Invoice & payments" description={tentative ? 'Tentative: no invoice yet. Confirm it to make the invoice here, or later from the list.' : 'The invoice (GST, company, bill to) and its payment plan, made with this ' + word + '.'}>
+            <label className="check">
+              <input type="checkbox" checked={payLater || tentative} disabled={tentative} onChange={(e) => setPayLater(e.target.checked)} /> Pay later
+              <span className="muted small"> · no payment now; generate the invoice later from the {service ? noun : 'Booking'}s list</span>
+            </label>
+            {invoiceNow && (
+              <>
+                <div className="form-grid">
+                  <div className="span-2">
+                    <Label>Type</Label>
+                    <div className="seg" role="group" aria-label="Invoice type">
+                      <button type="button" className={invGst ? 'is-active' : undefined} onClick={() => pickKind('gst')}>
+                        With GST
+                      </button>
+                      <button type="button" className={!invGst ? 'is-active' : undefined} onClick={() => pickKind('nongst')}>
+                        Without GST
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="bk-inv-co">From (company)</Label>
+                    <Select id="bk-inv-co" value={inv.billing_company_id} onChange={(e) => setInv((d) => ({ ...d, billing_company_id: e.target.value }))}>
+                      <option value="">— the business’s own details —</option>
+                      {refs.companies
+                        .filter((c) => c.is_active || c.id === inv.billing_company_id)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.legal_name || c.name}
+                          </option>
+                        ))}
+                    </Select>
+                  </div>
+                  {invGst && (
+                    <div>
+                      <Label htmlFor="bk-inv-rate">GST %</Label>
+                      <TextInput id="bk-inv-rate" type="number" min={0} value={inv.gst_rate} onChange={(e) => setInv((d) => ({ ...d, gst_rate: e.target.value }))} />
+                    </div>
+                  )}
+                  <div className="span-2">
+                    <Hint>
+                      {invCompany
+                        ? `Invoice no. ${formatInvoiceNo(invCompany.number_format, invCompany.invoice_prefix, invCompany.next_no)}${invCompany.gst_number ? ` · GSTIN ${invCompany.gst_number}` : ''}`
+                        : 'No company picked: the invoice shows the business’s own details and number series.'}
+                    </Hint>
+                  </div>
+                </div>
+                <div>
+                  <Label>Bill to</Label>
+                  <BuyerFields id="bk-inv-b" value={inv.buyer} onChange={(buyer) => setInv((d) => ({ ...d, buyer }))} />
+                </div>
+                <div className="bk-total" style={{ alignItems: 'flex-end' }}>
+                  <span className="muted small">
+                    {money(amount)}
+                    {invGst ? ` + GST ${money(invTax)}` : ' · no GST'} · Total
+                  </span>
+                  <b>{money(invTotal)}</b>
+                </div>
+                <div>
+                  <Label>Payment plan</Label>
+                  <Hint>Split the total into parts (advance, balance…); mark a part Paid when the money comes in.</Hint>
+                  <PaymentPlan parts={inv.parts} onChange={(parts) => setInv((d) => ({ ...d, parts }))} total={invTotal} canEdit modes={refs.modes} />
+                </div>
+              </>
+            )}
+          </FormSection>
+        )}
 
         {booking && brandDeal && <DealStepsSection booking={booking} canTick={can('bookings', 'edit')} me={me ?? null} onChanged={(msg) => onTicked?.(msg)} />}
 
@@ -476,13 +534,13 @@ export function BookingDrawer({
               <span className="muted small">
                 {booking.invoice_id ? (
                   <>
-                    On invoice <b>{invoiceNo(booking)}</b>
-                    {locked ? ' · fully paid, so this ' + word + ' can’t be changed.' : ' · GST and payments are on the invoice.'}
+                    On invoice <b>{invoiceNo(booking)}</b> · paid {money(booking.paid_amount)} · balance {money(Math.max(0, Number(booking.total_amount) - Number(booking.paid_amount)))}
+                    {locked ? ' · fully paid, so this ' + word + ' can’t be changed.' : ''}
                   </>
                 ) : booking.status === 'cancelled' ? (
                   'Cancelled: not invoiced.'
                 ) : (
-                  `Not invoiced yet. Tick it in the ${service ? noun : 'Booking'}s list → Generate invoice.`
+                  payLater || tentative ? `Not invoiced yet. Untick Pay later above, or tick it in the ${service ? noun : 'Booking'}s list → Generate invoice.` : 'Not invoiced yet: the invoice is made when you save.'
                 )}
               </span>
               {booking.invoice_id && (
