@@ -19,10 +19,11 @@ export const releases: Release[] = [
     summary: 'A booking or order can make its invoice and payment plan as it is saved (or Pay later). Google Ads joins System Connections, with its logs, a funnel Google Ads tab and an Overall / Facebook / Google filter on the funnel report.',
     new: [
       'Booking / order form → Invoice & payments: With / Without GST, company, Bill to and the payment plan (mark parts Paid), made with the booking on save. Tick Pay later to generate the invoice from the list later, as before. Tentative bookings are Pay later.',
-      'System Connections → Google Ads (Add with keys, with four Claude in Chrome prompts: client Customer ID, BizDock manager + link request, client accepts, developer token and keys). Its ad accounts with on/off switches, Sync now, numbers every 3 hours.',
+      'System Connections → Google Ads (Add with keys: developer token, OAuth client, refresh token, manager ID and Customer IDs, with four Claude in Chrome prompts: client Customer ID, BizDock manager + link request, client accepts, token and keys). Its ad accounts with on/off switches, Sync now, numbers every 3 hours.',
       'Google Ads logs: campaigns, ad groups and ads with spend (with GST), impressions, clicks, CTR, CPC, conversions; click an ad for its headlines, descriptions and landing page.',
       'Funnel → Google Ads tab (after Facebook Ads): add Google campaigns, their spend, and spend per day (graph / list).',
-      'Funnel → Overview → List: Overall (Facebook + Google), Facebook or Google; leads by their UTM source.',
+      'Funnel → Overview: Overall (Facebook + Google), Facebook or Google on the funnel picture and the List; leads by their UTM source.',
+      'Invoice: the invoice number can be edited (unique in the workspace).',
       'Invoices list: a Print button on every row (latest company details, then the print page).',
     ],
     improved: [
