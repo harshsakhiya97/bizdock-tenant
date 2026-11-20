@@ -11,7 +11,7 @@ type LeadOpt = { id: string; name: string; phone: string }
 
 /**
  * Call from AI: a lead (or a typed number) and a template → Call now. With `lead` the lead is fixed (lead page).
- * Templates come from HelloRix; the default one (System Connections → AI Calling) is picked first.
+ * Templates come from HelloRix; one is picked for every call.
  */
 export function CallForm({ lead, leads, onPlaced }: { lead?: LeadOpt | null; leads?: LeadOpt[]; onPlaced: (c: AiCall) => void }) {
   const tenant = useTenant()
@@ -26,10 +26,9 @@ export function CallForm({ lead, leads, onPlaced }: { lead?: LeadOpt | null; lea
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    hx<{ templates: TemplateRow[]; default: string | null }>(tenant.id, { action: 'templates' }).then(
+    hx<{ templates: TemplateRow[] }>(tenant.id, { action: 'templates' }).then(
       (d) => {
         setTemplates(d.templates)
-        setObjective((o) => o || (d.default && d.templates.some((t) => t.id === d.default) ? d.default : (d.templates[0]?.id ?? '')))
         if (!d.templates.length) setTplMsg('No templates yet: make one in AI Calling → Templates.')
       },
       (e: Error) => {
@@ -116,7 +115,7 @@ export function CallForm({ lead, leads, onPlaced }: { lead?: LeadOpt | null; lea
           Template
         </Label>
         <Select id="ac-tpl" value={objective} onChange={(e) => setObjective(e.target.value)} disabled={!templates?.length}>
-          {!templates?.length && <option value="">{tplMsg}</option>}
+          <option value="">{templates?.length ? '— select —' : tplMsg}</option>
           {(templates ?? []).map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}

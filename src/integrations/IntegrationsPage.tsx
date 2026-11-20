@@ -677,8 +677,8 @@ function ConnectDrawer({
   const tenant = useTenant()
   const { membership } = useAuth()
   // secret fields start empty: left empty = keep the saved value
-  // AI Calling: calling hours, every day, the fixed opening and the language question on by default
-  const HX_DEFAULTS: Record<string, string> = { hours_start: '10:00', hours_end: '19:00', hours_days: '0,1,2,3,4,5,6', fixed_opening: '1', lang_step: '1' }
+  // AI Calling: calling hours 10–7, every day
+  const HX_DEFAULTS: Record<string, string> = { hours_start: '10:00', hours_end: '19:00', hours_days: '0,1,2,3,4,5,6' }
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (provider.id === 'hellorix' && HX_DEFAULTS[f.key] !== undefined ? HX_DEFAULTS[f.key] : f.options ? f.options[0] : ''))]),
@@ -1027,7 +1027,21 @@ function HxField({
   msg: string
   onChange: (v: string) => void
 }) {
-  const list = f === 'from_number' ? opts?.numbers : f === 'voice_id' ? opts?.voices : f === 'persona_id' ? opts?.personas : f === 'default_objective' ? opts?.templates : null
+  if (f === 'from_number')
+    return (
+      <>
+        <TextInput id={`int-${f}`} list="hx-numbers" value={value} placeholder="+91XXXXXXXXXX" onChange={(e) => onChange(e.target.value.replace(/[^\d+]/g, ''))} />
+        <datalist id="hx-numbers">
+          {(opts?.numbers ?? []).map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
+        </datalist>
+        {!opts && msg !== 'Enter the API key to load the options' && <Hint>{msg}</Hint>}
+      </>
+    )
+  const list = f === 'voice_id' ? opts?.voices : f === 'persona_id' ? opts?.personas : f === 'default_objective' ? opts?.templates : null
   if (list !== null && list !== undefined)
     return (
       <Select id={`int-${f}`} value={value} onChange={(e) => onChange(e.target.value)}>

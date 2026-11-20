@@ -9,7 +9,7 @@ import { hx, kindLabel, readyMade, type CollectField, type TemplateForm, type Te
 import { emptyForm, TemplateDrawer } from './TemplateDrawer'
 
 type Opt = { id: string; label: string }
-type Data = { templates: TemplateRow[]; default: string | null; voices: Opt[]; personas: Opt[]; fixed_opening: boolean; lang_step: boolean }
+type Data = { templates: TemplateRow[]; voices: Opt[]; personas: Opt[] }
 
 /** AI Calling → Templates: the call scripts on HelloRix, ready-made ones to start from, add / edit in the side drawer */
 export function AiTemplatesPage() {
@@ -25,7 +25,7 @@ export function AiTemplatesPage() {
   const business = selected?.name ?? tenant.app_name
   const load = useCallback(() => {
     hx<Data>(tenant.id, { action: 'templates' }).then(setData, (e: Error) => {
-      setData({ templates: [], default: null, voices: [], personas: [], fixed_opening: true, lang_step: true })
+      setData({ templates: [], voices: [], personas: [] })
       setNotice({ error: e.message })
     })
   }, [tenant.id])
@@ -53,6 +53,8 @@ export function AiTemplatesPage() {
           give_up: str('give_up'),
           voice_id: str('voice_id'),
           persona_id: str('persona_id'),
+          fixed_opening: !!x.fixed_opening,
+          lang_step: !!x.lang_step,
         },
       })
     } catch (e) {
@@ -91,7 +93,6 @@ export function AiTemplatesPage() {
               <article key={t.id} className="card card-pad ac-card">
                 <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
                   <b>{t.name}</b>
-                  {data.default === t.id && <span className="badge badge-success">Default</span>}
                   <span className="badge badge-muted">{kindLabel(t.kind)}</span>
                 </div>
                 <div className="muted small ac-clip">{t.prompt_mode === 'raw' ? 'Full prompt' : t.purpose || '—'}</div>
@@ -146,8 +147,6 @@ export function AiTemplatesPage() {
           business={business}
           voices={data.voices}
           personas={data.personas}
-          fixedOpening={data.fixed_opening}
-          langStep={data.lang_step}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {
             setDrawer(null)

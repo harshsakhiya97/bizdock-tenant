@@ -7,7 +7,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { FIELD_TYPES, hx, KINDS, type CollectField, type TemplateForm } from './api'
 
 type Opt = { id: string; label: string }
-export const emptyForm = (): TemplateForm => ({ name: '', kind: 'qualify', purpose: '', ask: '', scenario: '', collect: [], if_they_push_back: '', closing: '', give_up: '', voice_id: '', persona_id: '' })
+export const emptyForm = (): TemplateForm => ({ name: '', kind: 'qualify', purpose: '', ask: '', scenario: '', collect: [], if_they_push_back: '', closing: '', give_up: '', voice_id: '', persona_id: '', fixed_opening: true, lang_step: true })
 
 /**
  * Add / edit an AI calling template (a HelloRix script): Guided form (opening & purpose, what to ask, the information
@@ -19,8 +19,6 @@ export function TemplateDrawer({
   business,
   voices,
   personas,
-  fixedOpening,
-  langStep,
   onClose,
   onSaved,
 }: {
@@ -31,8 +29,6 @@ export function TemplateDrawer({
   business: string
   voices: Opt[]
   personas: Opt[]
-  fixedOpening: boolean
-  langStep: boolean
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
@@ -263,14 +259,27 @@ export function TemplateDrawer({
             </div>
           </div>
         </FormSection>
-        {(fixedOpening || langStep) && (
-          <Hint>
-            Added to every template (System Connections → AI Calling):{' '}
-            {fixedOpening ? 'the AI never says “Hello”: it starts with “Namaste {name} ji”, the company, why it is calling and “Kya aapke paas 2 minute hain?”, and asks when to call back if they are busy. ' : ''}
-            {langStep ? 'Then it asks Hindi or English and continues in that language; answers are saved in English. ' : ''}
-            So you don’t need to write the greeting yourself. Never put prices here that you don’t want quoted.
-          </Hint>
-        )}
+        <FormSection title="Opening and language">
+          <div className="check-box">
+            <Checkbox
+              id="at-open"
+              checked={f.fixed_opening}
+              onChange={(v) => set('fixed_opening', v)}
+              label="Fixed opening"
+              description="Never “Hello”: starts with “Namaste {name} ji”, the company, that they had sent an enquiry, and “Kya aapke paas 2 minute hain?”; if they are busy it asks when to call back (saved as callback time). You don’t write the greeting yourself."
+            />
+          </div>
+          <div className="check-box">
+            <Checkbox
+              id="at-lang"
+              checked={f.lang_step}
+              onChange={(v) => set('lang_step', v)}
+              label="Ask Hindi or English first"
+              description="After the opening it asks which language they prefer and goes on in it; the answers are saved in English."
+            />
+          </div>
+          <Hint>Never put prices here that you don’t want quoted.</Hint>
+        </FormSection>
       </div>
     </Drawer>
   )

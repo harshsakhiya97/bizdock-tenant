@@ -31,6 +31,9 @@ export type TemplateForm = {
   give_up: string
   voice_id: string
   persona_id: string
+  /** Rohan's fixed opening ("Namaste {name} ji…", 2 minutes?) and the Hindi / English question, added on save */
+  fixed_opening: boolean
+  lang_step: boolean
 }
 export type TemplateRow = { id: string; name: string; kind: string | null; version: number | null; status: string | null; purpose: string | null; prompt_mode: string | null; collect: CollectField[] | null }
 
@@ -131,7 +134,7 @@ export const fieldLabel = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c)
 /** ready-made templates (from Rohan), filled with the business name; checked in the editor before saving */
 export function readyMade(co: string) {
   const push = `If they ask the price or fees: say our team will share the exact details and offers on call or WhatsApp; never quote a price yourself. If they say "send details on WhatsApp": agree, confirm this is their WhatsApp number, and say the ${co} team will send it today. If they are busy: ask for a good time to call back.`
-  const t = (f: Partial<TemplateForm>): TemplateForm => ({ name: '', kind: 'qualify', purpose: '', ask: '', scenario: '', collect: [], if_they_push_back: push, closing: '', give_up: 'Thank them politely and end the call.', voice_id: '', persona_id: '', ...f })
+  const t = (f: Partial<TemplateForm>): TemplateForm => ({ name: '', kind: 'qualify', purpose: '', ask: '', scenario: '', collect: [], if_they_push_back: push, closing: '', give_up: 'Thank them politely and end the call.', voice_id: '', persona_id: '', fixed_opening: true, lang_step: true, ...f })
   return [
     {
       id: 'qualify',
