@@ -187,6 +187,7 @@ export function BookingCalendarPage() {
         storageKey="bookings.view"
         canAdd={canAdd}
         noun="bookings"
+        filtersRow
         onCreate={(x) => setDrawer({ booking: null, date: x.date, start: x.start, end: x.end })}
         onOpen={open}
         filters={
