@@ -124,13 +124,16 @@ function Shell() {
                         <span className="nav-text">{label}</span>
                         <ChevronDown size={15} className="nav-chevron" />
                       </button>
-                      {groupOpen(to) &&
-                        children.map((c) => (
-                          <NavLink key={c.to} to={c.to} className="nav-item nav-sub" title={c.label} onClick={() => setMobileOpen(false)}>
-                            <c.icon size={16} strokeWidth={1.9} />
-                            <span className="nav-text">{c.label}</span>
-                          </NavLink>
-                        ))}
+                      {groupOpen(to) && (
+                        <div className="nav-subs">
+                          {children.map((c) => (
+                            <NavLink key={c.to} to={c.to} className="nav-item nav-sub" title={c.label} onClick={() => setMobileOpen(false)}>
+                              <c.icon size={16} strokeWidth={1.9} />
+                              <span className="nav-text">{c.label}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <NavLink key={to} to={to} className="nav-item" title={label} onClick={() => setMobileOpen(false)}>
