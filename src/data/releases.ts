@@ -13,6 +13,25 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.27',
+    date: '2026-11-20',
+    title: 'My Calendar, Studio Schedule, Podcast Studios, menu by Access control',
+    summary: 'Meetings is My Calendar now: meetings and the webinars you host, with webinars set up right there. The Booking / Podcast Calendar is the Studio Schedule, across the podcast studios. The side menu follows Access control only.',
+    new: [
+      'Masters → Podcast Studios: studio name and Default (one default). Podcast Studio - Vakola is the default.',
+      'Paid Podcast and Studio Rental bookings: a Podcast Studio dropdown (the default studio first); every existing studio booking is on Vakola. “Studio not available” is per studio, across both businesses.',
+      'My Calendar (was Meetings): filters for Team member (My calendar by default; All team members or one person for whoever may see others), Type (Lead / Team / Webinars), Category (lead meetings) and Status. The webinars a team member hosts show on their calendar.',
+      'My Calendar → Schedule (or drag over free time): Lead, Team (internal) or Webinar. Webinar holds the whole setup: Webinar business (the one picked on top first), host (a team member), Zoom, dates, WhatsApp groups and lead categories. Type: Webinars also lists the webinars to edit, switch on / off or delete.',
+      'Access control: My Calendar (with See team members’ calendars, edit / delete others’ meetings, Add and edit webinars), Bookings and Orders each on their own.',
+    ],
+    improved: [
+      'Studio Schedule (was Booking / Podcast Calendar): every Paid Podcast and Studio Rental booking whatever business is picked on top, a Studio filter and the studio on each booking; a new booking asks which business it is for.',
+      'The side menu follows Access control only, not the business picked on top. Nobody lost anything: every role has My Calendar; whoever had bookings has Bookings, Orders and webinars too.',
+      'My Calendar: the dates and List / Day / Week / Month on the first row, the filters on the second.',
+    ],
+    removed: ['Webinar Calendar page (webinars are in My Calendar) and Masters → Webinar hosts (the host is a team member).', 'The booking calendar widget filter on meetings.'],
+  },
+  {
     version: '0.26',
     date: '2026-11-20',
     title: 'One level of businesses, Gemini AI, Dashboard date range',
