@@ -141,7 +141,9 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
         <>
           <div className="cb-paths">
             {AI_EXITS.map((x) => (
-              <span key={x.id}>{x.label}</span>
+              <span key={x.id} title={x.label}>
+                {x.label}
+              </span>
             ))}
           </div>
           {AI_EXITS.map((x, i) => (

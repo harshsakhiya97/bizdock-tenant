@@ -349,7 +349,7 @@ function AiCallTemplate({ d, onChange, disabled }: { d: Record<string, unknown>;
       <Label htmlFor="cb-ai-tpl" required>
         Template
       </Label>
-      <Select id="cb-ai-tpl" value={id} disabled={disabled || !list?.length} onChange={(e) => onChange({ ...d, objective_id: e.target.value, objective_name: list?.find((t) => t.id === e.target.value)?.name ?? '' })}>
+      <Select id="cb-ai-tpl" value={id} title={list?.length ? (list.find((t) => t.id === id)?.name ?? '') : msg} disabled={disabled || !list?.length} onChange={(e) => onChange({ ...d, objective_id: e.target.value, objective_name: list?.find((t) => t.id === e.target.value)?.name ?? '' })}>
         <option value="">{list?.length ? '— select —' : msg}</option>
         {(list ?? []).map((t) => (
           <option key={t.id} value={t.id}>
