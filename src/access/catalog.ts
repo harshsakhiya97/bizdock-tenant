@@ -83,7 +83,6 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       },
 
       { key: 'booking_list', label: 'Bookings', open: { kind: 'action', module: 'booking_list', action: 'view', hint: 'The list of bookings (add / edit / delete as in Studio Schedule)' }, actions: [] },
-      { key: 'orders', label: 'Orders', open: { kind: 'action', module: 'orders', action: 'view', hint: 'Orders and brand deals (add / edit / delete as in Studio Schedule)' }, actions: [] },
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
       {
         key: 'funnels',

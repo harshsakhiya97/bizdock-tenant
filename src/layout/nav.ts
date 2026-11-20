@@ -33,7 +33,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
       { to: '/meetings', label: 'My Calendar', icon: Handshake, module: 'calendar' },
       { to: '/bookings', label: 'Studio Schedule', icon: CalendarCheck, module: 'bookings' },
-      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'orders' },
+      // Orders: hidden for now (the page stays at /orders)
       { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
