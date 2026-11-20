@@ -1,4 +1,4 @@
-import { Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { Zap, Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -37,9 +37,9 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       {
-        to: '/funnels-workflows',
-        label: 'Funnels & Workflows',
-        icon: Workflow,
+        to: '/automation',
+        label: 'Automation',
+        icon: Zap,
         children: [
           { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
           { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
