@@ -18,6 +18,8 @@ import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
 import { FunnelGoogleTab } from './FunnelGoogleTab'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
+import { leadCols } from '@/leads/statCols'
 import { db } from '@/lib/supabase'
 import { FunnelPaymentsTab } from './FunnelPaymentsTab'
 import { FunnelAdsReport } from './FunnelAdsReport'
@@ -135,6 +137,10 @@ export function FunnelPage() {
   const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
   const businessName = biz ? (subName ? `${biz.name} · ${subName}` : biz.name) : '—'
 
+  // overview tiles: their records in a modal
+  const [leadShow, setLeadShow] = useState<StatShow<LeadRow> | null>(null)
+  const [subShow, setSubShow] = useState<StatShow<SubmissionRow> | null>(null)
+  const leadName = useMemo(() => new Map((leads ?? []).map((l) => [l.id, [l.first_name, l.last_name].filter(Boolean).join(' ')])), [leads])
   if (funnel === undefined) return <div className="empty">Loading funnel…</div>
   if (!funnel)
     return (
@@ -163,6 +169,20 @@ export function FunnelPage() {
 
   const fromForms = (leads ?? []).filter((l) => l.webhook_id || l.landing_page_id || l.sheet_id).length
   const won = (leads ?? []).filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
+  // the tiles open their records: leads, or the form posts
+  const showLeads = (title: string, f: (l: LeadRow) => boolean) => setLeadShow({ title, rows: (leads ?? []).filter(f), cols: leadCols(members) })
+  const showPosts = () =>
+    setSubShow({
+      title: 'Form posts',
+      rows: subs.filter((x) => x.via === 'webhook'),
+      cols: [
+        { label: 'Received', render: (x) => <span className="nowrap">{new Date(x.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span> },
+        { label: 'Lead', render: (x) => (x.lead_id ? <b>{leadName.get(x.lead_id) || 'Lead'}</b> : <span className="muted">—</span>) },
+        { label: 'New / existing', render: (x) => (x.is_new ? <span className="badge badge-success">New lead</span> : <span className="badge badge-muted">Existing lead</span>) },
+        { label: 'Result', render: (x) => x.result || x.action || <span className="muted">—</span> },
+        { label: 'UTM', render: (x) => <span className="small">{[x.utm_source, x.utm_campaign].filter(Boolean).join(' · ') || '—'}</span> },
+      ],
+    })
   const daysTo = event ? Math.round((new Date(`${event.event_date}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null
 
   return (
@@ -217,23 +237,25 @@ export function FunnelPage() {
           {tab === 'overview' && (
             <div className="stack">
               <div className="pl-tiles fp-tiles">
-                <div className="pl-tile">
+                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Leads', () => true)}>
                   <div className="pl-tile-label">Leads</div>
                   <div className="pl-tile-value">{leads?.length ?? '—'}</div>
                 </div>
-                <div className="pl-tile">
+                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('From forms & sheets', (l) => !!(l.webhook_id || l.landing_page_id || l.sheet_id))}>
                   <div className="pl-tile-label">From forms & sheets</div>
                   <div className="pl-tile-value">{fromForms}</div>
                 </div>
-                <div className="pl-tile">
+                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the form posts" onClick={showPosts}>
                   <div className="pl-tile-label">Form posts</div>
                   <div className="pl-tile-value">{subs.filter((s) => s.via === 'webhook').length}</div>
                 </div>
-                <div className="pl-tile">
+                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Won', (l) => stageOf.get(l.stage_id ?? '')?.kind === 'won')}>
                   <div className="pl-tile-label">Won</div>
                   <div className="pl-tile-value tone-success">{won}</div>
                 </div>
               </div>
+              <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
+              <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
 
               <FunnelAdsReport funnelId={funnel.id} leads={leads} />
 
