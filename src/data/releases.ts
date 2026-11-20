@@ -13,6 +13,24 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.28',
+    date: '2026-11-20',
+    title: 'AI Calling (HelloRix)',
+    summary: 'AI voice calls through HelloRix: call a lead or a number with a template, follow the call live, and get back the outcome, summary, answers, recording and cost. Also a workflow step that places an AI call and branches on the result.',
+    new: [
+      'System Connections → AI Calling: the HelloRix API key, After the call (Full / Outcome only) and calling hours and days (India time). Keys and Prompt & steps tabs (a Claude in Chrome prompt to make the key). The card shows this month’s calls, answered and ₹, the all-time ₹, the calling hours and the account’s calling numbers.',
+      'Side menu → AI Calling: Individual call (a lead or a typed number, and a template), Call history (every call with result, summary, talk time and ₹; click for the answers, transcript and recording) and Templates.',
+      'AI Calling → Templates: the call scripts saved on HelloRix (your existing ones show here). Guided form or Full prompt, the information to collect (up to 20 fields), objections and ending, voice and persona, “Opening and language” per template, Write it with AI (Gemini) and four ready-made templates.',
+      'Leads: Call from AI at the top and an AI Calls tab. The result sets the lead’s category (Interested → Hot, Call back → Warm, Not interested → Cold) and adds a note.',
+      'Workflows: the AI call step (a lead, a team member or a custom number, and a template). It waits for the call and goes on by Interested, Call back, Not interested or Not reached (also a failed call or no result after 3 hours). Variables: the outcome, summary and every collected answer.',
+      'Access control: AI Calling (view and place calls, Templates, whose calls they see).',
+    ],
+    improved: [
+      'Dropdowns in AI Calling are searchable.',
+      'Side menu: an open group’s sub-menu is indented with a thin guide line, so it reads apart from the main menu.',
+    ],
+  },
+  {
     version: '0.27',
     date: '2026-11-20',
     title: 'My Calendar, Studio Schedule, Podcast Studios, menu by Access control',
