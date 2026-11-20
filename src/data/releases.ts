@@ -27,8 +27,9 @@ export const releases: Release[] = [
       'Invoice numbers always come from the billing company (Company Master); with no company picked, the business’s company for that type.',
       'Dashboard: a date range (This month by default: the 1st till today) instead of the month picker; the cards, collections breakdown and lead sources follow it.',
       'Funnel report → List: Amount is without GST (hover for with GST).',
+      'Dashboard → All businesses: a card per business to compare them (leads, customers, bookings, billed, collected, outstanding, trend, converted and collected bars, follow-ups due) with Open dashboard.',
     ],
-    removed: ['Sub-businesses (and the sub-business cards on a business’s Dashboard).'],
+    removed: ['Sub-businesses (their comparison cards now compare businesses on All businesses).'],
   },
   {
     version: '0.25',
