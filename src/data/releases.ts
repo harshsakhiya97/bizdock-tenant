@@ -13,6 +13,19 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.29',
+    date: '2026-11-20',
+    title: 'AI Insights, Automation menu',
+    summary: 'An AI button on every page: a summary of the screen and a chat about it, from the full data of its lists, with names, phone numbers and emails hidden from the AI.',
+    new: [
+      'AI Insights: the AI button at the bottom right of every page. It reads the whole screen and every row of its lists (not only the page shown), starts with a summary (key numbers, what stands out, what needs attention, next steps) and answers your questions about it. A fresh chat each time; English.',
+      'Names of leads and team members are sent as “Person 1, Person 2…” and phone numbers / emails are removed; the answer shows the real names again on your screen only.',
+      'Access control → AI Insights: who sees the AI button (owners and admins already do).',
+      'System Connections → Gemini AI: Monthly AI limit (₹) and the price per 1M input / output tokens. The card shows this month’s estimated ₹ against the limit; at the limit AI Insights stops for the month.',
+    ],
+    improved: ['Side menu: Funnels and Workflows are grouped under Automation.'],
+  },
+  {
     version: '0.28',
     date: '2026-11-20',
     title: 'AI Calling (HelloRix)',
