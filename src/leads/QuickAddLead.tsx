@@ -49,7 +49,8 @@ export function QuickAddLead({
   async function save() {
     if (!bizId) return setError('Pick the business.')
     if (!name.trim()) return setError('Name is required.')
-    if (!phoneValid(phone)) return setError('Enter a valid 10-digit mobile number.')
+    // the phone is optional; when given it must be a valid mobile number
+    if (phone.trim() && !phoneValid(phone)) return setError('Enter a valid 10-digit mobile number, or leave it empty.')
     setBusy(true)
     setError(null)
     try {
@@ -59,7 +60,7 @@ export function QuickAddLead({
         stage_id: funnel?.funnel_stages[0]?.id ?? '',
         first_name: first,
         last_name: name.trim().slice(first.length).trim(),
-        phone: fullPhone(phone),
+        phone: phone.trim() ? fullPhone(phone) : '',
         whatsapp: '',
         email: '',
         city: city.trim(),
@@ -113,7 +114,7 @@ export function QuickAddLead({
             <TextInput id="q-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           </div>
           <div>
-            <Label htmlFor="q-phone" required>
+            <Label htmlFor="q-phone">
               Phone
             </Label>
             <PhoneInput id="q-phone" value={phone} onChange={setPhone} />
