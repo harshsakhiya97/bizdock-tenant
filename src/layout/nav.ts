@@ -36,8 +36,15 @@ export const navSections: { title: string; /** no heading shown in the side menu
       // Orders: hidden for now (the page stays at /orders)
       { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
-      { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
-      { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
+      {
+        to: '/funnels-workflows',
+        label: 'Funnels & Workflows',
+        icon: Workflow,
+        children: [
+          { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
+          { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
+        ],
+      },
       {
         to: '/whatsapp',
         label: 'WhatsApp',

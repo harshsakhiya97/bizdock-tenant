@@ -60,7 +60,11 @@ function Shell() {
     .filter((s) => s.items.length > 0)
   // accordions: the one holding the open page starts open
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
-  const groupOpen = (to: string) => openGroups[to] ?? pathname.startsWith(`${to}/`)
+  // a group holds the open page when the path is under it or under one of its items (Funnels & Workflows)
+  const inGroup = (to: string) =>
+    pathname.startsWith(`${to}/`) ||
+    !!navSections.flatMap((s) => s.items).find((i) => i.to === to)?.children?.some((c) => pathname === c.to || pathname.startsWith(`${c.to}/`))
+  const groupOpen = (to: string) => openGroups[to] ?? inGroup(to)
   const tabs = [...sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i])), { to: '/profile', label: 'My Profile', icon: User }].filter(
     (i) => tabNames[i.to],
   )
@@ -116,7 +120,7 @@ function Shell() {
                     <div key={to} className={cn('nav-group', groupOpen(to) && 'is-open')}>
                       <button
                         type="button"
-                        className={cn('nav-item nav-group-head', pathname.startsWith(`${to}/`) && 'is-current')}
+                        className={cn('nav-item nav-group-head', inGroup(to) && 'is-current')}
                         title={label}
                         aria-expanded={groupOpen(to)}
                         onClick={() => setOpenGroups((g) => ({ ...g, [to]: !groupOpen(to) }))}
