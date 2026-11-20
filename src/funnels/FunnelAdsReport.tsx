@@ -6,7 +6,7 @@ import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } 
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { MetaSync } from './MetaSync'
-import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
+import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
 import { db } from '@/lib/supabase'
 
@@ -17,7 +17,7 @@ const short = (s: string) => at(s).toLocaleDateString('en-IN', { day: 'numeric',
 /** a lead's day: its creation date in India time */
 /** '14:30' → '2:30 pm' */
 const clockOf = (t: string) => (t ? new Date(2000, 0, 1, Number(t.slice(0, 2)), Number(t.slice(3, 5))).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '')
-const leadDay = (ts: string) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+export const leadDay = (ts: string) => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 
 type By = 'day' | 'week' | 'month'
 type Row = {
@@ -39,8 +39,8 @@ type Lead = { id: string; created_at: string; utm_source?: string | null; is_arc
 /** where a lead came from, by its UTM source: Facebook / Instagram (fb, ig…) or Google (google, adwords, youtube…) */
 const FB_UTM = new Set(['fb', 'ig', 'facebook', 'instagram', 'meta', 'an', 'msg', 'messenger', 'threads', 'th'])
 const GOOGLE_UTM = new Set(['google', 'adwords', 'gads', 'googleads', 'google_ads', 'youtube', 'yt', 'gdn'])
-type Src = 'all' | 'fb' | 'google'
-const fromSrc = (l: Lead, s: Src) => s === 'all' || (s === 'fb' ? FB_UTM : GOOGLE_UTM).has(String(l.utm_source ?? '').trim().toLowerCase())
+export type Src = 'all' | 'fb' | 'google'
+export const fromSrc = (l: Pick<Lead, 'utm_source'>, s: Src) => s === 'all' || (s === 'fb' ? FB_UTM : GOOGLE_UTM).has(String(l.utm_source ?? '').trim().toLowerCase())
 const who = (l: Lead) => [l.first_name, l.last_name].filter(Boolean).join(' ') || l.phone || 'Lead'
 const last10 = (p: string | null | undefined) => {
   const d = (p ?? '').replace(/\D/g, '')
@@ -54,16 +54,27 @@ const pct = (a: number, b: number, what: string) => <span title={`${what}: ${a} 
  * Funnel → Overview: the 3D funnel (Facebook reach → clicks → page views → leads → stages → revenue) and its numbers, for a
  * period; or the List: spend (with GST), leads (by their creation date) and CPL per day / week / month.
  */
-export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?: Lead[] | null }) {
+export function FunnelAdsReport({
+  funnelId,
+  leads,
+  range,
+  setRange,
+  src,
+  setSrc,
+}: {
+  funnelId: string
+  leads?: Lead[] | null
+  /** the period and the source: kept by the funnel page, so the Overview tiles follow them too */
+  range: Range
+  setRange: (r: Range) => void
+  src: Src
+  setSrc: (s: Src) => void
+}) {
   const tenant = useTenant()
-  // same presets as Facebook Ads Manager (Last 30 days ends yesterday), so the numbers match
-  const [range, setRange] = useState<Range>(() => presetRange('last30'))
   const { from, to } = range
   const [reload, setReload] = useState(0)
   const [view, setView] = useState<'funnel' | 'list'>('funnel')
   const [by, setBy] = useState<By>('day')
-  // List: Overall (Facebook + Google spend, every lead), Facebook or Google (their spend, the leads with that UTM source)
-  const [src, setSrc] = useState<Src>('all')
   const [gDays, setGDays] = useState<{ day: string; spend: number; spend_gst: number }[]>([])
   useEffect(() => {
     funnelGoogleDays(tenant.id, funnelId, from, to).then(

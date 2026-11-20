@@ -22,13 +22,13 @@ import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { leadCols } from '@/leads/statCols'
 import { db } from '@/lib/supabase'
 import { FunnelPaymentsTab } from './FunnelPaymentsTab'
-import { FunnelAdsReport } from './FunnelAdsReport'
+import { FunnelAdsReport, fromSrc, leadDay, type Src } from './FunnelAdsReport'
 import { listWorkflows } from '@/workflows/api'
 import { funnelCampaignCount } from '@/meta/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
-import { DateRangePicker, isoDay, presetRange, type Range } from '@/components/DateRange'
+import { DateRangePicker, isoDay, presetRange, rangeLabel, type Range } from '@/components/DateRange'
 import { SpendLines, type Line } from './SpendLines'
 import { TEMPERATURES } from '@/leads/labels'
 
@@ -63,6 +63,10 @@ export function FunnelPage() {
   const [sheets, setSheets] = useState<FunnelSheet[] | null>(null)
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
+  // Overview: the funnel report's period and source (Overall / Facebook / Google); the tiles above it follow them too.
+  // Same presets as Facebook Ads Manager (Last 30 days ends yesterday), so the numbers match
+  const [repRange, setRepRange] = useState<Range>(() => presetRange('last30'))
+  const [repSrc, setRepSrc] = useState<Src>('all')
   // Leads tab: a date range (lead date), and Graph (leads per day, a line per category) or List
   const [leadRange, setLeadRange] = useState<Range>(() => presetRange('last30'))
   const [leadView, setLeadView] = useState<'graph' | 'list'>('graph')
@@ -167,14 +171,22 @@ export function FunnelPage() {
     navigate(`/leads?open=${leadId}`)
   }
 
-  const fromForms = (leads ?? []).filter((l) => l.webhook_id || l.landing_page_id || l.sheet_id).length
-  const won = (leads ?? []).filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
+  // the tiles: the leads created in the report's period, from its source (and their form posts)
+  const inRep = (ts: string) => {
+    const d = leadDay(ts)
+    return d >= repRange.from && d <= repRange.to
+  }
+  const tileLeads = (leads ?? []).filter((l) => inRep(l.created_at) && fromSrc(l, repSrc))
+  const leadOf = new Map((leads ?? []).map((l) => [l.id, l]))
+  const tilePosts = subs.filter((x) => x.via === 'webhook' && inRep(x.created_at) && (repSrc === 'all' || (!!x.lead_id && !!leadOf.get(x.lead_id) && fromSrc(leadOf.get(x.lead_id)!, repSrc))))
+  const fromForms = tileLeads.filter((l) => l.webhook_id || l.landing_page_id || l.sheet_id).length
+  const won = tileLeads.filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
   // the tiles open their records: leads, or the form posts
-  const showLeads = (title: string, f: (l: LeadRow) => boolean) => setLeadShow({ title, rows: (leads ?? []).filter(f), cols: leadCols(members) })
+  const showLeads = (title: string, f: (l: LeadRow) => boolean) => setLeadShow({ title, rows: tileLeads.filter(f), cols: leadCols(members) })
   const showPosts = () =>
     setSubShow({
       title: 'Form posts',
-      rows: subs.filter((x) => x.via === 'webhook'),
+      rows: tilePosts,
       cols: [
         { label: 'Received', render: (x) => <span className="nowrap">{new Date(x.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span> },
         { label: 'Lead', render: (x) => (x.lead_id ? <b>{leadName.get(x.lead_id) || 'Lead'}</b> : <span className="muted">—</span>) },
@@ -236,10 +248,13 @@ export function FunnelPage() {
         <div className="panel-body">
           {tab === 'overview' && (
             <div className="stack">
+              <div className="muted small">
+                {rangeLabel(repRange)} · {repSrc === 'all' ? 'Overall (Facebook + Google)' : repSrc === 'fb' ? 'Facebook' : 'Google'}: the Funnel report’s period and source (change them below).
+              </div>
               <div className="pl-tiles fp-tiles">
                 <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Leads', () => true)}>
                   <div className="pl-tile-label">Leads</div>
-                  <div className="pl-tile-value">{leads?.length ?? '—'}</div>
+                  <div className="pl-tile-value">{leads ? tileLeads.length : '—'}</div>
                 </div>
                 <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('From forms & sheets', (l) => !!(l.webhook_id || l.landing_page_id || l.sheet_id))}>
                   <div className="pl-tile-label">From forms & sheets</div>
@@ -247,7 +262,7 @@ export function FunnelPage() {
                 </div>
                 <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the form posts" onClick={showPosts}>
                   <div className="pl-tile-label">Form posts</div>
-                  <div className="pl-tile-value">{subs.filter((s) => s.via === 'webhook').length}</div>
+                  <div className="pl-tile-value">{tilePosts.length}</div>
                 </div>
                 <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Won', (l) => stageOf.get(l.stage_id ?? '')?.kind === 'won')}>
                   <div className="pl-tile-label">Won</div>
@@ -257,7 +272,7 @@ export function FunnelPage() {
               <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
               <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
 
-              <FunnelAdsReport funnelId={funnel.id} leads={leads} />
+              <FunnelAdsReport funnelId={funnel.id} leads={leads} range={repRange} setRange={setRepRange} src={repSrc} setSrc={setRepSrc} />
 
               <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>
