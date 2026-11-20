@@ -344,7 +344,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
       <td className="num">{pct(r.showed, r.booked, 'Show ups ÷ bookings')}</td>
     </>
   )
-  const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(ex)} without GST + ${inr(gstAmt - ex)} GST` : undefined}>{gstAmt ? inr(gstAmt) : '—'}</span>
+  const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(gstAmt)} with GST (${inr(gstAmt - ex)} GST)` : undefined}>{ex ? inr(ex) : '—'}</span>
   const cpl = (gstAmt: number, ex: number, n: number, onClick?: () => void) =>
     n && gstAmt ? (
       <span title={`${inr(ex / n)} without GST`} onClick={onClick}>
@@ -406,7 +406,7 @@ export function FunnelAdsReport({ funnelId, leads }: { funnelId: string; leads?:
           <>
             <div className="muted small">
               {src === 'all' ? 'Overall: Facebook + Google spend, every lead. ' : src === 'fb' ? 'Facebook: Facebook spend, the leads whose UTM source is fb / ig / facebook / instagram. ' : 'Google: Google spend, the leads whose UTM source is google / adwords / youtube. '}
-              By the leads created in each row: Amount spent with GST (hover: without GST) · Lead trend = leads vs the row below · CPL / CPP / Cost per booking / Cost per show up = amount spent ÷
+              By the leads created in each row: Amount spent without GST (hover: with GST) · Lead trend = leads vs the row below · CPL / CPP / Cost per booking / Cost per show up = amount spent ÷
               leads / payments / bookings / show ups · Payments = Razorpay payments (the funnel’s products in the Payments tab, else all) by those leads’ phone or email · Booking = those leads with a
               meeting · Show up = meeting done · Converted = marked Closed · Revenue = their invoices’ total + Razorpay received.
             </div>
