@@ -1685,3 +1685,5 @@ tfoot td {
 .pl-tile.is-clickable { cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s; }
 .pl-tile.is-clickable:hover { border-color: var(--brand); }
 .cal-filter { width: 158px; min-width: 0; flex: none; }
+/* calendar filters on a second line (My Calendar): row 1 dates + view switch, row 2 the filters */
+.panel-bar > .cal-filters { flex: 1 1 100%; flex-wrap: wrap; gap: 8px; }

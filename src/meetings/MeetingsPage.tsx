@@ -303,6 +303,7 @@ export function MeetingsPage() {
         storageKey="meetings.view"
         canAdd
         noun="meetings"
+        filtersRow
         onCreate={(x) => schedule({ date: x.date, start: x.start, end: x.end })}
         onOpen={(id) => {
           if (id.startsWith('planned:')) {

@@ -63,6 +63,7 @@ export function SlotCalendar({
   onCreate,
   onOpen,
   filters,
+  filtersRow,
   noun,
 }: {
   items: SlotItem[] | null
@@ -75,6 +76,8 @@ export function SlotCalendar({
   onOpen: (id: string) => void
   /** extra controls next to the view switch */
   filters?: ReactNode
+  /** the filters always on their own line under the dates (so the layout doesn't jump when one shows or hides) */
+  filtersRow?: boolean
   /** plural, for "No bookings this month." */
   noun: string
 }) {
@@ -362,7 +365,7 @@ export function SlotCalendar({
           <b className="cal-label">{label}</b>
         </div>
         <div className="row">
-          {filters}
+          {!filtersRow && filters}
           <div className="seg">
             {VIEWS.map((v) => (
               <button key={v.id} type="button" className={cn(view === v.id && 'is-active')} onClick={() => pickView(v.id)}>
@@ -371,6 +374,7 @@ export function SlotCalendar({
             ))}
           </div>
         </div>
+        {filtersRow && filters && <div className="row cal-filters">{filters}</div>}
       </div>
 
       {!items ? (
