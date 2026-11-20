@@ -28,6 +28,7 @@ export const releases: Release[] = [
     improved: [
       'Dropdowns in AI Calling are searchable.',
       'Side menu: an open group’s sub-menu is indented with a thin guide line, so it reads apart from the main menu.',
+      'Paid Podcast dashboard: the date range (this month, the 1st till today, by default) instead of the month picker; the tiles and the funnel follow it.',
     ],
   },
   {
