@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Plus, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { SearchSelect } from '@/components/SearchSelect'
 import { useTenant } from '@/tenant/useTenant'
 import { FIELD_TYPES, hx, KINDS, type CollectField, type TemplateForm } from './api'
 
@@ -130,13 +131,7 @@ export function TemplateDrawer({
             </div>
             <div>
               <Label htmlFor="at-kind">Type</Label>
-              <Select id="at-kind" value={f.kind} onChange={(e) => set('kind', e.target.value)}>
-                {KINDS.map(([k, l]) => (
-                  <option key={k} value={k}>
-                    {l}
-                  </option>
-                ))}
-              </Select>
+              <SearchSelect id="at-kind" value={f.kind} onChange={(v) => set('kind', v ?? 'qualify')} options={KINDS.map(([k, l]) => ({ value: k, label: l }))} searchPlaceholder="Search types…" />
             </div>
           </div>
           <div className="seg" role="radiogroup" aria-label="Script">
@@ -184,13 +179,7 @@ export function TemplateDrawer({
           {f.collect.map((c, i) => (
             <div key={i} className="ac-field">
               <TextInput aria-label="Field name" value={c.field} onChange={(e) => setField(i, { field: e.target.value.toLowerCase().replace(/[^a-z0-9_]+/g, '_') })} placeholder="field_name" />
-              <Select aria-label="Type" value={c.type} onChange={(e) => setField(i, { type: e.target.value })}>
-                {FIELD_TYPES.map(([k, l]) => (
-                  <option key={k} value={k}>
-                    {l}
-                  </option>
-                ))}
-              </Select>
+              <SearchSelect value={c.type} onChange={(v) => setField(i, { type: v ?? 'text' })} options={FIELD_TYPES.map(([k, l]) => ({ value: k, label: l }))} searchPlaceholder="Search…" />
               <TextInput aria-label="How to ask" value={c.how_to_ask ?? ''} onChange={(e) => setField(i, { how_to_ask: e.target.value })} placeholder="How to ask" />
               <Checkbox id={`at-req-${i}`} checked={!!c.required} onChange={(v) => setField(i, { required: v })} label="Required" />
               <button type="button" className="btn btn-ghost btn-icon" aria-label="Remove" onClick={() => setF((d) => ({ ...d, collect: d.collect.filter((_, j) => j !== i) }))}>
@@ -237,25 +226,11 @@ export function TemplateDrawer({
           <div className="form-grid">
             <div>
               <Label htmlFor="at-voice">Voice</Label>
-              <Select id="at-voice" value={f.voice_id} onChange={(e) => set('voice_id', e.target.value)}>
-                <option value="">Default</option>
-                {voices.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.label}
-                  </option>
-                ))}
-              </Select>
+              <SearchSelect id="at-voice" value={f.voice_id || null} onChange={(v) => set('voice_id', v ?? '')} options={[{ value: '', label: 'Default' }, ...voices.map((v) => ({ value: v.id, label: v.label }))]} placeholder="Default" searchPlaceholder="Search voices…" />
             </div>
             <div>
               <Label htmlFor="at-persona">Persona</Label>
-              <Select id="at-persona" value={f.persona_id} onChange={(e) => set('persona_id', e.target.value)}>
-                <option value="">Default</option>
-                {personas.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.label}
-                  </option>
-                ))}
-              </Select>
+              <SearchSelect id="at-persona" value={f.persona_id || null} onChange={(v) => set('persona_id', v ?? '')} options={[{ value: '', label: 'Default' }, ...personas.map((v) => ({ value: v.id, label: v.label }))]} placeholder="Default" searchPlaceholder="Search personas…" />
             </div>
           </div>
         </FormSection>

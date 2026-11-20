@@ -1083,10 +1083,15 @@ function HxField({
     )
   if (f === 'insights')
     return (
-      <Select id={`int-${f}`} value={value || 'full'} onChange={(e) => onChange(e.target.value)}>
-        <option value="full">Full: outcome, summary and answers</option>
-        <option value="outcome">Outcome only</option>
-      </Select>
+      <SearchSelect
+        id={`int-${f}`}
+        value={value || 'full'}
+        onChange={(v) => onChange(v ?? 'full')}
+        options={[
+          { value: 'full', label: 'Full: outcome, summary and answers' },
+          { value: 'outcome', label: 'Outcome only' },
+        ]}
+      />
     )
   if (f === 'hours_start' || f === 'hours_end') return <TextInput id={`int-${f}`} type="time" step={900} value={value} onChange={(e) => onChange(e.target.value)} />
   if (f === 'hours_days') {

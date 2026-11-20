@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { PhoneOutgoing } from 'lucide-react'
 import { Button } from '@/components/Button'
-import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput } from '@/components/Field'
 import { PhoneInput, phoneValid } from '@/components/PhoneInput'
 import { SearchSelect } from '@/components/SearchSelect'
 import { useTenant } from '@/tenant/useTenant'
@@ -114,14 +114,15 @@ export function CallForm({ lead, leads, onPlaced }: { lead?: LeadOpt | null; lea
         <Label htmlFor="ac-tpl" required>
           Template
         </Label>
-        <Select id="ac-tpl" value={objective} onChange={(e) => setObjective(e.target.value)} disabled={!templates?.length}>
-          <option value="">{templates?.length ? '— select —' : tplMsg}</option>
-          {(templates ?? []).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
+        <SearchSelect
+          id="ac-tpl"
+          value={objective || null}
+          onChange={(v) => setObjective(v ?? '')}
+          disabled={!templates?.length}
+          options={(templates ?? []).map((t) => ({ value: t.id, label: t.name }))}
+          placeholder={templates?.length ? '— select —' : tplMsg}
+          searchPlaceholder="Search templates…"
+        />
       </div>
       {error && <div className="alert alert-error">{error}</div>}
       <div>

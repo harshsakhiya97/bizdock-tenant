@@ -349,15 +349,15 @@ function AiCallTemplate({ d, onChange, disabled }: { d: Record<string, unknown>;
       <Label htmlFor="cb-ai-tpl" required>
         Template
       </Label>
-      <Select id="cb-ai-tpl" value={id} title={list?.length ? (list.find((t) => t.id === id)?.name ?? '') : msg} disabled={disabled || !list?.length} onChange={(e) => onChange({ ...d, objective_id: e.target.value, objective_name: list?.find((t) => t.id === e.target.value)?.name ?? '' })}>
-        <option value="">{list?.length ? '— select —' : msg}</option>
-        {(list ?? []).map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-        {id && list && !list.some((t) => t.id === id) && <option value={id}>{String(d.objective_name || id)}</option>}
-      </Select>
+      <SearchSelect
+        id="cb-ai-tpl"
+        value={id || null}
+        disabled={disabled || !list?.length}
+        placeholder={list?.length ? '— select —' : msg}
+        searchPlaceholder="Search templates…"
+        options={[...(list ?? []).map((t) => ({ value: t.id, label: t.name })), ...(id && list && !list.some((t) => t.id === id) ? [{ value: id, label: String(d.objective_name || id) }] : [])]}
+        onChange={(v) => onChange({ ...d, objective_id: v ?? '', objective_name: list?.find((t) => t.id === v)?.name ?? '' })}
+      />
     </div>
   )
 }
