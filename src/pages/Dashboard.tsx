@@ -1,7 +1,8 @@
 import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { ChevronLeft, ChevronRight, Phone, Plus, SquarePen } from 'lucide-react'
+import { Phone, Plus, SquarePen } from 'lucide-react'
+import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { makesCustomer, podcastCheck } from '@/leads/customers'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
@@ -25,8 +26,9 @@ import { useTenant } from '@/tenant/useTenant'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
-const shortMonth = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+const dm = (d: string, year = false) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) })
+/** 1 Nov – 20 Nov 2026 (or one day) */
+const rangeText = (r: Range) => (r.from === r.to ? dm(r.from, true) : `${dm(r.from, r.from.slice(0, 4) !== r.to.slice(0, 4))} – ${dm(r.to, true)}`)
 const dayMonth = (iso: string) => new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
 const hoursOf = (b: BookingRow) => {
   const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
@@ -47,7 +49,9 @@ function MonthDashboard() {
   const { selected, sub, inScope } = useBusiness()
   const refs = useBookingRefs()
   const today = isoDay(new Date())
-  const [month, setMonth] = useState(today.slice(0, 7))
+  // default: this month, the 1st till today
+  const [range, setRange] = useState<Range>(() => presetRange('thisMonth'))
+  const { from, to } = range
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [fus, setFus] = useState<FollowUpRow[]>([])
   const [bookings, setBookings] = useState<BookingRow[]>([])
@@ -72,7 +76,7 @@ function MonthDashboard() {
     const leadIds = new Set(L.map((l) => l.id))
     const B = bookings.filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled')
     const F = fus.filter((f) => leadIds.has(f.lead_id))
-    const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 7) === month
+    const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) >= from && iso.slice(0, 10) <= to
     const stageKind = new Map(refs.funnels.flatMap((f) => f.funnel_stages.map((s) => [s.id, s] as const)))
     // same rule as the Customers page (Paid Podcast: once a payment is received)
     const isPodcast = podcastCheck(businesses)
@@ -104,7 +108,7 @@ function MonthDashboard() {
     const logged = F.filter((f) => f.status === 'done' && inMonth(f.completed_at ?? f.due_at)).length
 
     // bookings this month
-    const mb = B.filter((b) => b.booking_date.slice(0, 7) === month)
+    const mb = B.filter((b) => inMonth(b.booking_date))
     const completed = mb.filter((b) => b.status === 'completed').length
     const upcoming = mb.filter((b) => b.booking_date >= today && b.status !== 'completed')
     const hours = mb.reduce((s, b) => s + hoursOf(b), 0)
@@ -116,13 +120,13 @@ function MonthDashboard() {
     const billed = mb.reduce((s, b) => s + Number(b.total_amount), 0)
     const pendingMonth = mb.reduce((s, b) => s + Math.max(0, b.total_amount - b.paid_amount), 0)
     const outstanding = B.filter((b) => b.status === 'confirmed' || b.status === 'completed').reduce((s, b) => s + Math.max(0, b.total_amount - b.paid_amount), 0)
-    const split = (fn: (bm: string) => boolean) => {
-      const ps = paidInMonth.filter((p) => fn(p.booking.booking_date.slice(0, 7)))
+    const split = (fn: (bd: string) => boolean) => {
+      const ps = paidInMonth.filter((p) => fn(p.booking.booking_date.slice(0, 10)))
       return { amount: ps.reduce((s, p) => s + Number(p.amount), 0), count: ps.length }
     }
-    const fromThis = split((bm) => bm === month)
-    const fromPrev = split((bm) => bm < month)
-    const advance = split((bm) => bm > month)
+    const fromThis = split((bd) => bd >= from && bd <= to)
+    const fromPrev = split((bd) => bd < from)
+    const advance = split((bd) => bd > to)
 
     // enquiry → customer: this month's enquiries with a confirmed / completed booking
     const converted = customersThisMonth
@@ -135,20 +139,17 @@ function MonthDashboard() {
     }
     const sources = [...src.entries()].sort((a, b) => b[1] - a[1])
 
-    const monthEnd = `${month}-31`
-    const shoots = B.filter((b) => b.booking_date >= today && b.booking_date <= monthEnd && b.booking_date.slice(0, 7) === month).sort((a, b) =>
+    // from today till the end of the range's last month
+    const [ty, tm] = to.split('-').map(Number)
+    const monthEnd = isoDay(new Date(ty, tm, 0))
+    const shoots = B.filter((b) => b.booking_date >= today && b.booking_date >= from && b.booking_date <= monthEnd).sort((a, b) =>
       (a.booking_date + a.start_time).localeCompare(b.booking_date + b.start_time),
     )
 
     return { monthLeads, open, lost, action, logged, mb, completed, upcoming, hours, collected, billed, pendingMonth, outstanding, fromThis, fromPrev, advance, converted, sources, shoots, stageKind }
-  }, [leads, fus, bookings, refs.funnels, refs.sources, inScope, month, today, businesses])
+  }, [leads, fus, bookings, refs.funnels, refs.sources, inScope, from, to, today, businesses])
 
-  const shiftMonth = (dir: number) => {
-    const [y, m] = month.split('-').map(Number)
-    const n = new Date(y, m - 1 + dir, 1)
-    setMonth(`${n.getFullYear()}-${pad(n.getMonth() + 1)}`)
-  }
-  const ml = shortMonth(month)
+  const ml = rangeText(range)
   const title = sub?.name ?? selected?.name ?? 'Dashboard'
   const pct = d.monthLeads.length ? Math.round((d.converted / d.monthLeads.length) * 100) : 0
   const maxSrc = Math.max(1, ...d.sources.map(([, n]) => n))
@@ -161,15 +162,9 @@ function MonthDashboard() {
     <>
       <div className="db-top">
         <div className="row" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-outline btn-icon" aria-label="Previous month" onClick={() => shiftMonth(-1)}>
-            <ChevronLeft size={16} />
-          </button>
-          <input className="input db-month" type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
-          <button type="button" className="btn btn-outline btn-icon" aria-label="Next month" onClick={() => shiftMonth(1)}>
-            <ChevronRight size={16} />
-          </button>
+          <DateRangePicker value={range} onChange={setRange} future />
           <span className="muted">
-            {title} · showing <b>{monthLabel(month)}</b>
+            {title} · showing <b>{ml}</b>
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
@@ -188,7 +183,7 @@ function MonthDashboard() {
       <Flash msg={notice} />
 
       {selected && !sub && selected.subs.length > 0 && (
-        <SubBusinessCards business={selected} month={month} leads={leads} bookings={bookings} fus={fus} />
+        <SubBusinessCards business={selected} from={from} to={to} leads={leads} bookings={bookings} fus={fus} />
       )}
 
       <div className="db-cards">
@@ -235,7 +230,7 @@ function MonthDashboard() {
           <b>{pct}%</b>
           <span>Lead to customer</span>
           <small>
-            {d.converted} of {d.monthLeads.length} leads this month became customers
+            {d.converted} of {d.monthLeads.length} leads in {ml} became customers
           </small>
         </Link>
       </div>
@@ -243,24 +238,24 @@ function MonthDashboard() {
       <section className="card card-pad db-section">
         <div className="db-head">
           <h3>
-            Collections breakdown <span className="muted small">· cash received in {ml}, by booking month</span>
+            Collections breakdown <span className="muted small">· cash received in {ml}, by booking date</span>
           </h3>
         </div>
         <div className="db-cards db-cards-4">
           <div className="db-card">
             <b className="tone-success">{money(d.fromThis.amount)}</b>
-            <span>From {ml} bookings</span>
-            <small>{d.fromThis.count} payments · shoots this month</small>
+            <span>From bookings in this range</span>
+            <small>{d.fromThis.count} payments · shoots in {ml}</small>
           </div>
           <div className="db-card">
             <b className="tone-success">{money(d.fromPrev.amount)}</b>
             <span>From previous bookings</span>
-            <small>{d.fromPrev.count} payments · earlier shoots</small>
+            <small>{d.fromPrev.count} payments · shoots before {dm(from, true)}</small>
           </div>
           <div className="db-card">
             <b>{money(d.advance.amount)}</b>
             <span>Advance for upcoming</span>
-            <small>{d.advance.count} payments · later shoots</small>
+            <small>{d.advance.count} payments · shoots after {dm(to, true)}</small>
           </div>
           <div className="db-card">
             <b className="tone-success">{money(d.collected)}</b>
@@ -348,7 +343,7 @@ function MonthDashboard() {
             <div className="db-head">
               <h3>Upcoming shoots</h3>
               <span className="muted small">
-                {d.shoots.length} in {ml}
+                {d.shoots.length} till {dm(isoDay(new Date(Number(to.slice(0, 4)), Number(to.slice(5, 7)), 0)), true)}
               </span>
             </div>
             {!d.shoots.length ? (
@@ -375,7 +370,7 @@ function MonthDashboard() {
               </h3>
             </div>
             {!d.sources.length ? (
-              <div className="muted">No leads this month.</div>
+              <div className="muted">No leads in {ml}.</div>
             ) : (
               <div className="stack" style={{ gap: 8 }}>
                 {d.sources.map(([name, n]) => (

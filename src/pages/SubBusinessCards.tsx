@@ -10,23 +10,26 @@ import type { LeadRow } from '@/leads/types'
 import { cn } from '@/lib/cn'
 
 const COLORS = ['#dc2626', '#7c3aed', '#0891b2', '#d97706', '#16a34a', '#2563eb']
-const prevMonth = (m: string) => {
-  const [y, mo] = m.split('-').map(Number)
-  const d = new Date(y, mo - 2, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+const pad = (n: number) => String(n).padStart(2, '0')
+const shiftDay = (d: string, n: number) => {
+  const x = new Date(`${d}T00:00:00`)
+  x.setDate(x.getDate() + n)
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`
 }
 const short = (n: number) => (n >= 100000 ? `₹${(n / 100000).toFixed(n >= 1000000 ? 0 : 1)}L` : money(n))
 
-/** Business level: one card per sub-business with its numbers for the month. */
+/** Business level: one card per sub-business with its numbers for the date range. */
 export function SubBusinessCards({
   business,
-  month,
+  from,
+  to,
   leads,
   bookings,
   fus,
 }: {
   business: Business
-  month: string
+  from: string
+  to: string
   leads: LeadRow[]
   bookings: BookingRow[]
   fus: FollowUpRow[]
@@ -34,23 +37,27 @@ export function SubBusinessCards({
   const { businesses, typeName } = useAuth()
   const { select } = useBusiness()
   const isPodcast = podcastCheck(businesses)
-  const prev = prevMonth(month)
+  // the same number of days just before the range, for the trend
+  const days = Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000) + 1
+  const pTo = shiftDay(from, -1)
+  const pFrom = shiftDay(from, -days)
+  const inR = (iso: string | null | undefined, a = from, b = to) => !!iso && iso.slice(0, 10) >= a && iso.slice(0, 10) <= b
   const now = new Date().toISOString()
 
   const cards = business.subs.map((s, i) => {
     const L = leads.filter((l) => !l.is_archived && l.business_id === business.id && l.sub_business_id === s.id)
     const ids = new Set(L.map((l) => l.id))
     const B = bookings.filter((b) => b.business_id === business.id && b.sub_business_id === s.id && b.status !== 'cancelled')
-    const monthLeads = L.filter((l) => l.created_at.slice(0, 7) === month)
-    const prevLeads = L.filter((l) => l.created_at.slice(0, 7) === prev).length
+    const monthLeads = L.filter((l) => inR(l.created_at))
+    const prevLeads = L.filter((l) => inR(l.created_at, pFrom, pTo)).length
     const customerIds = new Set(B.filter((b) => makesCustomer(b, isPodcast)).map((b) => b.lead_id))
     const customers = monthLeads.filter((l) => customerIds.has(l.id)).length
-    const mb = B.filter((b) => b.booking_date.slice(0, 7) === month)
+    const mb = B.filter((b) => inR(b.booking_date))
     const billed = mb.reduce((n, b) => n + Number(b.total_amount), 0)
-    const collected = B.flatMap((b) => b.booking_payments).filter((p) => p.status === 'paid' && p.paid_on?.slice(0, 7) === month).reduce((n, p) => n + Number(p.amount), 0)
+    const collected = B.flatMap((b) => b.booking_payments).filter((p) => p.status === 'paid' && inR(p.paid_on)).reduce((n, p) => n + Number(p.amount), 0)
     const outstanding = B.filter((b) => makesCustomer(b, isPodcast)).reduce((n, b) => n + Math.max(0, b.total_amount - b.paid_amount), 0)
     const due = fus.filter((f) => ids.has(f.lead_id) && f.status === 'pending' && f.due_at <= now).length
-    // enquiries vs last month
+    // enquiries vs the same number of days before
     const trend = !prevLeads && !monthLeads.length ? 'steady' : monthLeads.length > prevLeads * 1.1 ? 'up' : monthLeads.length < prevLeads * 0.9 ? 'down' : 'steady'
     return {
       s,
