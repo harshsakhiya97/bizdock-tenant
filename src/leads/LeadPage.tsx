@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -37,8 +37,10 @@ import { PurchaseDrawer } from '@/webinars/PurchaseDrawer'
 import { LeadPaymentsTab, listLeadPayments, type LeadPay } from '@/payments/LeadPaymentsTab'
 import { LeadInvoices, countLeadInvoices } from '@/invoices/LeadInvoices'
 import { db } from '@/lib/supabase'
+import { CallFromAiDrawer, LeadAiCalls } from '@/aicalls/LeadAiCalls'
+import { listAiCalls } from '@/aicalls/api'
 
-type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments'
+type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments' | 'ai_calls'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -57,7 +59,7 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' ? t : 'details'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' || t === 'ai_calls' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
@@ -74,10 +76,14 @@ export function LeadPage() {
   const [invCount, setInvCount] = useState<number | null>(null)
   const [removing, setRemoving] = useState(false)
   const [wa, setWa] = useState(false)
+  // AI Calling: Call from AI (the drawer) and the AI Calls tab's count
+  const [aiCall, setAiCall] = useState(false)
+  const [aiCount, setAiCount] = useState<number | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
   const load = useCallback(() => {
+    listAiCalls(tenant.id, { leadId: id }).then((c) => setAiCount(c.length), () => setAiCount(null))
     getLead(id)
       .then(setLead)
       .catch((e: Error) => {
@@ -237,6 +243,7 @@ export function LeadPage() {
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
     ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments', count: (canInv ? (invCount ?? 0) : 0) + (canPay ? directCount : 0) }] : []),
+    ...(can('ai_calling', 'view') || aiCount ? [{ id: 'ai_calls' as Tab, label: 'AI Calls', count: aiCount ?? undefined }] : []),
   ]
 
   return (
@@ -289,6 +296,11 @@ export function LeadPage() {
           {canFollow && (
             <button type="button" className="btn btn-outline" onClick={() => setTab('followups')}>
               <PhoneCall size={15} /> Log call
+            </button>
+          )}
+          {can('ai_calling', 'view') && (
+            <button type="button" className="btn btn-outline" onClick={() => setAiCall(true)}>
+              <PhoneOutgoing size={15} /> Call from AI
             </button>
           )}
           {can('leads', 'delete') && (
@@ -363,6 +375,7 @@ export function LeadPage() {
           <MeetingsTab meetings={meetings} members={members} canAdd onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
+        {tab === 'ai_calls' && <LeadAiCalls leadId={lead.id} members={members} refreshKey={refresh} onCount={setAiCount} />}
         {tab === 'payments' && (canPay || canInv) && (
           <div className="stack">
             {canPay && canInv && (
@@ -409,6 +422,18 @@ export function LeadPage() {
           onSaved={(msg) => {
             setEditing(false)
             done(msg)
+          }}
+        />
+      )}
+      {aiCall && (
+        <CallFromAiDrawer
+          lead={{ id: lead.id, name, phone: lead.phone }}
+          onClose={() => setAiCall(false)}
+          onPlaced={(c) => {
+            setAiCall(false)
+            setNotice({ ok: `Calling ${c.to_name || c.to_phone} now: the result shows in AI Calls.` })
+            setTab('ai_calls')
+            setRefresh((r) => r + 1)
           }}
         />
       )}

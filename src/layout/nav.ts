@@ -1,4 +1,4 @@
-import { Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -47,6 +47,16 @@ export const navSections: { title: string; /** no heading shown in the side menu
           { to: '/whatsapp/campaigns', label: 'Campaign', icon: Megaphone, module: 'whatsapp', action: 'campaign' },
           { to: '/whatsapp/logs', label: 'History logs', icon: ScrollText, area: 'whatsapp' },
           { to: '/whatsapp/templates', label: 'Templates', icon: MessageSquareText, module: 'whatsapp', action: 'templates', or: { module: 'whatsapp', action: 'campaign' } },
+        ],
+      },
+      {
+        to: '/ai-calling',
+        label: 'AI Calling',
+        icon: PhoneOutgoing,
+        children: [
+          { to: '/ai-calling/call', label: 'Individual call', icon: PhoneOutgoing, module: 'ai_calling' },
+          { to: '/ai-calling/logs', label: 'Call history', icon: ScrollText, area: 'ai_calls' },
+          { to: '/ai-calling/templates', label: 'Templates', icon: MessageSquareText, module: 'ai_calling', or: { module: 'ai_calling', action: 'templates' } },
         ],
       },
       {
@@ -112,6 +122,9 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/whatsapp/campaigns': { title: 'WhatsApp', crumb: 'Campaigns', icon: Megaphone },
   '/whatsapp/logs': { title: 'WhatsApp', crumb: 'History logs', icon: ScrollText },
   '/whatsapp/templates': { title: 'WhatsApp', crumb: 'Templates', icon: MessageSquareText },
+  '/ai-calling/call': { title: 'AI Calling', crumb: 'Individual call', icon: PhoneOutgoing },
+  '/ai-calling/logs': { title: 'AI Calling', crumb: 'Call history', icon: ScrollText },
+  '/ai-calling/templates': { title: 'AI Calling', crumb: 'Templates', icon: MessageSquareText },
   '/payments/logs': { title: 'Payments', crumb: 'History logs', icon: CreditCard },
   '/callyzer/logs': { title: 'Callyzer', crumb: 'History logs', icon: PhoneCall },
   '/callyzer/team': { title: 'Callyzer', crumb: 'Team numbers', icon: Users2 },

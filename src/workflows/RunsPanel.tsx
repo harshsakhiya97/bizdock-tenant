@@ -73,7 +73,7 @@ export function stepPath(w: Pick<WorkflowRow, 'nodes' | 'edges'>): StepNode[] {
     if (!n || seen.has(n.id)) break
     out.push(n)
     seen.add(n.id)
-    if (n.type === 'switch' || n.type === 'condition') break
+    if (n.type === 'switch' || n.type === 'condition' || n.type === 'ai_call') break
     at = n.id
   }
   return out

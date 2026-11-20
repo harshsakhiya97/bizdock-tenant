@@ -4,7 +4,7 @@ import { CheckCircle2, CircleAlert, ExternalLink, PlugZap, ScrollText } from 'lu
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Hint, Label, Select, TextInput } from '@/components/Field'
+import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { ConfirmModal, PageHead } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listMemberOptions } from '@/leads/api'
@@ -76,6 +76,8 @@ export function IntegrationsPage() {
   const [gBusy, setGBusy] = useState(false)
   // Gemini AI: this month's tokens (BizDock's own AI calls)
   const [aiUse, setAiUse] = useState<{ model: string; calls: number; input: number; output: number }[]>([])
+  // AI Calling: this month's calls and their cost (HelloRix's price of each call)
+  const [hxMonth, setHxMonth] = useState<{ calls: number; answered: number; cost: number; all: number } | null>(null)
   // a card's accounts: a one-line summary on the card, the full list in a modal
   const [listFor, setListFor] = useState<string | null>(null)
   const load = useCallback(() => {
@@ -85,6 +87,18 @@ export function IntegrationsPage() {
     db()
       .rpc('ai_usage_month', { p_tenant: tenant.id })
       .then(({ data }) => setAiUse((data ?? []) as typeof aiUse))
+    const ist = new Date(Date.now() + 330 * 60_000)
+    const monthStart = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), 1) - 330 * 60_000).toISOString()
+    void db()
+      .from('ai_calls')
+      .select('placed_at, cost, talk_seconds')
+      .eq('tenant_id', tenant.id)
+      .limit(10000)
+      .then(({ data }) => {
+        const rows = (data ?? []) as { placed_at: string; cost: number | null; talk_seconds: number | null }[]
+        const m = rows.filter((x) => x.placed_at >= monthStart)
+        setHxMonth({ calls: m.length, answered: m.filter((x) => Number(x.talk_seconds) > 0).length, cost: m.reduce((t, x) => t + Number(x.cost ?? 0), 0), all: rows.reduce((t, x) => t + Number(x.cost ?? 0), 0) })
+      })
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
@@ -324,6 +338,21 @@ export function IntegrationsPage() {
                   </div>
                 )
               })()}
+              {p.id === 'hellorix' && r && !off && (
+                <div className="int-summary" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                  <span>
+                    This month: <b>{hxMonth?.calls ?? 0}</b> call{hxMonth?.calls === 1 ? '' : 's'} · {hxMonth?.answered ?? 0} answered · <b>₹{(hxMonth?.cost ?? 0).toFixed(2)}</b>
+                  </span>
+                  <span className="muted">
+                    All time ₹{(hxMonth?.all ?? 0).toFixed(2)} · calls {r.config.hours_start || '10:00'}–{r.config.hours_end || '19:00'} (India time)
+                  </span>
+                  <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                    <a className="link-btn" href="https://app.hellorix.ai" target="_blank" rel="noopener noreferrer">
+                      HelloRix wallet / recharge <ExternalLink size={12} />
+                    </a>
+                  </span>
+                </div>
+              )}
               {p.id === 'google_ads' && r && gAccounts.filter((x) => !x.is_manager).length > 0 && (() => {
                 const ga = gAccounts.filter((x) => !x.is_manager)
                 return (
@@ -462,7 +491,7 @@ export function IntegrationsPage() {
                       : r.config.last_sync_at
                         ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
                         : 'Connected · first check in a minute'
-                    : p.id === 'gemini' && r && !off
+                    : (p.id === 'gemini' || p.id === 'hellorix') && r && !off
                     ? r.config.checked_at
                       ? `Key checked ${ago(r.config.checked_at)}`
                       : 'Connected'
@@ -543,7 +572,7 @@ export function IntegrationsPage() {
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
-                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' || p.id === 'gemini' ? 'Add with keys' : 'Connect'}
+                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' || p.id === 'gemini' || p.id === 'hellorix' ? 'Add with keys' : 'Connect'}
                       </>
                     )}
                   </button>
@@ -647,8 +676,12 @@ function ConnectDrawer({
   const tenant = useTenant()
   const { membership } = useAuth()
   // secret fields start empty: left empty = keep the saved value
+  // AI Calling: calling hours, every day, the fixed opening and the language question on by default
+  const HX_DEFAULTS: Record<string, string> = { hours_start: '10:00', hours_end: '19:00', hours_days: '0,1,2,3,4,5,6', fixed_opening: '1', lang_step: '1' }
   const [values, setValues] = useState<Record<string, string>>(() =>
-    Object.fromEntries(provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (f.options ? f.options[0] : ''))])),
+    Object.fromEntries(
+      provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (provider.id === 'hellorix' && HX_DEFAULTS[f.key] !== undefined ? HX_DEFAULTS[f.key] : f.options ? f.options[0] : ''))]),
+    ),
   )
   const [label, setLabel] = useState(existing?.label ?? '')
   const [error, setError] = useState<string | null>(null)
@@ -691,8 +724,45 @@ function ConnectDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typedKey])
 
+  // AI Calling: the key's caller numbers, voices, personas and templates (the typed key, else the saved one)
+  type Opt = { id: string; label: string }
+  const [hxOpts, setHxOpts] = useState<{ numbers: Opt[]; voices: Opt[]; personas: Opt[]; templates: Opt[] } | null>(() => {
+    try {
+      return provider.id === 'hellorix' && existing?.config.options ? JSON.parse(existing.config.options) : null
+    } catch {
+      return null
+    }
+  })
+  const [hxMsg, setHxMsg] = useState('Enter the API key to load the options')
+  const hxKey = provider.id === 'hellorix' ? (values.api_key ?? '').trim() : ''
+  useEffect(() => {
+    if (provider.id !== 'hellorix') return
+    if (!hxKey && !existing) return
+    if (hxKey && hxKey.length < 12) return
+    let live = true
+    setHxMsg('Checking the key…')
+    const t = window.setTimeout(async () => {
+      const { data, error: e } = await db().functions.invoke('hellorix', { body: { action: 'options', ...(hxKey ? { api_key: hxKey } : { id: existing?.id }) } })
+      if (!live) return
+      const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+      if (why) {
+        setHxOpts(null)
+        setHxMsg(why)
+        return
+      }
+      setHxOpts({ numbers: data?.numbers ?? [], voices: data?.voices ?? [], personas: data?.personas ?? [], templates: data?.templates ?? [] })
+    }, 500)
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hxKey])
+
   async function save() {
     if (provider.multiple && !label.trim()) return setError('Give this account a name.')
+    if (provider.id === 'hellorix' && (values.hours_start || '') >= (values.hours_end || '')) return setError('The calling hours must end after they start.')
+    if (provider.id === 'hellorix' && !values.hours_days) return setError('Tick at least one calling day.')
     const config: Record<string, string> = existing ? { ...existing.config } : {}
     if (vendor) config.vendor = vendor
     for (const f of provider.fields) {
@@ -720,6 +790,13 @@ function ConnectDrawer({
         const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'test', id } })
         const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
         onSaved(why ? `Gemini saved, but Google refused the key: ${why}` : `Gemini AI connected · model ${data?.model} (${data?.models} models available; change it in Settings).`)
+        return
+      }
+      // AI Calling: check the key, keep its options and the webhook secret
+      if (provider.id === 'hellorix' && id) {
+        const { data, error: e } = await db().functions.invoke('hellorix', { body: { action: 'test', id } })
+        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        onSaved(why ? `AI Calling saved, but HelloRix refused the key: ${why}` : 'AI Calling connected. Make your call scripts in AI Calling → Templates.')
         return
       }
       // Google Ads keys: log in, list the ad accounts, start the first pull
@@ -893,7 +970,9 @@ function ConnectDrawer({
             <Label htmlFor={`int-${f.key}`} required={f.required && !(f.secret && existing?.config[f.key])}>
               {f.label}
             </Label>
-            {provider.id === 'gemini' && f.key === 'model' ? (
+            {provider.id === 'hellorix' && f.key !== 'api_key' ? (
+              <HxField f={f.key} value={values[f.key] ?? ''} opts={hxOpts} msg={hxMsg} onChange={(v) => setValues((s) => ({ ...s, [f.key]: v }))} />
+            ) : provider.id === 'gemini' && f.key === 'model' ? (
               <SearchSelect
                 id={`int-${f.key}`}
                 value={values[f.key] || null}
@@ -932,3 +1011,82 @@ function ConnectDrawer({
     </Drawer>
   )
 }
+
+/** System Connections → AI Calling: a setting below the key (dropdowns from the key's account, hours, days, switches) */
+function HxField({
+  f,
+  value,
+  opts,
+  msg,
+  onChange,
+}: {
+  f: string
+  value: string
+  opts: { numbers: { id: string; label: string }[]; voices: { id: string; label: string }[]; personas: { id: string; label: string }[]; templates: { id: string; label: string }[] } | null
+  msg: string
+  onChange: (v: string) => void
+}) {
+  const list = f === 'from_number' ? opts?.numbers : f === 'voice_id' ? opts?.voices : f === 'persona_id' ? opts?.personas : f === 'default_objective' ? opts?.templates : null
+  if (list !== null && list !== undefined)
+    return (
+      <Select id={`int-${f}`} value={value} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{f === 'default_objective' ? '— none —' : f === 'from_number' ? 'Any free line' : 'Account default'}</option>
+        {list.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.label}
+          </option>
+        ))}
+        {value && !list.some((o) => o.id === value) && <option value={value}>{value}</option>}
+      </Select>
+    )
+  if (f === 'from_number' || f === 'voice_id' || f === 'persona_id' || f === 'default_objective')
+    return (
+      <Select id={`int-${f}`} value="" disabled>
+        <option value="">{msg}</option>
+      </Select>
+    )
+  if (f === 'insights')
+    return (
+      <Select id={`int-${f}`} value={value || 'full'} onChange={(e) => onChange(e.target.value)}>
+        <option value="full">Full: outcome, summary and answers</option>
+        <option value="outcome">Outcome only</option>
+      </Select>
+    )
+  if (f === 'hours_start' || f === 'hours_end') return <TextInput id={`int-${f}`} type="time" step={900} value={value} onChange={(e) => onChange(e.target.value)} />
+  if (f === 'hours_days') {
+    const days = value.split(',').filter(Boolean)
+    return (
+      <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, i) => {
+          const on = days.includes(String(i))
+          return (
+            <button
+              key={d}
+              type="button"
+              className={cn('btn btn-sm', on ? 'btn-primary' : 'btn-outline')}
+              onClick={() => onChange((on ? days.filter((x) => x !== String(i)) : [...days, String(i)]).sort().join(','))}
+            >
+              {d}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+  if (f === 'fixed_opening' || f === 'lang_step')
+    return (
+      <Checkbox
+        id={`int-${f}`}
+        checked={value !== '0'}
+        onChange={(v) => onChange(v ? '1' : '0')}
+        label="Added to every template"
+        description={
+          f === 'fixed_opening'
+            ? 'Never “Hello”: starts with “Namaste {name} ji”, the company, why we called and “Kya aapke paas 2 minute hain?”; if busy it asks when to call back.'
+            : 'After the opening it asks Hindi or English and goes on in that language; answers are saved in English.'
+        }
+      />
+    )
+  return <TextInput id={`int-${f}`} value={value} onChange={(e) => onChange(e.target.value)} />
+}
+

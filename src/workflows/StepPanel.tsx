@@ -4,6 +4,8 @@ import { cn } from '@/lib/cn'
 import { ArrowUp, Braces, ExternalLink, Eye, EyeOff, GripVertical, Plus, Save, Trash2, X } from 'lucide-react'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { HookTrigger } from './HookTrigger'
+import { useTenant } from '@/tenant/useTenant'
+import { hx as hxCall } from '@/aicalls/api'
 import { WaBubble } from '@/integrations/WaBubble'
 import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, StepOrderContext, fieldLabel, orderedGroups, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
@@ -121,6 +123,17 @@ export function StepPanel({
           </>
         )}
         {(kind === 'whatsapp' || kind === 'email') && <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom={kind === 'whatsapp'} />}
+        {kind === 'ai_call' && (
+          <>
+            <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom label="Call" />
+            <AiCallTemplate d={d} onChange={onChange} disabled={ro} />
+            <Hint>
+              The AI calls (within the calling hours of System Connections → AI Calling) and the workflow waits for the result, then goes down its path:
+              Interested, Call back, Not interested or Not reached (no answer, busy, failed, or no result in 3 hours). A lead call also sets the lead’s
+              category and adds a note. Later steps can use {'{{ai_call_outcome}}'}, {'{{ai_call_summary}}'} and each answer as {'{{ai_<field>}}'}.
+            </Hint>
+          </>
+        )}
         {kind === 'whatsapp' && (
           <WhatsAppFields
             d={d}
@@ -313,12 +326,48 @@ function LeadLookupFields({
   )
 }
 
-function RecipientField({ d, ctx, set, disabled, custom }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; custom?: boolean }) {
+/** AI call: the template (HelloRix), its name kept for the box */
+function AiCallTemplate({ d, onChange, disabled }: { d: Record<string, unknown>; onChange: (d: Record<string, unknown>) => void; disabled: boolean }) {
+  const tenant = useTenant()
+  const [list, setList] = useState<{ id: string; name: string }[] | null>(null)
+  const [msg, setMsg] = useState('Loading templates…')
+  useEffect(() => {
+    hxCall<{ templates: { id: string; name: string }[] }>(tenant.id, { action: 'templates' }).then(
+      (r) => {
+        setList(r.templates)
+        if (!r.templates.length) setMsg('No templates yet: make one in AI Calling → Templates.')
+      },
+      (e: Error) => {
+        setList([])
+        setMsg(e.message)
+      },
+    )
+  }, [tenant.id])
+  const id = String(d.objective_id ?? '')
+  return (
+    <div>
+      <Label htmlFor="cb-ai-tpl" required>
+        Template
+      </Label>
+      <Select id="cb-ai-tpl" value={id} disabled={disabled || !list?.length} onChange={(e) => onChange({ ...d, objective_id: e.target.value, objective_name: list?.find((t) => t.id === e.target.value)?.name ?? '' })}>
+        <option value="">{list?.length ? '— select —' : msg}</option>
+        {(list ?? []).map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+        {id && list && !list.some((t) => t.id === id) && <option value={id}>{String(d.objective_name || id)}</option>}
+      </Select>
+    </div>
+  )
+}
+
+function RecipientField({ d, ctx, set, disabled, custom, label = 'Send to' }: { d: Record<string, unknown>; ctx: FlowContext; set: (k: string, v: unknown) => void; disabled: boolean; custom?: boolean; label?: string }) {
   const to = (d.to as string) || 'lead'
   return (
     <div className="form-grid" style={{ gridTemplateColumns: to === 'team' || to === 'custom' ? '120px 1fr' : '1fr' }}>
       <div>
-        <Label htmlFor="cb-to">Send to</Label>
+        <Label htmlFor="cb-to">{label}</Label>
         <Select id="cb-to" value={to} onChange={(e) => set('to', e.target.value)} disabled={disabled}>
           <option value="lead">Lead</option>
           <option value="team">Team</option>

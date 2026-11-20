@@ -30,6 +30,9 @@ import { InvoicePrint } from '@/invoices/InvoicePrint'
 import { CustomersPage } from '@/leads/CustomersPage'
 import { OrdersPage } from '@/orders/OrdersPage'
 import { MeetingsPage } from '@/meetings/MeetingsPage'
+import { AiCallPage } from '@/aicalls/CallPage'
+import { AiHistoryPage } from '@/aicalls/HistoryPage'
+import { AiTemplatesPage } from '@/aicalls/TemplatesPage'
 import { IntegrationsPage } from '@/integrations/IntegrationsPage'
 import { WaTemplatesPage } from '@/integrations/WaTemplatesPage'
 import { WaTemplateNewPage } from '@/integrations/WaTemplateNewPage'
@@ -200,6 +203,10 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
+                <Route path="/ai-calling/call" element={<RequirePermission module="ai_calling"><AiCallPage /></RequirePermission>} />
+                <Route path="/ai-calling/logs" element={<RequirePermission area="ai_calls"><AiHistoryPage /></RequirePermission>} />
+                <Route path="/ai-calling/templates" element={<RequirePermission module="ai_calling" orModule="ai_calling" orAction="templates"><AiTemplatesPage /></RequirePermission>} />
+                <Route path="/ai-calling" element={<Navigate to="/ai-calling/call" replace />} />
                 <Route
                   path="/whatsapp/logs"
                   element={

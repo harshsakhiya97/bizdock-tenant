@@ -27,7 +27,7 @@ import { AddCtx } from './addCtx'
 import { FlowCtx, NODE_TYPES } from './StepBox'
 import { StepPanel } from './StepPanel'
 import { useCopiedStep } from './stepClipboard'
-import { PALETTE, STEP_META, WEBINAR_STEPS, addCase, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
+import { AI_EXITS, PALETTE, STEP_META, WEBINAR_STEPS, addCase, caseLabel, casesOf, flowContext, problem, upstreamOf } from './steps'
 import { STEP_DEFAULTS, type FlowEdge, type RefData, type StepKind, type StepNode, type WorkflowHook, type WorkflowRow } from './types'
 import { Flash } from '@/components/Flash'
 
@@ -204,7 +204,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       // under the "+" that was clicked (a Switch / Yes-No exit: under that exit), joined to it
       const w = target.measured?.width ?? 260
       const h = target.measured?.height ?? 90
-      const exits: (string | null)[] = target.type === 'switch' ? casesOf(target.data).map((c) => c.id) : target.type === 'condition' ? ['yes', 'no'] : [null]
+      const exits: (string | null)[] = target.type === 'switch' ? casesOf(target.data).map((c) => c.id) : target.type === 'condition' ? ['yes', 'no'] : target.type === 'ai_call' ? AI_EXITS.map((x) => x.id) : [null]
       const i = Math.max(0, exits.indexOf(from.handle))
       const shift = exits.length > 1 ? (i - (exits.length - 1) / 2) * (w + 40) : 0
       pos = { x: target.position.x + shift, y: target.position.y + h + 90 }
@@ -213,7 +213,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
       // without a drop position: under the selected box (or the last one), joined to it
       const anchor = nodes.find((n) => n.id === pickedId) ?? nodes[nodes.length - 1]
       pos = position ?? { x: anchor ? anchor.position.x : 0, y: anchor ? anchor.position.y + 130 : 0 }
-      const plain = anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto'
+      const plain = anchor && anchor.type !== 'condition' && anchor.type !== 'switch' && anchor.type !== 'goto' && anchor.type !== 'ai_call'
       const outs = plain ? edges.filter((e) => e.source === anchor.id) : []
       if (!position && plain && !outs.length) {
         setEdges((eds) => [...eds, withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge)])
@@ -238,7 +238,7 @@ function Builder({ workflow, refData, canEdit, onSaved }: Props) {
           ...eds.filter((e) => e.id !== out.id),
           withLook({ id: newId('e'), source: anchor.id, target: id } as FlowEdge),
           // a Switch / Yes-No goes on through its first path / Yes
-          withLook({ id: newId('e'), source: id, sourceHandle: kind === 'switch' ? 'c1' : kind === 'condition' ? 'yes' : undefined, target: out.target } as FlowEdge),
+          withLook({ id: newId('e'), source: id, sourceHandle: kind === 'switch' ? 'c1' : kind === 'condition' ? 'yes' : kind === 'ai_call' ? 'interested' : undefined, target: out.target } as FlowEdge),
         ])
       }
     }

@@ -71,6 +71,8 @@ export type StepKind =
   | 'trigger' | 'whatsapp' | 'bulk_whatsapp' | 'generate_link' | 'zoom_meeting' | 'lead_lookup' | 'email' | 'call' | 'wait' | 'wait_event' | 'condition' | 'switch' | 'goto'
   // Webinar businesses
   | 'register_webinar' | 'wait_zoom' | 'webinar_analytics'
+  // AI Calling (HelloRix)
+  | 'ai_call'
 
 /** a box on the canvas */
 export type StepNode = Node<Record<string, unknown>, StepKind>
@@ -180,6 +182,7 @@ export const STEP_DEFAULTS: Record<Exclude<StepKind, 'trigger'>, Record<string, 
   register_webinar: { webinar_id: '', short_link: true },
   wait_zoom: {},
   webinar_analytics: {},
+  ai_call: { to: 'lead', member_id: '', custom_phone: '', objective_id: '', objective_name: '' },
 }
 
 export const TRIGGER_DEFAULTS: Record<TriggerEvent, TriggerData> = {

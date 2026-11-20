@@ -105,6 +105,13 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         ],
       },
       {
+        key: 'ai_calling',
+        label: 'AI Calling',
+        open: { kind: 'action', module: 'ai_calling', action: 'view', hint: 'Individual call, Call from AI on a lead (HelloRix)' },
+        extraScopes: [{ area: 'ai_calls', label: 'Call history', hint: 'Whose AI calls they see in Call history (Own: the calls they placed)' }],
+        actions: [{ module: 'ai_calling', action: 'templates', label: 'Manage templates', hint: 'Make, edit and delete the call scripts (also Write with AI)' }],
+      },
+      {
         key: 'payments',
         label: 'Payments',
         open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments → History logs: Razorpay payments' },

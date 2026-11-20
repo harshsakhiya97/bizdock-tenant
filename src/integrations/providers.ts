@@ -88,7 +88,7 @@ export const geminiKeyPrompt = () => `In Chrome I'm logged in to Google with the
 3. When the key is shown, stop and tell me "Copy the API key now".
 4. Then tell me (no secrets): the project name, and whether it's on the Free tier or the Paid tier (the "Plan" / "Billing" column next to the key, or https://aistudio.google.com/usage). Don't set up billing; if I want the Paid tier I'll do it myself.`
 
-export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini'
+export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini' | 'hellorix'
 export type ProviderField = {
   key: string
   label: string
@@ -208,6 +208,32 @@ export const PROVIDERS: Provider[] = [
     fields: [
       { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Google AI Studio → Get API key.' },
       { key: 'model', label: 'Model', required: true, hint: 'The models this key can use (Flash: fast and cheap · Pro: smarter, costs more).' },
+    ],
+  },
+  {
+    id: 'hellorix',
+    name: 'AI Calling',
+    icon: PhoneOutgoing,
+    color: '#0f766e',
+    description: 'HelloRix voice AI: calls leads with your script (template), and brings back the outcome, summary, answers, recording and cost.',
+    usedFor: 'AI Calling (individual calls, call history, templates), Call from AI on leads, the AI call workflow step',
+    guide: [
+      'Log in at app.hellorix.ai → Developers → API keys → create a key with the campaigns.run and campaigns.view permissions. Copy it (hlx_live_…).',
+      'Link a mobile number in HelloRix (the number calls are made from) and recharge the HelloRix wallet: each call’s cost is taken from it.',
+      'Paste the key: the caller numbers, voices, personas and templates of the account fill the dropdowns. Set the calling hours, then Connect.',
+    ],
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'HelloRix → Developers → API keys (campaigns.run + campaigns.view).' },
+      { key: 'from_number', label: 'Caller number', hint: 'The number calls are made from (blank: HelloRix picks a free line).' },
+      { key: 'default_objective', label: 'Default template', hint: 'Picked first for Call from AI and Individual call. Make templates in AI Calling → Templates.' },
+      { key: 'voice_id', label: 'Voice', hint: 'Blank: the account’s default voice.' },
+      { key: 'persona_id', label: 'Persona', hint: 'Blank: the account’s default persona.' },
+      { key: 'insights', label: 'After the call', options: ['full', 'outcome'], hint: 'Full: outcome, summary and the collected answers. Outcome only: just the outcome.' },
+      { key: 'hours_start', label: 'Calling hours from', placeholder: '10:00' },
+      { key: 'hours_end', label: 'Calling hours to', placeholder: '19:00' },
+      { key: 'hours_days', label: 'Calling days' },
+      { key: 'fixed_opening', label: 'Fixed opening' },
+      { key: 'lang_step', label: 'Ask Hindi or English first' },
     ],
   },
   {

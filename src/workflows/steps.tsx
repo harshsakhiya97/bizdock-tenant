@@ -1,4 +1,4 @@
-import { BarChart3, CalendarPlus, Clock, CloudDownload, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarPlus, Clock, CloudDownload, GitFork, Hourglass, Link2, Mail, MessageCircle, MessagesSquare, PhoneCall, PhoneOutgoing, Split, UserSearch, Video, Workflow, Zap, type LucideIcon } from 'lucide-react'
 import { conditionProblem, conditionText } from './conditions'
 import { STEP_VAR_LABEL, looksLikeWhen, namedLikeWhen } from './varGroups'
 import type { BulkRow, ConditionData, FlowContext, RefData, StepKind, StepNode, SwitchCase, TriggerData, TriggerEvent, Unit, UpstreamStep } from './types'
@@ -19,8 +19,17 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
   register_webinar: { label: 'Register for webinar', hint: 'Registers the lead on Zoom for the webinar’s coming date; later messages use their joining link', icon: CalendarPlus, color: '#7c3aed' },
   wait_zoom: { label: 'Wait until Zoom data is in', hint: 'After the webinar ends: waits until its attendance, Q&A, chat and polls are fetched from Zoom', icon: CloudDownload, color: '#0b5cff' },
+  ai_call: { label: 'AI call', hint: 'An AI voice call (HelloRix) with a template; then a path for each result: Interested, Call back, Not interested, Not reached', icon: PhoneOutgoing, color: '#0f766e' },
   webinar_analytics: { label: 'Get webinar analytics', hint: 'How long the lead attended, their questions / chat / polls, and their category (Super Hot / Hot / Warm / Cold)', icon: BarChart3, color: '#db2777' },
 }
+
+/** an AI call's paths, by the call's result */
+export const AI_EXITS: { id: string; label: string }[] = [
+  { id: 'interested', label: 'Interested' },
+  { id: 'callback', label: 'Call back' },
+  { id: 'declined', label: 'Not interested' },
+  { id: 'not_reached', label: 'Not reached' },
+]
 
 /** every trigger, including ones no longer offered (older workflows still use them) */
 export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [
@@ -38,7 +47,7 @@ export const triggerLabel = (e: TriggerEvent | undefined) => ALL_TRIGGERS.find((
 
 /** the steps that can be dragged onto the canvas */
 // Email and Call are hidden for now (steps already made with them still show and can be edited)
-export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'generate_link', 'zoom_meeting', 'lead_lookup', 'register_webinar', 'wait_zoom', 'webinar_analytics', 'wait', 'wait_event', 'switch', 'goto']
+export const PALETTE: Exclude<StepKind, 'trigger'>[] = ['whatsapp', 'bulk_whatsapp', 'ai_call', 'generate_link', 'zoom_meeting', 'lead_lookup', 'register_webinar', 'wait_zoom', 'webinar_analytics', 'wait', 'wait_event', 'switch', 'goto']
 /** only offered when the workspace has webinars (Webinar businesses) */
 export const WEBINAR_STEPS: StepKind[] = ['register_webinar', 'wait_zoom', 'webinar_analytics']
 /** what Register for webinar / a Before / After webinar trigger give later steps */
@@ -359,6 +368,8 @@ export function summary(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     }
     case 'wait_zoom':
       return 'Until the webinar’s Zoom data is fetched (at most 2 hours after it ends)'
+    case 'ai_call':
+      return `${toWho(d, ctx)}${(d.objective_name as string) || 'Pick the template'}`
     case 'webinar_analytics':
       return 'Attendance, Q&A, chat, polls → Super Hot / Hot / Warm / Cold'
     case 'goto': {
@@ -442,6 +453,10 @@ export function problem(kind: StepKind, d: Record<string, unknown>, ctx: FlowCon
     case 'wait_zoom':
     case 'webinar_analytics':
       return null
+    case 'ai_call':
+      if (d.to === 'team' && !d.member_id) return 'Pick the team member'
+      if (d.to === 'custom' && !/^\d{10}$/.test(String(d.custom_phone ?? ''))) return 'Enter the 10-digit number'
+      return d.objective_id ? null : 'Pick the template'
     case 'goto':
       if (!d.workflow_id) return 'Pick the workflow'
       if (d.workflow_id === ctx.selfId) return 'Pick another workflow'
