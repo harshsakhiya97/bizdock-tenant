@@ -28,6 +28,7 @@ export const releases: Release[] = [
       'Studio Schedule (was Booking / Podcast Calendar): every Paid Podcast and Studio Rental booking whatever business is picked on top, a Studio filter and the studio on each booking; a new booking asks which business it is for.',
       'The side menu follows Access control only, not the business picked on top. Nobody lost anything: every role has My Calendar; whoever had bookings has Bookings, Orders and webinars too.',
       'My Calendar and Studio Schedule: the dates and List / Day / Week / Month on the first row, the filters on the second.',
+      'Leads: the phone number is optional (Add lead and the lead form); when given, it must be a valid mobile number.',
       'Funnel → Overview: the Leads, From forms & sheets, Form posts and Won tiles follow the Funnel report’s date range and Overall / Facebook / Google (and their lists too).',
       'My Calendar goes by team member only: lead meetings and webinars of every business, whatever is picked on top (Book podcast on a done meeting with a Paid Podcast lead).',
     ],
