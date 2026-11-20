@@ -318,7 +318,7 @@ export function MeetingsPage() {
         filters={
           <>
             {canSeeOthers && (
-              <select className="input input-sm filter-select" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
+              <select className="input input-sm filter-select cal-filter" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
                 <option value={me}>My calendar</option>
                 <option value="">All team members</option>
                 {members
@@ -331,7 +331,7 @@ export function MeetingsPage() {
               </select>
             )}
             <select
-              className="input input-sm filter-select"
+              className="input input-sm filter-select cal-filter"
               value={typeF}
               onChange={(e) => {
                 setTypeF(e.target.value as TypeF)
@@ -342,11 +342,11 @@ export function MeetingsPage() {
             >
               <option value="">All types</option>
               <option value="lead">Lead meetings</option>
-              <option value="team">Team (internal) meetings</option>
+              <option value="team">Team meetings</option>
               <option value="webinar">Webinars</option>
             </select>
             {typeF === 'lead' && (
-              <select className="input input-sm filter-select" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
+              <select className="input input-sm filter-select cal-filter" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
                 <option value="">All categories</option>
                 {TEMPERATURES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -355,7 +355,7 @@ export function MeetingsPage() {
                 ))}
               </select>
             )}
-            <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
+            <select className="input input-sm filter-select cal-filter" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
               <option value="">All statuses</option>
               {statusOptions.map((s) => (
                 <option key={s} value={s}>

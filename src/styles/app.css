@@ -1684,3 +1684,4 @@ tfoot td {
 /* funnel overview tiles open their records */
 .pl-tile.is-clickable { cursor: pointer; border: 1px solid transparent; transition: border-color 0.15s; }
 .pl-tile.is-clickable:hover { border-color: var(--brand); }
+.cal-filter { width: 158px; min-width: 0; flex: none; }
