@@ -3,9 +3,19 @@ import { db } from '@/lib/supabase'
 /** the hellorix function: AI Calling through HelloRix (the key stays on the server) */
 export async function hx<T = Record<string, unknown>>(tenantId: string, body: Record<string, unknown>): Promise<T> {
   const { data, error } = await db().functions.invoke('hellorix', { body: { tenant_id: tenantId, ...body } })
-  const why = data?.error ?? (error ? ((await (error as { context?: Response }).context?.json().catch(() => null))?.error ?? error.message) : null)
+  const why = data?.error ?? (error ? await errText(error) : null)
   if (why) throw new Error(String(why))
   return data as T
+}
+
+/** a function call's error: its JSON { error } when it answered, else why it couldn't be reached */
+export async function errText(error: unknown) {
+  const ctx = (error as { context?: unknown } | null)?.context
+  const payload = ctx && typeof (ctx as Response).json === 'function' ? await (ctx as Response).json().catch(() => null) : null
+  if (payload?.error) return String(payload.error)
+  const name = (error as { name?: string } | null)?.name
+  if (name === 'FunctionsFetchError' || name === 'FunctionsRelayError') return 'AI Calling’s server function isn’t reachable (not deployed yet?). Try again in a minute.'
+  return String((error as Error | null)?.message ?? 'Something went wrong')
 }
 
 export type CollectField = { field: string; type: string; required?: boolean; how_to_ask?: string; options?: string | string[] }

@@ -7,6 +7,7 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, Hint, Label, Select, TextInput } from '@/components/Field'
 import { ConfirmModal, PageHead } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
+import { errText } from '@/aicalls/api'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
@@ -707,7 +708,7 @@ function ConnectDrawer({
     const t = window.setTimeout(async () => {
       const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'models', ...(typedKey ? { api_key: typedKey } : { id: existing?.id }) } })
       if (!live) return
-      const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+      const why = data?.error ?? (e ? await errText(e) : null)
       if (why) {
         setGModels(null)
         setGModelsMsg(why)
@@ -744,7 +745,7 @@ function ConnectDrawer({
     const t = window.setTimeout(async () => {
       const { data, error: e } = await db().functions.invoke('hellorix', { body: { action: 'options', ...(hxKey ? { api_key: hxKey } : { id: existing?.id }) } })
       if (!live) return
-      const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+      const why = data?.error ?? (e ? await errText(e) : null)
       if (why) {
         setHxOpts(null)
         setHxMsg(why)
@@ -781,21 +782,21 @@ function ConnectDrawer({
       // Razorpay keys: checked straight away
       if (provider.id === 'razorpay' && id) {
         const { data, error: e } = await db().functions.invoke('razorpay', { body: { action: 'test', id } })
-        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        const why = data?.error ?? (e ? await errText(e) : null)
         onSaved(why ? `Razorpay saved, but it refused the keys: ${why}` : 'Razorpay connected. Payments come in within 5 minutes (the last 90 days first).')
         return
       }
       // Gemini: check the key, list the models (for the Model dropdown), pick a default model
       if (provider.id === 'gemini' && id) {
         const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'test', id } })
-        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        const why = data?.error ?? (e ? await errText(e) : null)
         onSaved(why ? `Gemini saved, but Google refused the key: ${why}` : `Gemini AI connected · model ${data?.model} (${data?.models} models available; change it in Settings).`)
         return
       }
       // AI Calling: check the key, keep its options and the webhook secret
       if (provider.id === 'hellorix' && id) {
         const { data, error: e } = await db().functions.invoke('hellorix', { body: { action: 'test', id } })
-        const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+        const why = data?.error ?? (e ? await errText(e) : null)
         onSaved(why ? `AI Calling saved, but HelloRix refused the key: ${why}` : 'AI Calling connected. Make your call scripts in AI Calling → Templates.')
         return
       }
