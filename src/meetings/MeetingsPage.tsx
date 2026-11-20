@@ -3,7 +3,6 @@ import { Link } from 'react-router'
 import { CalendarClock, CircleCheck, Handshake, Pencil, Plus, Presentation, Trash2, UserX } from 'lucide-react'
 import { BT } from '@/auth/auth-context'
 import { useAuth } from '@/auth/useAuth'
-import { activeType } from '@/business/activeType'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { useBusiness } from '@/business/useBusiness'
@@ -38,13 +37,14 @@ type Entry = { id: string; date: string; start: string; title: string; type: str
 export function MeetingsPage() {
   const tenant = useTenant()
   const { membership, can, businesses } = useAuth()
-  const { inScope, selected, sub } = useBusiness()
+  // the business picked on top only presets a new webinar's business; meetings go by team member
+  const { selected } = useBusiness()
   const isAdmin = !!membership && (membership.is_support || membership.role.level <= 1)
   // the team member dropdown: whoever may see team members' calendars
   const canSeeOthers = isAdmin || can('meetings', 'view')
   const canWebinar = can('webinars', 'edit')
-  // Paid Podcast: a done meeting can book the podcast
-  const podcast = activeType(selected, sub) === BT.PAID_PODCAST
+  // a done meeting with a Paid Podcast lead can book the podcast
+  const isPodcastBiz = (id: string | null | undefined) => businesses.find((b) => b.id === id)?.type === BT.PAID_PODCAST
   const refs = useBookingRefs()
   const today = isoDay(new Date())
   const me = membership?.id ?? ''
@@ -115,18 +115,17 @@ export function MeetingsPage() {
             (m) =>
               !!me &&
               (!who || m.members.includes(who) || m.created_by === who) &&
-              (m.kind === 'team' || inScope(m.business_id ?? '', m.sub_business_id)) &&
               (!typeF || m.kind === typeF) &&
               (typeF !== 'lead' || !catF || (!!m.lead_id && leadById.get(m.lead_id)?.temperature === catF)) &&
               (!status || m.status === status),
           ),
-    [meetings, me, who, inScope, typeF, catF, leadById, status],
+    [meetings, me, who, typeF, catF, leadById, status],
   )
 
   // ---- webinars: the ones this team member hosts (all, for All team members) ----
   const myWebinars = useMemo(
-    () => (webinars ?? []).filter((w) => (!who || w.host_member_id === who) && (!selected || w.business_id === selected.id)),
-    [webinars, who, selected],
+    () => (webinars ?? []).filter((w) => !who || w.host_member_id === who),
+    [webinars, who],
   )
   const byId = useMemo(() => new Map((webinars ?? []).map((w) => [w.id, w])), [webinars])
   const showWebinars = typeF === '' || typeF === 'webinar'
@@ -268,7 +267,6 @@ export function MeetingsPage() {
     }
   }
 
-  const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
   const statusOptions: MeetingStatus[] = typeF === 'webinar' ? ['scheduled', 'done'] : typeF === 'team' ? ['scheduled', 'done', 'cancelled'] : ['scheduled', 'done', 'no_show', 'cancelled']
   const hostFor = who || me
   const schedule = (d: { date?: string; start?: string; end?: string }) =>
@@ -482,7 +480,7 @@ export function MeetingsPage() {
           meeting={drawer.meeting}
           initialKind={drawer.kind}
           defaults={{ date: drawer.date, start: drawer.start, end: drawer.end }}
-          leads={drawer.meeting ? leads : scopedLeads}
+          leads={leads}
           members={members}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {
@@ -491,7 +489,7 @@ export function MeetingsPage() {
             load()
           }}
           onBook={
-            podcast
+            drawer.meeting && isPodcastBiz(drawer.meeting.business_id)
               ? (l) => {
                   setDrawer(null)
                   setBook(l)
