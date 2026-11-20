@@ -303,9 +303,6 @@ export function IntegrationsPage() {
                 const calls = aiUse.reduce((t, x) => t + Number(x.calls), 0)
                 const tin = aiUse.reduce((t, x) => t + Number(x.input), 0)
                 const tout = aiUse.reduce((t, x) => t + Number(x.output), 0)
-                const pin = Number(r.config.price_in) || 0
-                const pout = Number(r.config.price_out) || 0
-                const est = (tin / 1e6) * pin + (tout / 1e6) * pout
                 const k = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n))
                 return (
                   <div className="int-summary" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
@@ -314,7 +311,6 @@ export function IntegrationsPage() {
                     </span>
                     <span className="muted">
                       This month: {calls} call{calls === 1 ? '' : 's'} · {k(tin)} in / {k(tout)} out tokens
-                      {pin || pout ? ` · ≈ ₹${est.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : ' · add prices in Settings for an estimate'}
                     </span>
                     <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
                       <a className="link-btn" href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">
@@ -658,6 +654,42 @@ function ConnectDrawer({
   const [busy, setBusy] = useState(false)
   const Icon = provider.icon
 
+  // Gemini: the models the key can use (the typed key, else the saved one), for the Model dropdown
+  const [gModels, setGModels] = useState<{ id: string; name: string }[] | null>(() => {
+    try {
+      return provider.id === 'gemini' && existing?.config.models ? JSON.parse(existing.config.models) : null
+    } catch {
+      return null
+    }
+  })
+  const [gModelsMsg, setGModelsMsg] = useState('Enter the API key to list the models')
+  const typedKey = provider.id === 'gemini' ? (values.api_key ?? '').trim() : ''
+  useEffect(() => {
+    if (provider.id !== 'gemini') return
+    if (!typedKey && !existing) return
+    if (typedKey && typedKey.length < 20) return
+    let live = true
+    setGModelsMsg('Checking the key…')
+    const t = window.setTimeout(async () => {
+      const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'models', ...(typedKey ? { api_key: typedKey } : { id: existing?.id }) } })
+      if (!live) return
+      const why = data?.error ?? (e ? ((await (e as { context?: Response }).context?.json().catch(() => null))?.error ?? e.message) : null)
+      if (why) {
+        setGModels(null)
+        setGModelsMsg(why)
+        return
+      }
+      const list = (data?.models ?? []) as { id: string; name: string }[]
+      setGModels(list)
+      setValues((v) => ({ ...v, model: list.some((m) => m.id === v.model) ? v.model : String(data?.default ?? list[0]?.id ?? '') }))
+    }, 500)
+    return () => {
+      live = false
+      window.clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typedKey])
+
   async function save() {
     if (provider.multiple && !label.trim()) return setError('Give this account a name.')
     const config: Record<string, string> = existing ? { ...existing.config } : {}
@@ -860,21 +892,14 @@ function ConnectDrawer({
             <Label htmlFor={`int-${f.key}`} required={f.required && !(f.secret && existing?.config[f.key])}>
               {f.label}
             </Label>
-            {provider.id === 'gemini' && f.key === 'model' && existing?.config.models ? (
-              <Select id={`int-${f.key}`} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
-                {(() => {
-                  let list: { id: string; name: string }[] = []
-                  try {
-                    list = JSON.parse(existing.config.models)
-                  } catch {
-                    list = []
-                  }
-                  return list.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.id})
-                    </option>
-                  ))
-                })()}
+            {provider.id === 'gemini' && f.key === 'model' ? (
+              <Select id={`int-${f.key}`} value={values[f.key]} disabled={!gModels?.length} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
+                {!gModels?.length && <option value="">{gModelsMsg}</option>}
+                {gModels?.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.id})
+                  </option>
+                ))}
               </Select>
             ) : f.options ? (
               <Select id={`int-${f.key}`} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>

@@ -203,14 +203,11 @@ export const PROVIDERS: Provider[] = [
     guide: [
       'Open Google AI Studio → Get API key (aistudio.google.com/apikey) → Create API key (in a project, e.g. “BizDock AI”). Copy the key.',
       'Free tier: no bill, but daily limits, and Google may use the data to improve its models. Paid tier: billed by Google Cloud for what you use.',
-      'Press Connect: BizDock checks the key and lists the models it can use; pick one under Model (Flash is fast and cheap, Pro is smarter and costs more).',
-      'Prices (optional): your ₹ per 1M input / output tokens for the model, so the card can estimate this month’s amount.',
+      'Paste the key: the Model list fills with the models it can use. Pick one (Flash is fast and cheap, Pro is smarter and costs more) and press Connect.',
     ],
     fields: [
       { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Google AI Studio → Get API key.' },
-      { key: 'model', label: 'Model', placeholder: 'Picked after the key is checked', hint: 'The models this key can use appear here once it’s connected.' },
-      { key: 'price_in', label: 'Input price (₹ per 1M tokens)', placeholder: 'e.g. 25', hint: 'Optional: for the estimated amount on the card.' },
-      { key: 'price_out', label: 'Output price (₹ per 1M tokens)', placeholder: 'e.g. 210' },
+      { key: 'model', label: 'Model', required: true, hint: 'The models this key can use (Flash: fast and cheap · Pro: smarter, costs more).' },
     ],
   },
   {
