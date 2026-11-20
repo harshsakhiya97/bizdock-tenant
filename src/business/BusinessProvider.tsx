@@ -22,7 +22,7 @@ function store(key: string, v: string | null) {
   }
 }
 
-/** Remembers which business (or "All businesses") and sub-business is selected in the top bar. */
+/** Remembers which business (or "All businesses") is selected in the top bar. */
 export function BusinessProvider({ children }: { children: ReactNode }) {
   const tenant = useTenant()
   const { businesses } = useAuth()
@@ -34,29 +34,30 @@ export function BusinessProvider({ children }: { children: ReactNode }) {
 
   const canSeeAll = businesses.length > 1
   // fall back if the stored business is gone; with only one business, it's always selected
+  // (a sub-business picked before is a business of its own now, with the same id)
   const selected =
-    businesses.find((b) => b.id === selectedId) ?? (canSeeAll ? null : (businesses[0] ?? null))
-  // a business with only one sub-business (e.g. a member given just that one) is always that sub-business:
-  // "the whole business" would hide its menu items (Meetings…), which go by the sub-business's type
-  const sub = selected?.subs.find((s) => s.id === subId) ?? (selected?.subs.length === 1 ? selected.subs[0] : null)
+    businesses.find((b) => b.id === subId) ?? businesses.find((b) => b.id === selectedId) ?? (canSeeAll ? null : (businesses[0] ?? null))
+  // one level of businesses now: no sub-business is ever picked
+  const sub = null
 
   const select = useCallback(
-    (id: string | null, nextSub: string | null = null) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (id: string | null, _nextSub: string | null = null) => {
       setSelectedId(id)
-      setSubId(nextSub)
+      setSubId(null)
       setSwitches((n) => n + 1)
       store(key, id)
-      store(skey, nextSub)
+      store(skey, null)
     },
     [key, skey],
   )
 
   const inScope = useCallback(
-    (businessId: string | null | undefined, rowSub?: string | null) =>
-      !selected || (businessId === selected.id && (!sub || rowSub === sub.id)),
-    [selected, sub],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (businessId: string | null | undefined, _rowSub?: string | null) => !selected || businessId === selected.id,
+    [selected],
   )
 
-  const value = useMemo(() => ({ selected, sub, select, inScope, canSeeAll, switches }), [selected, sub, select, inScope, canSeeAll, switches])
+  const value = useMemo(() => ({ selected, sub, select, inScope, canSeeAll, switches }), [selected, select, inScope, canSeeAll, switches])
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>
 }

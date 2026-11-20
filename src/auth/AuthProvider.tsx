@@ -50,28 +50,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return clear()
       }
 
-      const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: subRows }, { data: typeRows }] = await Promise.all([
+      const [{ data: prof }, { data: bizRows }, { data: allowed }, { data: typeRows }] = await Promise.all([
         db().from('profiles').select('id, email, full_name, phone').eq('id', userId).maybeSingle<Profile>(),
         db().from('businesses').select('id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
         member.all_businesses
           ? Promise.resolve({ data: null })
-          : db().from('member_businesses').select('business_id, sub_business_ids').eq('member_id', member.id),
-        db().from('sub_businesses').select('id, business_id, name, type').eq('tenant_id', tenant.id).eq('is_active', true).order('sort_order'),
+          : db().from('member_businesses').select('business_id').eq('member_id', member.id),
         db().from('business_types').select('id, code, name, is_system, is_active, sort_order').eq('tenant_id', tenant.id).order('sort_order').order('name'),
       ])
 
-      // business → allowed sub-business ids (null = all of them)
-      const allowedMap = allowed
-        ? new Map((allowed as { business_id: string; sub_business_ids: string[] | null }[]).map((r) => [r.business_id, r.sub_business_ids?.length ? r.sub_business_ids : null]))
-        : null
-      // types stored before the codes (podcast, …) read as their code (PAID-PODCAST, …)
-      const subs = ((subRows ?? []) as SubBusiness[]).map((x) => ({ ...x, type: typeCode(x.type) }))
+      // one level of businesses (sub-businesses were turned into businesses); members see the ones they're given
+      const allowedIds = allowed ? new Set((allowed as { business_id: string }[]).map((r) => r.business_id)) : null
       const list: Business[] = ((bizRows ?? []) as { id: string; name: string; type: SubBusiness['type'] | null }[])
-        .filter((b) => !allowedMap || allowedMap.has(b.id))
-        .map((b) => {
-          const only = allowedMap?.get(b.id)
-          return { ...b, type: typeCode(b.type), subs: subs.filter((s) => s.business_id === b.id && (!only || only.includes(s.id))) }
-        })
+        .filter((b) => !allowedIds || allowedIds.has(b.id))
+        .map((b) => ({ ...b, type: typeCode(b.type), subs: [] }))
 
       setAccessError(null)
       setProfile(prof ?? null)

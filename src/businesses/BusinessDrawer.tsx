@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { ImageUp, Plus, Trash2, X } from 'lucide-react'
+import { ImageUp, Trash2 } from 'lucide-react'
 import { BT, typeCode } from '@/auth/auth-context'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { AddressFields } from '@/components/AddressFields'
-import { Checkbox, FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
+import { FormSection, Hint, Label, Select, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
-import { listSubBusinesses, saveBusiness, saveSubBusinesses, type SubBusinessDraft } from './api'
+import { saveBusiness } from './api'
 import { CompanyPick } from './CompanyPick'
 import { listBillingCompanies } from '@/masters/api'
 import type { BillingCompanyRow } from '@/masters/types'
@@ -67,16 +67,10 @@ export function BusinessDrawer({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
-  const [subs, setSubs] = useState<SubBusinessDraft[]>([])
-  const [removedSubs, setRemovedSubs] = useState<string[]>([])
-  useEffect(() => {
-    if (business) void listSubBusinesses(business.id).then(setSubs, () => setSubs([]))
-  }, [business])
   const [companies, setCompanies] = useState<BillingCompanyRow[]>([])
   useEffect(() => {
     void listBillingCompanies(tenant.id).then(setCompanies, () => setCompanies([]))
   }, [tenant.id])
-  const setSub = (i: number, patch: Partial<SubBusinessDraft>) => setSubs((l) => l.map((s, j) => (j === i ? { ...s, ...patch } : s)))
 
   const logoPreview = useMemo(() => {
     if (logo) return URL.createObjectURL(logo)
@@ -93,15 +87,10 @@ export function BusinessDrawer({
     const email = (input.email ?? '').trim()
     if (!input.name.trim()) return setError('Business name is required.')
     if (email && !isValidEmail(email)) return setError('Enter a valid business email.')
-    if (input.has_sub_businesses && !subs.length) return setError('Add the sub-businesses, or untick "Has multiple sub-businesses".')
-    if (input.has_sub_businesses && subs.some((s) => !s.name.trim())) return setError('Give every sub-business a name, or remove it.')
     setBusy(true)
     setError(null)
     try {
-      const saved = await saveBusiness({ tenantId: tenant.id, existing: business, input, logo })
-      // without sub-businesses, the existing ones are removed (their records stay in the business)
-      if (input.has_sub_businesses) await saveSubBusinesses(tenant.id, saved.id, subs, removedSubs)
-      else await saveSubBusinesses(tenant.id, saved.id, [], [...removedSubs, ...subs.filter((s) => s.id).map((s) => s.id!)])
+      await saveBusiness({ tenantId: tenant.id, existing: business, input: { ...input, has_sub_businesses: false }, logo })
       onSaved()
     } catch (err) {
       setError((err as Error).message)
@@ -170,19 +159,6 @@ export function BusinessDrawer({
         </FormSection>
 
         <FormSection title="Business type" description="What this business does; the app works according to it.">
-          <div className="check-box">
-            <Checkbox
-              id="bz-has-subs"
-              checked={input.has_sub_businesses}
-              onChange={(v) => {
-                setInput((d) => ({ ...d, has_sub_businesses: v }))
-                if (v && !subs.length) setSubs([{ name: '', type: BT.DEFAULT }])
-              }}
-              label="Does this business contain multiple sub-businesses?"
-              description="Tick it to split the business (e.g. Editing service, Podcast, Podcast studio rental), each with its own type. Leave it off when the business does one thing."
-            />
-          </div>
-          {!input.has_sub_businesses && (
             <div>
               <Label htmlFor="bz-type" required>
                 Type
@@ -194,62 +170,10 @@ export function BusinessDrawer({
                   </option>
                 ))}
               </Select>
-              {subs.some((s) => s.id) && <Hint>Its sub-businesses are removed when you save; their leads, sales and bookings stay in this business.</Hint>}
             </div>
-          )}
         </FormSection>
 
-        {input.has_sub_businesses && (
-        <FormSection title="Sub-businesses" description="Leads, funnels, bookings and services can then be tagged with one; each works by its type.">
-          {subs.length > 0 && (
-            <div className="stack" style={{ gap: 8 }}>
-              {subs.map((s, i) => (
-                <div key={s.id ?? `new-${i}`} className="stack" style={{ gap: 6 }}>
-                <div className="sub-biz-row">
-                  <TextInput aria-label="Sub-business name" placeholder="e.g. Podcast Studio Rental" value={s.name} onChange={(e) => setSub(i, { name: e.target.value })} />
-                  <Select aria-label="Type" value={s.type} onChange={(e) => setSub(i, { type: e.target.value as SubBusinessDraft['type'] })}>
-                    {typeOptions(s.type).map((t) => (
-                      <option key={t.code} value={t.code}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </Select>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-icon"
-                    aria-label="Remove"
-                    onClick={() => {
-                      if (s.id) setRemovedSubs((r) => [...r, s.id!])
-                      setSubs((l) => l.filter((_, j) => j !== i))
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-                {companies.length > 0 && (
-                  <CompanyPick
-                    id={`sb-${i}`}
-                    companies={companies}
-                    company={s.company_id ?? ''}
-                    nongst={s.nongst_company_id ?? ''}
-                    emptyLabel="Same as the business"
-                    onChange={(v) => setSub(i, { company_id: v.company || null, nongst_company_id: v.nongst || null })}
-                  />
-                )}
-                </div>
-              ))}
-            </div>
-          )}
-          <div>
-            <Button variant="outline" size="sm" onClick={() => setSubs((l) => [...l, { name: '', type: BT.DEFAULT }])}>
-              <Plus /> Add sub-business
-            </Button>
-          </div>
-          {removedSubs.length > 0 && <Hint>Leads, sales and bookings of a removed sub-business stay in this business.</Hint>}
-        </FormSection>
-        )}
-
-        <FormSection title="Invoices" description="The company invoices are issued from (Masters → Company Master). A sub-business can pick its own.">
+        <FormSection title="Invoices" description="The company invoices are issued from (Masters → Company Master); invoice numbers come from the company.">
           {companies.length ? (
             <CompanyPick
               id="bz"

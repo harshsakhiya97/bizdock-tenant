@@ -94,17 +94,13 @@ export function TeamPanel() {
     if (!m.member_businesses.length) return <span className="muted">—</span>
     return (
       <div className="stack" style={{ gap: 2 }}>
-        {m.member_businesses.map((mb) => {
-          const b = businessById.get(mb.business_id)
-          return (
+        {m.member_businesses
+          .filter((mb) => businessById.has(mb.business_id))
+          .map((mb) => (
             <span key={mb.business_id} className="nowrap">
-              {b?.name ?? 'Archived business'}
-              {mb.sub_business_ids?.length ? (
-                <span className="muted small"> · {mb.sub_business_ids.map((id) => b?.subs.find((x) => x.id === id)?.name).filter(Boolean).join(', ')}</span>
-              ) : null}
+              {businessById.get(mb.business_id)?.name}
             </span>
-          )
-        })}
+          ))}
       </div>
     )
   }
