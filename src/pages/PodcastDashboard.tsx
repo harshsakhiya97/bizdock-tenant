@@ -8,6 +8,7 @@ import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import type { BookingRow } from '@/bookings/types'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
+import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { Flash } from '@/components/Flash'
 import { clock } from '@/components/SlotCalendar'
 import { listFollowUps } from '@/followups/api'
@@ -31,8 +32,8 @@ const addDays = (d: string, n: number) => {
   x.setDate(x.getDate() + n)
   return isoDay(x)
 }
-const monthLabel = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
-const shortMonth = (m: string) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+const dm = (d: string, year = false) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...(year ? { year: 'numeric' } : {}) })
+const rangeText = (r: Range) => (r.from === r.to ? dm(r.from, true) : `${dm(r.from, r.from.slice(0, 4) !== r.to.slice(0, 4))} – ${dm(r.to, true)}`)
 const dayLabel = (d: string, o: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }) => new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', o)
 const daysAgo = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000))
 const DONE: MeetingStatus[] = ['done']
@@ -51,7 +52,9 @@ export function PodcastDashboard() {
   const { selected, sub, inScope } = useBusiness()
   const refs = useBookingRefs()
   const today = isoDay(new Date())
-  const [month, setMonth] = useState(today.slice(0, 7))
+  // default: this month, the 1st till today
+  const [range, setRange] = useState<Range>(() => presetRange('thisMonth'))
+  const { from, to } = range
   const [day, setDay] = useState(today)
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   const [fus, setFus] = useState<FollowUpRow[]>([])
@@ -98,7 +101,7 @@ export function PodcastDashboard() {
     const M = meetings.filter((m) => inScope(m.business_id, m.sub_business_id))
     const B = bookings.filter((b) => inScope(b.business_id, b.sub_business_id) && b.status !== 'cancelled')
     const F = fus.filter((f) => leadById.has(f.lead_id))
-    const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 7) === month
+    const inMonth = (iso: string | null | undefined) => !!iso && iso.slice(0, 10) >= from && iso.slice(0, 10) <= to
     const stageKind = new Map(refs.funnels.flatMap((f) => f.funnel_stages.map((s) => [s.id, s.kind] as const)))
     const isPodcast = podcastCheck(businesses)
     const customerIds = new Set(B.filter((b) => makesCustomer(b, isPodcast)).map((b) => b.lead_id).filter(Boolean) as string[])
@@ -109,12 +112,12 @@ export function PodcastDashboard() {
     const fuDue = F.filter((f) => f.status === 'pending' && f.due_at <= now)
     const monthLeads = L.filter((l) => inMonth(l.created_at))
     const openNow = L.filter(isOpen).length
-    const mb = B.filter((b) => b.booking_date.slice(0, 7) === month)
+    const mb = B.filter((b) => inMonth(b.booking_date))
     const paidInMonth = B.flatMap((b) => b.booking_payments).filter((p) => p.status === 'paid' && inMonth(p.paid_on))
     const collected = paidInMonth.reduce((s, p) => s + Number(p.amount), 0)
     const billed = mb.reduce((s, b) => s + Number(b.total_amount), 0)
     const pending = mb.reduce((s, b) => s + Math.max(0, b.total_amount - b.paid_amount), 0)
-    const mm = M.filter((m) => m.meeting_date.slice(0, 7) === month)
+    const mm = M.filter((m) => inMonth(m.meeting_date))
     const doneM = mm.filter((m) => DONE.includes(m.status))
     const noShow = mm.filter((m) => m.status === 'no_show').length
     // a scheduled meeting whose time + 1 hour has passed, with no result yet
@@ -168,14 +171,9 @@ export function PodcastDashboard() {
 
     const qualifiedLeads = new Set(M.filter((m) => m.status === 'done').map((m) => m.lead_id))
     return { leadById, fuDue, monthLeads, openNow, mb, collected, billed, pending, mm, doneM, noShow, overdue, clients, funnel, dayMeetings, tasks, recordings, qualifiedLeads, awaiting, kind }
-  }, [leads, fus, bookings, meetings, refs.funnels, inScope, month, day, today, businesses])
+  }, [leads, fus, bookings, meetings, refs.funnels, inScope, from, to, day, today, businesses])
 
-  const shiftMonth = (dir: number) => {
-    const [y, m] = month.split('-').map(Number)
-    const n = new Date(y, m - 1 + dir, 1)
-    setMonth(`${n.getFullYear()}-${pad(n.getMonth() + 1)}`)
-  }
-  const ml = shortMonth(month)
+  const ml = rangeText(range)
   const title = sub?.name ?? selected?.name ?? 'Paid Podcast'
   const ownerName = (l: LeadRow | undefined) => (l?.owner_id && members.find((m) => m.id === l.owner_id)?.name) || '—'
   const name = (id: string) => {
@@ -205,7 +203,7 @@ export function PodcastDashboard() {
 
   const SECTIONS: { id: SectionId; label: string; count?: number; tone?: string }[] = [
     { id: 'today', label: day === today ? 'Meetings - Today' : `Meetings - ${dayLabel(day)}`, count: d.dayMeetings.length },
-    { id: 'funnel', label: `Funnel - ${monthLabel(month)}` },
+    { id: 'funnel', label: `Funnel - ${ml}` },
     { id: 'overdue', label: 'Meetings Overdue', count: d.overdue.length, tone: d.overdue.length ? 'is-danger' : undefined },
     { id: 'tasks', label: "Today's Tasks", count: d.tasks.length },
     { id: 'recordings', label: 'Upcoming Recordings', count: d.recordings.length },
@@ -248,15 +246,9 @@ export function PodcastDashboard() {
     <>
       <div className="db-top">
         <div className="row" style={{ gap: 8 }}>
-          <button type="button" className="btn btn-outline btn-icon" aria-label="Previous month" onClick={() => shiftMonth(-1)}>
-            <ChevronLeft size={16} />
-          </button>
-          <input className="input db-month" type="month" value={month} onChange={(e) => e.target.value && setMonth(e.target.value)} aria-label="Month" />
-          <button type="button" className="btn btn-outline btn-icon" aria-label="Next month" onClick={() => shiftMonth(1)}>
-            <ChevronRight size={16} />
-          </button>
+          <DateRangePicker value={range} onChange={setRange} future />
           <span className="muted">
-            {title} · showing <b>{monthLabel(month)}</b>
+            {title} · showing <b>{ml}</b>
           </span>
         </div>
         <div className="row" style={{ gap: 8 }}>
@@ -430,7 +422,7 @@ export function PodcastDashboard() {
 
       {shown('funnel') && (
         <section className="card card-pad db-section" id="pd-funnel">
-          {head('funnel', <>Funnel - {monthLabel(month)}</>)}
+          {head('funnel', <>Funnel - {ml}</>)}
           <p className="muted small" style={{ marginTop: -4 }}>
             How many remain at each stage. The biggest drop is where the most is to be gained.
           </p>
