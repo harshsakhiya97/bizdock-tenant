@@ -11,7 +11,6 @@ import { useTenant } from '@/tenant/useTenant'
 import { listProducts } from './api'
 import { BusinessTypesTab } from './BusinessTypesTab'
 import { CompaniesTab } from './CompaniesTab'
-import { WebinarHostsTab } from './WebinarHostsTab'
 import { PodcastStudiosTab } from './PodcastStudiosTab'
 import { isStudioType } from '@/business/activeType'
 import { BT } from '@/auth/auth-context'
@@ -21,7 +20,7 @@ import { TemplatesTab } from './TemplatesTab'
 import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'companies' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'podcast_studios' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'companies' | 'business_types' | 'products' | 'goods' | 'podcast_studios' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
@@ -40,12 +39,11 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'follow_up_outcomes', label: 'Follow-up outcomes' },
   { id: 'deal_steps', label: 'Brand deal steps' },
   { id: 'goods', label: 'Products' },
-  { id: 'webinar_hosts', label: 'Webinar hosts' },
   { id: 'podcast_studios', label: 'Podcast Studios' },
   { id: 'whatsapp', label: 'WhatsApp messages' },
 ]
 /** only with a Webinar business */
-const WEBINAR_TABS: Tab[] = ['goods', 'webinar_hosts']
+const WEBINAR_TABS: Tab[] = ['goods']
 
 /** Masters: the editable lists every module picks from. */
 export function MastersPage() {
@@ -87,7 +85,6 @@ export function MastersPage() {
         {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'products' && <ProductsTab key="services" canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'goods' && <ProductsTab key="goods" kind="product" canEdit={canEdit} onNotice={onNotice} />}
-        {tab === 'webinar_hosts' && <WebinarHostsTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'podcast_studios' && <PodcastStudiosTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
@@ -112,7 +109,6 @@ const ABOUT: Partial<Record<Tab, { table: string; purpose: string }>> = {
   business_types: { table: 'business_types', purpose: 'What a business or sub-business does: a name everyone sees and a fixed code the app works by.' },
   products: { table: 'products', purpose: 'Services offered on a booking: price, GST, name on the GST bill and HSN / SAC, per business.' },
   goods: { table: 'goods', purpose: 'What webinar leads buy (entered by hand on the lead): price and GST, per business.' },
-  webinar_hosts: { table: 'webinar_hosts', purpose: 'Who hosts a webinar: name, email and phone.' },
   podcast_studios: { table: 'podcast_studios', purpose: 'Where Paid Podcast and Studio Rental bookings take place; one is the default.' },
   whatsapp: { table: 'message_templates', purpose: 'Ready WhatsApp messages sent from a lead (call not received, booking, follow-up…).' },
   ...Object.fromEntries((Object.keys(SIMPLE) as SimpleTable[]).map((t) => [t, { table: t, purpose: SIMPLE[t]!.purpose }])),

@@ -47,6 +47,8 @@ export function MeetingDrawer({
   onClose,
   onSaved,
   onBook,
+  onWebinar,
+  initialKind,
 }: {
   meeting: MeetingRow | null
   /** open with Done / Reschedule / No-show already picked */
@@ -62,6 +64,10 @@ export function MeetingDrawer({
   onSaved: (msg: string) => void
   /** qualified: book the podcast for this guest */
   onBook?: (lead: LeadRow) => void
+  /** My Calendar: the third option, Webinar (opens the webinar setup with the same date and time) */
+  onWebinar?: (d: { date: string; start: string; end: string }) => void
+  /** a new one: Lead or Team (internal) picked first */
+  initialKind?: MeetingKind
 }) {
   const tenant = useTenant()
   const { can, membership } = useAuth()
@@ -72,7 +78,7 @@ export function MeetingDrawer({
   const canEdit = meeting ? mine || (meeting.kind === 'lead' && can('meetings', 'edit')) : true
   const canDelete = !!meeting && ((!!me && meeting.created_by === me) || can('meetings', 'delete'))
   const [f, setF] = useState<MeetingInput>(() => ({
-    kind: meeting?.kind ?? 'lead',
+    kind: meeting?.kind ?? initialKind ?? 'lead',
     title: meeting?.title ?? '',
     agenda: meeting?.agenda ?? '',
     lead_id: meeting?.lead_id ?? lead?.id ?? '',
@@ -224,7 +230,7 @@ export function MeetingDrawer({
       open
       onClose={onClose}
       width={620}
-      title={meeting ? (meeting.kind === 'team' ? `Team meeting · ${meeting.title ?? ''}` : `Meeting · ${guest ? fullName(guest) : ''}`) : 'Schedule meeting'}
+      title={meeting ? (meeting.kind === 'team' ? `Team meeting · ${meeting.title ?? ''}` : `Meeting · ${guest ? fullName(guest) : ''}`) : onWebinar ? 'Schedule' : 'Schedule meeting'}
       footer={
         <>
           {canDelete ? (
@@ -288,6 +294,11 @@ export function MeetingDrawer({
                       {k === 'lead' ? 'Lead' : 'Team (internal)'}
                     </button>
                   ))}
+                  {onWebinar && (
+                    <button type="button" role="radio" aria-checked={false} onClick={() => onWebinar({ date: f.meeting_date, start: f.start_time, end: f.end_time })}>
+                      Webinar
+                    </button>
+                  )}
                 </div>
                 <Hint>{team ? 'An internal meeting of the team, at company level (no lead, not tied to a business).' : 'A meeting with a lead of this business.'}</Hint>
               </div>

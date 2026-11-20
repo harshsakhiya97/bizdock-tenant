@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { PageHead, StatCard } from '@/components/ui'
 import { SlotCalendar, clock, fmtDay as fmt, isoDay as iso, minutesOf as minutes } from '@/components/SlotCalendar'
-import { activeType, calendarName, isStudioType } from '@/business/activeType'
+import { isStudioType } from '@/business/activeType'
 import { Modal } from '@/components/Modal'
 import { listLeads } from '@/leads/api'
 import { money } from '@/leads/labels'
@@ -17,23 +17,19 @@ import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
-import { BT } from '@/auth/auth-context'
-import { WebinarCalendarPage } from '@/webinars/WebinarCalendarPage'
-
-/** /bookings: a Webinar business's Webinar Calendar, else the Booking (Podcast) Calendar */
+/**
+ * Studio Schedule: the studio's own schedule, whatever business is picked in the top bar: every Paid Podcast and Studio
+ * Rental booking (all podcast studios, or one). Day / week / month; drag over free time to book it.
+ */
 export function BookingCalendarPage() {
-  const { selected, sub } = useBusiness()
-  return activeType(selected, sub) === BT.WEBINAR ? <WebinarCalendarPage /> : <BookingsCalendar />
-}
-
-/** Booking calendar: day / week / month; drag over free time to book it. */
-function BookingsCalendar() {
   const tenant = useTenant()
-  const { can } = useAuth()
-  const { inScope, selected, sub } = useBusiness()
-  const type = activeType(selected, sub)
-  const title = calendarName(type)
-  // one studio for Studio Rental and Paid Podcast: the other one's bookings show here, view only
+  const { can, businesses } = useAuth()
+  const { selected } = useBusiness()
+  const title = 'Studio Schedule'
+  // the studio businesses this person works in (a new booking is for one of them)
+  const studioBiz = useMemo(() => businesses.filter((b) => isStudioType(b.type)), [businesses])
+  const defaultBiz = selected && studioBiz.some((b) => b.id === selected.id) ? selected.id : (studioBiz[0]?.id ?? null)
+  // bookings of studio businesses this person isn't in show here too, view only
   const [others, setOthers] = useState<BusySlot[]>([])
   const [viewing, setViewing] = useState<BusySlot | null>(null)
   const refs = useBookingRefs()
@@ -48,14 +44,15 @@ function BookingsCalendar() {
   const [studioF, setStudioF] = useState('')
   const [drawer, setDrawer] = useState<{ booking: BookingRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
-  const shared = !!selected && isStudioType(type)
+  const shared = true
+  const anyStudio = studioBiz[0]?.id
   const load = useCallback(() => {
     listBookings(tenant.id)
       .then(setBookings)
       .catch((e: Error) => setNotice({ error: e.message }))
-    if (shared && selected) studioBusy(selected.id).then(setOthers, () => setOthers([]))
+    if (anyStudio) studioBusy(anyStudio).then(setOthers, () => setOthers([]))
     else setOthers([])
-  }, [tenant.id, shared, selected])
+  }, [tenant.id, anyStudio])
   useEffect(load, [load])
   useEffect(() => {
     if (canAdd) void listLeads(tenant.id).then(setLeads, () => setLeads([]))
@@ -64,12 +61,12 @@ function BookingsCalendar() {
   const visible = useMemo(
     () =>
       (bookings ?? [])
-        .filter((b) => inScope(b.business_id, b.sub_business_id))
+        .filter((b) => studioBiz.some((x) => x.id === b.business_id))
         .filter((b) => (status ? b.status === status : b.status !== 'cancelled'))
-        .filter((b) => !shared || !studioF || b.studio_id === studioF),
-    [bookings, inScope, status, shared, studioF],
+        .filter((b) => !studioF || b.studio_id === studioF),
+    [bookings, studioBiz, status, studioF],
   )
-  const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
+  const scopedLeads = useMemo(() => leads.filter((l) => studioBiz.some((x) => x.id === l.business_id)), [leads, studioBiz])
 
   // ---- stats for the month on screen ----
   const month = anchor.slice(0, 7)
@@ -102,7 +99,7 @@ function BookingsCalendar() {
   const open = (id: string) => {
     const b = bookings?.find((x) => x.id === id)
     const o = others.find((x) => x.id === id)
-    if (o && (!b || !inScope(b.business_id, b.sub_business_id))) return setViewing(o)
+    if (o && (!b || !studioBiz.some((x) => x.id === b.business_id))) return setViewing(o)
     if (b) setDrawer({ booking: b })
   }
   const items = useMemo(
@@ -144,7 +141,7 @@ function BookingsCalendar() {
   const otherItems = useMemo(() => {
     const mine = new Set(visible.map((b) => b.id))
     return others
-      .filter((o) => !mine.has(o.id) && o.sub_business_id !== sub?.id && (!status || o.status === status) && (!studioF || o.studio_id === studioF))
+      .filter((o) => !mine.has(o.id) && (!status || o.status === status) && (!studioF || o.studio_id === studioF))
       .map((o) => ({
         id: o.id,
         date: o.booking_date,
@@ -156,7 +153,7 @@ function BookingsCalendar() {
         color: '#64748b',
         faded: true,
       }))
-  }, [others, visible, sub, status, studioF])
+  }, [others, visible, status, studioF])
   const allItems = useMemo(() => (items ? [...items, ...otherItems] : null), [items, otherItems])
 
   return (
@@ -263,6 +260,8 @@ function BookingsCalendar() {
           booking={drawer.booking}
           defaults={{ date: drawer.date, start: drawer.start, end: drawer.end }}
           leads={scopedLeads}
+          businessChoices={drawer.booking ? undefined : studioBiz.map((b) => ({ id: b.id, name: b.name }))}
+          defaultBusinessId={defaultBiz}
           refs={refs}
           onClose={() => setDrawer(null)}
           onSaved={(msg) => {

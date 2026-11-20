@@ -1,29 +1,6 @@
 import { db } from '@/lib/supabase'
 import { shortBase } from '@/workflows/api'
 
-// ---------------- Masters → Webinar hosts ----------------
-export type WebinarHost = { id: string; name: string; email: string | null; phone: string | null; is_active: boolean; sort_order: number }
-
-export async function listHosts(tenantId: string): Promise<WebinarHost[]> {
-  const { data, error } = await db().from('webinar_hosts').select('id, name, email, phone, is_active, sort_order').eq('tenant_id', tenantId).order('sort_order').order('name')
-  if (error) throw error
-  return (data ?? []) as WebinarHost[]
-}
-
-export async function saveHost(tenantId: string, id: string | null, h: { name: string; email: string; phone: string; is_active: boolean; sort_order?: number }) {
-  const row = { name: h.name.trim(), email: h.email.trim() || null, phone: h.phone.trim() || null, is_active: h.is_active, ...(h.sort_order != null ? { sort_order: h.sort_order } : {}) }
-  const { data, error } = id
-    ? await db().from('webinar_hosts').update(row).eq('id', id).select('id').single()
-    : await db().from('webinar_hosts').insert({ ...row, tenant_id: tenantId }).select('id').single()
-  if (error) throw error
-  return String(data.id)
-}
-
-export async function deleteHost(id: string) {
-  const { error } = await db().from('webinar_hosts').delete().eq('id', id)
-  if (error) throw error
-}
-
 // ---------------- webinars ----------------
 export type WebinarRepeat = 'once' | 'dates' | 'weekly'
 export type WebinarRow = {
@@ -33,6 +10,8 @@ export type WebinarRow = {
   title: string
   description: string | null
   host_id: string | null
+  /** the host: a team member (the webinar shows on their My Calendar) */
+  host_member_id: string | null
   zoom_account_id: string | null
   funnel_id: string | null
   repeat: WebinarRepeat

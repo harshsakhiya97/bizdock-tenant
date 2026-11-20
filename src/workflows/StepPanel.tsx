@@ -1435,7 +1435,7 @@ function RegisterWebinarFields({ d, ctx, set, disabled }: { d: Record<string, un
             </option>
           ))}
         </Select>
-        {!list.length && <Hint>No webinars yet: create one on the Webinar Calendar.</Hint>}
+        {!list.length && <Hint>No webinars yet: create one in My Calendar → Schedule → Webinar.</Hint>}
       </div>
       <label className="check-inline">
         <input type="checkbox" checked={d.short_link !== false} disabled={disabled} onChange={(e) => set('short_link', e.target.checked)} /> Also make a short link of the joining link
@@ -1639,7 +1639,7 @@ function TriggerFields({
                 </option>
               )}
             </Select>
-            {!(ctx.webinars ?? []).length && <Hint>No webinars yet: create one on the Webinar Calendar.</Hint>}
+            {!(ctx.webinars ?? []).length && <Hint>No webinars yet: create one in My Calendar → Schedule → Webinar.</Hint>}
           </div>
           {/* Before a webinar starts: from registration (the messages' own times are on the Bulk WhatsApp step) */}
           {!(t.event === 'before_event' && t.webinar_id) && (

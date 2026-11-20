@@ -45,6 +45,8 @@ export function BookingDrawer({
   lead,
   leads,
   refs,
+  businessChoices,
+  defaultBusinessId,
   onClose,
   onSaved,
   onTicked,
@@ -64,6 +66,9 @@ export function BookingDrawer({
   /** leads to pick from (calendar) */
   leads?: LeadRow[]
   refs: BookingRefs
+  /** a new booking from the Studio Schedule: the businesses it can be for (a dropdown), and the one picked first */
+  businessChoices?: { id: string; name: string }[]
+  defaultBusinessId?: string | null
   onClose: () => void
   onSaved: (msg: string) => void
   /** a Brand Deal step ticked / unticked (saved straight away) */
@@ -80,7 +85,7 @@ export function BookingDrawer({
   // calendar: a lead to link, or '' for a direct booking (no enquiry)
   const [pickedLead, setPickedLead] = useState<string>('')
   const [input, setInput] = useState<BookingInput>(() => ({
-    business_id: booking?.business_id ?? lead?.business_id ?? selected?.id ?? businesses[0]?.id ?? '',
+    business_id: booking?.business_id ?? lead?.business_id ?? defaultBusinessId ?? selected?.id ?? businesses[0]?.id ?? '',
     sub_business_id: booking ? (booking.sub_business_id ?? '') : (lead ? (lead.sub_business_id ?? '') : (sub?.id ?? '')),
     product_id: booking?.product_id ?? '',
     lead_id: booking?.lead_id ?? lead?.id ?? null,
@@ -317,6 +322,20 @@ export function BookingDrawer({
           description={booking ? undefined : service ? `Add the services below. The ${word} gets the next ORD number; its invoice and payments are made below, or later with Pay later.` : 'Pick the lead and the client details fill in. A confirmed booking can’t overlap another confirmed slot on the same date.'}
         >
           <div className="form-grid">
+            {!booking && businessChoices && businessChoices.length > 1 && (
+              <div className="span-2">
+                <Label htmlFor="bk-biz" required>
+                  Business
+                </Label>
+                <Select id="bk-biz" value={input.business_id} disabled={!canEdit} onChange={(e) => setInput((p) => ({ ...p, business_id: e.target.value, sub_business_id: '' }))}>
+                  {businessChoices.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="span-2">
               <Label htmlFor="bk-lead">Linked lead</Label>
               {fixed ? (

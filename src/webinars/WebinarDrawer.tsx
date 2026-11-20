@@ -7,10 +7,11 @@ import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from 
 import { addWebhook, saveFunnel } from '@/funnels/api'
 import { templateStages } from '@/funnels/templates'
 import { cn } from '@/lib/cn'
-import { HostDrawer } from '@/masters/WebinarHostsTab'
+import { listMemberOptions } from '@/leads/api'
+import type { MemberOption } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
-import { DEFAULT_CATEGORIES, joinLink, listHosts, saveWebinar, slugify, WEEKDAYS, type WebinarHost, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
+import { DEFAULT_CATEGORIES, joinLink, saveWebinar, slugify, WEEKDAYS, type WebinarInput, type WebinarRepeat, type WebinarRow } from './api'
 import { createWebinarWorkflows, syncCategoryPaths } from './workflows'
 import { CategoriesEditor, cleanCategories } from './CategoriesEditor'
 import { WebinarGroupsSection } from './WebinarGroupsSection'
@@ -30,6 +31,8 @@ export function WebinarDrawer({
   businesses,
   defaultBusinessId,
   defaults,
+  defaultHostId,
+  onSwitch,
   onClose,
   onSaved,
 }: {
@@ -39,12 +42,16 @@ export function WebinarDrawer({
   defaultBusinessId: string | null
   /** a new one from the calendar: the day / time dragged over */
   defaults?: { date?: string; start?: string; end?: string }
+  /** the host picked first (My Calendar: the team member whose calendar it is) */
+  defaultHostId?: string | null
+  /** My Calendar → Schedule: back to a Lead / Team (internal) meeting */
+  onSwitch?: (kind: 'lead' | 'team') => void
   onClose: () => void
   onSaved: (msg: string) => void
 }) {
   const tenant = useTenant()
   const { membership, can } = useAuth()
-  const canEdit = webinar ? can('bookings', 'edit') || can('bookings', 'add') : can('bookings', 'add')
+  const canEdit = can('webinars', 'edit')
   const [f, setF] = useState<WebinarInput>(() => ({
     business_id: webinar?.business_id ?? defaultBusinessId ?? (businesses.length === 1 ? businesses[0].id : ''),
     title: webinar?.title ?? '',
@@ -52,7 +59,8 @@ export function WebinarDrawer({
     wa_slug: webinar?.wa_slug ?? null,
     categories: webinar?.categories?.length ? webinar.categories : DEFAULT_CATEGORIES,
     description: webinar?.description ?? '',
-    host_id: webinar?.host_id ?? '',
+    host_id: webinar?.host_id ?? null,
+    host_member_id: webinar?.host_member_id ?? defaultHostId ?? membership?.id ?? '',
     zoom_account_id: webinar?.zoom_account_id ?? '',
     funnel_id: webinar?.funnel_id ?? NEW_FUNNEL,
     repeat: webinar?.repeat ?? 'once',
@@ -85,14 +93,13 @@ export function WebinarDrawer({
   }
   const [stops, setStops] = useState<'never' | 'on'>(webinar?.stop_date ? 'on' : 'never')
   const [newDate, setNewDate] = useState('')
-  const [hosts, setHosts] = useState<WebinarHost[]>([])
+  const [hosts, setHosts] = useState<MemberOption[]>([])
   const [zooms, setZooms] = useState<ZoomOption[]>([])
-  const [addingHost, setAddingHost] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    void listHosts(tenant.id).then(setHosts, () => setHosts([]))
+    void listMemberOptions(tenant.id).then(setHosts, () => setHosts([]))
     void listZoomOptions(tenant.id).then(
       (z) => {
         setZooms(z)
@@ -118,7 +125,7 @@ export function WebinarDrawer({
       return setError(cats)
     }
     if (joinCheck === 'checking' || waCheck === 'checking') return setError('Checking the link… try again in a moment.')
-    if (!f.host_id) return setError('Pick the host (or add one).')
+    if (!f.host_member_id) return setError('Pick the host.')
     if (!f.zoom_account_id) return setError('Pick the Zoom account the webinars are made on.')
     if (!/^\d{2}:\d{2}$/.test(f.start_time) || !/^\d{2}:\d{2}$/.test(f.end_time) || f.end_time <= f.start_time) return setError('The end time must be after the start time.')
     if (f.repeat === 'once' && !f.first_date) return setError('Pick the date.')
@@ -144,7 +151,7 @@ export function WebinarDrawer({
         // and the registration form's webhook in it: each post adds the lead, and the registration workflow starts from it
         webhookId = await addWebhook(tenant.id, funnelId, { name: `${f.title.trim()} – registration form`, action: 'create_lead', match_by: 'phone' })
       }
-      const input = { ...f, categories: cats, slug: slugify(slug) || null, wa_slug: slugify(waSlug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, zoom_account_id: f.zoom_account_id || null }
+      const input = { ...f, categories: cats, slug: slugify(slug) || null, wa_slug: slugify(waSlug) || null, funnel_id: funnelId, stop_date: f.repeat === 'weekly' && stops === 'on' ? f.stop_date : null, host_id: f.host_id || null, host_member_id: f.host_member_id || null, zoom_account_id: f.zoom_account_id || null }
       const id = await saveWebinar(tenant.id, membership?.id, webinar?.id ?? null, input)
       if (webinar && saveGroupsRef.current) await saveGroupsRef.current(id)
       // the after-webinar workflow's paths follow the categories
@@ -180,7 +187,7 @@ export function WebinarDrawer({
         open
         width={640}
         onClose={onClose}
-        title={webinar ? `Webinar · ${webinar.title}` : 'New webinar'}
+        title={webinar ? `Webinar · ${webinar.title}` : onSwitch ? 'Schedule' : 'New webinar'}
         footer={
           <>
             <Button variant="outline" onClick={onClose}>
@@ -197,6 +204,23 @@ export function WebinarDrawer({
           </>
         }
       >
+        {!webinar && onSwitch && (
+          <div style={{ marginBottom: 16 }}>
+            <Label>Meeting with</Label>
+            <div className="seg" role="radiogroup" aria-label="Meeting with">
+              <button type="button" role="radio" aria-checked={false} onClick={() => onSwitch('lead')}>
+                Lead
+              </button>
+              <button type="button" role="radio" aria-checked={false} onClick={() => onSwitch('team')}>
+                Team (internal)
+              </button>
+              <button type="button" role="radio" aria-checked className="is-active">
+                Webinar
+              </button>
+            </div>
+            <Hint>A webinar of a Webinar business: its dates, Zoom, WhatsApp groups and lead categories.</Hint>
+          </div>
+        )}
         <div className="tabs" style={{ marginBottom: 16 }}>
           {(
             [
@@ -249,10 +273,10 @@ export function WebinarDrawer({
         <div className="stack" style={{ display: tab === 'details' ? undefined : 'none' }}>
           <FormSection title="Webinar">
             <div className="form-grid">
-              {businesses.length > 1 && (
+              {businesses.length > 0 && (
                 <div className="span-2">
                   <Label htmlFor="wb-biz" required>
-                    Business
+                    Webinar business
                   </Label>
                   <Select id="wb-biz" value={f.business_id} disabled={!canEdit || !!webinar} onChange={(e) => set('business_id', e.target.value)}>
                     <option value="">— select —</option>
@@ -304,22 +328,15 @@ export function WebinarDrawer({
                 <Label htmlFor="wb-host" required>
                   Host
                 </Label>
-                <Select
-                  id="wb-host"
-                  value={f.host_id ?? ''}
-                  disabled={!canEdit}
-                  onChange={(e) => (e.target.value === NEW_FUNNEL ? setAddingHost(true) : set('host_id', e.target.value))}
-                >
+                <Select id="wb-host" value={f.host_member_id ?? ''} disabled={!canEdit} onChange={(e) => set('host_member_id', e.target.value)}>
                   <option value="">— select —</option>
-                  {hosts
-                    .filter((h) => h.is_active || h.id === f.host_id)
-                    .map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.name}
-                      </option>
-                    ))}
-                  <option value={NEW_FUNNEL}>+ Add new host</option>
+                  {hosts.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
                 </Select>
+                <Hint>A team member: the webinar shows on their My Calendar.</Hint>
               </div>
               <div>
                 <Label htmlFor="wb-zoom" required>
@@ -488,18 +505,6 @@ export function WebinarDrawer({
           )}
         </div>
       </Drawer>
-      {addingHost && (
-        <HostDrawer
-          host={null}
-          nextOrder={Math.max(0, ...hosts.map((h) => h.sort_order)) + 1}
-          onClose={() => setAddingHost(false)}
-          onSaved={(id) => {
-            setAddingHost(false)
-            void listHosts(tenant.id).then(setHosts)
-            set('host_id', id)
-          }}
-        />
-      )}
     </>
   )
 }

@@ -36,7 +36,7 @@ export function WebinarDateDrawer({
   onDeleted: (msg: string) => void
 }) {
   const { can, membership } = useAuth()
-  const canEdit = can('bookings', 'edit') || can('bookings', 'add')
+  const canEdit = can('webinars', 'edit')
   const [regs, setRegs] = useState<Registration[] | null>(null)
   const [zoom, setZoom] = useState<{ attendance: Attendance[]; comments: ZoomComment[] } | null>(null)
   const [busy, setBusy] = useState(false)

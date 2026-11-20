@@ -97,8 +97,8 @@ export default function App() {
                 <Route path="/customers/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
                 <Route path="/invoices" element={<RequirePermission module="bookings"><InvoicesPage /></RequirePermission>} />
                 <Route path="/invoices/:id" element={<InvoiceRedirect />} />
-                <Route path="/orders" element={<RequirePermission module="bookings"><OrdersPage key="orders" /></RequirePermission>} />
-                <Route path="/booking-list" element={<RequirePermission module="bookings"><OrdersPage key="bookings" bookings /></RequirePermission>} />
+                <Route path="/orders" element={<RequirePermission module="orders"><OrdersPage key="orders" /></RequirePermission>} />
+                <Route path="/booking-list" element={<RequirePermission module="booking_list"><OrdersPage key="bookings" bookings /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
                 <Route
                   path="/bookings"
@@ -108,7 +108,7 @@ export default function App() {
                     </RequirePermission>
                   }
                 />
-                <Route path="/meetings" element={<MeetingsPage />} />
+                <Route path="/meetings" element={<RequirePermission module="calendar"><MeetingsPage /></RequirePermission>} />
                 <Route path="/attendance" element={<RequirePermission area="attendance"><AttendancePage /></RequirePermission>} />
                 <Route
                   path="/funnels"

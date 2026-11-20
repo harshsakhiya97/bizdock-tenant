@@ -1,5 +1,5 @@
 import { Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
-import { BT, type SubBusinessType } from '@/auth/auth-context'
+import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
 export type NavItem = {
@@ -31,10 +31,10 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/leads', label: 'Leads', icon: Users, area: 'leads' },
       { to: '/customers', label: 'Customers', icon: Contact, area: 'leads' },
       { to: '/follow-ups', label: 'Follow-ups', icon: CalendarClock, area: 'leads' },
-      { to: '/meetings', label: 'Meetings', icon: Handshake },
-      { to: '/bookings', label: 'Studio Schedule', icon: CalendarCheck, module: 'bookings', hideType: [BT.DEFAULT, BT.BRAND_DEALS] },
-      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'bookings', onlyType: [BT.DEFAULT, BT.BRAND_DEALS] },
-      { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'bookings', hideType: [BT.DEFAULT, BT.BRAND_DEALS] },
+      { to: '/meetings', label: 'My Calendar', icon: Handshake, module: 'calendar' },
+      { to: '/bookings', label: 'Studio Schedule', icon: CalendarCheck, module: 'bookings' },
+      { to: '/orders', label: 'Orders', icon: PackageCheck, module: 'orders' },
+      { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       { to: '/funnels', label: 'Funnels', icon: Workflow, module: 'funnels' },
       { to: '/workflows', label: 'Workflows', icon: Network, module: 'workflows' },
@@ -97,7 +97,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/dashboard': { title: 'Dashboards', crumb: 'Overview', icon: LayoutGrid },
   '/follow-ups': { title: 'Follow-ups', crumb: 'Calls & reminders', icon: CalendarClock },
   '/bookings': { title: 'Studio Schedule', crumb: 'Slots & bookings', icon: CalendarCheck },
-  '/meetings': { title: 'Meetings', crumb: 'My meetings', icon: Handshake },
+  '/meetings': { title: 'My Calendar', crumb: 'Meetings & webinars', icon: Handshake },
   '/attendance': { title: 'Attendance', crumb: 'Check in & discipline', icon: Clock3 },
   '/masters': { title: 'Masters', crumb: 'Lists & settings', icon: Database },
   '/widgets': { title: 'Widgets', crumb: 'Overview', icon: Blocks },

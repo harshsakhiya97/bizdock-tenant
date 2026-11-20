@@ -61,6 +61,17 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         actions: [{ module: 'follow_ups', action: 'add', label: 'Add follow-ups', hint: 'Schedule and log follow-ups' }],
       },
       {
+        key: 'calendar',
+        label: 'My Calendar',
+        open: { kind: 'action', module: 'calendar', action: 'view', hint: 'Their own meetings and the webinars they host' },
+        actions: [
+          { module: 'meetings', action: 'view', label: 'See team members’ calendars', hint: 'The team member dropdown (All team members, or one), and every lead meeting on lead pages and dashboards' },
+          { module: 'meetings', action: 'edit', label: 'Edit others’ lead meetings', hint: 'Reschedule, mark done / no-show' },
+          { module: 'meetings', action: 'delete', label: 'Delete others’ meetings' },
+          { module: 'bookings', action: 'add', label: 'Add and edit webinars', hint: 'Schedule → Webinar: its setup, dates and Zoom' },
+        ],
+      },
+      {
         key: 'bookings',
         label: 'Studio Schedule',
         open: { kind: 'action', module: 'bookings', action: 'view', hint: 'Bookings of the businesses they work in' },
@@ -70,15 +81,9 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'bookings', action: 'delete', label: 'Delete bookings', hint: 'Delete a booking / order / brand deal (and its own invoice)' },
         ],
       },
-      {
-        key: 'meetings',
-        label: 'Meetings',
-        open: { kind: 'action', module: 'meetings', action: 'view', hint: 'Every lead meeting (lead page, dashboard). Without it, people still see and add their own meetings.' },
-        actions: [
-          { module: 'meetings', action: 'edit', label: 'Edit others’ lead meetings', hint: 'Reschedule, mark done / no-show' },
-          { module: 'meetings', action: 'delete', label: 'Delete others’ meetings' },
-        ],
-      },
+
+      { key: 'booking_list', label: 'Bookings', open: { kind: 'action', module: 'booking_list', action: 'view', hint: 'The list of bookings (add / edit / delete as in Studio Schedule)' }, actions: [] },
+      { key: 'orders', label: 'Orders', open: { kind: 'action', module: 'orders', action: 'view', hint: 'Orders and brand deals (add / edit / delete as in Studio Schedule)' }, actions: [] },
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
       {
         key: 'funnels',

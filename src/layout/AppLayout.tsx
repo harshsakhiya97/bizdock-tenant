@@ -5,7 +5,6 @@ import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
 import { useBusiness } from '@/business/useBusiness'
-import { activeType, calendarName, orderNoun } from '@/business/activeType'
 import { Avatar } from '@/components/Avatar'
 import { DevelopedBy } from '@/components/DevelopedBy'
 import { TenantLockup } from '@/components/Logo'
@@ -40,17 +39,14 @@ function Shell() {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const { selected, sub, switches } = useBusiness()
-  const type = activeType(selected, sub)
+  const { switches } = useBusiness()
   const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
-  const meta = pathname === '/bookings' ? { ...base, title: calendarName(type) } : pathname === '/orders' ? { ...base, title: orderNoun(type).many } : base
+  const meta = base
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
 
   const shows = (i: NavItem) =>
-    (!i.onlyType || [i.onlyType].flat().includes(type ?? '')) &&
-    (!i.hideType || ![i.hideType].flat().includes(type ?? '')) &&
     (i.area ? scope(i.area) !== 'none' : true) &&
     (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
   const sections = navSections
@@ -58,8 +54,7 @@ function Shell() {
       ...s,
       items: s.items
         .map((i) => (i.children ? { ...i, children: i.children.filter(shows) } : i))
-        .filter((i) => (i.children ? i.children.length > 0 : shows(i)))
-        .map((i) => (i.to === '/bookings' ? { ...i, label: calendarName(type) } : i.to === '/orders' ? { ...i, label: orderNoun(type).many } : i)),
+        .filter((i) => (i.children ? i.children.length > 0 : shows(i))),
     }))
     .filter((s) => s.items.length > 0)
   // accordions: the one holding the open page starts open
