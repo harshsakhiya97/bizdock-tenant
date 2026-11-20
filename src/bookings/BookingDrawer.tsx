@@ -112,6 +112,7 @@ export function BookingDrawer({
     status: booking?.status ?? 'confirmed',
     ...(service ? { order_status: booking?.order_status ?? 'not_started', owner_id: booking?.owner_id ?? membership?.id ?? '' } : {}),
     billing_company_id: booking?.billing_company_id ?? copyFrom?.billing_company_id ?? refs.companies[0]?.id ?? '',
+    studio_id: booking?.studio_id ?? copyFrom?.studio_id ?? '',
     notes: booking?.notes ?? copyFrom?.notes ?? '',
   }))
   const set = <K extends keyof BookingInput>(k: K, v: BookingInput[K]) => setInput((p) => ({ ...p, [k]: v }))
@@ -146,9 +147,13 @@ export function BookingDrawer({
   })()
 
   const subs = useSubBusinesses(input.business_id)
-  // Studio Rental and Paid Podcast share one studio: no two of their bookings at the same time
+  // Studio Rental and Paid Podcast bookings take a podcast studio: no two bookings of a studio at the same time
   const bizType = businesses.find((b) => b.id === input.business_id)?.type ?? null
   const studio = isStudioType(input.sub_business_id ? subs.find((x) => x.id === input.sub_business_id)?.type : subs.length ? null : bizType)
+  // the default studio until one is picked
+  useEffect(() => {
+    if (studio && !input.studio_id && refs.defaultStudio) setInput((p) => ({ ...p, studio_id: refs.defaultStudio }))
+  }, [studio, input.studio_id, refs.defaultStudio])
   const [taken, setTaken] = useState<BusySlot[]>([])
   useEffect(() => {
     if (!studio || !input.business_id) return
@@ -164,12 +169,12 @@ export function BookingDrawer({
   const clockOf = (t: string) => new Date(2000, 0, 1, ...(t.split(':').map(Number) as [number, number])).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
   const clashText = (c: BusySlot | null) =>
     c
-      ? `Studio not available on ${new Date(`${c.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${clockOf(c.start_time)} – ${clockOf(c.end_time)}: booked for ${c.client_name} (${c.sub_name}).`
+      ? `${c.studio_name ?? 'Studio'} not available on ${new Date(`${c.booking_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}, ${clockOf(c.start_time)} – ${clockOf(c.end_time)}: booked for ${c.client_name} (${c.sub_name}).`
       : null
   const clashes =
     studio && input.status !== 'cancelled'
       ? [
-          studioClash(taken, { id: booking?.id, date: input.booking_date, start: input.start_time, end: input.end_time }),
+          studioClash(taken, { id: booking?.id, date: input.booking_date, start: input.start_time, end: input.end_time, studio: input.studio_id }),
         ]
       : []
   const clash = clashes.find(Boolean) ?? null
@@ -371,6 +376,20 @@ export function BookingDrawer({
               <TextInput id="bk-end" type="time" step={900} value={input.end_time} onChange={(e) => set('end_time', e.target.value)} disabled={!canEdit} />
             </div>
             </>
+            )}
+            {studio && refs.studios.length > 0 && (
+              <div>
+                <Label htmlFor="bk-studio" required>
+                  Podcast Studio
+                </Label>
+                <Select id="bk-studio" value={input.studio_id ?? ''} onChange={(e) => set('studio_id', e.target.value)} disabled={!canEdit}>
+                  {refs.studios.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+              </div>
             )}
             {clashes[0] && <div className="span-2 alert alert-error small">{clashText(clashes[0])}</div>}
             <div>

@@ -66,3 +66,20 @@ export async function saveBillingCompany(tenantId: string, id: string | null, in
 /** "12 months", "Lifetime", "—" */
 export const validityText = (p: { lifetime: boolean; validity_months: number | null }) =>
   p.lifetime ? 'Lifetime' : p.validity_months ? `${p.validity_months} month${p.validity_months > 1 ? 's' : ''}` : '—'
+
+// ---------------- Masters → Podcast Studios ----------------
+export type PodcastStudio = { id: string; name: string; is_default: boolean; sort_order: number }
+export async function listStudios(tenantId: string): Promise<PodcastStudio[]> {
+  const { data, error } = await db().from('podcast_studios').select('id, name, is_default, sort_order').eq('tenant_id', tenantId).order('sort_order').order('name')
+  if (error) throw error
+  return (data ?? []) as PodcastStudio[]
+}
+export async function saveStudio(tenantId: string, id: string | null, s: { name: string; is_default: boolean; sort_order?: number }) {
+  const row = { name: s.name.trim(), is_default: s.is_default, ...(s.sort_order !== undefined ? { sort_order: s.sort_order } : {}) }
+  const { error } = id ? await db().from('podcast_studios').update(row).eq('id', id) : await db().from('podcast_studios').insert({ ...row, tenant_id: tenantId })
+  if (error) throw new Error(error.message)
+}
+export async function deleteStudio(id: string) {
+  const { error } = await db().from('podcast_studios').delete().eq('id', id)
+  if (error) throw new Error(error.code === '23503' ? 'This studio has bookings, so it can’t be deleted.' : error.message)
+}

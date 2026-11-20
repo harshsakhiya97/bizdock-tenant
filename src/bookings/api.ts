@@ -83,6 +83,7 @@ export async function saveBooking(
     ...(input.order_status ? { order_status: input.order_status } : {}),
     ...(input.owner_id !== undefined ? { owner_id: input.owner_id || null } : {}),
     billing_company_id: input.billing_company_id || null,
+    ...(input.studio_id !== undefined ? { studio_id: input.studio_id || null } : {}),
     notes: input.notes.trim() || null,
   }
   let id = existing?.id
@@ -237,9 +238,11 @@ export type BusySlot = {
   start_time: string
   end_time: string
   status: string
+  studio_id: string | null
+  studio_name: string | null
 }
 
-/** studio bookings of a business, across its Studio Rental and Paid Podcast sub-businesses */
+/** the studio's bookings: every Studio Rental and Paid Podcast business of the workspace, with their studio */
 export async function studioBusy(businessId: string): Promise<BusySlot[]> {
   const { data, error } = await db().rpc('studio_busy', { p_business: businessId })
   if (error) throw error
@@ -247,12 +250,12 @@ export async function studioBusy(businessId: string): Promise<BusySlot[]> {
 }
 
 /** the first studio booking that overlaps this slot (another booking, not cancelled) */
-export function studioClash(busy: BusySlot[], slot: { id?: string; date: string; start: string; end: string }) {
+export function studioClash(busy: BusySlot[], slot: { id?: string; date: string; start: string; end: string; studio?: string }) {
   const m = (t: string) => {
     const [h, mm] = t.split(':').map(Number)
     return h * 60 + mm
   }
-  return busy.find((b) => b.id !== slot.id && b.booking_date === slot.date && m(b.start_time) < m(slot.end) && m(b.end_time) > m(slot.start)) ?? null
+  return busy.find((b) => b.id !== slot.id && b.booking_date === slot.date && (!slot.studio || !b.studio_id || b.studio_id === slot.studio) && m(b.start_time) < m(slot.end) && m(b.end_time) > m(slot.start)) ?? null
 }
 
 /** delete a booking / order / brand deal (with its own invoice, or off a shared one) */

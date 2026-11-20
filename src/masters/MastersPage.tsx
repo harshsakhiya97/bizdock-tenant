@@ -12,6 +12,8 @@ import { listProducts } from './api'
 import { BusinessTypesTab } from './BusinessTypesTab'
 import { CompaniesTab } from './CompaniesTab'
 import { WebinarHostsTab } from './WebinarHostsTab'
+import { PodcastStudiosTab } from './PodcastStudiosTab'
+import { isStudioType } from '@/business/activeType'
 import { BT } from '@/auth/auth-context'
 import { ProductDrawer } from './ProductDrawer'
 import { SimpleList } from './SimpleList'
@@ -19,7 +21,7 @@ import { TemplatesTab } from './TemplatesTab'
 import type { ProductRow, SimpleTable } from './types'
 import { Flash } from '@/components/Flash'
 
-type Tab = 'overview' | 'companies' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'whatsapp' | SimpleTable
+type Tab = 'overview' | 'companies' | 'business_types' | 'products' | 'goods' | 'webinar_hosts' | 'podcast_studios' | 'whatsapp' | SimpleTable
 
 const SIMPLE: Partial<Record<SimpleTable, { title: string; purpose: string }>> = {
   payment_modes: { title: 'Payment modes', purpose: 'How money was received.' },
@@ -39,6 +41,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'deal_steps', label: 'Brand deal steps' },
   { id: 'goods', label: 'Products' },
   { id: 'webinar_hosts', label: 'Webinar hosts' },
+  { id: 'podcast_studios', label: 'Podcast Studios' },
   { id: 'whatsapp', label: 'WhatsApp messages' },
 ]
 /** only with a Webinar business */
@@ -52,7 +55,9 @@ export function MastersPage() {
   const webinar = businesses.some((b) => b.type === BT.WEBINAR || b.subs.some((x) => x.type === BT.WEBINAR))
   // Brand deal steps: only with a Brand Deals business
   const brandDeals = businesses.some((b) => b.type === BT.BRAND_DEALS || b.subs.some((x) => x.type === BT.BRAND_DEALS))
-  const tabs = TABS.filter((t) => (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps'))
+  // Podcast Studios: only with a Paid Podcast / Studio Rental business
+  const studios = businesses.some((b) => isStudioType(b.type))
+  const tabs = TABS.filter((t) => (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios'))
   const tab = (tabs.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const go = (t: Tab) => {
@@ -77,12 +82,13 @@ export function MastersPage() {
             ))}
           </div>
         </div>
-        {tab === 'overview' && <Overview go={go} webinar={webinar} brandDeals={brandDeals} />}
+        {tab === 'overview' && <Overview go={go} webinar={webinar} brandDeals={brandDeals} studios={studios} />}
         {tab === 'companies' && <CompaniesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'business_types' && <BusinessTypesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'products' && <ProductsTab key="services" canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'goods' && <ProductsTab key="goods" kind="product" canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'webinar_hosts' && <WebinarHostsTab canEdit={canEdit} onNotice={onNotice} />}
+        {tab === 'podcast_studios' && <PodcastStudiosTab canEdit={canEdit} onNotice={onNotice} />}
         {tab === 'whatsapp' && <TemplatesTab canEdit={canEdit} onNotice={onNotice} />}
         {tab in SIMPLE && (
           <SimpleList
@@ -107,15 +113,16 @@ const ABOUT: Partial<Record<Tab, { table: string; purpose: string }>> = {
   products: { table: 'products', purpose: 'Services offered on a booking: price, GST, name on the GST bill and HSN / SAC, per business.' },
   goods: { table: 'goods', purpose: 'What webinar leads buy (entered by hand on the lead): price and GST, per business.' },
   webinar_hosts: { table: 'webinar_hosts', purpose: 'Who hosts a webinar: name, email and phone.' },
+  podcast_studios: { table: 'podcast_studios', purpose: 'Where Paid Podcast and Studio Rental bookings take place; one is the default.' },
   whatsapp: { table: 'message_templates', purpose: 'Ready WhatsApp messages sent from a lead (call not received, booking, follow-up…).' },
   ...Object.fromEntries((Object.keys(SIMPLE) as SimpleTable[]).map((t) => [t, { table: t, purpose: SIMPLE[t]!.purpose }])),
 }
 
-function Overview({ go, webinar, brandDeals }: { go: (t: Tab) => void; webinar: boolean; brandDeals: boolean }) {
+function Overview({ go, webinar, brandDeals, studios }: { go: (t: Tab) => void; webinar: boolean; brandDeals: boolean; studios: boolean }) {
   const tenant = useTenant()
   const [counts, setCounts] = useState<Record<string, number>>({})
   // the same lists, in the same order, as the tabs
-  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
+  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios') && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
   useEffect(() => {
     void Promise.all(
       Object.values(ABOUT).map(({ table: t }) => {
@@ -126,6 +133,7 @@ function Overview({ go, webinar, brandDeals }: { go: (t: Tab) => void; webinar: 
           .eq('is_active', true)
         if (t === 'products') q = q.neq('kind', 'product')
         if (t === 'goods') q = q.eq('kind', 'product')
+        if (t === 'podcast_studios') q = db().from(t).select('id', { count: 'exact', head: true }).eq('tenant_id', tenant.id)
         return q.then(({ count }) => [t, count ?? 0] as const)
       }),
     ).then((r) => setCounts(Object.fromEntries(r)))

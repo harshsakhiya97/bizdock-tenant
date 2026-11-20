@@ -39,6 +39,7 @@ export function invoiceAsBooking(i: InvoiceRow): { b: BookingRow; subs: Map<stri
       paid_amount: Number(i.paid_amount),
       status: 'confirmed',
       billing_company_id: i.billing_company_id,
+      studio_id: null,
       invoice_no: i.invoice_no,
       invoice_date: i.invoice_date,
       notes: i.notes,

@@ -37,12 +37,15 @@ function BookingsCalendar() {
   const [others, setOthers] = useState<BusySlot[]>([])
   const [viewing, setViewing] = useState<BusySlot | null>(null)
   const refs = useBookingRefs()
+  const studioName = (id: string) => refs.studios.find((x) => x.id === id)?.name ?? 'Studio'
   const canAdd = can('bookings', 'add')
   const today = iso(new Date())
   const [anchor, setAnchor] = useState(today)
   const [bookings, setBookings] = useState<BookingRow[] | null>(null)
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [status, setStatus] = useState<'' | BookingStatus>('')
+  // Studio Rental / Paid Podcast: one podcast studio, or all
+  const [studioF, setStudioF] = useState('')
   const [drawer, setDrawer] = useState<{ booking: BookingRow | null; date?: string; start?: string; end?: string } | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const shared = !!selected && isStudioType(type)
@@ -62,8 +65,9 @@ function BookingsCalendar() {
     () =>
       (bookings ?? [])
         .filter((b) => inScope(b.business_id, b.sub_business_id))
-        .filter((b) => (status ? b.status === status : b.status !== 'cancelled')),
-    [bookings, inScope, status],
+        .filter((b) => (status ? b.status === status : b.status !== 'cancelled'))
+        .filter((b) => !shared || !studioF || b.studio_id === studioF),
+    [bookings, inScope, status, shared, studioF],
   )
   const scopedLeads = useMemo(() => leads.filter((l) => inScope(l.business_id, l.sub_business_id)), [leads, inScope])
 
@@ -111,7 +115,7 @@ function BookingsCalendar() {
             end: b.end_time,
             title: b.client_name,
             detail: b.purpose,
-            meta: `${clock(b.start_time)} – ${clock(b.end_time)}${b.purpose ? ` · ${b.purpose}` : ''} · ${STATUS_META[b.status].label}`,
+            meta: `${clock(b.start_time)} – ${clock(b.end_time)}${b.purpose ? ` · ${b.purpose}` : ''}${shared && b.studio_id ? ` · ${studioName(b.studio_id)}` : ''} · ${STATUS_META[b.status].label}`,
             color: STATUS_META[b.status].color,
             faded: b.status === 'tentative',
             side: (
@@ -134,12 +138,13 @@ function BookingsCalendar() {
             ),
           }))
         : null,
-    [bookings, visible],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bookings, visible, shared, refs.studios],
   )
   const otherItems = useMemo(() => {
     const mine = new Set(visible.map((b) => b.id))
     return others
-      .filter((o) => !mine.has(o.id) && o.sub_business_id !== sub?.id && (!status || o.status === status))
+      .filter((o) => !mine.has(o.id) && o.sub_business_id !== sub?.id && (!status || o.status === status) && (!studioF || o.studio_id === studioF))
       .map((o) => ({
         id: o.id,
         date: o.booking_date,
@@ -147,11 +152,11 @@ function BookingsCalendar() {
         end: o.end_time,
         title: `${o.client_name} · ${o.sub_name}`,
         detail: 'Studio booked · view only',
-        meta: `${clock(o.start_time)} – ${clock(o.end_time)} · Studio booked by ${o.sub_name} · view only`,
+        meta: `${clock(o.start_time)} – ${clock(o.end_time)} · ${o.studio_name ?? 'Studio'} booked by ${o.sub_name} · view only`,
         color: '#64748b',
         faded: true,
       }))
-  }, [others, visible, sub, status])
+  }, [others, visible, sub, status, studioF])
   const allItems = useMemo(() => (items ? [...items, ...otherItems] : null), [items, otherItems])
 
   return (
@@ -188,6 +193,17 @@ function BookingsCalendar() {
         onCreate={(x) => setDrawer({ booking: null, date: x.date, start: x.start, end: x.end })}
         onOpen={open}
         filters={
+          <>
+          {shared && refs.studios.length > 0 && (
+            <select className="input input-sm filter-select" value={studioF} onChange={(e) => setStudioF(e.target.value)} aria-label="Podcast studio">
+              <option value="">All studios</option>
+              {refs.studios.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | '')} aria-label="Status">
             <option value="">All but cancelled</option>
             {(Object.keys(STATUS_META) as BookingStatus[]).map((s) => (
@@ -196,6 +212,7 @@ function BookingsCalendar() {
               </option>
             ))}
           </select>
+          </>
         }
       />
 

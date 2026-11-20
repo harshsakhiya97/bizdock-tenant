@@ -48,6 +48,8 @@ export type BookingRow = {
   paid_amount: number
   status: BookingStatus
   billing_company_id: string | null
+  /** Paid Podcast / Studio Rental: the podcast studio (Masters → Podcast Studios) */
+  studio_id: string | null
   invoice_no: string | null
   invoice_date: string | null
   notes: string | null
@@ -103,6 +105,8 @@ export type BookingInput = {
   order_status?: OrderStatus
   owner_id?: string
   billing_company_id: string
+  /** Paid Podcast / Studio Rental: the podcast studio */
+  studio_id?: string
   notes: string
   items: ItemDraft[]
   parts: PartDraft[]
