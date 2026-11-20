@@ -368,13 +368,16 @@ a.link:not(.strong) { color: var(--brand); font-weight: 600; font-size: 12.5px; 
 .nav-chevron { margin-left: auto; transition: transform .15s; color: var(--text-muted); }
 .nav-group.is-open .nav-chevron { transform: rotate(180deg); }
 .nav-item.nav-sub { height: 34px; padding-left: 24px; font-size: 12.5px; }
-/* an open group's sub-menu: a soft tinted panel with an inner shadow, so it reads apart from the main menu */
+/* an open group's sub-menu: a soft rounded card, inset from the main menu, with a guide line on the left */
 .nav-subs {
-  background: color-mix(in srgb, var(--text) 4%, var(--bg));
-  box-shadow: inset 0 2px 4px -2px color-mix(in srgb, var(--text) 18%, transparent), inset 0 -2px 4px -2px color-mix(in srgb, var(--text) 12%, transparent);
-  padding: 4px 0;
+  margin: 2px 12px 6px 18px; padding: 4px; border-radius: 10px;
+  background: color-mix(in srgb, var(--brand) 4%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--brand) 10%, var(--line));
 }
-.nav-subs .nav-item:hover:not(.active) { background: color-mix(in srgb, var(--text) 8%, var(--bg)); }
+.nav-subs .nav-item.nav-sub { height: 32px; padding-left: 10px; border-radius: 7px; }
+.nav-subs .nav-item:hover:not(.active) { background: color-mix(in srgb, var(--brand) 9%, var(--bg)); }
+.sidebar.is-collapsed .nav-subs { margin: 2px 6px; padding: 2px; }
+.sidebar.is-collapsed .nav-subs .nav-item.nav-sub { padding: 0; }
 .sidebar.is-collapsed .nav-chevron { display: none; }
 .sidebar.is-collapsed .nav-item.nav-sub { padding: 0; }
 
