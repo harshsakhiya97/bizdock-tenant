@@ -18,7 +18,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, geminiKeyPrompt, googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, geminiKeyPrompt, hellorixKeyPrompt,googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -842,7 +842,7 @@ function ConnectDrawer({
   }
 
   // Zoom keys, Razorpay and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
-  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || provider.id === 'gemini' || (provider.id === 'whatsapp' && vendor === 'wati')
+  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || provider.id === 'gemini' || provider.id === 'hellorix' || (provider.id === 'whatsapp' && vendor === 'wati')
   const [tab, setTab] = useState<'keys' | 'prompt'>('keys')
   const showForm = !tabbed || tab === 'keys'
   const [hookUrl, setHookUrl] = useState<string | null>(null)
@@ -913,6 +913,13 @@ function ConnectDrawer({
             title="Let Claude in Chrome make the Gemini API key"
             note="Log in to Google, open Claude in Chrome and paste this. It opens Google AI Studio, creates the key and tells you the plan (Free / Paid); you copy the key into the Keys tab yourself."
             text={geminiKeyPrompt()}
+          />
+        )}
+        {tabbed && tab === 'prompt' && provider.id === 'hellorix' && (
+          <PromptBox
+            title="Let Claude in Chrome make the HelloRix API key"
+            note="Log in at app.hellorix.ai as the account’s owner or admin, open Claude in Chrome and paste this. It creates the key and tells you the linked numbers and wallet balance; you copy the key into the Keys tab yourself."
+            text={hellorixKeyPrompt()}
           />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'razorpay' && (

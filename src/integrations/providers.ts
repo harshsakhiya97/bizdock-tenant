@@ -88,7 +88,15 @@ export const geminiKeyPrompt = () => `In Chrome I'm logged in to Google with the
 3. When the key is shown, stop and tell me "Copy the API key now".
 4. Then tell me (no secrets): the project name, and whether it's on the Free tier or the Paid tier (the "Plan" / "Billing" column next to the key, or https://aistudio.google.com/usage). Don't set up billing; if I want the Paid tier I'll do it myself.`
 
-export type ProviderId = 'whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini' | 'hellorix'
+/** HelloRix: a prompt for Claude in Chrome that creates the API key and checks the linked number and the wallet */
+export const hellorixKeyPrompt = () => `In Chrome I'm logged in to HelloRix (app.hellorix.ai) as the account's owner or admin. Help me get an API key to connect HelloRix's AI calling to my CRM "BizDock". Never read out, copy or paste the API key into this chat — when it's on screen, stop and tell me to copy it myself. Ask me before any final Create / Save click. Don't recharge the wallet, start calls or change anything else. If a screen doesn't match, stop and tell me what you see.
+
+1. Open Developers → API keys.
+2. Create a new key named "BizDock" with the permissions campaigns.run and campaigns.view (nothing more).
+3. When the key is shown (it starts with hlx_live_), stop and tell me "Copy the API key now".
+4. Then tell me (no secrets): which mobile numbers are linked for calling (Numbers / Phone numbers), and the wallet balance. If no number is linked or the wallet is empty, tell me so; I'll do that myself.`
+
+export type ProviderId ='whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini' | 'hellorix'
 export type ProviderField = {
   key: string
   label: string
