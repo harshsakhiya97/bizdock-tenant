@@ -13,6 +13,24 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.26',
+    date: '2026-11-20',
+    title: 'One level of businesses, Gemini AI, Dashboard date range',
+    summary: 'Sub-businesses are businesses of their own now (TVS’s Paid Podcast, Podcast Studio Rental, Reels Brand Deal and Reel Editing service), with all their records. Gemini AI joins System Connections. The Dashboard takes a date range.',
+    new: [
+      'System Connections → Gemini AI: the API key (with a Claude in Chrome prompt to get it) and the model, picked from a searchable list of the models that key can use. The card shows the model, this month’s calls and tokens, and links to Google’s usage and billing pages.',
+      'Funnel → Overview: the Leads, From forms & sheets, Form posts and Won tiles open their records.',
+    ],
+    improved: [
+      'Businesses are one level: the top-bar picker is All Businesses plus every business. TVS’s sub-businesses are businesses now, with their leads, bookings, invoices, meetings, funnels, products, calls, ad spend and team access; TVS is switched off (kept). The business form has no sub-business option, and team access is by business.',
+      'Paid Podcast and Podcast Studio Rental still share the studio: no two bookings at the same time across the two, and each calendar shows the other’s bookings (view only).',
+      'Invoice numbers always come from the billing company (Company Master); with no company picked, the business’s company for that type.',
+      'Dashboard: a date range (This month by default: the 1st till today) instead of the month picker; the cards, collections breakdown and lead sources follow it.',
+      'Funnel report → List: Amount is without GST (hover for with GST).',
+    ],
+    removed: ['Sub-businesses (and the sub-business cards on a business’s Dashboard).'],
+  },
+  {
     version: '0.25',
     date: '2026-11-19',
     title: 'Invoice with the booking, Google Ads, invoices list Print',
