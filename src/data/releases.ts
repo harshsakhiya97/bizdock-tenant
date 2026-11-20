@@ -27,10 +27,11 @@ export const releases: Release[] = [
     improved: [
       'Studio Schedule (was Booking / Podcast Calendar): every Paid Podcast and Studio Rental booking whatever business is picked on top, a Studio filter and the studio on each booking; a new booking asks which business it is for.',
       'The side menu follows Access control only, not the business picked on top. Nobody lost anything: every role has My Calendar; whoever had bookings has Bookings, Orders and webinars too.',
-      'My Calendar: the dates and List / Day / Week / Month on the first row, the filters on the second.',
+      'My Calendar and Studio Schedule: the dates and List / Day / Week / Month on the first row, the filters on the second.',
       'Funnel → Overview: the Leads, From forms & sheets, Form posts and Won tiles follow the Funnel report’s date range and Overall / Facebook / Google (and their lists too).',
+      'My Calendar goes by team member only: lead meetings and webinars of every business, whatever is picked on top (Book podcast on a done meeting with a Paid Podcast lead).',
     ],
-    removed: ['Webinar Calendar page (webinars are in My Calendar) and Masters → Webinar hosts (the host is a team member).', 'The booking calendar widget filter on meetings.'],
+    removed: ['Webinar Calendar page (webinars are in My Calendar) and Masters → Webinar hosts (the host is a team member).', 'The booking calendar widget filter on meetings.', 'Orders hidden from the side menu and Access control for now.'],
   },
   {
     version: '0.26',
