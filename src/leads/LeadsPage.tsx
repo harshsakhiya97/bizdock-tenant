@@ -9,6 +9,7 @@ import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Link2, Phone,
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
+import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
@@ -268,6 +269,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   useEffect(() => setPage(1), [stageTab, filters, selected, sub])
   const pages = Math.max(1, Math.ceil(visible.length / perPage))
   const current = Math.min(page, pages)
+  // AI Insights reads every filtered lead, not only this page
+  useAiRows(visible)
   const pageRows = visible.slice((current - 1) * perPage, current * perPage)
 
   const pickedIds = visible.filter((l) => picked.has(l.id)).map((l) => l.id)

@@ -328,6 +328,24 @@ export function IntegrationsPage() {
                     <span className="muted">
                       This month: {calls} call{calls === 1 ? '' : 's'} · {k(tin)} in / {k(tout)} out tokens
                     </span>
+                    {(() => {
+                      const cost = (tin * Number(r.config.price_in || 0) + tout * Number(r.config.price_out || 0)) / 1e6
+                      const limit = Number(r.config.monthly_limit || 0)
+                      return (
+                        <span>
+                          This month ≈ <b>₹{cost.toFixed(2)}</b>
+                          {limit > 0 ? (
+                            <>
+                              {' '}
+                              of <b>₹{limit.toLocaleString('en-IN')}</b> limit{cost >= limit && <span className="danger-text"> · used up: AI Insights is paused</span>}
+                            </>
+                          ) : (
+                            <span className="muted"> · no monthly limit</span>
+                          )}
+                          {!r.config.price_in && !r.config.price_out && <span className="muted"> (set the prices in Settings)</span>}
+                        </span>
+                      )
+                    })()}
                     <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
                       <a className="link-btn" href="https://aistudio.google.com/usage" target="_blank" rel="noopener noreferrer">
                         AI Studio usage <ExternalLink size={12} />

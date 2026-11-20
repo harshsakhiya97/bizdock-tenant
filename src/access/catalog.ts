@@ -174,6 +174,7 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         ],
       },
       { key: 'integrations', label: 'System Connections', open: { kind: 'action', module: 'settings', action: 'edit', hint: 'WhatsApp, Facebook ads and other connections' }, actions: [] },
+      { key: 'ai_insights', label: 'AI Insights', open: { kind: 'action', module: 'ai_insights', action: 'view', hint: 'The AI button on every page: a summary of the screen and a chat about it (Gemini AI)' }, actions: [] },
       { key: 'call_logs', label: 'Call logs', open: { kind: 'action', module: 'call_logs', action: 'view', hint: 'Callyzer call logs of every lead (System Connections people see them too)' }, actions: [] },
     ],
   },

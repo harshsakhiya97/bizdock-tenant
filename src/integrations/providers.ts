@@ -207,7 +207,7 @@ export const PROVIDERS: Provider[] = [
     icon: Sparkles,
     color: '#1a73e8',
     description: 'Your Google Gemini API key and the model BizDock’s AI features (AI Insights) use.',
-    usedFor: 'AI Insights (coming)',
+    usedFor: 'AI Insights (the AI button on every page), Write with AI in AI Calling templates',
     guide: [
       'Open Google AI Studio → Get API key (aistudio.google.com/apikey) → Create API key (in a project, e.g. “BizDock AI”). Copy the key.',
       'Free tier: no bill, but daily limits, and Google may use the data to improve its models. Paid tier: billed by Google Cloud for what you use.',
@@ -216,6 +216,9 @@ export const PROVIDERS: Provider[] = [
     fields: [
       { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Google AI Studio → Get API key.' },
       { key: 'model', label: 'Model', required: true, hint: 'The models this key can use (Flash: fast and cheap · Pro: smarter, costs more).' },
+      { key: 'monthly_limit', label: 'Monthly AI limit (₹)', placeholder: 'e.g. 500', hint: 'AI Insights stops for the month once the estimated cost reaches this. Empty: no limit.' },
+      { key: 'price_in', label: 'Price per 1M input tokens (₹)', placeholder: '26', hint: 'Google’s price for your model (ai.google.dev/pricing) in ₹, for the estimate. Free tier: 0.' },
+      { key: 'price_out', label: 'Price per 1M output tokens (₹)', placeholder: '215', hint: 'Output includes the model’s thinking.' },
     ],
   },
   {

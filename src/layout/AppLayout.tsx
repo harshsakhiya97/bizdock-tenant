@@ -11,6 +11,7 @@ import { TenantLockup } from '@/components/Logo'
 import { LogoutDialog } from '@/components/LogoutDialog'
 import { APP_VERSION } from '@/config'
 import { cn } from '@/lib/cn'
+import { AiInsights } from '@/ai/AiInsights'
 import { NotificationBell } from './NotificationBell'
 import { navSections, pageMeta, tabNames, type NavItem } from './nav'
 
@@ -208,6 +209,7 @@ function Shell() {
           ))}
         </nav>
 
+        <AiInsights page={`${meta.title} / ${meta.crumb}`} />
         <LogoutDialog open={logoutOpen} onClose={() => setLogoutOpen(false)} />
       </div>
   )

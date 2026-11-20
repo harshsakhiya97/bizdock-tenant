@@ -1,3 +1,4 @@
+import { useAiRows } from '@/ai/insights'
 // Shared building blocks from the theme kit.
 import { useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Inbox, Search, type LucideIcon } from 'lucide-react'
@@ -324,6 +325,8 @@ export function PageFoot({
  * `children` gets the rows of the current page; back to page 1 when the list's length or `reset` changes.
  */
 export function Paged<T>({ rows, reset, children }: { rows: T[]; reset?: unknown; children: (rows: T[]) => ReactNode }) {
+  // AI Insights reads the full list, not only this page
+  useAiRows(rows)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(20)
   const key = `${rows.length}|${typeof reset === 'object' ? JSON.stringify(reset) : String(reset ?? '')}`

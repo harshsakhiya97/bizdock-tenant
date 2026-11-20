@@ -39,6 +39,7 @@ import { LeadInvoices, countLeadInvoices } from '@/invoices/LeadInvoices'
 import { db } from '@/lib/supabase'
 import { CallFromAiDrawer, LeadAiCalls } from '@/aicalls/LeadAiCalls'
 import { listAiCalls } from '@/aicalls/api'
+import { useAiNames } from '@/ai/insights'
 
 type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments' | 'ai_calls'
 
@@ -53,6 +54,8 @@ export function LeadPage() {
   const { can, businesses, membership } = useAuth()
   const refs = useBookingRefs()
   const [lead, setLead] = useState<LeadRow | null | undefined>(undefined)
+  // AI Insights: hide the lead's name too
+  useAiNames([lead ? fullName(lead) : null])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [bookings, setBookings] = useState<BookingRow[] | null>(null)
