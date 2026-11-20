@@ -6,6 +6,7 @@ import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Hint, Label, Select, TextInput } from '@/components/Field'
 import { ConfirmModal, PageHead } from '@/components/ui'
+import { SearchSelect } from '@/components/SearchSelect'
 import { listMemberOptions } from '@/leads/api'
 import type { MemberOption } from '@/leads/types'
 import { cn } from '@/lib/cn'
@@ -893,14 +894,15 @@ function ConnectDrawer({
               {f.label}
             </Label>
             {provider.id === 'gemini' && f.key === 'model' ? (
-              <Select id={`int-${f.key}`} value={values[f.key]} disabled={!gModels?.length} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
-                {!gModels?.length && <option value="">{gModelsMsg}</option>}
-                {gModels?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name} ({m.id})
-                  </option>
-                ))}
-              </Select>
+              <SearchSelect
+                id={`int-${f.key}`}
+                value={values[f.key] || null}
+                disabled={!gModels?.length}
+                placeholder={gModels?.length ? 'Select a model' : gModelsMsg}
+                searchPlaceholder="Search models…"
+                options={(gModels ?? []).map((m) => ({ value: m.id, label: `${m.name} (${m.id})` }))}
+                onChange={(v) => setValues({ ...values, [f.key]: v ?? '' })}
+              />
             ) : f.options ? (
               <Select id={`int-${f.key}`} value={values[f.key]} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}>
                 {f.options.map((o) => (
