@@ -9,6 +9,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { PodcastDashboard } from './PodcastDashboard'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
+import { BusinessCards } from './BusinessCards'
 import { listBookings } from '@/bookings/api'
 import { BookingDrawer } from '@/bookings/BookingDrawer'
 import type { BookingRow } from '@/bookings/types'
@@ -180,6 +181,8 @@ function MonthDashboard() {
         </div>
       </div>
       <Flash msg={notice} />
+
+      {!selected && businesses.length > 1 && <BusinessCards from={from} to={to} leads={leads} bookings={bookings} fus={fus} />}
 
       <div className="db-cards">
         <Link to="/leads" className="db-card">
