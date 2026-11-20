@@ -347,6 +347,20 @@ export function IntegrationsPage() {
                   <span className="muted">
                     All time ₹{(hxMonth?.all ?? 0).toFixed(2)} · calls {r.config.hours_start || '10:00'}–{r.config.hours_end || '19:00'} (India time)
                   </span>
+                  {(() => {
+                    // the calling numbers linked on the HelloRix account (read when the key was checked)
+                    let nums: { id: string; label: string }[] = []
+                    try {
+                      nums = JSON.parse(r.config.options || '{}').numbers ?? []
+                    } catch {
+                      nums = []
+                    }
+                    return (
+                      <span className="muted">
+                        Calling number{nums.length === 1 ? '' : 's'}: {nums.length ? nums.map((n) => n.label || n.id).join(', ') : 'none linked on HelloRix yet'}
+                      </span>
+                    )
+                  })()}
                   <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
                     <a className="link-btn" href="https://app.hellorix.ai" target="_blank" rel="noopener noreferrer">
                       HelloRix wallet / recharge <ExternalLink size={12} />

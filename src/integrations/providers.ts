@@ -220,11 +220,10 @@ export const PROVIDERS: Provider[] = [
     guide: [
       'Log in at app.hellorix.ai → Developers → API keys → create a key with the campaigns.run and campaigns.view permissions. Copy it (hlx_live_…).',
       'Link a mobile number in HelloRix (the number calls are made from) and recharge the HelloRix wallet: each call’s cost is taken from it.',
-      'Paste the key, add the caller number and set the calling hours, then Connect. Templates (with their voice) are made in AI Calling → Templates.',
+      'Paste the key and set the calling hours, then Connect. The account’s calling numbers show on the card; templates (with their voice) are made in AI Calling → Templates.',
     ],
     fields: [
       { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'HelloRix → Developers → API keys (campaigns.run + campaigns.view).' },
-      { key: 'from_number', label: 'Caller number', placeholder: '+91XXXXXXXXXX', hint: 'The number every AI call is made from (linked on your HelloRix account). Blank: HelloRix picks a free line.' },
       { key: 'insights', label: 'After the call', options: ['full', 'outcome'], hint: 'Full: outcome, summary and the collected answers. Outcome only: just the outcome.' },
       { key: 'hours_start', label: 'Calling hours from', placeholder: '10:00' },
       { key: 'hours_end', label: 'Calling hours to', placeholder: '19:00' },
