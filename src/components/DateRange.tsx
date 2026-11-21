@@ -14,14 +14,14 @@ const long = (s: string) => parse(s).toLocaleDateString('en-IN', { day: 'numeric
 export type RangeKey = 'today' | 'yesterday' | 'last7' | 'last14' | 'last28' | 'last30' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth' | 'thisQuarter' | 'lastQuarter' | 'max' | 'all' | 'custom'
 export type Range = { key: RangeKey; from: string; to: string }
 
-/** the same presets as Facebook Ads Manager: "Last N days" ends yesterday (today isn't over yet) */
+/** presets: "Last N days" are the N days up to and including today */
 const PRESETS: { key: Exclude<RangeKey, 'custom'>; label: string; range: (t: Date) => [Date, Date] }[] = [
   { key: 'today', label: 'Today', range: (t) => [t, t] },
   { key: 'yesterday', label: 'Yesterday', range: (t) => [add(t, -1), add(t, -1)] },
-  { key: 'last7', label: 'Last 7 days', range: (t) => [add(t, -7), add(t, -1)] },
-  { key: 'last14', label: 'Last 14 days', range: (t) => [add(t, -14), add(t, -1)] },
-  { key: 'last28', label: 'Last 28 days', range: (t) => [add(t, -28), add(t, -1)] },
-  { key: 'last30', label: 'Last 30 days', range: (t) => [add(t, -30), add(t, -1)] },
+  { key: 'last7', label: 'Last 7 days', range: (t) => [add(t, -6), t] },
+  { key: 'last14', label: 'Last 14 days', range: (t) => [add(t, -13), t] },
+  { key: 'last28', label: 'Last 28 days', range: (t) => [add(t, -27), t] },
+  { key: 'last30', label: 'Last 30 days', range: (t) => [add(t, -29), t] },
   { key: 'thisWeek', label: 'This week', range: (t) => [add(t, -t.getDay()), t] },
   { key: 'lastWeek', label: 'Last week', range: (t) => [add(t, -t.getDay() - 7), add(t, -t.getDay() - 1)] },
   { key: 'thisMonth', label: 'This month', range: (t) => [new Date(t.getFullYear(), t.getMonth(), 1), t] },
