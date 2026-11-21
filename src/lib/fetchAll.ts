@@ -21,7 +21,13 @@ export async function fetchAll<T>(make: () => Page<T>, size = 1000, parallel = 4
  * (gentle on the shared database: more at once slowed every workspace down).
  * Used where the table's row-by-row access checks are too slow for big workspaces (list_leads, list_purchases).
  */
-export async function rpcAll<T>(call: (offset: number, limit: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>, size = 1000, parallel = 2): Promise<T[]> {
+export async function rpcAll<T>(
+  call: (offset: number, limit: number) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  size = 1000,
+  parallel = 2,
+  /** called after each round with everything so far (to show the first rows before the rest arrive) */
+  onBatch?: (soFar: T[]) => void,
+): Promise<T[]> {
   const out: T[] = []
   for (let start = 0; ; start += size * parallel) {
     const pages = await Promise.all(Array.from({ length: parallel }, (_, i) => call(start + i * size, size)))
@@ -30,5 +36,6 @@ export async function rpcAll<T>(call: (offset: number, limit: number) => Promise
       out.push(...((p.data as T[] | null) ?? []))
     }
     if (pages.some((p) => ((p.data as unknown[] | null)?.length ?? 0) < size)) return out
+    onBatch?.(out.slice())
   }
 }

@@ -13,12 +13,32 @@ const LEAD_NULLS = Object.fromEntries(
     .map((c) => [c, null]),
 )
 
-export async function listLeads(tenantId: string): Promise<LeadRow[]> {
+// a load already running for the workspace is shared (two pages asking at once, or React running an effect twice)
+const loading = new Map<string, { promise: Promise<LeadRow[]>; partial: Set<(rows: LeadRow[]) => void> }>()
+
+/**
+ * Every lead of the workspace, newest first. `onPartial` gets the newest ones as they arrive (the first 3,000 in well
+ * under a second), so a list can show them while the rest load.
+ */
+export function listLeads(tenantId: string, onPartial?: (rows: LeadRow[]) => void): Promise<LeadRow[]> {
+  const running = loading.get(tenantId)
+  if (running) {
+    if (onPartial) running.partial.add(onPartial)
+    return running.promise
+  }
+  const partial = new Set<(rows: LeadRow[]) => void>(onPartial ? [onPartial] : [])
+  const promise = loadLeads(tenantId, (rows) => partial.forEach((f) => f(rows))).finally(() => loading.delete(tenantId))
+  loading.set(tenantId, { promise, partial })
+  return promise
+}
+
+async function loadLeads(tenantId: string, onPartial: (rows: LeadRow[]) => void): Promise<LeadRow[]> {
   // all of them, past the 1,000-rows-per-request cap (a workspace can hold tens of thousands)
   // list_leads_lite: the same access rule as the table, checked once per call (fast with 20,000+ leads); a lighter row
   // (only the extra fields the lists read, empty fields left out and filled back in here as null)
-  const rows = await rpcAll<Partial<LeadRow>>((offset, limit) => db().rpc('list_leads_lite', { p_tenant: tenantId, p_offset: offset, p_limit: limit }), 1000, 3)
-  return rows.map((r) => ({ ...LEAD_NULLS, ...r }) as LeadRow)
+  const fill = (rows: Partial<LeadRow>[]) => rows.map((r) => ({ ...LEAD_NULLS, ...r }) as LeadRow)
+  const rows = await rpcAll<Partial<LeadRow>>((offset, limit) => db().rpc('list_leads_lite', { p_tenant: tenantId, p_offset: offset, p_limit: limit }), 1000, 3, (soFar) => onPartial(fill(soFar)))
+  return fill(rows)
 }
 
 export async function listFunnelLeads(funnelId: string): Promise<LeadRow[]> {

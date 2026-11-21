@@ -79,7 +79,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
   // Leads: every lead (Closed ones too; Customers lists the Closed leads). customers mode: leads with a booking
   const leads = useMemo(
-    () => (allLeads && revenue ? (customers ? allLeads.filter((l) => revenue.has(l.id)) : allLeads) : null),
+    () => (allLeads && (revenue || !customers) ? (customers ? allLeads.filter((l) => revenue!.has(l.id)) : allLeads) : null),
     [allLeads, revenue, customers],
   )
   const word = customers ? 'customer' : 'lead'
@@ -104,7 +104,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
 
   const load = useCallback(() => {
-    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
+    // big workspaces: the newest leads show first while the rest load
+    let done = false
+    Promise.all([listLeads(tenant.id, (part) => !done && setLeads(part)).finally(() => (done = true)), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
       .then(([l, f, s, r, m, rv]) => {
         setLeads(l)
         setRevenue(rv)
