@@ -3,7 +3,6 @@ import { FileText, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { db } from '@/lib/supabase'
-import { PlayRecording } from './PlayRecording'
 
 export type TranscriptStatus = 'waiting' | 'done' | 'error' | 'skipped' | null
 
@@ -36,6 +35,15 @@ function TranscriptDrawer({ call, onClose }: { call: { id: string; recording_pat
   const [row, setRow] = useState<{ transcript: string | null; transcript_status: TranscriptStatus; transcript_error: string | null; transcript_at: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // the recording: our copy (a 1-hour link), else Callyzer's link until it's copied
+  const [audio, setAudio] = useState<string | null>(null)
+  useEffect(() => {
+    if (!call.recording_path) return setAudio(call.recording_url ?? null)
+    db()
+      .storage.from('call-recordings')
+      .createSignedUrl(call.recording_path, 3600)
+      .then(({ data }) => setAudio(data?.signedUrl ?? call.recording_url ?? null))
+  }, [call.recording_path, call.recording_url])
   useEffect(() => {
     db()
       .from('calls')
@@ -82,9 +90,7 @@ function TranscriptDrawer({ call, onClose }: { call: { id: string; recording_pat
       }
     >
       <div className="stack">
-        <div className="row" style={{ gap: 8 }}>
-          <span className="muted small">Recording:</span> <PlayRecording path={call.recording_path} url={call.recording_url ?? null} />
-        </div>
+        {audio ? <audio className="rec-player" src={audio} controls preload="metadata" /> : <div className="muted small">Loading the recording…</div>}
         {!row ? (
           <div className="muted small">Loading…</div>
         ) : done ? (
