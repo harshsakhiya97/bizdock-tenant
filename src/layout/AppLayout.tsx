@@ -14,6 +14,7 @@ import { cn } from '@/lib/cn'
 import { AiInsights } from '@/ai/AiInsights'
 import { NotificationBell } from './NotificationBell'
 import { navSections, pageMeta, tabNames, type NavItem } from './nav'
+import { useTenant } from '@/tenant/useTenant'
 
 const STORAGE_KEY = 'bizdock.sidebarCollapsed'
 
@@ -37,6 +38,7 @@ export function AppLayout() {
 function Shell() {
   const { pathname } = useLocation()
   const { profile, user, can, scope } = useAuth()
+  const tenant = useTenant()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
@@ -168,9 +170,11 @@ function Shell() {
               <LogOut size={16} />
             </button>
           </div>
-          <NavLink to="/whats-new" className="sidebar-version" onClick={() => setMobileOpen(false)}>
-            Version {APP_VERSION} · What’s new
-          </NavLink>
+          {!tenant.hide_bizdock_branding && (
+            <NavLink to="/whats-new" className="sidebar-version" onClick={() => setMobileOpen(false)}>
+              Version {APP_VERSION} · What’s new
+            </NavLink>
+          )}
           <DevelopedBy className="sidebar-dev" />
         </aside>
 

@@ -9,6 +9,8 @@ export type Tenant = {
   primary_color: string
   /** sidebar look: 'light' (default) or 'dark' */
   sidebar_style?: string | null
+  /** hide the "Version · What's new" link and "Developed by BizDock" */
+  hide_bizdock_branding?: boolean | null
   /** the workspace's address: primary domain + folder (no trailing /) */
   app_url?: string | null
 }
