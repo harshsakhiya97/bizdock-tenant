@@ -4,7 +4,7 @@ import { Md } from '@/ai/AiInsights'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
 import { Hint, Label, TextInput } from '@/components/Field'
-import { ConfirmModal } from '@/components/ui'
+import { ConfirmModal, Tabs } from '@/components/ui'
 import { useTenant } from '@/tenant/useTenant'
 import { addRecording, listRecordings, recordingUrl, redoRecording, REC_BUCKET, removeRecording, type RecTarget, type Recording } from './recordings'
 
@@ -97,6 +97,7 @@ function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: ()
   const [url, setUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+  const [tab, setTab] = useState('Summary')
   const path = r.video_path ?? r.audio_path
   const isVideo = !!r.video_path
   useEffect(() => {
@@ -171,7 +172,7 @@ function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: ()
 
       <div className="rec-section">
         <div className="rec-section-head">
-          <b>Summary</b>
+          <Tabs tabs={['Summary', 'Transcript']} value={tab} onChange={setTab} />
           {r.copy_status === 'done' && r.ai_status !== 'waiting' && path && (
             <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void redo()}>
               {r.ai_status === 'done' ? <RefreshCw size={13} /> : <Sparkles size={13} />} {r.ai_status === 'done' ? 'Write again' : 'Write summary'}
@@ -180,24 +181,15 @@ function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: ()
         </div>
         {r.ai_status === 'waiting' && r.copy_status === 'done' ? (
           <div className="muted small">Writing the transcript and summary… (a few minutes)</div>
-        ) : r.summary ? (
-          <Md text={r.summary} />
-        ) : r.ai_error ? (
-          <div className="muted small">{r.ai_error}</div>
+        ) : tab === 'Summary' ? (
+          r.summary ? <Md text={r.summary} /> : <div className="muted small">{r.ai_error || '—'}</div>
+        ) : r.transcript ? (
+          <pre className="rec-transcript">{r.transcript}</pre>
         ) : (
-          <div className="muted small">—</div>
+          <div className="muted small">{r.ai_error || 'No transcript yet.'}</div>
         )}
         {msg && <div className="muted small">{msg}</div>}
       </div>
-
-      {r.transcript && (
-        <details className="rec-section">
-          <summary>
-            <b>Transcript</b> <span className="muted small">({r.transcript.split('\n').length} lines)</span>
-          </summary>
-          <pre className="rec-transcript">{r.transcript}</pre>
-        </details>
-      )}
     </article>
   )
 }
