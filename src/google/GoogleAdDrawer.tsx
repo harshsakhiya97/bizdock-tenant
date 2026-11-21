@@ -1,10 +1,10 @@
 import { ExternalLink } from 'lucide-react'
 import { Drawer } from '@/components/Drawer'
 import { cn } from '@/lib/cn'
-import { gTone, gWord, type GAd } from './api'
+import { googleAdsUrl, gTone, gWord, type GAd } from './api'
 
 /** a Google ad: Google has no ready preview like Facebook's, so its words: headlines, descriptions and where it leads */
-export function GoogleAdDrawer({ ad, sub, onClose }: { ad: GAd; sub: string; onClose: () => void }) {
+export function GoogleAdDrawer({ ad, sub, customerId, onClose }: { ad: GAd; sub: string; customerId?: string | null; onClose: () => void }) {
   return (
     <Drawer open onClose={onClose} width={560} title={ad.name || ad.headlines[0] || `Ad ${ad.ad_id}`}>
       <div className="stack">
@@ -12,6 +12,9 @@ export function GoogleAdDrawer({ ad, sub, onClose }: { ad: GAd; sub: string; onC
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           <span className={cn('badge', gTone(ad.status))}>{gWord(ad.status)}</span>
           {ad.type && <span className="badge badge-muted">{gWord(ad.type)}</span>}
+          <a className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} href={googleAdsUrl(customerId, ad.campaign_id, ad.ad_group_id)} target="_blank" rel="noopener noreferrer">
+            Open in Google Ads <ExternalLink size={12} />
+          </a>
         </div>
         {/* how a search ad reads: the first headlines, the address, the first description */}
         {ad.headlines.length > 0 && (

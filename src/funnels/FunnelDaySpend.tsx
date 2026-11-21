@@ -5,7 +5,7 @@ import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/met
 import { SpendLines, type Line } from './SpendLines'
 import { AdPreviewDrawer } from '@/meta/AdPreviewDrawer'
 import { GoogleAdDrawer } from '@/google/GoogleAdDrawer'
-import { funnelGoogleAdDays, type GAd } from '@/google/api'
+import { funnelGoogleAdDays, googleAdsUrl, type GAd } from '@/google/api'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -27,7 +27,7 @@ export function FunnelDaySpend({
   campaigns: Pick<Campaign, 'campaign_id' | 'name'>[]
   adsets: Pick<AdSet, 'adset_id' | 'name'>[]
   /** Google Ads (Funnel → Google Ads): its ads (for the preview); else Facebook */
-  google?: { ads: GAd[] }
+  google?: { ads: GAd[]; customers?: Map<string, string> }
 }) {
   const platform = google ? 'Google' : 'Facebook'
   const tenant = useTenant()
@@ -195,10 +195,13 @@ export function FunnelDaySpend({
                         </tr>
                         {isOpen &&
                           d.ads.map((a) => (
-                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => {
+                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title={google && !data?.objs?.get(a.ad_id) ? 'Open the campaign in Google Ads' : 'See the ad'} onClick={() => {
                               if (!google) return setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })
                               const o = data?.objs?.get(a.ad_id)
-                              if (o) setGPreview({ ad: o, sub: `${a.campaign} · ${a.adset}` })
+                              if (o) return setGPreview({ ad: o, sub: `${a.campaign} · ${a.adset}` })
+                              // Performance Max (no ads): the campaign in Google Ads
+                              const r = data?.days.find((x) => x.ad_id === a.ad_id)
+                              if (r) window.open(googleAdsUrl(google.customers?.get(r.account_id), r.campaign_id), '_blank', 'noopener')
                             }}>
                               <td />
                               <td>
@@ -220,7 +223,7 @@ export function FunnelDaySpend({
         </>
       )}
       {preview && <AdPreviewDrawer ad={preview} onClose={() => setPreview(null)} />}
-      {gPreview && <GoogleAdDrawer ad={gPreview.ad} sub={gPreview.sub} onClose={() => setGPreview(null)} />}
+      {gPreview && <GoogleAdDrawer ad={gPreview.ad} sub={gPreview.sub} customerId={google?.customers?.get(gPreview.ad.account_id)} onClose={() => setGPreview(null)} />}
     </section>
   )
 }

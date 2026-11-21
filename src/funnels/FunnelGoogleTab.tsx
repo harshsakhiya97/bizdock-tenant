@@ -141,7 +141,7 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
           accounts={accounts}
           campaigns={tree.campaigns}
           adsets={tree.groups.map((g) => ({ adset_id: g.ad_group_id, name: g.name }))}
-          google={{ ads: tree.ads }}
+          google={{ ads: tree.ads, customers: new Map(accounts.map((a) => [a.id, a.customer_id])) }}
         />
       )}
 

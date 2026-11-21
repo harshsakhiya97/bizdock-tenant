@@ -127,6 +127,15 @@ export async function funnelGoogleDays(tenantId: string, funnelId: string, from:
 }
 
 /** Google words → plain words */
+/** Google Ads, opened on that account's campaign (or ad group's ads) — __e picks the account */
+export function googleAdsUrl(customerId: string | null | undefined, campaignId: string, adGroupId?: string | null) {
+  const q = new URLSearchParams()
+  if (customerId) q.set('__e', customerId.replace(/\D/g, ''))
+  q.set('campaignId', campaignId)
+  if (adGroupId) q.set('adGroupId', adGroupId)
+  return `https://ads.google.com/aw/${adGroupId ? 'ads' : 'overview'}?${q}`
+}
+
 export const gWord = (s: string | null) => (s ? s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ') : '—')
 export const gTone = (s: string | null) => (s === 'ENABLED' ? 'badge-success' : s === 'PAUSED' ? 'badge-warning' : 'badge-muted')
 

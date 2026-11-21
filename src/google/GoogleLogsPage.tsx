@@ -256,7 +256,7 @@ export function GoogleLogsPage() {
           </Paged>
         )}
       </section>
-      {preview && <GoogleAdDrawer ad={preview.ad} sub={preview.sub} onClose={() => setPreview(null)} />}
+      {preview && <GoogleAdDrawer ad={preview.ad} sub={preview.sub} customerId={accById.get(preview.ad.account_id)?.customer_id} onClose={() => setPreview(null)} />}
     </>
   )
 }
