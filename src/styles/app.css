@@ -1721,14 +1721,14 @@ tfoot td {
 
 /* ---------- AI Insights: the AI button on every page and its chat ---------- */
 .ai-fab {
-  position: fixed; right: 22px; bottom: 22px; z-index: 50; width: 52px; height: 52px; border-radius: 50%; border: 0;
+  position: fixed; right: 30px; bottom: 92px; z-index: 50; width: 52px; height: 52px; border-radius: 50%; border: 0;
   display: grid; place-items: center; cursor: pointer; color: #fff; background: var(--brand); box-shadow: var(--shadow-float), 0 4px 14px color-mix(in srgb, var(--brand) 35%, transparent);
   transition: transform .15s, box-shadow .15s;
 }
 .ai-fab:hover { transform: translateY(-2px); }
 .ai-fab.is-open { background: var(--text); }
 .ai-panel {
-  position: fixed; right: 22px; bottom: 86px; z-index: 50; width: 400px; max-width: calc(100vw - 32px); height: min(600px, calc(100dvh - 120px));
+  position: fixed; right: 30px; bottom: 156px; z-index: 50; width: 400px; max-width: calc(100vw - 32px); height: min(600px, calc(100dvh - 190px));
   display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-float); overflow: hidden;
   animation: pop .18s ease-out;
 }
