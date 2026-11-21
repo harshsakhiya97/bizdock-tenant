@@ -20,12 +20,14 @@ export const releases: Release[] = [
     new: [
       'Meeting recordings: the Zoom cloud recording of every meeting and webinar date is copied into BizDock’s own storage about 30 minutes after it ends (video and audio). Zoom → Recording tab: the player, the file path and Download, then Summary and Transcript tabs written by Gemini AI (Purpose, Key points, client’s questions and objections, prices and offers, decisions, next steps). The summary is also added as a note on the meeting’s lead.',
       'Add recording by hand (an audio / video file, or a link) on any meeting, also meetings not on Zoom; an uploaded file gets its transcript and summary too.',
+      'Callyzer call transcripts: every call recording is transcribed by Gemini AI (newest first, old calls too). History logs and the lead’s Callyzer tab have a Transcript column: View opens the transcript with the recording and Regenerate.',
       'Billing → Payments: every payment of every invoice (date, client, invoice, part, mode, reference, received by, amount, Paid / Due / Overdue) with Received / Due / Overdue totals and filters (status, mode, received by, dates; All dates by default).',
     ],
     improved: [
       'Side menu: Invoices, Payments and Razorpay (was Payments → History logs) are grouped under Billing.',
       'Meeting Done on a lead meeting: Lead category is required, pre-filled from the lead and saved on it.',
       'Zoom: after saving a meeting, its new Zoom meeting shows by itself (no need to reopen).',
+      'Date ranges: Last 7 / 14 / 28 / 30 days now run up to and including today.',
     ],
   },
   {
