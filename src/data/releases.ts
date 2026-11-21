@@ -28,6 +28,7 @@ export const releases: Release[] = [
       'Expenses: what the business spends (ad spend, salary, venue, software…), by date, category and business. The total feeds net profit on the dashboard. Access control → Expenses.',
       'Lead → Profile: business, personal, batch & pod, implementer & family and CRM details. Lead → Journey: one timeline of webinars, courses bought, payments and refunds.',
       'Masters → Courses: Order in the ladder.',
+      'Lead → Profile: Webinars & Zoom (webinars registered, Zoom sessions and minutes, which sessions, chat) and Form answers (3 biggest challenges, main question, website, GST). Journey shows the Zoom attendance and every webinar registered.',
     ],
     improved: [
       'Masters → Business types: switched-off types are hidden; tick Show inactive to see them.',

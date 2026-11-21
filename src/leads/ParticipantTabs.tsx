@@ -65,6 +65,28 @@ export const PROFILE_GROUPS: { title: string; fields: { key: string; label: stri
     ],
   },
   {
+    title: 'Webinars & Zoom',
+    fields: [
+      { key: 'webinar_events', label: 'Webinars registered' },
+      { key: 'zoom_sessions', label: 'Zoom sessions attended' },
+      { key: 'zoom_minutes', label: 'Total minutes on Zoom' },
+      { key: 'zoom_first', label: 'First attended', type: 'date' },
+      { key: 'zoom_last', label: 'Last attended', type: 'date' },
+      { key: 'zoom_attended', label: 'Sessions they sat in' },
+      { key: 'chat_count', label: 'Chat messages' },
+      { key: 'chat_text', label: 'What they wrote in the chat' },
+    ],
+  },
+  {
+    title: 'Form answers',
+    fields: [
+      { key: 'challenges', label: '3 biggest challenges' },
+      { key: 'question', label: 'Main question (VIP form)' },
+      { key: 'website', label: 'Website / LinkedIn' },
+      { key: 'gst', label: 'Has GST?' },
+    ],
+  },
+  {
     title: 'CRM',
     fields: [
       { key: 'assigned_to', label: 'Assigned to (from the sheet)' },
@@ -159,7 +181,17 @@ export function JourneyTab({ lead, purchases }: { lead: LeadRow; purchases: Purc
     const out: Step[] = []
     const x = lead.extra ?? {}
     out.push({ at: x.first_seen || lead.created_at, icon: UserPlus, title: 'Became a lead', detail: [x.lead_source || null, lead.utm_campaign ? `campaign ${lead.utm_campaign}` : null].filter(Boolean).join(' · ') || undefined })
-    if (x.webinar_names || x.webinar_registered_on)
+    if (x.zoom_first)
+      out.push({
+        at: x.zoom_first,
+        icon: Video,
+        title: `Attended ${x.zoom_sessions || 'some'} Zoom session${x.zoom_sessions === '1' ? '' : 's'}${x.zoom_minutes ? ` · ${Math.round(Number(x.zoom_minutes))} min` : ''}`,
+        detail: [x.zoom_attended, x.zoom_last && x.zoom_last !== x.zoom_first ? `last on ${fmtDay(x.zoom_last)}` : null].filter(Boolean).join(' · ') || undefined,
+        tone: 'info',
+      })
+    if (x.webinar_events)
+      out.push({ at: x.webinar_registered_on || x.first_seen || lead.created_at, icon: Video, title: 'Registered for webinars', detail: x.webinar_events })
+    else if (x.webinar_names || x.webinar_registered_on)
       out.push({
         at: x.webinar_registered_on || lead.created_at,
         icon: Video,
