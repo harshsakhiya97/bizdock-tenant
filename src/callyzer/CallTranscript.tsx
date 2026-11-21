@@ -95,7 +95,7 @@ function TranscriptDrawer({ call, onClose }: { call: { id: string; recording_pat
           <div className="muted small">Loading…</div>
         ) : done ? (
           <>
-            <pre className="rec-transcript">{row.transcript}</pre>
+            <TranscriptChat text={row.transcript ?? ''} />
             {row.transcript_at && <div className="muted small">Written by Gemini AI on {new Date(row.transcript_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}.</div>}
           </>
         ) : (
@@ -111,5 +111,42 @@ function TranscriptDrawer({ call, onClose }: { call: { id: string; recording_pat
         )}
       </div>
     </Drawer>
+  )
+}
+
+/** the turns of a transcript: "Team: …" / "Customer: …" (one per line, or run together on one line) */
+function turns(text: string) {
+  const parts = text
+    .replace(/\r/g, '')
+    .split(/\n+|(?=\b(?:Team|Customer)\s*(?:\([^)]*\))?\s*:)/)
+    .map((x) => x.trim())
+    .filter(Boolean)
+  return parts.map((p) => {
+    const m = /^(\[?[\d:]+\]?\s*)?([A-Za-z][\w .'()-]{0,30}?)\s*:\s*([\s\S]*)$/.exec(p)
+    if (!m) return { who: '', side: 'note' as const, text: p }
+    const who = m[2].trim()
+    const side = /^team\b/i.test(who) ? ('right' as const) : ('left' as const)
+    return { who, side, text: m[3].trim() }
+  })
+}
+
+/** a call transcript as a chat: the team on the right, the customer on the left */
+function TranscriptChat({ text }: { text: string }) {
+  const list = turns(text)
+  return (
+    <div className="tc-chat">
+      {list.map((t, i) =>
+        t.side === 'note' ? (
+          <div key={i} className="tc-note">
+            {t.text}
+          </div>
+        ) : (
+          <div key={i} className={`wa-msg ${t.side === 'right' ? 'is-out' : 'is-in'}`}>
+            <div className="wa-msg-tpl">{t.who}</div>
+            <div className="wa-msg-text">{t.text}</div>
+          </div>
+        ),
+      )}
+    </div>
   )
 }

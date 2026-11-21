@@ -1856,3 +1856,8 @@ details.rec-section summary { cursor: pointer; }
 
 /* lead → Follow-ups → WhatsApp: the chat window */
 .lead-wa { height: min(640px, calc(100vh - 260px)); min-height: 420px; border: 1px solid var(--line); border-radius: var(--radius-lg, 12px); overflow: hidden; background: var(--surface); }
+
+/* a call transcript as a chat (Callyzer → Transcript) */
+.tc-chat { display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #efeae2; border-radius: var(--radius); max-height: calc(100vh - 300px); overflow-y: auto; }
+.tc-chat .wa-msg { max-width: 82%; }
+.tc-note { align-self: center; font-size: 12px; color: #667781; background: rgba(255, 255, 255, .7); padding: 3px 10px; border-radius: 8px; }
