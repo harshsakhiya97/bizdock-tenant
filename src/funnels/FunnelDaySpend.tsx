@@ -14,7 +14,7 @@ const day = (d: Date) => d.toLocaleDateString('en-CA')
 type Ad = { ad_id: string; name: string; campaign: string; adset: string; spend: number; gst: number }
 type Day = { day: string; spend: number; gst: number; ads: Ad[] }
 
-/** Funnel → Facebook Ads: the linked campaigns' spend per day (with GST, hover without), and each day's ads with their spend. */
+/** Funnel → Facebook Ads: the linked campaigns' spend per day (without GST, hover with), and each day's ads with their spend. */
 export function FunnelDaySpend({
   links,
   accounts,
@@ -75,10 +75,9 @@ export function FunnelDaySpend({
     }
     return [...byDay.values()].filter((d) => d.spend > 0).map((d) => ({ ...d, ads: d.ads.filter((a) => a.spend > 0).sort((a, b) => b.spend - a.spend) })).sort((a, b) => b.day.localeCompare(a.day))
   }, [data, accounts, campaigns, adsets])
-  // the graph: every day from the first to the last day with spend, one line per campaign or per ad (with GST)
+  // the graph: every day from the first to the last day with spend, one line per campaign or per ad (without GST)
   const [by, setBy] = useState<'campaign' | 'ad'>('campaign')
   const chart = useMemo(() => {
-    const gst = new Map(accounts.map((a) => [a.id, Number(a.gst_rate)]))
     const rows = (data?.days ?? []).filter((r) => Number(r.spend) > 0)
     if (!rows.length) return { days: [] as string[], lines: [] as Line[] }
     const first = rows.reduce((m, r) => (r.day < m ? r.day : m), rows[0].day)
@@ -91,7 +90,7 @@ export function FunnelDaySpend({
     for (const r of rows) {
       const k = by === 'campaign' ? r.campaign_id : r.ad_id
       const l = series.get(k) ?? { key: k, name: by === 'campaign' ? (cName.get(k) ?? k) : (data?.ads.get(k) ?? k), values: axis.map(() => 0) }
-      l.values[at.get(r.day)!] += Number(r.spend) * (1 + (gst.get(r.account_id) ?? 18) / 100)
+      l.values[at.get(r.day)!] += Number(r.spend)
       series.set(k, l)
     }
     const sum = (l: Line) => l.values.reduce((a, b) => a + b, 0)
@@ -105,8 +104,8 @@ export function FunnelDaySpend({
   }, [data, accounts, campaigns, by])
   const total = days.reduce((t, d) => ({ spend: t.spend + d.spend, gst: t.gst + d.gst }), { spend: 0, gst: 0 })
   const money = (ex: number, inc: number) => (
-    <span className="gst-hover" title={`${inr(ex)} + GST ${inr(inc - ex)} = ${inr(inc)}`}>
-      {inr(inc)}
+    <span className="gst-hover" title={`${inr(ex)} + GST ${inr(inc - ex)} = ${inr(inc)} with GST`}>
+      {inr(ex)}
     </span>
   )
 
@@ -116,7 +115,7 @@ export function FunnelDaySpend({
         <div>
           <b>Spend per day</b>
           <div className="muted small">
-            The linked campaigns’ {platform} spend, with GST (hover: without GST + GST).{days.length ? ` ${days.length} day${days.length === 1 ? '' : 's'} · ` : ' '}
+            The linked campaigns’ {platform} spend, without GST (hover: + GST).{days.length ? ` ${days.length} day${days.length === 1 ? '' : 's'} · ` : ' '}
             {days.length ? <>total {money(total.spend, total.gst)}</> : null}
           </div>
         </div>
@@ -141,7 +140,7 @@ export function FunnelDaySpend({
         <>
         {view === 'graph' && <div className="stack" style={{ gap: 8 }}>
           <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
-            <span className="muted small">Spend per day with GST · click a name below to hide / show its line</span>
+            <span className="muted small">Spend per day without GST · click a name below to hide / show its line</span>
             <div className="seg seg-sm" role="group" aria-label="Lines">
               <button type="button" className={by === 'campaign' ? 'is-active' : undefined} onClick={() => setBy('campaign')}>
                 By campaign

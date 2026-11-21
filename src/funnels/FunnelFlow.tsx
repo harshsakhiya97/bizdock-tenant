@@ -11,7 +11,9 @@ type Step = { stage: Stage; rate?: string }
 
 /** Funnel → Overview: the 3D funnel — Facebook reach → clicks → page views → leads → each stage reached → revenue — then profit and the ad numbers */
 export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
+  // every amount without GST (the Ad spend tile shows the GST on hover)
   const spendGst = f.spend_gst != null ? Number(f.spend_gst) : Number(f.spend) * gst
+  const spendEx = Number(f.spend)
   const src = f.source ?? 'fb'
   const where = src === 'fb' ? 'Facebook / Instagram' : src === 'google' ? 'Google Ads' : 'Facebook / Instagram + Google Ads'
   // landing page views are Facebook's (Google doesn't count them): only on the Facebook view
@@ -23,14 +25,14 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
   const color = () => COLORS[i++ % COLORS.length]
   const ads = f.linked > 0 && Number(f.impressions) > 0
   if (ads) {
-    steps.push({ stage: { tag: 'Ad reach', value: num(f.impressions), title: 'Ad impressions', sub: `Shown on ${where} · CPM ${inr((spendGst / f.impressions) * 1000)}`, color: color() } })
+    steps.push({ stage: { tag: 'Ad reach', value: num(f.impressions), title: 'Ad impressions', sub: `Shown on ${where} · CPM ${inr((spendEx / f.impressions) * 1000)}`, color: color() } })
     steps.push({
       rate: `${pct(f.link_clicks, f.impressions)} CTR · ${num(f.link_clicks)} clicks from ${num(f.impressions)} impressions`,
-      stage: { tag: 'Traffic', value: num(f.link_clicks), title: 'Link clicks', sub: `Cost per click ${inr(f.link_clicks ? spendGst / f.link_clicks : 0)}`, color: color() },
+      stage: { tag: 'Traffic', value: num(f.link_clicks), title: 'Link clicks', sub: `Cost per click ${inr(f.link_clicks ? spendEx / f.link_clicks : 0)}`, color: color() },
     })
     if (withLpv) steps.push({
       rate: `${pct(f.lpv, f.link_clicks)} click-to-view rate · ${num(f.lpv)} page views from ${num(f.link_clicks)} clicks`,
-      stage: { tag: 'Landing page', value: num(f.lpv), title: 'Landing page views', sub: `Cost per view ${inr(f.lpv ? spendGst / f.lpv : 0)}`, color: color() },
+      stage: { tag: 'Landing page', value: num(f.lpv), title: 'Landing page views', sub: `Cost per view ${inr(f.lpv ? spendEx / f.lpv : 0)}`, color: color() },
     })
   }
   const organic = f.leads - f.leads_ads
@@ -54,7 +56,7 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
 
   const n = steps.length
   const won = f.stages.find((s) => s.kind === 'won')?.n ?? 0
-  const profit = Number(f.revenue) - spendGst
+  const profit = Number(f.revenue) - spendEx
 
   return (
     <div className="stack" style={{ gap: 16 }}>
@@ -87,10 +89,10 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
       </div>
 
       <div className="flow-tiles">
-        <div className="flow-tile" style={{ background: '#c2410c' }} title={`${inr(f.spend)} + GST = ${inr(spendGst)}`}>
-          <b>{inr(spendGst)}</b>
+        <div className="flow-tile" style={{ background: '#c2410c' }} title={`${inr(spendEx)} + GST = ${inr(spendGst)} with GST`}>
+          <b>{inr(spendEx)}</b>
           <span>Ad spend</span>
-          <small>with GST</small>
+          <small>without GST</small>
         </div>
         <div className="flow-tile" style={{ background: profit >= 0 ? '#15803d' : '#b91c1c' }}>
           <b>{inr(profit)}</b>
@@ -98,17 +100,17 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
           <small>Revenue − ad spend</small>
         </div>
         <div className="flow-tile" style={{ background: '#1d4ed8' }}>
-          <b>{spendGst ? `${(Number(f.revenue) / spendGst).toFixed(2)}×` : '—'}</b>
+          <b>{spendEx ? `${(Number(f.revenue) / spendEx).toFixed(2)}×` : '—'}</b>
           <span>ROAS</span>
           <small>Revenue ÷ ad spend</small>
         </div>
         <div className="flow-tile" style={{ background: '#0f766e' }}>
-          <b>{won ? inr(spendGst / won) : '—'}</b>
+          <b>{won ? inr(spendEx / won) : '—'}</b>
           <span>CAC</span>
           <small>Ad spend per won lead</small>
         </div>
         <div className="flow-tile" style={{ background: '#6d28d9' }}>
-          <b>{f.leads ? inr(spendGst / f.leads) : '—'}</b>
+          <b>{f.leads ? inr(spendEx / f.leads) : '—'}</b>
           <span>Cost per lead</span>
           <small>Ad spend ÷ all leads</small>
         </div>
@@ -120,22 +122,22 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
           <div className="flow-cards">
             {[
               [num(f.impressions), 'Impressions', 'Total ads shown'],
-              [inr((spendGst / f.impressions) * 1000), 'CPM', 'Cost per 1,000 impressions'],
-              [num(f.link_clicks), withLpv ? 'Link clicks' : 'Clicks', `CTR ${pct(f.link_clicks, f.impressions)} · ${inr(f.link_clicks ? spendGst / f.link_clicks : 0)} per click`],
+              [inr((spendEx / f.impressions) * 1000), 'CPM', 'Cost per 1,000 impressions'],
+              [num(f.link_clicks), withLpv ? 'Link clicks' : 'Clicks', `CTR ${pct(f.link_clicks, f.impressions)} · ${inr(f.link_clicks ? spendEx / f.link_clicks : 0)} per click`],
               ...(withLpv
                 ? [
                     [num(f.lpv), 'Landing page views', `Click-to-view rate ${pct(f.lpv, f.link_clicks)}`],
-                    [inr(f.lpv ? spendGst / f.lpv : 0), 'Cost per page view', 'Ad spend ÷ landing page views'],
+                    [inr(f.lpv ? spendEx / f.lpv : 0), 'Cost per page view', 'Ad spend ÷ landing page views'],
                   ]
                 : []),
               [pct(f.leads_ads, base), withLpv ? 'Page conversion' : 'Click conversion', `${num(f.leads_ads)} ad leads from ${num(base)} ${baseWord}`],
               ...(src !== 'google'
                 ? [
-                    [num(f.meta_leads), 'Facebook leads', f.meta_leads ? `${inr(spendGst / f.meta_leads)} per lead (Facebook’s count)` : 'Facebook’s count'],
-                    [num(f.purchases), 'Purchases (Pixel)', f.purchases ? `${inr(spendGst / f.purchases)} per purchase` : 'No purchase events'],
+                    [num(f.meta_leads), 'Facebook leads', f.meta_leads ? `${inr(spendEx / f.meta_leads)} per lead (Facebook’s count)` : 'Facebook’s count'],
+                    [num(f.purchases), 'Purchases (Pixel)', f.purchases ? `${inr(spendEx / f.purchases)} per purchase` : 'No purchase events'],
                   ]
                 : []),
-              ...(src !== 'fb' ? [[num(Number(f.conversions ?? 0)), 'Google conversions', f.conversions ? `${inr(spendGst / Number(f.conversions))} per conversion (Google’s count)` : 'Google’s count']] : []),
+              ...(src !== 'fb' ? [[num(Number(f.conversions ?? 0)), 'Google conversions', f.conversions ? `${inr(spendEx / Number(f.conversions))} per conversion (Google’s count)` : 'Google’s count']] : []),
             ].map(([v, l, s]) => (
               <div key={l} className="flow-card">
                 <b>{v}</b>

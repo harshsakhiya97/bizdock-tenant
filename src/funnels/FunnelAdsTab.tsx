@@ -46,11 +46,10 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         setAdsets(t.adsets)
         setLinks(t.links)
         setFunnelNames(new Map(fs.map((f) => [f.id, f.name])))
-        const gst = new Map(a.map((x) => [x.id, Number(x.gst_rate)]))
         const c = new Map<string, number>()
         const s = new Map<string, number>()
         for (const r of sp) {
-          const v = Number(r.spend) * (1 + (gst.get(r.account_id) ?? 18) / 100)
+          const v = Number(r.spend) // without GST
           c.set(r.campaign_id, (c.get(r.campaign_id) ?? 0) + v)
           s.set(r.adset_id, (s.get(r.adset_id) ?? 0) + v)
         }
@@ -105,7 +104,7 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
     <div className="stack">
       {error && <div className="alert alert-error">{error}</div>}
       <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <div className="muted small">Campaigns whose leads and spend count for this funnel. Spend is the last 30 days, with GST.</div>
+        <div className="muted small">Campaigns whose leads and spend count for this funnel. Spend is the last 30 days, without GST.</div>
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void refresh()} title="Bring in the latest campaigns and numbers">
             <RefreshCw size={14} /> Refresh from Facebook

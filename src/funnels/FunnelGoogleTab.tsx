@@ -40,9 +40,8 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
         setAccounts(real)
         setTree(t)
         setFunnelNames(new Map(fs.map((f) => [f.id, f.name])))
-        const gst = new Map(real.map((x) => [x.id, Number(x.gst_rate)]))
         const c = new Map<string, number>()
-        for (const r of sp) c.set(r.campaign_id, (c.get(r.campaign_id) ?? 0) + Number(r.spend) * (1 + (gst.get(r.account_id) ?? 18) / 100))
+        for (const r of sp) c.set(r.campaign_id, (c.get(r.campaign_id) ?? 0) + Number(r.spend)) // without GST
         setSpend(c)
       })
       .catch((e: Error) => setError(e.message))
@@ -92,7 +91,7 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
     <div className="stack">
       {error && <div className="alert alert-error">{error}</div>}
       <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <div className="muted small">Google campaigns whose spend counts for this funnel. Spend is the last 30 days, with GST.</div>
+        <div className="muted small">Google campaigns whose spend counts for this funnel. Spend is the last 30 days, without GST.</div>
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void refresh()} title="Bring in the latest campaigns and numbers">
             <RefreshCw size={14} /> Refresh from Google

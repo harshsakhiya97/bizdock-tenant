@@ -52,7 +52,7 @@ const pct = (a: number, b: number, what: string) => <span title={`${what}: ${a} 
 
 /**
  * Funnel → Overview: the 3D funnel (Facebook reach → clicks → page views → leads → stages → revenue) and its numbers, for a
- * period; or the List: spend (with GST), leads (by their creation date) and CPL per day / week / month.
+ * period; or the List: spend (without GST), leads (by their creation date) and CPL per day / week / month.
  */
 export function FunnelAdsReport({
   funnelId,
@@ -358,8 +358,8 @@ export function FunnelAdsReport({
   const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(gstAmt)} with GST (${inr(gstAmt - ex)} GST)` : undefined}>{ex ? inr(ex) : '—'}</span>
   const cpl = (gstAmt: number, ex: number, n: number, onClick?: () => void) =>
     n && gstAmt ? (
-      <span title={`${inr(ex / n)} without GST`} onClick={onClick}>
-        {inr(gstAmt / n)}
+      <span title={`${inr(gstAmt / n)} with GST`} onClick={onClick}>
+        {inr(ex / n)}
       </span>
     ) : (
       <span className="muted">—</span>
@@ -417,7 +417,7 @@ export function FunnelAdsReport({
           <>
             <div className="muted small">
               {src === 'all' ? 'Overall: Facebook + Google spend, every lead. ' : src === 'fb' ? 'Facebook: Facebook spend, the leads whose UTM source is fb / ig / facebook / instagram. ' : 'Google: Google spend, the leads whose UTM source is google / adwords / youtube. '}
-              By the leads created in each row: Amount spent without GST (hover: with GST) · Lead trend = leads vs the row below · CPL / CPP / Cost per booking / Cost per show up = amount spent ÷
+              By the leads created in each row: Amount spent without GST (hover: with GST) · Lead trend = leads vs the row below · CPL / CPP / Cost per booking / Cost per show up = amount spent without GST ÷
               leads / payments / bookings / show ups · Payments = Razorpay payments (the funnel’s products in the Payments tab, else all) by those leads’ phone or email · Booking = those leads with a
               meeting · Show up = meeting done · Converted = marked Closed · Revenue = their invoices’ total + Razorpay received.
             </div>
