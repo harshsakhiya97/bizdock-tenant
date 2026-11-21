@@ -5,10 +5,20 @@ import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option, Temperature
 const COLS =
   'id, tenant_id, business_id, sub_business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, webhook_id, sheet_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra, purpose, required_on, required_hours, webinar_category'
 
+/** every field of a lead that can be empty, as null (list_leads_lite leaves empty fields out) */
+const LEAD_NULLS = Object.fromEntries(
+  COLS.split(',')
+    .map((c) => c.trim())
+    .filter((c) => !['id', 'tenant_id', 'business_id', 'first_name', 'phone', 'tags', 'is_archived', 'stage_changed_at', 'created_at', 'updated_at', 'extra'].includes(c))
+    .map((c) => [c, null]),
+)
+
 export async function listLeads(tenantId: string): Promise<LeadRow[]> {
   // all of them, past the 1,000-rows-per-request cap (a workspace can hold tens of thousands)
-  // list_leads: the same access rule as the table, checked once per call instead of on every row (fast with 20,000+ leads)
-  return rpcAll<LeadRow>((offset, limit) => db().rpc('list_leads', { p_tenant: tenantId, p_offset: offset, p_limit: limit }))
+  // list_leads_lite: the same access rule as the table, checked once per call (fast with 20,000+ leads); a lighter row
+  // (only the extra fields the lists read, empty fields left out and filled back in here as null)
+  const rows = await rpcAll<Partial<LeadRow>>((offset, limit) => db().rpc('list_leads_lite', { p_tenant: tenantId, p_offset: offset, p_limit: limit }), 1000, 3)
+  return rows.map((r) => ({ ...LEAD_NULLS, ...r }) as LeadRow)
 }
 
 export async function listFunnelLeads(funnelId: string): Promise<LeadRow[]> {
