@@ -14,6 +14,7 @@ export function letterIcon(tenant: Pick<Tenant, 'app_name' | 'primary_color'>) {
 /** Puts the tenant's colour, name and icon on the page. */
 export function applyBranding(tenant: Tenant) {
   document.documentElement.style.setProperty('--brand', tenant.primary_color)
+  document.documentElement.dataset.sidebar = tenant.sidebar_style === 'dark' ? 'dark' : 'light'
   document.title = tenant.app_name
 
   let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')

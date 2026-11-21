@@ -26,7 +26,7 @@ async function devTenantKey() {
 
 async function resolveTenant() {
   const devKey = await devTenantKey()
-  const { data, error } = await registry.rpc('resolve_tenant', {
+  const { data, error } = await registry.rpc('resolve_tenant_v2', {
     p_domain: devKey ? null : window.location.hostname,
     p_key: devKey || null,
   })
