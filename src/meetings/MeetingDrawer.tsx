@@ -134,6 +134,8 @@ export function MeetingDrawer({
   const [cat, setCat] = useState<Temperature | ''>('')
   const [nd, setNd] = useState({ date: '', start: hm(meeting?.start_time), end: hm(meeting?.end_time) })
   const upcoming = meeting?.status === 'scheduled'
+  // Done on a lead meeting: the lead's category (its own, unless New, until changed here)
+  const leadCat = (): Temperature | '' => (guest?.temperature && guest.temperature !== 'new' ? guest.temperature : '')
   function pickAct(a: '' | MeetingAction) {
     setAct(a)
     setError(null)
@@ -150,6 +152,7 @@ export function MeetingDrawer({
       if (minutesOf(nd.end) <= minutesOf(nd.start)) return setError('End time must be after the start time.')
       if (nd.date < today() || (nd.date === today() && nd.start < nowHm())) return setError('Pick a date and time that hasn’t passed yet.')
     } else if (!note.trim()) return setError(act === 'done' ? (team ? 'Write the comments / description of the meeting.' : 'Write a comment about the meeting.') : 'Write the reason.')
+    if (act === 'done' && !team && guest && !(cat || leadCat())) return setError('Pick the lead category.')
     setBusy(true)
     setError(null)
     try {
@@ -158,7 +161,8 @@ export function MeetingDrawer({
         onSaved(`${team ? `Team meeting “${name}”` : `Meeting with ${name}`} rescheduled to ${fmtDay(nd.date, { day: 'numeric', month: 'short' })}, ${clock(nd.start)}.${meeting.zoom_meeting_id ? ' Its Zoom meeting moves too.' : ''}`)
       } else {
         await closeMeeting(meeting.id, act, note)
-        if (!team && act === 'done' && cat && guest && cat !== guest.temperature) await setLeadCategory(tenant.id, membership?.id, guest.id, cat)
+        const nextCat = cat || leadCat()
+        if (!team && act === 'done' && nextCat && guest && nextCat !== guest.temperature) await setLeadCategory(tenant.id, membership?.id, guest.id, nextCat)
         onSaved(
           act === 'done'
             ? `${team ? `Team meeting “${name}”` : `Meeting with ${name}`} marked done.`
@@ -174,6 +178,7 @@ export function MeetingDrawer({
   }
 
   const guest = leads.find((l) => l.id === f.lead_id) ?? lead ?? null
+  const doneCat = cat || leadCat()
   const options = useMemo(() => leads.filter((l) => !l.is_archived).map((l) => ({ value: l.id, label: `${fullName(l)} · ${l.phone}` })), [leads])
   const moved =
     !!meeting && (meeting.meeting_date !== f.meeting_date || hm(meeting.start_time) !== f.start_time || hm(meeting.end_time) !== f.end_time)
@@ -437,16 +442,18 @@ export function MeetingDrawer({
                 </div>
                 {!team && (
                 <div className="span-2">
-                  <Label htmlFor="mt-cat">Lead’s category</Label>
-                  <Select id="mt-cat" value={cat || guest?.temperature || ''} onChange={(e) => setCat(e.target.value as Temperature)}>
-                    {!guest?.temperature && <option value="">—</option>}
-                    {TEMPERATURES.map((t) => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <Hint>Change it if the meeting changed how warm the lead is.</Hint>
+                  <Label htmlFor="mt-cat" required>
+                    Lead category
+                  </Label>
+                  <SearchSelect
+                    id="mt-cat"
+                    value={doneCat || null}
+                    onChange={(v) => setCat((v ?? '') as Temperature | '')}
+                    options={TEMPERATURES.filter((t) => t.value !== 'new').map((t) => ({ value: t.value, label: t.label }))}
+                    placeholder="— select —"
+                    searchPlaceholder="Search…"
+                  />
+                  <Hint>The lead’s category field: change it if the meeting changed how warm the lead is.</Hint>
                 </div>
                 )}
               </div>
