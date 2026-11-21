@@ -23,7 +23,10 @@ export const releases: Release[] = [
       'Access control → AI Insights: who sees the AI button (owners and admins already do).',
       'System Connections → Gemini AI: Monthly AI limit (₹) and the price per 1M input / output tokens. The card shows this month’s estimated ₹ against the limit; at the limit AI Insights stops for the month.',
     ],
-    improved: ['Side menu: Funnels and Workflows are grouped under Automation.'],
+    improved: [
+      'Side menu: Funnels and Workflows are grouped under Automation.',
+      'Funnels: every ad amount is without GST (hover shows it with GST): the Funnel report’s Amount, CPL, CPP, cost per booking and show up, the funnel view’s ad spend and costs, the day spend and the campaigns’ spend.',
+    ],
   },
   {
     version: '0.28',
