@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { BadgeIndianRupee, GraduationCap, RefreshCw, Users, Wallet } from 'lucide-react'
+import { BadgeIndianRupee, GraduationCap, RefreshCw, Undo2, Users, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
@@ -9,6 +9,7 @@ import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
+import { fetchAll } from '@/lib/fetchAll'
 import { useTenant } from '@/tenant/useTenant'
 import { useTerm } from '@/tenant/useTerm'
 import type { Purchase } from '@/webinars/api'
@@ -16,18 +17,32 @@ import type { Purchase } from '@/webinars/api'
 /** Enrolled Courses: every course purchase (entered on the lead → Purchases), with what is paid and still due. */
 type Row = Purchase & { leads: { first_name: string; last_name: string | null; phone: string | null; email: string | null } | null }
 
-type Pay = 'paid' | 'part' | 'unpaid' | 'cancelled'
+type Pay = 'paid' | 'part' | 'unpaid' | 'refunded' | 'cancelled'
 const PAY: Record<Pay, { label: string; cls: string }> = {
   paid: { label: 'Fully paid', cls: 'badge-success' },
   part: { label: 'Part paid', cls: 'badge-warning' },
   unpaid: { label: 'Unpaid', cls: 'badge-muted' },
+  refunded: { label: 'Refunded', cls: 'badge-info' },
   cancelled: { label: 'Cancelled', cls: 'badge-danger' },
 }
 const payState = (r: Row): Pay =>
-  r.status === 'cancelled' ? 'cancelled' : Number(r.total_amount) - Number(r.paid_amount) <= 0.01 ? 'paid' : Number(r.paid_amount) > 0 ? 'part' : 'unpaid'
-const due = (r: Row) => (r.status === 'cancelled' ? 0 : Math.max(0, Number(r.total_amount) - Number(r.paid_amount)))
+  r.status === 'cancelled' ? 'cancelled' : Number(r.refund_amount) > 0 ? 'refunded' : Number(r.total_amount) - Number(r.paid_amount) <= 0.01 ? 'paid' : Number(r.paid_amount) > 0 ? 'part' : 'unpaid'
+const due = (r: Row) => (r.status === 'cancelled' || Number(r.refund_amount) > 0 ? 0 : Math.max(0, Number(r.total_amount) - Number(r.paid_amount)))
 const fmtDay = (d: string | null) => (d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—')
 const person = (r: Row) => (r.leads ? [r.leads.first_name, r.leads.last_name].filter(Boolean).join(' ') : '—')
+/** how old an unpaid balance is, counted from the purchase date */
+const AGES = [
+  { value: '0-30', label: 'Under 30 days', min: 0, max: 30 },
+  { value: '30-60', label: '30–60 days', min: 30, max: 60 },
+  { value: '60-90', label: '60–90 days', min: 60, max: 90 },
+  { value: '90-180', label: '90–180 days', min: 90, max: 180 },
+  { value: '180+', label: 'Over 180 days', min: 180, max: Infinity },
+]
+const ageDays = (r: Row) => Math.floor((Date.now() - new Date(`${r.purchase_date}T00:00:00`).getTime()) / 86400000)
+const inAge = (r: Row, k: string) => {
+  const a = AGES.find((x) => x.value === k)
+  return !!a && due(r) > 0 && ageDays(r) >= a.min && ageDays(r) < a.max
+}
 /** the next part still to be paid */
 const nextPart = (r: Row) =>
   [...(r.purchase_payments ?? [])].filter((p) => p.status !== 'paid').sort((a, b) => (a.due_on ?? '9999').localeCompare(b.due_on ?? '9999'))[0] ?? null
@@ -43,20 +58,25 @@ export function EnrolledCoursesPage() {
   const [q, setQ] = useState('')
   const [course, setCourse] = useState<string | null>(null)
   const [pay, setPay] = useState<string | null>(null)
+  const [age, setAge] = useState<string | null>(null)
   const [range, setRange] = useState<Range>(ALL_DATES)
 
   const load = useCallback(() => {
     setRows(null)
     setError(null)
-    db()
-      .from('purchases')
-      .select('*, purchase_payments(*), leads(first_name, last_name, phone, email)')
-      .eq('tenant_id', tenant.id)
-      .order('purchase_date', { ascending: false })
-      .limit(10000)
-      .then(({ data, error: e }) => {
-        if (e) setError(e.message)
-        setRows((data ?? []) as unknown as Row[])
+    fetchAll<Row>(
+      () =>
+        db()
+          .from('purchases')
+          .select('*, purchase_payments(*), leads(first_name, last_name, phone, email)')
+          .eq('tenant_id', tenant.id)
+          .order('purchase_date', { ascending: false })
+          .order('id') as never,
+    )
+      .then(setRows)
+      .catch((e: Error) => {
+        setError(e.message)
+        setRows([])
       })
   }, [tenant.id])
   useEffect(load, [load])
@@ -71,11 +91,12 @@ export function EnrolledCoursesPage() {
       (r) =>
         (!course || r.name === course) &&
         (!pay || payState(r) === pay) &&
+        (!age || inAge(r, age)) &&
         (!range.from || r.purchase_date >= range.from) &&
         (!range.to || r.purchase_date <= range.to) &&
         (!s || `${person(r)} ${r.leads?.phone ?? ''} ${r.leads?.email ?? ''} ${r.name}`.toLowerCase().includes(s)),
     )
-  }, [mine, q, course, pay, range])
+  }, [mine, q, course, pay, age, range])
 
   // the cards follow the filters (cancelled ones aren't counted)
   const live = shown.filter((r) => r.status !== 'cancelled')
@@ -83,6 +104,7 @@ export function EnrolledCoursesPage() {
   const received = live.reduce((t, r) => t + Number(r.paid_amount), 0)
   const pending = live.reduce((t, r) => t + due(r), 0)
   const people = new Set(live.map((r) => r.lead_id)).size
+  const refunded = shown.reduce((t, r) => t + Number(r.refund_amount || 0), 0)
 
   return (
     <>
@@ -93,6 +115,7 @@ export function EnrolledCoursesPage() {
         <StatCard icon={BadgeIndianRupee} tone="ink" value={money(billed)} label="Billed" hint="Price with GST" />
         <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" />
         <StatCard icon={Users} tone="warning" value={money(pending)} label="Due" hint={`${live.filter((r) => due(r) > 0).length} with an amount due`} />
+        <StatCard icon={Undo2} tone="danger" value={money(refunded)} label="Refunded" hint={`${shown.filter((r) => Number(r.refund_amount) > 0).length} refunds`} onClick={() => setPay('refunded')} />
       </div>
       <section className="panel">
         <div className="panel-filters">
@@ -108,8 +131,16 @@ export function EnrolledCoursesPage() {
               options={(Object.keys(PAY) as Pay[]).map((k) => ({ value: k, label: `${PAY[k].label} (${mine.filter((r) => payState(r) === k).length})` }))}
             />
           </div>
+          <div style={{ width: 180 }}>
+            <SearchSelect
+              value={age}
+              onChange={setAge}
+              placeholder="Balance: any age"
+              options={AGES.map((a) => ({ value: a.value, label: `${a.label} (${mine.filter((r) => inAge(r, a.value)).length})` }))}
+            />
+          </div>
           <DateRangePicker value={range} onChange={setRange} />
-          {(q || course || pay || range.key !== 'all') && (
+          {(q || course || pay || age || range.key !== 'all') && (
             <button
               type="button"
               className="clear-btn"
@@ -117,6 +148,7 @@ export function EnrolledCoursesPage() {
                 setQ('')
                 setCourse(null)
                 setPay(null)
+                setAge(null)
                 setRange(ALL_DATES)
               }}
             >
@@ -132,7 +164,7 @@ export function EnrolledCoursesPage() {
         ) : !shown.length ? (
           <Empty icon={GraduationCap}>{mine.length ? 'No enrollments for these filters.' : `No ${term('courses')} bought yet. Add a purchase on the lead → Purchases.`}</Empty>
         ) : (
-          <Paged rows={shown} reset={[q, course, pay, range.from, range.to]}>
+          <Paged rows={shown} reset={[q, course, pay, age, range.from, range.to]}>
             {(paged) => (
               <div className="table-wrap">
                 <table className="table">
@@ -169,6 +201,7 @@ export function EnrolledCoursesPage() {
                           <td className="num nowrap">{due(r) > 0 ? money(due(r)) : <span className="muted">—</span>}</td>
                           <td>
                             <span className={cn('badge', st.cls)}>{st.label}</span>
+                            {Number(r.refund_amount) > 0 && <div className="muted small">{money(r.refund_amount)} back{r.refund_reason ? ` · ${r.refund_reason}` : ''}</div>}
                           </td>
                           <td className="small nowrap">
                             {next ? (

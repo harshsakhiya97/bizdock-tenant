@@ -44,6 +44,9 @@ export function PurchaseDrawer({
     gst_rate: String(purchase?.gst_rate ?? 18),
     purchase_date: purchase?.purchase_date ?? today(),
     notes: purchase?.notes ?? '',
+    refund_amount: purchase?.refund_amount ? String(purchase.refund_amount) : '',
+    refund_reason: purchase?.refund_reason ?? '',
+    refunded_on: purchase?.refunded_on ?? '',
     parts: (purchase?.purchase_payments ?? [])
       .slice()
       .sort((a, b) => (a.due_on ?? a.paid_on ?? '').localeCompare(b.due_on ?? b.paid_on ?? ''))
@@ -77,6 +80,8 @@ export function PurchaseDrawer({
     if (!f.name.trim()) return setError(`Pick the ${term('product')} (or type its name).`)
     if (f.price.trim() === '' || price < 0) return setError('Enter the price.')
     if (f.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
+    if (num(f.refund_amount) > paid + 0.01) return setError(`The refund ${money(num(f.refund_amount))} is more than what was paid (${money(paid)}).`)
+    if (num(f.refund_amount) > 0 && !f.refund_reason.trim()) return setError('Enter the reason for the refund.')
     if (planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
     setBusy(true)
     setError(null)
@@ -92,6 +97,9 @@ export function PurchaseDrawer({
         purchase_date: f.purchase_date || today(),
         notes: f.notes,
         parts: f.parts,
+        refund_amount: num(f.refund_amount),
+        refund_reason: f.refund_reason,
+        refunded_on: f.refunded_on || today(),
       })
       onSaved(purchase ? 'Purchase saved.' : `${f.name.trim()} added for ${lead.name}.${paid > 0 ? ' They’re a customer now.' : ''}`)
     } catch (e) {
@@ -263,6 +271,25 @@ export function PurchaseDrawer({
               Planned {money(planned)} of {money(total)} · paid <b className="tone-success">{money(paid)}</b> · balance <b>{money(Math.max(0, total - paid))}</b>
               {total - planned > 0.01 && f.parts.length > 0 && <span className="tone-warning"> · {money(total - planned)} not planned yet</span>}
             </span>
+          </div>
+        </FormSection>
+
+        <FormSection title="Refund" description="Money given back. Leave the amount empty when there is no refund.">
+          <div className="form-grid">
+            <div>
+              <Label htmlFor="pu-ref-amt">Refund amount (₹)</Label>
+              <TextInput id="pu-ref-amt" type="number" min={0} step="0.01" value={f.refund_amount} disabled={!canEdit} onChange={(e) => set('refund_amount', e.target.value)} />
+            </div>
+            <div>
+              <Label htmlFor="pu-ref-on">Refunded on</Label>
+              <TextInput id="pu-ref-on" type="date" value={f.refunded_on} disabled={!canEdit || !num(f.refund_amount)} onChange={(e) => set('refunded_on', e.target.value)} />
+            </div>
+            <div className="span-2">
+              <Label htmlFor="pu-ref-why" required={num(f.refund_amount) > 0}>
+                Reason
+              </Label>
+              <TextInput id="pu-ref-why" value={f.refund_reason} disabled={!canEdit || !num(f.refund_amount)} placeholder="e.g. couldn’t attend the batch" onChange={(e) => set('refund_reason', e.target.value)} />
+            </div>
           </div>
         </FormSection>
       </div>

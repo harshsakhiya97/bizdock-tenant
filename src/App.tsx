@@ -30,6 +30,8 @@ import { InvoicePrint } from '@/invoices/InvoicePrint'
 import { CustomersPage } from '@/leads/CustomersPage'
 import { OrdersPage } from '@/orders/OrdersPage'
 import { EnrolledCoursesPage } from '@/enrolled/EnrolledCoursesPage'
+import { UpsellPage } from '@/enrolled/UpsellPage'
+import { ExpensesPage } from '@/expenses/ExpensesPage'
 import { MeetingsPage } from '@/meetings/MeetingsPage'
 import { AiCallPage } from '@/aicalls/CallPage'
 import { AiHistoryPage } from '@/aicalls/HistoryPage'
@@ -104,6 +106,8 @@ export default function App() {
                 <Route path="/orders" element={<RequirePermission module="orders"><OrdersPage key="orders" /></RequirePermission>} />
                 <Route path="/booking-list" element={<RequirePermission module="booking_list"><OrdersPage key="bookings" bookings /></RequirePermission>} />
                 <Route path="/enrolled-courses" element={<RequirePermission area="leads"><EnrolledCoursesPage /></RequirePermission>} />
+                <Route path="/upsell" element={<RequirePermission area="leads"><UpsellPage /></RequirePermission>} />
+                <Route path="/expenses" element={<RequirePermission module="expenses"><ExpensesPage /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
                 <Route
                   path="/bookings"

@@ -112,6 +112,12 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         actions: [{ module: 'ai_calling', action: 'templates', label: 'Manage templates', hint: 'Make, edit and delete the call scripts (also Write with AI)' }],
       },
       {
+        key: 'expenses',
+        label: 'Expenses',
+        open: { kind: 'action', module: 'expenses', action: 'view', hint: 'Expenses: what the business spends, and net profit' },
+        actions: [{ module: 'expenses', action: 'edit', label: 'Add / edit / delete expenses' }],
+      },
+      {
         key: 'payments',
         label: 'Payments',
         open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments → History logs: Razorpay payments' },

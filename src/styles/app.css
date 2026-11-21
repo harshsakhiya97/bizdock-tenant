@@ -1787,3 +1787,17 @@ html[data-sidebar='dark'] .sidebar .brand-name span,
 html[data-sidebar='dark'] .sidebar .user-link:hover b,
 html[data-sidebar='dark'] .sidebar .user-link.active b { color: color-mix(in oklab, var(--brand) 45%, white); }
 html[data-sidebar='dark'] .sidebar.is-collapsed .nav-item { margin: 1px 8px; padding: 0; }
+
+/* Expenses: category chips (click to filter) */
+.exp-chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit; color: var(--text); }
+.exp-chip:hover { border-color: var(--brand); color: var(--brand); }
+.exp-chip.is-on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* Upsell: the course ladder steps */
+.upsell-ladder { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.upsell-step { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); padding: 12px 14px; cursor: pointer; font-family: inherit; color: var(--text); }
+.upsell-step:hover { border-color: var(--brand); }
+.upsell-step.is-on { border-color: var(--brand); background: var(--brand-soft); box-shadow: inset 0 0 0 1px var(--brand); }
+.upsell-step .upsell-name { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.upsell-step b { font-size: 22px; line-height: 1.2; }
+.upsell-step small { font-size: 11.5px; color: var(--text-muted); }

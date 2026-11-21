@@ -142,6 +142,13 @@ export function ProductDrawer({
               <TextInput id="p-name" value={f.name} onChange={(e) => set('name', e.target.value)} autoFocus={!product} />
             </div>
             <SubBusinessSelect id="p-sub" businessId={f.business_id} value={f.sub_business_id} onChange={(v) => set('sub_business_id', v)} />
+            {isProduct && (
+              <div>
+                <Label htmlFor="p-order">Order in the ladder</Label>
+                <TextInput id="p-order" type="number" min={0} value={f.sort_order} onChange={(e) => set('sort_order', e.target.value)} />
+                <Hint>1 = the first {word} people buy, then 2, 3… Upsell follows this order.</Hint>
+              </div>
+            )}
             <div className="span-2">
               <Label htmlFor="p-desc">Description</Label>
               <TextArea id="p-desc" rows={2} value={f.description} onChange={(e) => set('description', e.target.value)} />
