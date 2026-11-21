@@ -12,7 +12,7 @@ export function GoogleAdDrawer({ ad, sub, customerId, onClose }: { ad: GAd; sub:
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           <span className={cn('badge', gTone(ad.status))}>{gWord(ad.status)}</span>
           {ad.type && <span className="badge badge-muted">{gWord(ad.type)}</span>}
-          <a className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} href={googleAdsUrl(customerId, ad.campaign_id, ad.ad_group_id)} target="_blank" rel="noopener noreferrer">
+          <a className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} href={googleAdsUrl(customerId, ad.campaign_id, ad.ad_group_id || null)} target="_blank" rel="noopener noreferrer">
             Open in Google Ads <ExternalLink size={12} />
           </a>
         </div>
@@ -57,7 +57,7 @@ export function GoogleAdDrawer({ ad, sub, customerId, onClose }: { ad: GAd; sub:
             ))}
           </div>
         )}
-        {!ad.headlines.length && !ad.descriptions.length && <div className="muted small">Google doesn’t share the words of this kind of ad (image, video or Performance Max assets).</div>}
+        {!ad.headlines.length && !ad.descriptions.length && <div className="muted small">{ad.ad_id ? 'Google doesn’t share the words of this kind of ad (image, video or Performance Max assets).' : 'Performance Max: Google runs this campaign’s ads from its assets and doesn’t report spend by ad, so there is no single ad to show. Open it in Google Ads for the asset groups and their results.'}</div>}
       </div>
     </Drawer>
   )

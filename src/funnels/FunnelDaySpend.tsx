@@ -5,7 +5,7 @@ import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/met
 import { SpendLines, type Line } from './SpendLines'
 import { AdPreviewDrawer } from '@/meta/AdPreviewDrawer'
 import { GoogleAdDrawer } from '@/google/GoogleAdDrawer'
-import { funnelGoogleAdDays, googleAdsUrl, type GAd } from '@/google/api'
+import { funnelGoogleAdDays, type GAd, type GCampaign } from '@/google/api'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -27,7 +27,7 @@ export function FunnelDaySpend({
   campaigns: Pick<Campaign, 'campaign_id' | 'name'>[]
   adsets: Pick<AdSet, 'adset_id' | 'name'>[]
   /** Google Ads (Funnel → Google Ads): its ads (for the preview); else Facebook */
-  google?: { ads: GAd[]; customers?: Map<string, string> }
+  google?: { ads: GAd[]; customers?: Map<string, string>; campaigns?: GCampaign[] }
 }) {
   const platform = google ? 'Google' : 'Facebook'
   const tenant = useTenant()
@@ -195,13 +195,18 @@ export function FunnelDaySpend({
                         </tr>
                         {isOpen &&
                           d.ads.map((a) => (
-                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title={google && !data?.objs?.get(a.ad_id) ? 'Open the campaign in Google Ads' : 'See the ad'} onClick={() => {
+                            <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => {
                               if (!google) return setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })
                               const o = data?.objs?.get(a.ad_id)
                               if (o) return setGPreview({ ad: o, sub: `${a.campaign} · ${a.adset}` })
-                              // Performance Max (no ads): the campaign in Google Ads
+                              // Performance Max (no ads): the campaign's panel (its type, status and Open in Google Ads)
                               const r = data?.days.find((x) => x.ad_id === a.ad_id)
-                              if (r) window.open(googleAdsUrl(google.customers?.get(r.account_id), r.campaign_id), '_blank', 'noopener')
+                              const c = google.campaigns?.find((x) => x.campaign_id === r?.campaign_id)
+                              if (r)
+                                setGPreview({
+                                  ad: { ad_id: '', ad_group_id: '', campaign_id: r.campaign_id, account_id: r.account_id, name: c?.name ?? a.campaign, type: c?.channel ?? null, status: c?.status ?? null, final_urls: [], headlines: [], descriptions: [] },
+                                  sub: `${a.campaign} · spend not split by ad`,
+                                })
                             }}>
                               <td />
                               <td>
