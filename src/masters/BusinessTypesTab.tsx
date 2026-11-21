@@ -30,6 +30,9 @@ export function BusinessTypesTab({ canEdit, onNotice }: { canEdit: boolean; onNo
   const [drawer, setDrawer] = useState<{ row: BusinessType | null } | null>(null)
   const [deleting, setDeleting] = useState<BusinessType | null>(null)
   const [busy, setBusy] = useState(false)
+  // switched-off types are hidden unless asked for (like Masters → Services)
+  const [showOff, setShowOff] = useState(false)
+  const shown = businessTypes.filter((t) => showOff || t.is_active)
 
   // how many businesses / sub-businesses (this user sees) are of each type
   const used = (code: string) => businesses.reduce((n, b) => n + (b.subs.length ? b.subs.filter((s) => s.type === code).length : b.type === code ? 1 : 0), 0)
@@ -59,13 +62,20 @@ export function BusinessTypesTab({ canEdit, onNotice }: { canEdit: boolean; onNo
           <b>Business types</b>
           <div className="muted small">What a business or sub-business does. The name is what everyone sees; the code is fixed and the app works by it.</div>
         </div>
-        {canEdit && (
-          <button type="button" className="btn btn-primary" onClick={() => setDrawer({ row: null })}>
-            <Plus size={16} /> Add business type
-          </button>
-        )}
+        <div className="row">
+          {businessTypes.some((t) => !t.is_active) && (
+            <label className="check-inline">
+              <input type="checkbox" checked={showOff} onChange={(e) => setShowOff(e.target.checked)} /> Show inactive
+            </label>
+          )}
+          {canEdit && (
+            <button type="button" className="btn btn-primary" onClick={() => setDrawer({ row: null })}>
+              <Plus size={16} /> Add business type
+            </button>
+          )}
+        </div>
       </div>
-      <Paged rows={businessTypes}>
+      <Paged rows={shown}>
         {(paged) => (
           <div className="table-wrap">
             <table className="table">
