@@ -197,7 +197,7 @@ export function AiInsights({ page }: { page: string }) {
         </section>
       )}
       <button type="button" className={`ai-fab${open ? ' is-open' : ''}`} title="AI Insights: summary of this screen" aria-label="AI Insights" onClick={() => (open ? setOpen(false) : void start())}>
-        {open ? <X size={22} /> : <Sparkles size={22} />}
+        {open ? <X size={18} /> : <Sparkles size={18} />} AI Insights
       </button>
     </>
   )
