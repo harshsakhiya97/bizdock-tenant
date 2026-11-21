@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { AlertTriangle, Clock, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
-import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
+import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -51,8 +51,8 @@ export function InvoicePaymentsPage() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
-  // default: this month, the 1st till today
-  const [range, setRange] = useState<Range>(() => presetRange('thisMonth'))
+  // default: all dates
+  const [range, setRange] = useState<Range>(ALL_DATES)
   const [f, setF] = useState({ q: '', state: '', mode: '', by: '' })
 
   const load = useCallback(() => {
@@ -88,7 +88,7 @@ export function InvoicePaymentsPage() {
   useEffect(load, [load])
 
   const scoped = useMemo(() => (rows ?? []).filter((r) => inScope(r.inv.business_id, r.inv.sub_business_id)), [rows, inScope])
-  const inRange = scoped.filter((r) => r.date >= range.from && r.date <= range.to)
+  const inRange = range.key === 'all' ? scoped : scoped.filter((r) => r.date >= range.from && r.date <= range.to)
   const visible = inRange
     .filter((r) => !f.state || r.state === f.state)
     .filter((r) => !f.mode || r.mode === f.mode)
@@ -121,7 +121,6 @@ export function InvoicePaymentsPage() {
 
       <div className="panel">
         <div className="panel-filters">
-          <DateRangePicker value={range} onChange={setRange} future />
           <SearchInput placeholder="Client, invoice no., phone or reference" value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={260} />
           <div className="filter-ss">
             <SearchSelect
@@ -143,6 +142,7 @@ export function InvoicePaymentsPage() {
               Reset
             </button>
           )}
+          <DateRangePicker value={range} onChange={setRange} allDates future />
         </div>
 
         {!rows ? (
