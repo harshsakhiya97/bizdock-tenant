@@ -11,6 +11,8 @@ export type Tenant = {
   sidebar_style?: string | null
   /** hide the "Version · What's new" link and "Developed by BizDock" */
   hide_bizdock_branding?: boolean | null
+  /** menu pages turned off for this workspace (e.g. '/my-day'): not in the menu, and opening one goes to the first page in the menu */
+  hidden_pages?: string[] | null
   /** the workspace's address: primary domain + folder (no trailing /) */
   app_url?: string | null
 }

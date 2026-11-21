@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ChevronDown, LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
@@ -49,7 +49,9 @@ function Shell() {
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
 
+  const hiddenPages = tenant.hidden_pages ?? []
   const shows = (i: NavItem) =>
+    !hiddenPages.includes(i.to) &&
     (i.area ? scope(i.area) !== 'none' : true) &&
     (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
   const sections = navSections
@@ -102,6 +104,10 @@ function Shell() {
       return !c
     })
   }
+
+  // a page turned off for this workspace (e.g. My Day, the default landing page) → the first page in its menu
+  const firstPage = sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i]))[0]?.to
+  if (firstPage && hiddenPages.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return <Navigate to={firstPage} replace />
 
   return (
       <div className="shell">
