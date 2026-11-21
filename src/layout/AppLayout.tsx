@@ -57,8 +57,10 @@ function Shell() {
   ]
   // onlyType: shown when that type of business is picked in the top bar, or when all businesses are shown
   const type = activeType(selected, sub)
+  // a hidden page hides what's under it too ('/whatsapp' → '/whatsapp/chats')
+  const isHidden = (to: string) => hiddenPages.some((p) => to === p || to.startsWith(`${p}/`))
   const shows = (i: NavItem) =>
-    !hiddenPages.includes(i.to) &&
+    !isHidden(i.to) &&
     (!i.onlyType || !type || [i.onlyType].flat().includes(type)) &&
     (i.area ? scope(i.area) !== 'none' : true) &&
     (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
@@ -115,7 +117,7 @@ function Shell() {
 
   // a page turned off for this workspace (e.g. My Day, the default landing page) → the first page in its menu
   const firstPage = sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i]))[0]?.to
-  if (firstPage && hiddenPages.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return <Navigate to={firstPage} replace />
+  if (firstPage && isHidden(pathname)) return <Navigate to={firstPage} replace />
 
   return (
       <div className="shell">
