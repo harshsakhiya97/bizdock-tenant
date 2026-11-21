@@ -10,10 +10,22 @@ type State = { status: 'loading' } | { status: 'not-found' } | { status: 'ready'
 /**
  * Works out which tenant this app is for:
  * - production: from the domain (e.g. admin.viralsakhiya.com)
- * - local testing: from VITE_TENANT_KEY in .env.local
+ * - local testing: the checked-out deploy/<client> branch's TENANT_KEY (deploy.config), else VITE_TENANT_KEY in .env.local
  */
+async function devTenantKey() {
+  if (!import.meta.env.DEV) return import.meta.env.VITE_TENANT_KEY?.trim()
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}__tenant_key`, { cache: 'no-store' })
+    const k = r.ok ? (await r.text()).trim() : ''
+    if (/^tk_[a-z0-9]+$/i.test(k)) return k
+  } catch {
+    /* falls back to .env.local */
+  }
+  return import.meta.env.VITE_TENANT_KEY?.trim()
+}
+
 async function resolveTenant() {
-  const devKey = import.meta.env.VITE_TENANT_KEY?.trim()
+  const devKey = await devTenantKey()
   const { data, error } = await registry.rpc('resolve_tenant', {
     p_domain: devKey ? null : window.location.hostname,
     p_key: devKey || null,
