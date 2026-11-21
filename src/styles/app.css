@@ -1818,3 +1818,17 @@ html[data-sidebar='dark'] .sidebar.is-collapsed .nav-item { margin: 1px 8px; pad
 .cd-bar i { display: block; width: 100%; max-width: 38px; border-radius: 6px 6px 2px 2px; background: var(--brand); }
 .cd-bar small { font-size: 11px; color: var(--text-muted); }
 .cd-bar-val { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+
+/* Lead → Profile and Journey (course workspaces) */
+.pf-title { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.pf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 18px; }
+.pf-item { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pf-item > span { font-size: 11.5px; color: var(--text-muted); }
+.pf-item > b { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.jr-list { list-style: none; margin: 0; padding: 0; position: relative; }
+.jr-list::before { content: ''; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.jr-list li { position: relative; display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; padding: 8px 0; }
+.jr-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-muted); color: var(--text-muted); border: 2px solid var(--surface); position: relative; z-index: 1; }
+.jr-list li.is-success .jr-dot { background: var(--success-soft); color: var(--success); }
+.jr-list li.is-danger .jr-dot { background: var(--danger-soft); color: var(--danger); }
+.jr-list li.is-info .jr-dot { background: var(--info-soft); color: var(--info); }
