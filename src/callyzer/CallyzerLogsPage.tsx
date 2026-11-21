@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PlayRecording } from './PlayRecording'
+import { TranscriptCell, type TranscriptStatus } from './CallTranscript'
 import { useNavigate } from 'react-router'
 import { PhoneCall, RefreshCw } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
@@ -22,6 +23,7 @@ type CallLog = {
   agent_phone: string | null
   recording_url: string | null
   recording_path: string | null
+  transcript_status: TranscriptStatus
   lead_name: string | null
 }
 
@@ -158,6 +160,7 @@ export function CallyzerLogsPage() {
                       <th>Status</th>
                       <th>By</th>
                       <th>Recording</th>
+                      <th>Transcript</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -181,6 +184,9 @@ export function CallyzerLogsPage() {
                           <td className="small nowrap">{by(r) || <span className="muted">—</span>}</td>
                           <td onClick={(e) => e.stopPropagation()}>
                             <PlayRecording path={r.recording_path} url={r.recording_url} />
+                          </td>
+                          <td onClick={(e) => e.stopPropagation()}>
+                            <TranscriptCell call={{ ...r, title: name(r) || nicePhone(r.phone ?? '') }} />
                           </td>
                         </tr>
                       )

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { PlayRecording } from '@/callyzer/PlayRecording'
+import { TranscriptCell, type TranscriptStatus } from '@/callyzer/CallTranscript'
 import { Paged } from '@/components/ui'
 import { MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -41,6 +42,7 @@ type CallRow = {
   emp_name: string | null
   recording_url: string | null
   recording_path: string | null
+  transcript_status?: TranscriptStatus
   call_method: string | null
 }
 /** a WATI message of the lead */
@@ -120,7 +122,7 @@ export function FollowUpsTab({
         .then(({ data }) => setWati((data ?? []) as WaLog[]))
       const { data } = await db()
         .from('calls')
-        .select('id, direction, started_at, duration_sec, agent_phone, member_id, emp_name, recording_url, recording_path, call_method')
+        .select('id, direction, started_at, duration_sec, agent_phone, member_id, emp_name, recording_url, recording_path, call_method, transcript_status')
         .eq('tenant_id', tenant.id)
         .eq('phone', ph)
         .order('started_at', { ascending: false })
@@ -364,6 +366,7 @@ export function FollowUpsTab({
                       <th>Status</th>
                       <th>By</th>
                       <th>Recording</th>
+                      <th>Transcript</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -381,6 +384,9 @@ export function FollowUpsTab({
                         <td className="muted nowrap">{c.member_id ? name(c.member_id) : (c.emp_name ?? c.agent_phone ?? '—')}</td>
                         <td>
                           <PlayRecording path={c.recording_path} url={c.recording_url} />
+                        </td>
+                        <td>
+                          <TranscriptCell call={{ ...c, title: when(c.started_at) }} />
                         </td>
                       </tr>
                     ))}
