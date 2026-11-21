@@ -1861,3 +1861,7 @@ details.rec-section summary { cursor: pointer; }
 .tc-chat { display: flex; flex-direction: column; gap: 8px; padding: 14px; background: #efeae2; border-radius: var(--radius); max-height: calc(100vh - 300px); overflow-y: auto; }
 .tc-chat .wa-msg { max-width: 82%; }
 .tc-note { align-self: center; font-size: 12px; color: #667781; background: rgba(255, 255, 255, .7); padding: 3px 10px; border-radius: 8px; }
+
+/* Play on a call recording: a small floating audio player */
+.rec-pop { position: fixed; z-index: 80; width: 340px; display: flex; align-items: center; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-float); animation: pop .15s ease-out; }
+.rec-pop audio { flex: 1; min-width: 0; height: 40px; }
