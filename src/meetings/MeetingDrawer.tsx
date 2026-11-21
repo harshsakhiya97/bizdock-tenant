@@ -13,6 +13,7 @@ import { setLeadCategory } from '@/leads/CategorySelect'
 import type { LeadRow, MemberOption, Temperature } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
 import { listZoomOptions, type ZoomOption } from '@/zoom/api'
+import { RecordingPanel } from '@/zoom/RecordingPanel'
 import { ZoomPanel } from '@/zoom/ZoomPanel'
 import { closeMeeting, deleteMeeting, meetingBusy, rescheduleMeeting, saveMeeting, type Busy, type MeetingInput } from './api'
 import { MemberPicker } from './MemberPicker'
@@ -504,7 +505,7 @@ export function MeetingDrawer({
         )}
 
         {meeting && meeting.zoom_account_id && meeting.mode === 'online' && (
-          <FormSection title="Zoom" description="Attendance, Q&A and chat from Zoom.">
+          <FormSection title="Zoom" description="Attendance, Q&A, chat and the recording from Zoom.">
             <ZoomPanel
               target={{ kind: 'meeting', id: meeting.id }}
               zoomId={meeting.zoom_meeting_id}
@@ -515,6 +516,13 @@ export function MeetingDrawer({
               pulledAt={meeting.zoom_pulled_at}
               accountName={zooms.find((z) => z.id === meeting.zoom_account_id)?.name}
             />
+          </FormSection>
+        )}
+
+        {/* not on Zoom: a recording can still be added by hand (Zoom meetings have it in the Zoom panel's Recording tab) */}
+        {meeting && !(meeting.zoom_account_id && meeting.mode === 'online') && (
+          <FormSection title="Recording" description="A recording added by hand (a file or a link), with its summary and transcript.">
+            <RecordingPanel target={{ kind: 'meeting', id: meeting.id }} />
           </FormSection>
         )}
 

@@ -52,7 +52,7 @@ export const retryZoom = (t: ZoomTarget) => call<{ ok: true }>({ action: 'sync',
 
 /** fetch attendance, Q&A and chat now */
 export const pullZoom = (t: ZoomTarget) =>
-  call<{ attendees: number; questions: number; chat: number; chat_found: boolean; notes: string[] }>({ action: 'pull', ...t })
+  call<{ attendees: number; questions: number; chat: number; chat_found: boolean; recording?: boolean; notes: string[] }>({ action: 'pull', ...t })
 
 export async function listZoomData(t: ZoomTarget) {
   const col = t.kind === 'meeting' ? 'meeting_id' : 'event_id'

@@ -3,6 +3,7 @@ import { CircleAlert, RefreshCw, Video } from 'lucide-react'
 import { Link } from 'react-router'
 import { Tabs, Paged } from '@/components/ui'
 import { listZoomData, pullZoom, retryZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
+import { RecordingPanel } from './RecordingPanel'
 
 const time = (s: string | null) => (s ? new Date(s).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '—')
 const when = (s: string | null) => (s ? new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '')
@@ -37,6 +38,8 @@ export function ZoomPanel({
   const [tab, setTab] = useState('Attendance')
   const [busy, setBusy] = useState<'pull' | 'retry' | null>(null)
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
+  const [recCount, setRecCount] = useState<number | undefined>(undefined)
+  const [recKey, setRecKey] = useState(0)
 
   const { kind, id } = target
   const load = useCallback(() => {
@@ -50,9 +53,10 @@ export function ZoomPanel({
     try {
       const r = await pullZoom(target)
       setMsg({
-        ok: `${r.attendees} attended · ${r.questions} questions · ${r.chat_found ? `${r.chat} chat messages` : 'no chat yet (needs the cloud recording)'}${r.notes.length ? ` · ${r.notes.join(' · ')}` : ''}`,
+        ok: `${r.attendees} attended · ${r.questions} questions · ${r.chat_found ? `${r.chat} chat messages` : 'no chat yet (needs the cloud recording)'}${r.recording ? ' · recording found' : ''}${r.notes.length ? ` · ${r.notes.join(' · ')}` : ''}`,
       })
       load()
+      setRecKey((k) => k + 1)
       onChanged?.()
     } catch (e) {
       setMsg({ error: (e as Error).message })
@@ -128,12 +132,14 @@ export function ZoomPanel({
             {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance and Q&A come in 5 minutes after it ends (tried again every 5 minutes if Zoom isn’t ready); chat after 4 hours.'}
           </div>
           <Tabs
-            tabs={['Attendance', 'Q&A', 'Chat']}
+            tabs={['Attendance', 'Q&A', 'Chat', 'Recording']}
             value={tab}
             onChange={setTab}
-            count={tab === 'Attendance' ? data?.attendees.length : tab === 'Q&A' ? qa.length : chat.length}
+            count={tab === 'Attendance' ? data?.attendees.length : tab === 'Q&A' ? qa.length : tab === 'Chat' ? chat.length : recCount}
           />
-          {!data ? (
+          {tab === 'Recording' ? (
+            <RecordingPanel key={recKey} target={target} onCount={setRecCount} />
+          ) : !data ? (
             <div className="muted small">Loading…</div>
           ) : tab === 'Attendance' ? (
             data.attendees.length ? (

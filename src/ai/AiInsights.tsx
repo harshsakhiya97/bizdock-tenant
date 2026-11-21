@@ -30,7 +30,7 @@ function inline(t: string): ReactNode[] {
   )
 }
 /** a small Markdown subset: headings, bullet / numbered lists, paragraphs */
-function Md({ text }: { text: string }) {
+export function Md({ text }: { text: string }) {
   const out: ReactNode[] = []
   let list: { ordered: boolean; items: ReactNode[] } | null = null
   const flush = () => {
