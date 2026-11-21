@@ -1,5 +1,5 @@
 import { BT } from '@/auth/auth-context'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { getFollowUp, listOutcomes, pendingFollowUpId, scheduleFollowUp } from '@/followups/api'
 import { CompleteModal } from '@/followups/CompleteModal'
@@ -14,6 +14,7 @@ import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
+import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
 import { deleteLeads, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
 import { QuickAddLead } from './QuickAddLead'
@@ -33,6 +34,8 @@ const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', f
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
 
 type PendingMove = { ids: string[]; stage: StageRow }
+/** lead_stats: the Leads cards counted in the database */
+type SrvStats = { total: number; new_week: number; due: number; overdue: number; won: number; temps: Record<string, number> }
 
 /** ✕ on a lead in no funnel: it has no Lost stage, so this stands in for one (lost reason + Not interested) */
 const NO_FUNNEL_LOST = { id: '', funnel_id: '', name: 'Lost', kind: 'lost', note_required: false, color: '#dc2626', position: 999 } as unknown as StageRow
@@ -76,10 +79,14 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const pp = !customers && !!sub && activeType(selected, sub) === BT.PAID_PODCAST
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
+  const first = useRef(true)
+  // until every lead has arrived, the cards show the database's count (lead_stats)
+  const [allLoaded, setAllLoaded] = useState(false)
+  const [srvStats, setSrvStats] = useState<SrvStats | null>(null)
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
   // Leads: every lead (Closed ones too; Customers lists the Closed leads). customers mode: leads with a booking
   const leads = useMemo(
-    () => (allLeads && revenue ? (customers ? allLeads.filter((l) => revenue.has(l.id)) : allLeads) : null),
+    () => (allLeads && (revenue || !customers) ? (customers ? allLeads.filter((l) => revenue!.has(l.id)) : allLeads) : null),
     [allLeads, revenue, customers],
   )
   const word = customers ? 'customer' : 'lead'
@@ -104,9 +111,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
 
   const load = useCallback(() => {
-    Promise.all([listLeads(tenant.id), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
+    // big workspaces: the cards come from one quick count, and the newest leads show first while the rest load;
+    // opening the page reuses a list loaded in the last minute, a reload after a change gets a fresh one
+    let done = false
+    const wasFirst = first.current
+    first.current = false
+    setAllLoaded(false)
+    Promise.all([listLeads(tenant.id, (part) => !done && setLeads(part), { cached: wasFirst }).finally(() => (done = true)), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
       .then(([l, f, s, r, m, rv]) => {
         setLeads(l)
+        setAllLoaded(true)
         setRevenue(rv)
         setFunnels(f)
         setSources(s)
@@ -116,6 +130,14 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id, businesses])
   useEffect(load, [load])
+  // the cards' quick count, for the business picked in the top bar
+  useEffect(() => {
+    if (customers) return
+    setSrvStats(null)
+    void db()
+      .rpc('lead_stats', { p_tenant: tenant.id, p_business: selected?.id ?? null, p_sub: sub?.id ?? null })
+      .then(({ data }) => setSrvStats((data as SrvStats | null) ?? null))
+  }, [customers, tenant.id, selected?.id, sub?.id])
   // every business: last comment, follow-ups done (· connected calls), meeting
   const loadExtras = useCallback(() => {
     if (customers) return
@@ -265,6 +287,21 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [base, stageById, revenue])
 
+  // while the list is still loading: the cards from lead_stats (filters apply once everything is in)
+  const cards =
+    !allLoaded && srvStats && !customers
+      ? {
+          ...stats,
+          total: srvStats.total,
+          newWeek: srvStats.new_week,
+          due: srvStats.due,
+          overdue: srvStats.overdue,
+          hot: srvStats.temps.hot ?? 0,
+          won: srvStats.won,
+          cats: [...TEMPERATURES.map((t) => `${srvStats.temps[t.value] ?? 0} ${t.label.toLowerCase()}`), ...(srvStats.temps.none ? [`${srvStats.temps.none} no category`] : [])].join(' · '),
+        }
+      : stats
+
   // back to page 1 when the list changes (tab, filters, funnel, business)
   useEffect(() => setPage(1), [stageTab, filters, selected, sub])
   const pages = Math.max(1, Math.ceil(visible.length / perPage))
@@ -400,10 +437,10 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         </div>
       ) : (
       <div className="stat-grid">
-        <StatCard icon={Users} tone="brand" value={stats.total} label="Leads" hint={stats.cats} onClick={showLeads('Leads', () => true)} />
-        <StatCard icon={UserPlus} tone="info" value={stats.newWeek} label="New this week" onClick={showLeads('New this week', (l) => l.created_at >= new Date(Date.now() - 7 * 864e5).toISOString())} />
-        <StatCard icon={CalendarClock} tone="warning" value={stats.due} label="Follow-ups due today" hint={stats.overdue ? `${stats.overdue} overdue` : undefined} onClick={showLeads('Follow-ups due today', (l) => !!l.next_follow_up_at && new Date(l.next_follow_up_at) < new Date(new Date().setHours(24, 0, 0, 0)))} />
-        <StatCard icon={Trophy} tone="success" value={stats.won} label="Won" hint={stats.total ? `${Math.round((stats.won / stats.total) * 100)}% conversion` : undefined} onClick={showLeads('Won', (l) => kindOf(l) === 'won')} />
+        <StatCard icon={Users} tone="brand" value={cards.total} label="Leads" hint={cards.cats} onClick={showLeads('Leads', () => true)} />
+        <StatCard icon={UserPlus} tone="info" value={cards.newWeek} label="New this week" onClick={showLeads('New this week', (l) => l.created_at >= new Date(Date.now() - 7 * 864e5).toISOString())} />
+        <StatCard icon={CalendarClock} tone="warning" value={cards.due} label="Follow-ups due today" hint={cards.overdue ? `${cards.overdue} overdue` : undefined} onClick={showLeads('Follow-ups due today', (l) => !!l.next_follow_up_at && new Date(l.next_follow_up_at) < new Date(new Date().setHours(24, 0, 0, 0)))} />
+        <StatCard icon={Trophy} tone="success" value={cards.won} label="Won" hint={cards.total ? `${Math.round((cards.won / cards.total) * 100)}% conversion` : undefined} onClick={showLeads('Won', (l) => kindOf(l) === 'won')} />
       </div>
       )}
       <StatRecords show={statShow} onClose={() => setStatShow(null)} rowKey={(l) => l.id} onRow={(l) => openRow(l.id)} />

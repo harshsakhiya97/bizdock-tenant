@@ -1,4 +1,4 @@
-import { Zap, Blocks, GraduationCap, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { Zap, Blocks, GraduationCap, TrendingUp, Wallet, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -38,7 +38,9 @@ export const navSections: { title: string; /** no heading shown in the side menu
       // Orders: hidden for now (the page stays at /orders)
       { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
       { to: '/enrolled-courses', label: 'Enrolled Courses', icon: GraduationCap, area: 'leads', onlyType: 'WEBINAR', optIn: true },
+      { to: '/upsell', label: 'Upsell', icon: TrendingUp, area: 'leads', onlyType: 'WEBINAR', optIn: true },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
+      { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
       {
         to: '/automation',
         label: 'Automation',
@@ -126,6 +128,8 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/invoices': { title: 'Invoices', crumb: 'Invoices & payments', icon: FileText },
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/enrolled-courses': { title: 'Enrolled Courses', crumb: 'Course purchases & payments', icon: GraduationCap },
+  '/upsell': { title: 'Upsell', crumb: 'Who to sell the next course to', icon: TrendingUp },
+  '/expenses': { title: 'Expenses', crumb: 'Spending & net profit', icon: Wallet },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },

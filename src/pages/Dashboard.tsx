@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { PodcastDashboard } from './PodcastDashboard'
+import { CourseDashboard } from './CourseDashboard'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { BusinessCards } from './BusinessCards'
 import { listBookings } from '@/bookings/api'
@@ -38,7 +39,11 @@ const hoursOf = (b: BookingRow) => {
 /** Paid Podcast has its own dashboard; everything else gets the month dashboard below. */
 export function DashboardPage() {
   const { selected, sub } = useBusiness()
-  return activeType(selected, sub) === BT.PAID_PODCAST ? <PodcastDashboard /> : <MonthDashboard />
+  const tenant = useTenant()
+  const t = activeType(selected, sub)
+  // course workspaces (opt-in, e.g. BGR): the course dashboard for their Webinar business, or with all businesses shown
+  if (tenant.extra_pages?.includes('course-dashboard') && (!t || t === BT.WEBINAR)) return <CourseDashboard />
+  return t === BT.PAID_PODCAST ? <PodcastDashboard /> : <MonthDashboard />
 }
 
 /** Month dashboard: enquiries, action required, follow-ups, bookings, money collected and enquiry sources. */

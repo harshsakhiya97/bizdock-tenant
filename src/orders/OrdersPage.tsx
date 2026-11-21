@@ -85,7 +85,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
   function newOne() {
     setOpen({ booking: null })
-    if (!leads) listLeads(tenant.id).then(setLeads, () => setLeads([]))
+    if (!leads) listLeads(tenant.id, undefined, { cached: true }).then(setLeads, () => setLeads([]))
   }
 
   const load = useCallback(() => {

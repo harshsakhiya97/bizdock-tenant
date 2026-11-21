@@ -1,3 +1,4 @@
+import { fetchAll, rpcAll } from '@/lib/fetchAll'
 import { db } from '@/lib/supabase'
 import { shortBase } from '@/workflows/api'
 
@@ -256,17 +257,25 @@ export type Purchase = {
   purchase_date: string
   notes: string | null
   status: 'active' | 'cancelled'
+  /** refunded back to them (0 = none) */
+  refund_amount: number
+  refund_reason: string | null
+  refunded_on: string | null
   created_at: string
   purchase_payments: PurchasePayment[]
 }
 
 export async function listPurchases(filter: { leadId?: string; tenantId?: string }): Promise<Purchase[]> {
-  let q = db().from('purchases').select('*, purchase_payments(*)')
-  if (filter.leadId) q = q.eq('lead_id', filter.leadId)
-  if (filter.tenantId) q = q.eq('tenant_id', filter.tenantId)
-  const { data, error } = await q.order('purchase_date', { ascending: false })
-  if (error) throw error
-  return (data ?? []) as Purchase[]
+  // a whole workspace: list_purchases (access checked once per call, fast with thousands of purchases)
+  if (filter.tenantId && !filter.leadId)
+    return rpcAll<Purchase>((offset, limit) => db().rpc('list_purchases', { p_tenant: filter.tenantId, p_offset: offset, p_limit: limit }))
+  const make = () => {
+    let q = db().from('purchases').select('*, purchase_payments(*)')
+    if (filter.leadId) q = q.eq('lead_id', filter.leadId)
+    if (filter.tenantId) q = q.eq('tenant_id', filter.tenantId)
+    return q.order('purchase_date', { ascending: false }).order('id') as never
+  }
+  return fetchAll<Purchase>(make)
 }
 
 export type PartDraft = { key: string; id?: string; label: string; due_on: string; amount: string; mode: string; note: string; status: 'pending' | 'paid'; paid_on: string }
@@ -281,6 +290,9 @@ export type PurchaseInput = {
   purchase_date: string
   notes: string
   parts: PartDraft[]
+  refund_amount?: number
+  refund_reason?: string
+  refunded_on?: string
 }
 
 export async function savePurchase(tenantId: string, memberId: string | undefined, existing: Purchase | null, p: PurchaseInput) {
@@ -297,6 +309,9 @@ export async function savePurchase(tenantId: string, memberId: string | undefine
     total_amount: p.price + gst,
     purchase_date: p.purchase_date,
     notes: p.notes.trim() || null,
+    refund_amount: p.refund_amount ?? 0,
+    refund_reason: p.refund_amount ? p.refund_reason?.trim() || null : null,
+    refunded_on: p.refund_amount ? p.refunded_on || null : null,
   }
   let id = existing?.id
   if (existing) {
@@ -340,8 +355,9 @@ export async function deletePurchase(id: string) {
 
 /** leads with a paid part of a purchase (customers), and what they bought / paid */
 export async function purchaseTotals(tenantId: string): Promise<Map<string, { count: number; billed: number; paid: number; last: string }>> {
-  const { data, error } = await db().from('purchases').select('lead_id, total_amount, paid_amount, purchase_date').eq('tenant_id', tenantId).eq('status', 'active').gt('paid_amount', 0)
-  if (error) throw error
+  const data = (await rpcAll<{ lead_id: string; total_amount: number; paid_amount: number; purchase_date: string; status: string }>((offset, limit) =>
+    db().rpc('list_purchases', { p_tenant: tenantId, p_offset: offset, p_limit: limit }),
+  )).filter((p) => p.status === 'active' && Number(p.paid_amount) > 0)
   const m = new Map<string, { count: number; billed: number; paid: number; last: string }>()
   for (const p of (data ?? []) as { lead_id: string; total_amount: number; paid_amount: number; purchase_date: string }[]) {
     const r = m.get(p.lead_id) ?? { count: 0, billed: 0, paid: 0, last: '' }

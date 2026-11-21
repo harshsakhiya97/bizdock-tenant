@@ -47,6 +47,8 @@ export function FunnelsPage() {
           .select('funnel_id, stage_id, owner_id')
           .eq('tenant_id', tenant.id)
           .eq('is_archived', false)
+          // only leads in a funnel are counted; asking for just those keeps big workspaces fast
+          .not('funnel_id', 'is', null)
           .then(({ data }) => {
             const m = new Map<string, Counts>()
             for (const l of data ?? []) {

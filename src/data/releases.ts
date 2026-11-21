@@ -15,17 +15,24 @@ export const releases: Release[] = [
   {
     version: '0.30',
     date: '2026-11-21',
-    title: 'Workspace look and menu, Enrolled Courses',
-    summary: 'Each workspace can now have its own look, menu and words: a dark sidebar, pages turned off or on, and words like Product shown as Course. Also a new Enrolled Courses page.',
+    title: 'Course business: dashboard, Upsell, Expenses; big workspaces',
+    summary: 'For course businesses: a course dashboard, Enrolled Courses, Upsell, refunds, Expenses and the participant Profile and Journey on the lead. Each workspace can have its own look, menu and words. Workspaces with tens of thousands of leads now load quickly.',
     new: [
       'Enrolled Courses (side menu, for workspaces that have it): every course bought on a lead, with the total, paid and due amounts, the payment status and the next part (overdue in red). Search, filter by course, payment status and date; click a row to open the lead’s Purchases.',
       'Workspace look: a dark sidebar in the workspace colour, set per workspace.',
       'Workspace menu: pages can be turned off for a workspace (with everything under them), and opening one goes to the first page in the menu.',
       'Workspace words: a workspace can call things by its own name, e.g. Masters → Products shown as Courses, and Course on the lead’s purchase.',
+      'Course dashboard (for course workspaces): leads, converted, sold, collected, pending, expenses, net profit and refunded; this month vs last month and this year vs last year; collected by month; course performance in ladder order; team performance (leads, converted, rate, collected, outstanding).',
+      'Upsell: the course ladder (the order set in Masters → Courses) and, for each step, who bought it but not the next course. Click a row to open the lead.',
+      'Refunds on a purchase: amount, date and reason (not more than what was paid). Enrolled Courses shows a Refunded status and total, and a filter for how old a balance is (under 30 days to over 180).',
+      'Expenses: what the business spends (ad spend, salary, venue, software…), by date, category and business. The total feeds net profit on the dashboard. Access control → Expenses.',
+      'Lead → Profile: business, personal, batch & pod, implementer & family and CRM details. Lead → Journey: one timeline of webinars, courses bought, payments and refunds.',
+      'Masters → Courses: Order in the ladder.',
     ],
     improved: [
       'Masters → Business types: switched-off types are hidden; tick Show inactive to see them.',
       'The Version · What’s new link and “Developed by BizDock” can be hidden per workspace.',
+      'Big workspaces (20,000+ leads): Leads, Customers, Follow-ups, Enrolled Courses, Upsell and the dashboard load quickly. The Leads cards come from one quick count, the newest leads show first while the rest load, and the list is reused for a minute when moving between pages.',
     ],
   },
   {

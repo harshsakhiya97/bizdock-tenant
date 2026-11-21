@@ -89,7 +89,7 @@ export function MeetingsPage() {
   }, [tenant.id])
   useEffect(load, [load])
   useEffect(() => {
-    void listLeads(tenant.id).then(setLeads, () => setLeads([]))
+    void listLeads(tenant.id, undefined, { cached: true }).then(setLeads, () => setLeads([]))
     void listMemberOptions(tenant.id).then(setMembers, () => setMembers([]))
   }, [tenant.id])
 

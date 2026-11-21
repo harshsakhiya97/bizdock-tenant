@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { listLeads, listMemberOptions } from '@/leads/api'
@@ -14,13 +14,15 @@ export function useFollowUpData() {
   const { inScope } = useBusiness()
   const [followUps, setFollowUps] = useState<FollowUpRow[] | null>(null)
   const [leads, setLeads] = useState<LeadRow[]>([])
+  // opening the page reuses a lead list loaded in the last minute; a reload after a change gets a fresh one
+  const leadsFirst = useRef(true)
   const [funnels, setFunnels] = useState<FunnelRow[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [outcomes, setOutcomes] = useState<Option[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
-    Promise.all([listFollowUps(tenant.id), listLeads(tenant.id), listFunnels(tenant.id), listMemberOptions(tenant.id), listOutcomes(tenant.id)])
+    Promise.all([listFollowUps(tenant.id), listLeads(tenant.id, undefined, { cached: leadsFirst.current }).finally(() => (leadsFirst.current = false)), listFunnels(tenant.id), listMemberOptions(tenant.id), listOutcomes(tenant.id)])
       .then(([f, l, fn, m, o]) => {
         setFollowUps(f)
         setLeads(l)

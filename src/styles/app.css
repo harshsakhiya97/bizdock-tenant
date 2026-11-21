@@ -1787,3 +1787,48 @@ html[data-sidebar='dark'] .sidebar .brand-name span,
 html[data-sidebar='dark'] .sidebar .user-link:hover b,
 html[data-sidebar='dark'] .sidebar .user-link.active b { color: color-mix(in oklab, var(--brand) 45%, white); }
 html[data-sidebar='dark'] .sidebar.is-collapsed .nav-item { margin: 1px 8px; padding: 0; }
+
+/* Expenses: category chips (click to filter) */
+.exp-chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit; color: var(--text); }
+.exp-chip:hover { border-color: var(--brand); color: var(--brand); }
+.exp-chip.is-on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* Upsell: the course ladder steps */
+.upsell-ladder { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.upsell-step { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); padding: 12px 14px; cursor: pointer; font-family: inherit; color: var(--text); }
+.upsell-step:hover { border-color: var(--brand); }
+.upsell-step.is-on { border-color: var(--brand); background: var(--brand-soft); box-shadow: inset 0 0 0 1px var(--brand); }
+.upsell-step .upsell-name { display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); }
+.upsell-step b { font-size: 22px; line-height: 1.2; }
+.upsell-step small { font-size: 11.5px; color: var(--text-muted); }
+
+/* Course dashboard (opt-in): comparisons and the monthly bars */
+.cd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1100px) { .cd-grid { grid-template-columns: 1fr; } }
+.cd-compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; margin-top: 10px; }
+.cd-cmp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: 13px; }
+.cd-cmp-row { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+.cd-cmp-row > span { color: var(--text-muted); }
+.cd-cmp-row > b { font-size: 12.5px; min-width: 70px; text-align: right; }
+.cd-track { height: 8px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.cd-track i { display: block; height: 100%; border-radius: 999px; background: var(--brand); }
+.cd-cmp-row.is-prev .cd-track i { background: color-mix(in oklab, var(--brand) 35%, white); }
+.cd-bars { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; align-items: end; height: 190px; margin-top: 12px; }
+.cd-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.cd-bar i { display: block; width: 100%; max-width: 38px; border-radius: 6px 6px 2px 2px; background: var(--brand); }
+.cd-bar small { font-size: 11px; color: var(--text-muted); }
+.cd-bar-val { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+
+/* Lead → Profile and Journey (course workspaces) */
+.pf-title { margin: 0 0 10px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.pf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 18px; }
+.pf-item { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pf-item > span { font-size: 11.5px; color: var(--text-muted); }
+.pf-item > b { font-size: 13.5px; font-weight: 600; overflow-wrap: anywhere; }
+.jr-list { list-style: none; margin: 0; padding: 0; position: relative; }
+.jr-list::before { content: ''; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.jr-list li { position: relative; display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: start; padding: 8px 0; }
+.jr-dot { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-muted); color: var(--text-muted); border: 2px solid var(--surface); position: relative; z-index: 1; }
+.jr-list li.is-success .jr-dot { background: var(--success-soft); color: var(--success); }
+.jr-list li.is-danger .jr-dot { background: var(--danger-soft); color: var(--danger); }
+.jr-list li.is-info .jr-dot { background: var(--info-soft); color: var(--info); }

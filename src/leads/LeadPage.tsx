@@ -40,8 +40,9 @@ import { db } from '@/lib/supabase'
 import { CallFromAiDrawer, LeadAiCalls } from '@/aicalls/LeadAiCalls'
 import { listAiCalls } from '@/aicalls/api'
 import { useAiNames } from '@/ai/insights'
+import { JourneyTab, ProfileTab } from './ParticipantTabs'
 
-type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments' | 'ai_calls'
+type Tab = 'details' | 'followups' | 'meetings' | 'bookings' | 'webinars' | 'purchases' | 'payments' | 'ai_calls' | 'profile' | 'journey'
 
 export const fmtDay = (d: string | null) =>
   d ? new Date(`${d.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '—'
@@ -62,7 +63,7 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' || t === 'ai_calls' ? t : 'details'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' || t === 'ai_calls' || t === 'profile' || t === 'journey' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
@@ -241,6 +242,13 @@ export function LeadPage() {
       ? [
           { id: 'webinars' as Tab, label: 'Webinars' },
           { id: 'purchases' as Tab, label: 'Purchases', count: (purchases ?? []).filter((p) => p.status === 'active').length },
+          // course workspaces (opt-in): the participant's profile and journey
+          ...(tenant.extra_pages?.includes('participant-profile')
+            ? [
+                { id: 'profile' as Tab, label: 'Profile' },
+                { id: 'journey' as Tab, label: 'Journey' },
+              ]
+            : []),
         ]
       : can('bookings', 'view')
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
@@ -396,6 +404,8 @@ export function LeadPage() {
             {canInv && (!canPay || paySub === 'invoice') ? <LeadInvoices leadId={lead.id} refs={refs} onChanged={done} /> : <LeadPaymentsTab payments={payments} error={payError} />}
           </div>
         )}
+        {tab === 'profile' && isWebinar && <ProfileTab key={lead.updated_at} lead={lead} canEdit={canEdit} onSaved={done} />}
+        {tab === 'journey' && isWebinar && <JourneyTab lead={lead} purchases={purchases} />}
         {tab === 'purchases' && isWebinar && (
           <PurchasesTab purchases={purchases} canAdd={canEdit} onAdd={() => setPu({ purchase: null })} onOpen={(p) => setPu({ purchase: p })} onChanged={done} />
         )}
