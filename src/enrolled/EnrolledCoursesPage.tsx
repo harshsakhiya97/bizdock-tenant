@@ -9,7 +9,7 @@ import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
 import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
-import { fetchAll } from '@/lib/fetchAll'
+import { rpcAll } from '@/lib/fetchAll'
 import { useTenant } from '@/tenant/useTenant'
 import { useTerm } from '@/tenant/useTerm'
 import type { Purchase } from '@/webinars/api'
@@ -64,15 +64,7 @@ export function EnrolledCoursesPage() {
   const load = useCallback(() => {
     setRows(null)
     setError(null)
-    fetchAll<Row>(
-      () =>
-        db()
-          .from('purchases')
-          .select('*, purchase_payments(*), leads(first_name, last_name, phone, email)')
-          .eq('tenant_id', tenant.id)
-          .order('purchase_date', { ascending: false })
-          .order('id') as never,
-    )
+    rpcAll<Row>((offset, limit) => db().rpc('list_purchases', { p_tenant: tenant.id, p_offset: offset, p_limit: limit }))
       .then(setRows)
       .catch((e: Error) => {
         setError(e.message)

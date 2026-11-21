@@ -149,17 +149,16 @@ export async function archiveWorkflow(id: string) {
 
 /** funnels, webhook forms and webinars / events to pick from */
 export async function loadRefData(tenantId: string): Promise<RefData> {
-  const [funnels, pages, events, types, members, workflows, leadTags, leadExtras, sources, zoomAccounts, hooks, webinars] = await Promise.all([
+  const [funnels, pages, events, types, members, workflows, leadTags, , sources, zoomAccounts, hooks, webinars] = await Promise.all([
     listFunnels(tenantId),
     db().from('funnel_webhooks').select('id, name, funnel_id, field_map, sample, action').eq('tenant_id', tenantId).order('created_at'),
     listEvents(tenantId),
     listEventTypes(tenantId),
     listMemberOptions(tenantId),
     db().from('workflows').select('id, name, is_active').eq('tenant_id', tenantId).is('archived_at', null).order('name'),
-    // tags already given to leads
-    db().from('leads').select('tags').eq('tenant_id', tenantId).not('tags', 'eq', '{}').limit(5000),
-    // extra fields saved on leads (form / sheet columns kept as "extra")
-    db().from('leads').select('funnel_id, extra').eq('tenant_id', tenantId).not('extra', 'is', null).limit(5000),
+    // tags already given to leads, and extra fields saved on leads (form / sheet columns kept as "extra"), per funnel
+    db().rpc('lead_tag_field_names', { p_tenant: tenantId }),
+    Promise.resolve(null),
     db().from('lead_sources').select('id, name').eq('tenant_id', tenantId).order('name'),
     listZoomOptions(tenantId).catch(() => []),
     db().from('workflow_hooks').select('*').eq('tenant_id', tenantId),
@@ -207,14 +206,14 @@ export async function loadRefData(tenantId: string): Promise<RefData> {
     webinars: (webinars.data ?? []) as NonNullable<RefData['webinars']>,
     workflows: (workflows.data ?? []) as { id: string; name: string; is_active: boolean }[],
     // extra fields saved on each funnel's leads (a workflow only offers its own funnel's)
-    extraKeysByFunnel: ((leadExtras.data ?? []) as { funnel_id: string | null; extra: Record<string, unknown> | null }[]).reduce<Record<string, string[]>>((m, l) => {
+    extraKeysByFunnel: (((leadTags.data as { extras?: { funnel_id: string | null; keys: string[] }[] } | null)?.extras ?? []).map((x) => ({ funnel_id: x.funnel_id, extra: Object.fromEntries(x.keys.map((k) => [k, ''])) })) as { funnel_id: string | null; extra: Record<string, unknown> | null }[]).reduce<Record<string, string[]>>((m, l) => {
       if (!l.funnel_id) return m
       const keys = new Set(m[l.funnel_id] ?? [])
       for (const k of Object.keys(l.extra ?? {})) keys.add(k)
       m[l.funnel_id] = [...keys]
       return m
     }, {}),
-    leadTags: [...new Set(((leadTags.data ?? []) as { tags: string[] }[]).flatMap((l) => l.tags ?? []))].sort((a, b) => a.localeCompare(b)),
+    leadTags: [...new Set((leadTags.data as { tags?: string[] } | null)?.tags ?? [])].sort((a, b) => a.localeCompare(b)),
   }
 }
 

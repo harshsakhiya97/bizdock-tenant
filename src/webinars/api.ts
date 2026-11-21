@@ -1,4 +1,4 @@
-import { fetchAll } from '@/lib/fetchAll'
+import { fetchAll, rpcAll } from '@/lib/fetchAll'
 import { db } from '@/lib/supabase'
 import { shortBase } from '@/workflows/api'
 
@@ -266,6 +266,9 @@ export type Purchase = {
 }
 
 export async function listPurchases(filter: { leadId?: string; tenantId?: string }): Promise<Purchase[]> {
+  // a whole workspace: list_purchases (access checked once per call, fast with thousands of purchases)
+  if (filter.tenantId && !filter.leadId)
+    return rpcAll<Purchase>((offset, limit) => db().rpc('list_purchases', { p_tenant: filter.tenantId, p_offset: offset, p_limit: limit }))
   const make = () => {
     let q = db().from('purchases').select('*, purchase_payments(*)')
     if (filter.leadId) q = q.eq('lead_id', filter.leadId)
@@ -352,9 +355,9 @@ export async function deletePurchase(id: string) {
 
 /** leads with a paid part of a purchase (customers), and what they bought / paid */
 export async function purchaseTotals(tenantId: string): Promise<Map<string, { count: number; billed: number; paid: number; last: string }>> {
-  const data = await fetchAll<{ lead_id: string; total_amount: number; paid_amount: number; purchase_date: string }>(
-    () => db().from('purchases').select('lead_id, total_amount, paid_amount, purchase_date').eq('tenant_id', tenantId).eq('status', 'active').gt('paid_amount', 0).order('id') as never,
-  )
+  const data = (await rpcAll<{ lead_id: string; total_amount: number; paid_amount: number; purchase_date: string; status: string }>((offset, limit) =>
+    db().rpc('list_purchases', { p_tenant: tenantId, p_offset: offset, p_limit: limit }),
+  )).filter((p) => p.status === 'active' && Number(p.paid_amount) > 0)
   const m = new Map<string, { count: number; billed: number; paid: number; last: string }>()
   for (const p of (data ?? []) as { lead_id: string; total_amount: number; paid_amount: number; purchase_date: string }[]) {
     const r = m.get(p.lead_id) ?? { count: 0, billed: 0, paid: 0, last: '' }

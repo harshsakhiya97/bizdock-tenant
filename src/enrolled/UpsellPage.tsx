@@ -7,7 +7,7 @@ import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
-import { fetchAll } from '@/lib/fetchAll'
+import { rpcAll } from '@/lib/fetchAll'
 import { useTenant } from '@/tenant/useTenant'
 import { useTerm } from '@/tenant/useTerm'
 
@@ -49,15 +49,7 @@ export function UpsellPage() {
     setError(null)
     Promise.all([
       db().from('products').select('id, name, sort_order, price, business_id').eq('tenant_id', tenant.id).eq('kind', 'product').eq('is_active', true).order('sort_order'),
-      fetchAll<Buy>(
-        () =>
-          db()
-            .from('purchases')
-            .select('id, lead_id, product_id, name, business_id, purchase_date, total_amount, paid_amount, refund_amount, status, leads(first_name, last_name, phone, city)')
-            .eq('tenant_id', tenant.id)
-            .eq('status', 'active')
-            .order('id') as never,
-      ),
+      rpcAll<Buy>((offset, limit) => db().rpc('list_purchases', { p_tenant: tenant.id, p_offset: offset, p_limit: limit })).then((rows) => rows.filter((r) => r.status === 'active')),
     ])
       .then(([c, p]) => {
         if (c.error) setError(c.error.message)

@@ -1,4 +1,4 @@
-import { fetchAll } from '@/lib/fetchAll'
+import { rpcAll } from '@/lib/fetchAll'
 import { db } from '@/lib/supabase'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option, Temperature } from './types'
 
@@ -7,7 +7,8 @@ const COLS =
 
 export async function listLeads(tenantId: string): Promise<LeadRow[]> {
   // all of them, past the 1,000-rows-per-request cap (a workspace can hold tens of thousands)
-  return fetchAll<LeadRow>(() => db().from('leads').select(COLS).eq('tenant_id', tenantId).order('created_at', { ascending: false }).order('id') as never)
+  // list_leads: the same access rule as the table, checked once per call instead of on every row (fast with 20,000+ leads)
+  return rpcAll<LeadRow>((offset, limit) => db().rpc('list_leads', { p_tenant: tenantId, p_offset: offset, p_limit: limit }))
 }
 
 export async function listFunnelLeads(funnelId: string): Promise<LeadRow[]> {
