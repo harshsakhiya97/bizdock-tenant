@@ -42,12 +42,12 @@ export async function listWaLogs(tenantId: string, from: string, to: string): Pr
 }
 
 /** one number's whole conversation, oldest first */
-export async function listChat(tenantId: string, phone: string): Promise<WaLog[]> {
+export async function listChat(tenantId: string, phone: string | string[]): Promise<WaLog[]> {
   const { data, error } = await db()
     .from('whatsapp_logs')
     .select('id, direction, phone, lead_id, template, body, source, workflow_id, status, error, sent_at, delivered_at, read_at, leads(first_name, last_name), workflows(name)')
     .eq('tenant_id', tenantId)
-    .eq('phone', phone)
+    .in('phone', Array.isArray(phone) ? phone : [phone])
     .order('sent_at')
     .limit(1000)
   if (error) throw error

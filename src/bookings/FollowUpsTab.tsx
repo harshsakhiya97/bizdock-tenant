@@ -12,8 +12,8 @@ import { CALL_CATEGORIES, ENDS_FOLLOW_UPS } from '@/leads/labels'
 import type { MemberOption, Option, Temperature } from '@/leads/types'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
-import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
+import { Conversation } from '@/integrations/WaLogsPage'
 import { listLeadMessages } from './api'
 import type { LeadMessage } from './types'
 
@@ -82,6 +82,7 @@ export function FollowUpsTab({
   const [wati, setWati] = useState<WaLog[]>([])
   const [fus, setFus] = useState<Fu[] | null>(null)
   const [msgs, setMsgs] = useState<LeadMessage[] | null>(null)
+  const [leadPhone, setLeadPhone] = useState('')
   const [outcomes, setOutcomes] = useState<Option[]>([])
   // the log-a-call form (completing = the pending follow-up being closed)
   const [completing, setCompleting] = useState<Fu | null>(null)
@@ -111,6 +112,7 @@ export function FollowUpsTab({
       setLeadCat(t)
       setCat(t && CALL_CATEGORIES.some((c) => c.value === t) ? t : '')
       const ph = String(l?.phone ?? '').replace(/\D/g, '').slice(-10)
+      setLeadPhone(ph.length === 10 ? ph : '')
       if (ph.length < 10) return setPhoneCalls([])
       // WhatsApp (WATI) messages: every message with the lead's number
       db()
@@ -409,34 +411,21 @@ export function FollowUpsTab({
           ))}
           {!msgs ? (
             <div className="muted small">Loading…</div>
-          ) : msgs.length + wati.length === 0 ? (
-            <div className="muted small">No WhatsApp messages yet.</div>
+          ) : !leadPhone ? (
+            <div className="muted small">This lead has no mobile number.</div>
           ) : (
-            <ol className="timeline">
-              {[
-                ...msgs.map((m) => ({ key: m.id, at: m.sent_at, title: m.title ?? 'Message', body: m.body, foot: name(m.sent_by) })),
-                ...wati.map((w) => ({
-                  key: `w${w.id}`,
-                  at: w.sent_at,
-                  title: w.direction === 'in' ? 'Reply received' : (w.template ?? 'WhatsApp (WATI)'),
-                  body: w.body ?? '',
-                  foot: w.direction === 'in' ? 'WATI' : `WATI · ${w.status}`,
-                })),
-              ]
-                .sort((a, b) => b.at.localeCompare(a.at))
-                .map((m) => (
-                  <li key={m.key}>
-                    <span className="tl-dot" />
-                    <div>
-                      <b>{m.title}</b>
-                      {m.body && <p style={{ whiteSpace: 'pre-wrap' }}>{m.body}</p>}
-                      <small>
-                        {m.foot} · {ago(m.at)} · {when(m.at)}
-                      </small>
-                    </div>
-                  </li>
-                ))}
-            </ol>
+            // the chat as on WhatsApp → Individual chat: WATI's messages and the ones sent from here, then Send a template
+            <div className="wa-chat-pane lead-wa">
+              <Conversation
+                tenantId={tenant.id}
+                phone={`91${leadPhone}`}
+                phones={[leadPhone, `91${leadPhone}`, `+91${leadPhone}`]}
+                leadId={leadId}
+                hideHead
+                extra={msgs.map((m) => ({ id: m.id, at: m.sent_at, title: m.title ?? null, body: m.body, by: name(m.sent_by) }))}
+                onSent={() => undefined}
+              />
+            </div>
           )}
         </>
       )}

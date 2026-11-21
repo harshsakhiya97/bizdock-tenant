@@ -245,8 +245,31 @@ function ChatsTab({ rows, phone, pick, reload }: { rows: WaLog[] | null; phone: 
   )
 }
 
-function Conversation({ tenantId, phone, onSent }: { tenantId: string; phone: string; onSent: () => void }) {
-  const [msgs, setMsgs] = useState<WaLog[] | null>(null)
+/** a message to show in the chat that isn't in WATI's log (e.g. sent from the lead page), as an outgoing bubble */
+export type ChatExtra = { id: string; at: string; title: string | null; body: string; by: string | null }
+
+/**
+ * One WhatsApp chat (WATI): the messages as bubbles, then Send a template. On the lead page (Follow-ups → WhatsApp):
+ * phones = the lead's number in both forms, leadId, hideHead, and extra = the lead's other WhatsApp messages.
+ */
+export function Conversation({
+  tenantId,
+  phone,
+  onSent,
+  phones,
+  leadId: fixedLead,
+  hideHead,
+  extra,
+}: {
+  tenantId: string
+  phone: string
+  onSent: () => void
+  phones?: string[]
+  leadId?: string
+  hideHead?: boolean
+  extra?: ChatExtra[]
+}) {
+  const [logs, setMsgs] = useState<WaLog[] | null>(null)
   const { list, error: tplError } = useWatiTemplates()
   const [pickedKey, setPickedKey] = useState<string | null>(null)
   const [vals, setVals] = useState<Record<string, string>>({})
@@ -255,16 +278,31 @@ function Conversation({ tenantId, phone, onSent }: { tenantId: string; phone: st
   const end = useRef<HTMLDivElement>(null)
 
   const load = useCallback(() => {
-    listChat(tenantId, phone).then(setMsgs, (e: Error) => setError(e.message))
-  }, [tenantId, phone])
+    listChat(tenantId, phones ?? phone).then(setMsgs, (e: Error) => setError(e.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId, phone, (phones ?? []).join(',')])
+  // WATI's messages and the extra ones, oldest first
+  const msgs = useMemo(
+    () =>
+      logs &&
+      [
+        ...logs,
+        ...(extra ?? []).map(
+          (x) => ({ id: `x${x.id}`, direction: 'out', phone, lead_id: fixedLead ?? null, template: x.title, body: x.body, source: 'chat', workflow_id: null, status: 'sent', error: null, sent_at: x.at, delivered_at: null, read_at: null, by: x.by }) as unknown as WaLog & { by?: string | null },
+        ),
+      ].sort((a, b) => a.sent_at.localeCompare(b.sent_at)),
+    [logs, extra, phone, fixedLead],
+  )
   useEffect(load, [load])
   // (newer browsers return a promise from scrollIntoView: an effect must not return it)
+  // to the newest message: the chat scrolls, not the page
   useEffect(() => {
-    end.current?.scrollIntoView({ block: 'end' })
+    const box = end.current?.parentElement
+    if (box) box.scrollTop = box.scrollHeight
   }, [msgs])
 
   const name = msgs?.map(leadName).find(Boolean) ?? ''
-  const leadId = msgs?.map((m) => m.lead_id).filter(Boolean).at(-1) ?? null
+  const leadId = fixedLead ?? msgs?.map((m) => m.lead_id).filter(Boolean).at(-1) ?? null
   const approved = useMemo(() => (list ?? []).filter((t) => (t.status ?? '').toUpperCase() === 'APPROVED'), [list])
   const picked = approved.find((t) => `${t.elementName}|${t.language?.value ?? ''}` === pickedKey) ?? null
   const vars = picked ? watiVars(picked).vars : []
@@ -288,6 +326,7 @@ function Conversation({ tenantId, phone, onSent }: { tenantId: string; phone: st
 
   return (
     <>
+      {!hideHead && (
       <header className="wa-chat-head">
         <span className="wa-avatar">{(name || '#').slice(0, 1).toUpperCase()}</span>
         <div>
@@ -300,9 +339,12 @@ function Conversation({ tenantId, phone, onSent }: { tenantId: string; phone: st
           </Link>
         )}
       </header>
+      )}
       <div className="wa-chat-body">
         {!msgs ? (
           <div className="muted small">Loading…</div>
+        ) : !msgs.length ? (
+          <div className="muted small" style={{ margin: 'auto' }}>No WhatsApp messages yet.</div>
         ) : (
           msgs.map((m) => (
             <div key={m.id} className={cn('wa-msg', m.direction === 'in' ? 'is-in' : 'is-out', m.status === 'failed' && 'is-failed')}>
