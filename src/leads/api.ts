@@ -13,6 +13,13 @@ const LEAD_NULLS = Object.fromEntries(
     .map((c) => [c, null]),
 )
 
+// the last full list per workspace, reused for a minute when a page opens with `cached` (moving between Leads,
+// Customers, Follow-ups…); any change to leads or follow-ups made through the app's api files clears it, and a
+// page reloading after its own change always gets a fresh one
+const CACHE_MS = 60_000
+const cached = new Map<string, { at: number; rows: LeadRow[] }>()
+export const clearLeadsCache = () => cached.clear()
+
 // a load already running for the workspace is shared (two pages asking at once, or React running an effect twice)
 const loading = new Map<string, { promise: Promise<LeadRow[]>; partial: Set<(rows: LeadRow[]) => void> }>()
 
@@ -20,14 +27,22 @@ const loading = new Map<string, { promise: Promise<LeadRow[]>; partial: Set<(row
  * Every lead of the workspace, newest first. `onPartial` gets the newest ones as they arrive (the first 3,000 in well
  * under a second), so a list can show them while the rest load.
  */
-export function listLeads(tenantId: string, onPartial?: (rows: LeadRow[]) => void): Promise<LeadRow[]> {
+export function listLeads(tenantId: string, onPartial?: (rows: LeadRow[]) => void, opts?: { cached?: boolean }): Promise<LeadRow[]> {
+  // opened again within a minute (another page, or back to this one): the list just loaded, unless something changed
+  const hit = cached.get(tenantId)
+  if (opts?.cached && hit && Date.now() - hit.at < CACHE_MS) return Promise.resolve(hit.rows)
   const running = loading.get(tenantId)
   if (running) {
     if (onPartial) running.partial.add(onPartial)
     return running.promise
   }
   const partial = new Set<(rows: LeadRow[]) => void>(onPartial ? [onPartial] : [])
-  const promise = loadLeads(tenantId, (rows) => partial.forEach((f) => f(rows))).finally(() => loading.delete(tenantId))
+  const promise = loadLeads(tenantId, (rows) => partial.forEach((f) => f(rows)))
+    .then((rows) => {
+      cached.set(tenantId, { at: Date.now(), rows })
+      return rows
+    })
+    .finally(() => loading.delete(tenantId))
   loading.set(tenantId, { promise, partial })
   return promise
 }
@@ -59,6 +74,7 @@ export async function importLeads(
   fromFunnel: boolean,
   rows: Record<string, string>[],
 ) {
+  clearLeadsCache()
   const { data, error } = await db().rpc('import_leads', {
     p_business: target.businessId,
     p_funnel: target.funnelId,
@@ -145,6 +161,7 @@ export async function getLead(id: string): Promise<LeadRow | null> {
 }
 
 export async function createLead(tenantId: string, businessId: string, memberId: string | undefined, input: LeadInput) {
+  clearLeadsCache()
   const { data, error } = await db()
     .from('leads')
     .insert({ ...toRow(input), tenant_id: tenantId, business_id: businessId, created_by: memberId ?? null })
@@ -162,6 +179,7 @@ export async function updateLead(
   input: LeadInput,
   stageNote: { note: string; lost_reason_id: string | null },
 ) {
+  clearLeadsCache()
   const row = toRow(input)
   const { error } = await db()
     .from('leads')
@@ -183,12 +201,14 @@ export async function updateLead(
 
 /** Same change for many leads (bulk bar, board drag). */
 export async function updateLeads(ids: string[], patch: Record<string, unknown>) {
+  clearLeadsCache()
   const { error } = await db().from('leads').update(patch).in('id', ids)
   if (error) throw error
 }
 
 /** deletes leads for good (their follow-ups, activity and form posts go too; bookings keep their details) */
 export async function deleteLeads(ids: string[]) {
+  clearLeadsCache()
   const { data, error } = await db().from('leads').delete().in('id', ids).select('id')
   if (error) throw error
   if ((data ?? []).length < ids.length) throw new Error('Some leads couldn’t be deleted (no permission).')

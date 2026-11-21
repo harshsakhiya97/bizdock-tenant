@@ -55,7 +55,7 @@ export function BookingCalendarPage() {
   }, [tenant.id, anyStudio])
   useEffect(load, [load])
   useEffect(() => {
-    if (canAdd) void listLeads(tenant.id).then(setLeads, () => setLeads([]))
+    if (canAdd) void listLeads(tenant.id, undefined, { cached: true }).then(setLeads, () => setLeads([]))
   }, [tenant.id, canAdd])
 
   const visible = useMemo(

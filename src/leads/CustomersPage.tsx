@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { AlertTriangle, CalendarCheck, Download, Plus, Users, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -49,13 +49,15 @@ export function CustomersPage() {
   const [revenue, setRevenue] = useState<Map<string, Revenue> | null>(null)
   const [sources, setSources] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
+  // opening the page reuses a lead list loaded in the last minute; a reload after a change gets a fresh one
+  const leadsFirst = useRef(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [f, setF] = useState<{ q: string; owner: string; source: string; pay: Pay; sort: Sort; range: Range }>({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })
   const [book, setBook] = useState<{ lead: LeadRow; service: boolean; copy: BookingRow | null } | null>(null)
 
   const load = useCallback(() => {
-    Promise.all([listLeads(tenant.id), listCustomerRevenue(tenant.id, businesses), listSources(tenant.id), listMemberOptions(tenant.id)])
+    Promise.all([listLeads(tenant.id, undefined, { cached: leadsFirst.current }).finally(() => (leadsFirst.current = false)), listCustomerRevenue(tenant.id, businesses), listSources(tenant.id), listMemberOptions(tenant.id)])
       .then(([l, r, s, m]) => {
         setLeads(l)
         setRevenue(r)

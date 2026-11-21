@@ -1,3 +1,4 @@
+import { clearLeadsCache } from '@/leads/api'
 import { logActivity } from '@/leads/api'
 import { db } from '@/lib/supabase'
 import type { Option } from '@/leads/types'
@@ -32,6 +33,7 @@ export async function scheduleFollowUp(
   input: ScheduleInput,
   replace = true,
 ) {
+  clearLeadsCache()
   if (replace) {
     const { error } = await db()
       .from('follow_ups')
@@ -68,6 +70,7 @@ export async function completeFollowUp(
   result: { outcome_id: string; outcome_name: string; note: string },
   next: ScheduleInput | null,
 ) {
+  clearLeadsCache()
   const done = {
     status: 'done' as const,
     outcome_id: result.outcome_id,
@@ -96,12 +99,14 @@ export async function completeFollowUp(
 }
 
 export async function cancelFollowUp(id: string) {
+  clearLeadsCache()
   const { error } = await db().from('follow_ups').update({ status: 'cancelled' }).eq('id', id)
   if (error) throw error
 }
 
 /** Cancels every pending follow-up of a lead (the lead form's date was cleared). */
 export async function clearLeadFollowUps(leadId: string) {
+  clearLeadsCache()
   const { error } = await db().from('follow_ups').update({ status: 'cancelled' }).eq('lead_id', leadId).eq('status', 'pending')
   if (error) throw error
 }

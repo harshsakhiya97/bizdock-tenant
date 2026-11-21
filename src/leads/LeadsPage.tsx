@@ -1,5 +1,5 @@
 import { BT } from '@/auth/auth-context'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { getFollowUp, listOutcomes, pendingFollowUpId, scheduleFollowUp } from '@/followups/api'
 import { CompleteModal } from '@/followups/CompleteModal'
@@ -79,6 +79,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const pp = !customers && !!sub && activeType(selected, sub) === BT.PAID_PODCAST
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
+  const first = useRef(true)
   // until every lead has arrived, the cards show the database's count (lead_stats)
   const [allLoaded, setAllLoaded] = useState(false)
   const [srvStats, setSrvStats] = useState<SrvStats | null>(null)
@@ -110,10 +111,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [meetFor, setMeetFor] = useState<LeadRow | null>(null)
 
   const load = useCallback(() => {
-    // big workspaces: the cards come from one quick count, and the newest leads show first while the rest load
+    // big workspaces: the cards come from one quick count, and the newest leads show first while the rest load;
+    // opening the page reuses a list loaded in the last minute, a reload after a change gets a fresh one
     let done = false
+    const wasFirst = first.current
+    first.current = false
     setAllLoaded(false)
-    Promise.all([listLeads(tenant.id, (part) => !done && setLeads(part)).finally(() => (done = true)), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
+    Promise.all([listLeads(tenant.id, (part) => !done && setLeads(part), { cached: wasFirst }).finally(() => (done = true)), listFunnels(tenant.id), listSources(tenant.id), listLostReasons(tenant.id), listMemberOptions(tenant.id), listCustomerRevenue(tenant.id, businesses)])
       .then(([l, f, s, r, m, rv]) => {
         setLeads(l)
         setAllLoaded(true)
