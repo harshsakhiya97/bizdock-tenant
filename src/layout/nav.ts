@@ -46,7 +46,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
         children: [
           { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
           { to: '/invoice-payments', label: 'Payments', icon: BadgeIndianRupee, module: 'bookings' },
-          { to: '/payments/logs', label: 'Razorpay Payments', icon: ScrollText, module: 'payments' },
+          { to: '/payments/logs', label: 'Razorpay', icon: ScrollText, module: 'payments' },
         ],
       },
       { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
@@ -144,7 +144,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/ai-calling/call': { title: 'AI Calling', crumb: 'Individual call', icon: PhoneOutgoing },
   '/ai-calling/logs': { title: 'AI Calling', crumb: 'Call history', icon: ScrollText },
   '/ai-calling/templates': { title: 'AI Calling', crumb: 'Templates', icon: MessageSquareText },
-  '/payments/logs': { title: 'Billing', crumb: 'Razorpay Payments', icon: CreditCard },
+  '/payments/logs': { title: 'Billing', crumb: 'Razorpay', icon: CreditCard },
   '/callyzer/logs': { title: 'Callyzer', crumb: 'History logs', icon: PhoneCall },
   '/callyzer/team': { title: 'Callyzer', crumb: 'Team numbers', icon: Users2 },
   '/whatsapp': { title: 'WhatsApp', crumb: 'Chats & campaigns', icon: MessageCircle },
