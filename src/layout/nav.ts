@@ -1,4 +1,4 @@
-import { Zap, Blocks, GraduationCap, TrendingUp, Wallet, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { BadgeIndianRupee, Zap, Blocks, GraduationCap, TrendingUp, Wallet, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -40,6 +40,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/enrolled-courses', label: 'Enrolled Courses', icon: GraduationCap, area: 'leads', onlyType: 'WEBINAR', optIn: true },
       { to: '/upsell', label: 'Upsell', icon: TrendingUp, area: 'leads', onlyType: 'WEBINAR', optIn: true },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
+      { to: '/invoice-payments', label: 'Payments', icon: BadgeIndianRupee, module: 'bookings' },
       { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
       {
         to: '/automation',
@@ -129,6 +130,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/enrolled-courses': { title: 'Enrolled Courses', crumb: 'Course purchases & payments', icon: GraduationCap },
   '/upsell': { title: 'Upsell', crumb: 'Who to sell the next course to', icon: TrendingUp },
+  '/invoice-payments': { title: 'Payments', crumb: 'Invoice payments', icon: BadgeIndianRupee },
   '/expenses': { title: 'Expenses', crumb: 'Spending & net profit', icon: Wallet },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },

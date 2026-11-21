@@ -1832,3 +1832,7 @@ html[data-sidebar='dark'] .sidebar.is-collapsed .nav-item { margin: 1px 8px; pad
 .jr-list li.is-success .jr-dot { background: var(--success-soft); color: var(--success); }
 .jr-list li.is-danger .jr-dot { background: var(--danger-soft); color: var(--danger); }
 .jr-list li.is-info .jr-dot { background: var(--info-soft); color: var(--info); }
+
+/* a searchable dropdown in a list's filter row (same height as the other filters) */
+.filter-ss { width: 170px; }
+.filter-ss .ss-trigger { height: 34px; font-size: 13px; }
