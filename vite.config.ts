@@ -60,11 +60,31 @@ export default defineConfig(({ mode }) => {
       })
     },
   }
+  // dev: the tenant key of the branch checked out right now (deploy.config's TENANT_KEY on deploy/<client>),
+  // so after a git checkout a page reload opens that client's workspace; empty = .env.local's VITE_TENANT_KEY
+  const liveTenantKey = {
+    name: 'bizdock-tenant-key',
+    configureServer(server: { middlewares: { use: (fn: (req: { url?: string }, res: { setHeader: (k: string, v: string) => void; end: (s: string) => void }, next: () => void) => void) => void } }) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.split('?')[0].endsWith('/__tenant_key')) return next()
+        let key = ''
+        try {
+          const cfg = fs.readFileSync(path.resolve(import.meta.dirname, 'deploy.config'), 'utf8')
+          key = /^TENANT_KEY="?([^"\s#]*)"?/m.exec(cfg)?.[1] ?? ''
+        } catch {
+          key = ''
+        }
+        res.setHeader('Content-Type', 'text/plain')
+        res.setHeader('Cache-Control', 'no-store')
+        res.end(key)
+      })
+    },
+  }
   return {
     define: { __GIT_BRANCH__: JSON.stringify(branch) },
     // the app can live in a sub-folder, e.g. https://pride.viralsakhiya.com/pride/ (VITE_BASE_PATH=/pride/)
     base: env.VITE_BASE_PATH || '/',
-    plugins: [react(), tailwindcss(), embedScripts, liveBranch],
+    plugins: [react(), tailwindcss(), embedScripts, liveBranch, liveTenantKey],
     server: { port: 5174, proxy: api }, // owner app uses 5173
     preview: { proxy: api },
     resolve: {
