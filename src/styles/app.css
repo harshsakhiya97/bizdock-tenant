@@ -1761,3 +1761,29 @@ tfoot td {
   .ai-fab { bottom: calc(76px + env(safe-area-inset-bottom)); right: 16px; width: 48px; height: 48px; }
   .ai-panel { right: 16px; left: 16px; width: auto; bottom: calc(134px + env(safe-area-inset-bottom)); height: min(560px, calc(100dvh - 200px)); }
 }
+
+/* Dark sidebar: per-workspace option (tenants.sidebar_style = 'dark'), set on <html data-sidebar> by branding.ts.
+   Re-points the sidebar's own tokens so every rule above follows; the page area is unchanged. */
+html[data-sidebar='dark'] .sidebar {
+  --surface: color-mix(in oklab, var(--brand) 18%, #0a0f0d);
+  --surface-muted: color-mix(in oklab, var(--brand) 30%, #0f1613);
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #e8efeb;
+  --text-muted: rgba(232, 239, 235, 0.62);
+  --text-faint: rgba(232, 239, 235, 0.42);
+  --cream: rgba(255, 255, 255, 0.12);
+  --ink: #e8efeb;
+  background: var(--surface);
+  color: var(--text);
+  border-right-color: transparent;
+}
+html[data-sidebar='dark'] .sidebar .nav-section-label { color: var(--text-faint); }
+html[data-sidebar='dark'] .sidebar .nav-item { margin: 1px 8px; padding: 0 10px; border-radius: var(--radius); }
+html[data-sidebar='dark'] .sidebar .nav-subs .nav-item.nav-sub { padding-left: 32px; }
+html[data-sidebar='dark'] .sidebar .nav-subs::before { left: 26px; }
+html[data-sidebar='dark'] .sidebar .nav-item.active { background: color-mix(in oklab, var(--brand) 85%, white); }
+html[data-sidebar='dark'] .sidebar .nav-group-head.is-current,
+html[data-sidebar='dark'] .sidebar .brand-name span,
+html[data-sidebar='dark'] .sidebar .user-link:hover b,
+html[data-sidebar='dark'] .sidebar .user-link.active b { color: color-mix(in oklab, var(--brand) 45%, white); }
+html[data-sidebar='dark'] .sidebar.is-collapsed .nav-item { margin: 1px 8px; padding: 0; }

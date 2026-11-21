@@ -4,6 +4,7 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { money } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
+import { useTerm } from '@/tenant/useTerm'
 import { SubBusinessSelect } from '@/business/SubBusinessSelect'
 import { saveProduct, type ProductInput } from './api'
 import type { ProductRow } from './types'
@@ -54,8 +55,10 @@ export function ProductDrawer({
   const [busy, setBusy] = useState(false)
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((d) => ({ ...d, [k]: v }))
 
-  const word = (product?.kind ?? kind) === 'product' ? 'product' : 'service'
-  const Word = word === 'product' ? 'Product' : 'Service'
+  const term = useTerm()
+  const isProduct = (product?.kind ?? kind) === 'product'
+  const word = isProduct ? term('product') : 'service'
+  const Word = isProduct ? term('Product') : 'Service'
   const price = Number(f.price) || 0
   const gst = f.gst_applicable ? Math.round(price * Number(f.gst_rate)) / 100 : 0
 
@@ -146,7 +149,7 @@ export function ProductDrawer({
           </div>
         </FormSection>
 
-        <FormSection title="Price & GST" description={word === 'product' ? 'The default price; it can be changed on each purchase.' : 'The default price; it can be changed on each booking.'}>
+        <FormSection title="Price & GST" description={isProduct ? 'The default price; it can be changed on each purchase.' : 'The default price; it can be changed on each booking.'}>
           <div className="form-grid">
             <div>
               <Label htmlFor="p-price" required>
@@ -181,7 +184,7 @@ export function ProductDrawer({
         </FormSection>
 
         <div className="check-box">
-          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description={word === 'product' ? 'Inactive products can’t be picked on a new purchase.' : 'Inactive services can’t be picked on a new booking.'} />
+          <Checkbox id="p-active" checked={f.is_active} onChange={(v) => set('is_active', v)} label="Active" description={isProduct ? `Inactive ${term('products')} can’t be picked on a new purchase.` : 'Inactive services can’t be picked on a new booking.'} />
         </div>
       </form>
     </Drawer>

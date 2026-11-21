@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { ChevronDown, LayoutGrid, LogOut, Menu, PanelLeft, User } from 'lucide-react'
 import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
 import { useBusiness } from '@/business/useBusiness'
+import { activeType } from '@/business/activeType'
 import { Avatar } from '@/components/Avatar'
 import { DevelopedBy } from '@/components/DevelopedBy'
 import { TenantLockup } from '@/components/Logo'
@@ -14,6 +15,7 @@ import { cn } from '@/lib/cn'
 import { AiInsights } from '@/ai/AiInsights'
 import { NotificationBell } from './NotificationBell'
 import { navSections, pageMeta, tabNames, type NavItem } from './nav'
+import { useTenant } from '@/tenant/useTenant'
 
 const STORAGE_KEY = 'bizdock.sidebarCollapsed'
 
@@ -37,17 +39,29 @@ export function AppLayout() {
 function Shell() {
   const { pathname } = useLocation()
   const { profile, user, can, scope } = useAuth()
+  const tenant = useTenant()
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const { switches } = useBusiness()
+  const { switches, selected, sub } = useBusiness()
   const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
   const meta = base
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
 
+  // pages turned off for this workspace: listed in hidden_pages, or opt-in pages it doesn't list in extra_pages
+  const hiddenPages = [
+    ...(tenant.hidden_pages ?? []),
+    ...navSections.flatMap((s) => s.items.flatMap((i) => [i, ...(i.children ?? [])])).filter((i) => i.optIn && !(tenant.extra_pages ?? []).includes(i.to)).map((i) => i.to),
+  ]
+  // onlyType: shown when that type of business is picked in the top bar, or when all businesses are shown
+  const type = activeType(selected, sub)
+  // a hidden page hides what's under it too ('/whatsapp' → '/whatsapp/chats')
+  const isHidden = (to: string) => hiddenPages.some((p) => to === p || to.startsWith(`${p}/`))
   const shows = (i: NavItem) =>
+    !isHidden(i.to) &&
+    (!i.onlyType || !type || [i.onlyType].flat().includes(type)) &&
     (i.area ? scope(i.area) !== 'none' : true) &&
     (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
   const sections = navSections
@@ -100,6 +114,10 @@ function Shell() {
       return !c
     })
   }
+
+  // a page turned off for this workspace (e.g. My Day, the default landing page) → the first page in its menu
+  const firstPage = sections.flatMap((s) => s.items.flatMap((i) => i.children ?? [i]))[0]?.to
+  if (firstPage && isHidden(pathname)) return <Navigate to={firstPage} replace />
 
   return (
       <div className="shell">
@@ -168,9 +186,11 @@ function Shell() {
               <LogOut size={16} />
             </button>
           </div>
-          <NavLink to="/whats-new" className="sidebar-version" onClick={() => setMobileOpen(false)}>
-            Version {APP_VERSION} · What’s new
-          </NavLink>
+          {!tenant.hide_bizdock_branding && (
+            <NavLink to="/whats-new" className="sidebar-version" onClick={() => setMobileOpen(false)}>
+              Version {APP_VERSION} · What’s new
+            </NavLink>
+          )}
           <DevelopedBy className="sidebar-dev" />
         </aside>
 

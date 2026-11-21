@@ -8,6 +8,7 @@ import { Drawer } from '@/components/Drawer'
 import { Checkbox, FormSection, Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
 import { money } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
+import { useTerm } from '@/tenant/useTerm'
 import { savePurchase, type PartDraft, type Purchase } from './api'
 
 const today = () => new Date().toLocaleDateString('en-CA')
@@ -31,6 +32,7 @@ export function PurchaseDrawer({
   onSaved: (msg: string) => void
 }) {
   const tenant = useTenant()
+  const term = useTerm()
   const { membership, can } = useAuth()
   const canEdit = can('leads', 'edit')
   const products = refs.goods.filter((p) => p.business_id === lead.business_id && (p.is_active || p.id === purchase?.product_id))
@@ -72,7 +74,7 @@ export function PurchaseDrawer({
   }
 
   async function save() {
-    if (!f.name.trim()) return setError('Pick the product (or type its name).')
+    if (!f.name.trim()) return setError(`Pick the ${term('product')} (or type its name).`)
     if (f.price.trim() === '' || price < 0) return setError('Enter the price.')
     if (f.parts.some((p) => !(num(p.amount) > 0))) return setError('Enter an amount for every payment part, or remove it.')
     if (planned > total + 0.01) return setError(`The payment parts add up to ${money(planned)}, more than the total ${money(total)}.`)
@@ -125,7 +127,7 @@ export function PurchaseDrawer({
           <div className="form-grid">
             <div>
               <Label htmlFor="pu-product" required>
-                Product
+                {term('Product')}
               </Label>
               <Select id="pu-product" value={f.product_id} disabled={!canEdit} onChange={(e) => pickProduct(e.target.value)}>
                 <option value="">— select —</option>
@@ -135,7 +137,7 @@ export function PurchaseDrawer({
                   </option>
                 ))}
               </Select>
-              {!products.length && <Hint>No products yet: add them in Masters → Products.</Hint>}
+              {!products.length && <Hint>No {term('products')} yet: add them in Masters → {term('Products')}.</Hint>}
             </div>
             <div>
               <Label htmlFor="pu-date" required>

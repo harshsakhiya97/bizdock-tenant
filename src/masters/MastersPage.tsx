@@ -8,6 +8,7 @@ import { money } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
+import { useTerm } from '@/tenant/useTerm'
 import { listProducts } from './api'
 import { BusinessTypesTab } from './BusinessTypesTab'
 import { CompaniesTab } from './CompaniesTab'
@@ -55,7 +56,8 @@ export function MastersPage() {
   const brandDeals = businesses.some((b) => b.type === BT.BRAND_DEALS || b.subs.some((x) => x.type === BT.BRAND_DEALS))
   // Podcast Studios: only with a Paid Podcast / Studio Rental business
   const studios = businesses.some((b) => isStudioType(b.type))
-  const tabs = TABS.filter((t) => (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios'))
+  const term = useTerm()
+  const tabs = TABS.map((t) => (t.id === 'goods' ? { ...t, label: term(t.label) } : t)).filter((t) => (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios'))
   const tab = (tabs.find((t) => t.id === params.get('tab'))?.id ?? 'overview') as Tab
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
   const go = (t: Tab) => {
@@ -116,9 +118,10 @@ const ABOUT: Partial<Record<Tab, { table: string; purpose: string }>> = {
 
 function Overview({ go, webinar, brandDeals, studios }: { go: (t: Tab) => void; webinar: boolean; brandDeals: boolean; studios: boolean }) {
   const tenant = useTenant()
+  const term = useTerm()
   const [counts, setCounts] = useState<Record<string, number>>({})
   // the same lists, in the same order, as the tabs
-  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios') && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.label, ...ABOUT[t.id]! }))
+  const rows = TABS.filter((t) => t.id !== 'overview' && (webinar || !WEBINAR_TABS.includes(t.id)) && (brandDeals || t.id !== 'deal_steps') && (studios || t.id !== 'podcast_studios') && ABOUT[t.id]).map((t) => ({ tab: t.id, label: t.id === 'goods' ? term(t.label) : t.label, ...ABOUT[t.id]! }))
   useEffect(() => {
     void Promise.all(
       Object.values(ABOUT).map(({ table: t }) => {
@@ -177,8 +180,9 @@ function Overview({ go, webinar, brandDeals, studios }: { go: (t: Tab) => void; 
 }
 
 function ProductsTab({ canEdit, onNotice, kind = 'service' }: { canEdit: boolean; onNotice: (n: { ok?: string; error?: string }) => void; kind?: ProductRow['kind'] }) {
-  const word = kind === 'product' ? 'product' : 'service'
-  const Words = kind === 'product' ? 'Products' : 'Services'
+  const term = useTerm()
+  const word = kind === 'product' ? term('product') : 'service'
+  const Words = kind === 'product' ? term('Products') : 'Services'
   const tenant = useTenant()
   const { businesses } = useAuth()
   const { selected, sub } = useBusiness()
@@ -225,7 +229,7 @@ function ProductsTab({ canEdit, onNotice, kind = 'service' }: { canEdit: boolean
       ) : visible.length === 0 ? (
         <Empty icon={Package}>
           {kind === 'product'
-            ? 'No products yet. Add what webinar leads buy (courses, digital products…) so a purchase can be entered on the lead.'
+            ? `No ${term('products')} yet. Add what webinar leads buy so a purchase can be entered on the lead.`
             : 'No services yet. Add the services you offer (studio, editing, host…) so they can be picked on a booking.'}
         </Empty>
       ) : (
@@ -235,7 +239,7 @@ function ProductsTab({ canEdit, onNotice, kind = 'service' }: { canEdit: boolean
           <table className="table">
             <thead>
               <tr>
-                <th>{kind === 'product' ? 'Product' : 'Service'}</th>
+                <th>{kind === 'product' ? term('Product') : 'Service'}</th>
                 {!selected && <th>Business</th>}
                 <th className="right">Price</th>
                 <th>GST</th>
