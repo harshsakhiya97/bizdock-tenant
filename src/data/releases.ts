@@ -13,6 +13,22 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.30',
+    date: '2026-11-21',
+    title: 'Workspace look and menu, Enrolled Courses',
+    summary: 'Each workspace can now have its own look, menu and words: a dark sidebar, pages turned off or on, and words like Product shown as Course. Also a new Enrolled Courses page.',
+    new: [
+      'Enrolled Courses (side menu, for workspaces that have it): every course bought on a lead, with the total, paid and due amounts, the payment status and the next part (overdue in red). Search, filter by course, payment status and date; click a row to open the lead’s Purchases.',
+      'Workspace look: a dark sidebar in the workspace colour, set per workspace.',
+      'Workspace menu: pages can be turned off for a workspace (with everything under them), and opening one goes to the first page in the menu.',
+      'Workspace words: a workspace can call things by its own name, e.g. Masters → Products shown as Courses, and Course on the lead’s purchase.',
+    ],
+    improved: [
+      'Masters → Business types: switched-off types are hidden; tick Show inactive to see them.',
+      'The Version · What’s new link and “Developed by BizDock” can be hidden per workspace.',
+    ],
+  },
+  {
     version: '0.29',
     date: '2026-11-20',
     title: 'AI Insights, Automation menu',
