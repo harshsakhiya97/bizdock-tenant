@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { CircleAlert, RefreshCw, Video } from 'lucide-react'
 import { Link } from 'react-router'
 import { Tabs, Paged } from '@/components/ui'
+import { db } from '@/lib/supabase'
 import { listZoomData, pullZoom, retryZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
 import { RecordingPanel } from './RecordingPanel'
 
@@ -13,7 +14,52 @@ const when = (s: string | null) => (s ? new Date(s).toLocaleString('en-IN', { da
  * then — once it has ended — who attended, the Q&A and the chat. Pulled in automatically 5 minutes after
  * the end (and again after 4 hours for the recording's chat); "Fetch now" pulls straight away.
  */
-export function ZoomPanel({
+export function ZoomPanel(props: {
+  target: ZoomTarget
+  zoomId: string | null
+  joinUrl: string | null
+  startUrl: string | null
+  password: string | null
+  error: string | null
+  pulledAt: string | null
+  accountName?: string
+  onChanged?: () => void
+}) {
+  // just saved: the Zoom meeting is made on the server in a few seconds; look for it every 3 seconds (up to a minute)
+  const [fresh, setFresh] = useState<Partial<{ zoomId: string | null; joinUrl: string | null; startUrl: string | null; password: string | null; error: string | null }>>({})
+  const waiting = !(fresh.zoomId ?? props.zoomId) && !(fresh.error ?? props.error)
+  const { kind: tk, id: tid } = props.target
+  useEffect(() => {
+    if (!waiting) return
+    let n = 0
+    const t = window.setInterval(async () => {
+      if (++n > 20) return window.clearInterval(t)
+      const { data } =
+        tk === 'meeting'
+          ? await db().from('meetings').select('zoom_meeting_id, link, zoom_start_url, zoom_password, zoom_error').eq('id', tid).maybeSingle()
+          : await db().from('events').select('zoom_webinar_id, meeting_link, zoom_start_url, zoom_password, zoom_error').eq('id', tid).maybeSingle()
+      const r = (data ?? {}) as Record<string, string | null>
+      const zid = r.zoom_meeting_id ?? r.zoom_webinar_id ?? null
+      if (zid || r.zoom_error) {
+        setFresh({ zoomId: zid, joinUrl: r.link ?? r.meeting_link ?? null, startUrl: r.zoom_start_url, password: r.zoom_password, error: r.zoom_error })
+        window.clearInterval(t)
+      }
+    }, 3000)
+    return () => window.clearInterval(t)
+  }, [waiting, tk, tid])
+  return (
+    <ZoomPanelInner
+      {...props}
+      zoomId={fresh.zoomId ?? props.zoomId}
+      joinUrl={fresh.joinUrl ?? props.joinUrl}
+      startUrl={fresh.startUrl ?? props.startUrl}
+      password={fresh.password ?? props.password}
+      error={fresh.error ?? props.error}
+    />
+  )
+}
+
+function ZoomPanelInner({
   target,
   zoomId,
   joinUrl,
@@ -93,7 +139,7 @@ export function ZoomPanel({
         ) : error ? (
           <span>Zoom meeting not created</span>
         ) : (
-          <span className="muted">Creating the Zoom meeting… (reopen in a moment)</span>
+          <span className="muted">Creating the Zoom meeting…</span>
         )}
         <div className="zp-actions">
           {joinUrl?.startsWith('http') && (
