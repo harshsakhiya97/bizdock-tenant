@@ -5,6 +5,7 @@ import { displayName, useAuth } from '@/auth/useAuth'
 import { BusinessProvider } from '@/business/BusinessProvider'
 import { BusinessSwitcher } from '@/business/BusinessSwitcher'
 import { useBusiness } from '@/business/useBusiness'
+import { activeType } from '@/business/activeType'
 import { Avatar } from '@/components/Avatar'
 import { DevelopedBy } from '@/components/DevelopedBy'
 import { TenantLockup } from '@/components/Logo'
@@ -42,16 +43,23 @@ function Shell() {
   const [collapsed, setCollapsed] = useState(readCollapsed)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [logoutOpen, setLogoutOpen] = useState(false)
-  const { switches } = useBusiness()
+  const { switches, selected, sub } = useBusiness()
   const base = pageMeta[pathname] ?? pageMeta[`/${pathname.split('/')[1]}`] ?? { title: 'Dashboard', crumb: 'Overview', icon: LayoutGrid }
   const meta = base
   const Icon = meta.icon
   const name = displayName(profile?.full_name, user?.email)
   const email = profile?.email ?? user?.email ?? ''
 
-  const hiddenPages = tenant.hidden_pages ?? []
+  // pages turned off for this workspace: listed in hidden_pages, or opt-in pages it doesn't list in extra_pages
+  const hiddenPages = [
+    ...(tenant.hidden_pages ?? []),
+    ...navSections.flatMap((s) => s.items.flatMap((i) => [i, ...(i.children ?? [])])).filter((i) => i.optIn && !(tenant.extra_pages ?? []).includes(i.to)).map((i) => i.to),
+  ]
+  // onlyType: shown when that type of business is picked in the top bar, or when all businesses are shown
+  const type = activeType(selected, sub)
   const shows = (i: NavItem) =>
     !hiddenPages.includes(i.to) &&
+    (!i.onlyType || !type || [i.onlyType].flat().includes(type)) &&
     (i.area ? scope(i.area) !== 'none' : true) &&
     (!i.module || can(i.module, i.action ?? 'view') || Boolean(i.or && can(i.or.module, i.or.action)))
   const sections = navSections

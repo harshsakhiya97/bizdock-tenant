@@ -1,4 +1,4 @@
-import { Zap, Blocks, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { Zap, Blocks, GraduationCap, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -16,6 +16,8 @@ export type NavItem = {
   onlyType?: SubBusinessType | SubBusinessType[]
   /** hidden when this type of (sub-)business is picked in the top bar */
   hideType?: SubBusinessType | SubBusinessType[]
+  /** shown only in workspaces that list this page in tenants.extra_pages */
+  optIn?: boolean
   /** an accordion: these open under it (it shows when one of them does) */
   children?: NavItem[]
 }
@@ -35,6 +37,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
       { to: '/bookings', label: 'Studio Schedule', icon: CalendarCheck, module: 'bookings' },
       // Orders: hidden for now (the page stays at /orders)
       { to: '/booking-list', label: 'Bookings', icon: PackageCheck, module: 'booking_list' },
+      { to: '/enrolled-courses', label: 'Enrolled Courses', icon: GraduationCap, area: 'leads', onlyType: 'WEBINAR', optIn: true },
       { to: '/invoices', label: 'Invoices', icon: FileText, module: 'bookings' },
       {
         to: '/automation',
@@ -122,6 +125,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/customers': { title: 'Customers', crumb: 'Closed leads & revenue', icon: Contact },
   '/invoices': { title: 'Invoices', crumb: 'Invoices & payments', icon: FileText },
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
+  '/enrolled-courses': { title: 'Enrolled Courses', crumb: 'Course purchases & payments', icon: GraduationCap },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },
   '/funnels': { title: 'Funnels', crumb: 'Funnels & stages', icon: Workflow },
   '/workflows': { title: 'Workflows', crumb: 'Automatic messages & calls', icon: Network },

@@ -29,6 +29,7 @@ import { InvoicesPage } from '@/bookings/InvoicesPage'
 import { InvoicePrint } from '@/invoices/InvoicePrint'
 import { CustomersPage } from '@/leads/CustomersPage'
 import { OrdersPage } from '@/orders/OrdersPage'
+import { EnrolledCoursesPage } from '@/enrolled/EnrolledCoursesPage'
 import { MeetingsPage } from '@/meetings/MeetingsPage'
 import { AiCallPage } from '@/aicalls/CallPage'
 import { AiHistoryPage } from '@/aicalls/HistoryPage'
@@ -102,6 +103,7 @@ export default function App() {
                 <Route path="/invoices/:id" element={<InvoiceRedirect />} />
                 <Route path="/orders" element={<RequirePermission module="orders"><OrdersPage key="orders" /></RequirePermission>} />
                 <Route path="/booking-list" element={<RequirePermission module="booking_list"><OrdersPage key="bookings" bookings /></RequirePermission>} />
+                <Route path="/enrolled-courses" element={<RequirePermission area="leads"><EnrolledCoursesPage /></RequirePermission>} />
                 <Route path="/follow-ups" element={<RequirePermission area="leads"><FollowUpsPage /></RequirePermission>} />
                 <Route
                   path="/bookings"
