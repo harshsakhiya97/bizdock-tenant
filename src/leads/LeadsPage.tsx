@@ -11,6 +11,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
+import { SearchSelect } from '@/components/SearchSelect'
 import { listFunnels } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
@@ -28,8 +29,8 @@ import { leadCols } from './statCols'
 import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listCustomerRevenue, type Revenue } from './customers'
 
-type Filters = { q: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string; range: Range }
-const EMPTY: Filters = { q: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest', range: ALL_DATES }
+type Filters = { q: string; funnel: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string; range: Range }
+const EMPTY: Filters = { q: '', funnel: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest', range: ALL_DATES }
 // the lead's creation date in the picked range
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
 
@@ -233,6 +234,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           (l.email ?? '').toLowerCase().includes(q) ||
           (l.city ?? '').toLowerCase().includes(q),
       )
+      .filter((l) => !filters.funnel || (filters.funnel === 'none' ? !l.funnel_id : l.funnel_id === filters.funnel))
       .filter((l) => studio || !filters.source || l.source_id === filters.source)
       .filter((l) => !filters.temp || l.temperature === filters.temp)
       .filter((l) => inRange(l.created_at, filters.range))
@@ -448,6 +450,15 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={filters.q} onChange={(v) => setF('q', v)} width={230} />
+          <div className="filter-ss">
+            <SearchSelect
+              value={filters.funnel || null}
+              onChange={(v) => setF('funnel', v ?? '')}
+              options={[{ value: '', label: 'All funnels' }, ...scopedFunnels.map((f) => ({ value: f.id, label: f.name })), { value: 'none', label: 'No funnel' }]}
+              placeholder="Funnel"
+              searchPlaceholder="Search funnels…"
+            />
+          </div>
           <select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
             <option value="">Owner</option>
             <option value="none">Unassigned</option>
@@ -651,6 +662,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     <>
                       <th>Category</th>
                       <th>Source</th>
+                      <th>Funnel</th>
                       <th>Owner</th>
                       {pp && <th>Form</th>}
                       {studio && (
@@ -710,6 +722,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           l={l}
                           x={extras.get(l.id)}
                           source={sourceName(l.source_id)}
+                          funnel={funnelName(l.funnel_id)}
                           owner={ownerName(l.owner_id)}
                           stage={stageById.get(l.stage_id ?? '') ?? null}
                           fu={fu}
@@ -854,6 +867,7 @@ export function LeadCells({
   l,
   x,
   source,
+  funnel,
   owner,
   stage,
   fu,
@@ -868,6 +882,8 @@ export function LeadCells({
   l: LeadRow
   x: LeadExtras | undefined
   source: string | undefined
+  /** the Leads list shows the funnel's name (a funnel's own table doesn't) */
+  funnel?: string
   owner: string | undefined
   stage: StageRow | null
   fu: { text: string; state: string }
@@ -889,6 +905,7 @@ export function LeadCells({
     <>
       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
       <td>{source ?? <span className="muted">—</span>}</td>
+      {funnel !== undefined && <td>{l.funnel_id ? funnel : <span className="muted">No funnel</span>}</td>}
       <td className="nowrap">{owner ?? <span className="muted">Unassigned</span>}</td>
       {kind === 'studio' && (
         <>
