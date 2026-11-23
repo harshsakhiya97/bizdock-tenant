@@ -13,6 +13,24 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.32',
+    date: '2026-11-23',
+    title: 'Call transcripts as a chat, Claude API, Sync transcripts',
+    summary: 'Call transcripts read like a chat with the recording right there; new calls get their transcript by themselves; Sync transcripts fixes old ones with the new Claude API connection.',
+    new: [
+      'System Connections → Claude API: your Anthropic key and model (Keys and Prompt & steps tabs). The card shows this month’s Claude use; untick it when not needed.',
+      'Callyzer → History logs → Sync transcripts: fixes the Team / Customer labels of old transcripts (Claude API, same words) and writes the missing ones (Gemini), in the background with live progress; Start / Stop.',
+      'New calls get their transcript automatically (Gemini) within a minute of the recording being copied.',
+    ],
+    improved: [
+      'Call transcript: the recording plays right in the panel, and the transcript reads like a chat (Team on the right, Customer on the left). Gemini is told the team member’s and the lead’s names and the call direction, so the speakers aren’t swapped.',
+      'Call recordings: Play opens a small floating audio player that plays right away (lead’s Callyzer tab, History logs, Team numbers).',
+      'Lead → Follow-ups → WhatsApp: the chat window as in WhatsApp → Individual chat (bubbles, ticks, read times, Send a template).',
+      'Google Ads: Open in Google Ads on the ad preview; a Performance Max row in Funnel → Google Ads → Spend per day opens the campaign’s panel.',
+      'The AI button is labelled AI Insights and sits clear of the pagination.',
+    ],
+  },
+  {
     version: '0.31',
     date: '2026-11-21',
     title: 'Meeting recordings, Billing, Payments',
