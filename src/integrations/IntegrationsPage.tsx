@@ -18,7 +18,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, geminiKeyPrompt, hellorixKeyPrompt,googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { mask, PROVIDERS, claudeKeyPrompt, geminiKeyPrompt, hellorixKeyPrompt,googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -315,10 +315,34 @@ export function IntegrationsPage() {
                 </div>
                 </Modal>
               )}
+              {p.id === 'claude' && r && !off && (() => {
+                const use = aiUse.filter((x) => /^claude/i.test(x.model))
+                const calls = use.reduce((t, x) => t + Number(x.calls), 0)
+                const k = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n))
+                return (
+                  <div className="int-summary" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
+                    <span>
+                      Model <b>{r.config.model || '— pick one in Settings'}</b>
+                    </span>
+                    <span className="muted">
+                      This month: {calls} request{calls === 1 ? '' : 's'} · {k(use.reduce((t, x) => t + Number(x.input), 0))} in / {k(use.reduce((t, x) => t + Number(x.output), 0))} out tokens
+                    </span>
+                    <span className="row" style={{ gap: 12, flexWrap: 'wrap' }}>
+                      <a className="link-btn" href="https://console.anthropic.com/usage" target="_blank" rel="noopener noreferrer">
+                        Usage on Anthropic <ExternalLink size={12} />
+                      </a>
+                      <Link className="link-btn" to="/callyzer/logs">
+                        Sync transcripts
+                      </Link>
+                    </span>
+                  </div>
+                )
+              })()}
               {p.id === 'gemini' && r && !off && (() => {
-                const calls = aiUse.reduce((t, x) => t + Number(x.calls), 0)
-                const tin = aiUse.reduce((t, x) => t + Number(x.input), 0)
-                const tout = aiUse.reduce((t, x) => t + Number(x.output), 0)
+                const gUse = aiUse.filter((x) => !/^claude/i.test(x.model))
+                const calls = gUse.reduce((t, x) => t + Number(x.calls), 0)
+                const tin = gUse.reduce((t, x) => t + Number(x.input), 0)
+                const tout = gUse.reduce((t, x) => t + Number(x.output), 0)
                 const k = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n))
                 return (
                   <div className="int-summary" style={{ cursor: 'default', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
@@ -524,7 +548,7 @@ export function IntegrationsPage() {
                       : r.config.last_sync_at
                         ? `Calls checked ${ago(r.config.last_sync_at)} · every 5 min`
                         : 'Connected · first check in a minute'
-                    : (p.id === 'gemini' || p.id === 'hellorix') && r && !off
+                    : (p.id === 'gemini' || p.id === 'hellorix' || p.id === 'claude') && r && !off
                     ? r.config.checked_at
                       ? `Key checked ${ago(r.config.checked_at)}`
                       : 'Connected'
@@ -605,7 +629,7 @@ export function IntegrationsPage() {
                   <button type="button" className={cn('btn btn-sm', r && !stale ? 'btn-outline' : 'btn-primary')} onClick={() => setOpen({ p: effective(p), row: r ?? null })}>
                     {r && !stale ? 'Settings' : (
                       <>
-                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' || p.id === 'gemini' || p.id === 'hellorix' ? 'Add with keys' : 'Connect'}
+                        <PlugZap size={14} /> {p.id === 'razorpay' || p.id === 'google_ads' || p.id === 'gemini' || p.id === 'hellorix' || p.id === 'claude' ? 'Add with keys' : 'Connect'}
                       </>
                     )}
                   </button>
@@ -724,21 +748,21 @@ function ConnectDrawer({
   // Gemini: the models the key can use (the typed key, else the saved one), for the Model dropdown
   const [gModels, setGModels] = useState<{ id: string; name: string }[] | null>(() => {
     try {
-      return provider.id === 'gemini' && existing?.config.models ? JSON.parse(existing.config.models) : null
+      return (provider.id === 'gemini' || provider.id === 'claude') && existing?.config.models ? JSON.parse(existing.config.models) : null
     } catch {
       return null
     }
   })
   const [gModelsMsg, setGModelsMsg] = useState('Enter the API key to list the models')
-  const typedKey = provider.id === 'gemini' ? (values.api_key ?? '').trim() : ''
+  const typedKey = provider.id === 'gemini' || provider.id === 'claude' ? (values.api_key ?? '').trim() : ''
   useEffect(() => {
-    if (provider.id !== 'gemini') return
+    if (provider.id !== 'gemini' && provider.id !== 'claude') return
     if (!typedKey && !existing) return
     if (typedKey && typedKey.length < 20) return
     let live = true
     setGModelsMsg('Checking the key…')
     const t = window.setTimeout(async () => {
-      const { data, error: e } = await db().functions.invoke('gemini', { body: { action: 'models', ...(typedKey ? { api_key: typedKey } : { id: existing?.id }) } })
+      const { data, error: e } = await db().functions.invoke(provider.id, { body: { action: 'models', ...(typedKey ? { api_key: typedKey } : { id: existing?.id }) } })
       if (!live) return
       const why = data?.error ?? (e ? await errText(e) : null)
       if (why) {
@@ -825,6 +849,13 @@ function ConnectDrawer({
         onSaved(why ? `Gemini saved, but Google refused the key: ${why}` : `Gemini AI connected · model ${data?.model} (${data?.models} models available; change it in Settings).`)
         return
       }
+      // Claude API: check the key, list the models, pick a default model
+      if (provider.id === 'claude' && id) {
+        const { data, error: e } = await db().functions.invoke('claude', { body: { action: 'test', id } })
+        const why = data?.error ?? (e ? await errText(e) : null)
+        onSaved(why ? `Claude API saved, but Anthropic refused the key: ${why}` : `Claude API connected · model ${data?.model}. Fix the old transcripts in Callyzer → History logs → Sync transcripts.`)
+        return
+      }
       // AI Calling: check the key, keep its options and the webhook secret
       if (provider.id === 'hellorix' && id) {
         const { data, error: e } = await db().functions.invoke('hellorix', { body: { action: 'test', id } })
@@ -860,7 +891,7 @@ function ConnectDrawer({
   }
 
   // Zoom keys, Razorpay and WATI: the form tab and a Prompt & steps tab (Claude in Chrome)
-  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || provider.id === 'gemini' || provider.id === 'hellorix' || (provider.id === 'whatsapp' && vendor === 'wati')
+  const tabbed = provider.id === 'zoom' || provider.id === 'razorpay' || provider.id === 'google_ads' || provider.id === 'gemini' || provider.id === 'hellorix' || provider.id === 'claude' || (provider.id === 'whatsapp' && vendor === 'wati')
   const [tab, setTab] = useState<'keys' | 'prompt'>('keys')
   const showForm = !tabbed || tab === 'keys'
   const [hookUrl, setHookUrl] = useState<string | null>(null)
@@ -931,6 +962,13 @@ function ConnectDrawer({
             title="Let Claude in Chrome make the Gemini API key"
             note="Log in to Google, open Claude in Chrome and paste this. It opens Google AI Studio, creates the key and tells you the plan (Free / Paid); you copy the key into the Keys tab yourself."
             text={geminiKeyPrompt()}
+          />
+        )}
+        {tabbed && tab === 'prompt' && provider.id === 'claude' && (
+          <PromptBox
+            title="Let Claude in Chrome make the Claude API key"
+            note="Log in at console.anthropic.com as the organisation’s admin, open Claude in Chrome and paste this. It creates the key and tells you the credit balance; you copy the key into the Keys tab yourself."
+            text={claudeKeyPrompt()}
           />
         )}
         {tabbed && tab === 'prompt' && provider.id === 'hellorix' && (
@@ -1012,14 +1050,14 @@ function ConnectDrawer({
             </Label>
             {provider.id === 'hellorix' && f.key !== 'api_key' ? (
               <HxField f={f.key} value={values[f.key] ?? ''} opts={hxOpts} msg={hxMsg} onChange={(v) => setValues((s) => ({ ...s, [f.key]: v }))} />
-            ) : provider.id === 'gemini' && f.key === 'model' ? (
+            ) : (provider.id === 'gemini' || provider.id === 'claude') && f.key === 'model' ? (
               <SearchSelect
                 id={`int-${f.key}`}
                 value={values[f.key] || null}
                 disabled={!gModels?.length}
                 placeholder={gModels?.length ? 'Select a model' : gModelsMsg}
                 searchPlaceholder="Search models…"
-                options={(gModels ?? []).map((m) => ({ value: m.id, label: `${m.name} (${m.id})` }))}
+                options={(gModels ?? []).map((m) => ({ value: m.id, label: m.name === m.id ? m.id : `${m.name} (${m.id})` }))}
                 onChange={(v) => setValues({ ...values, [f.key]: v ?? '' })}
               />
             ) : f.options ? (

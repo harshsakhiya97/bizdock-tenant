@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PlayRecording } from './PlayRecording'
 import { TranscriptCell, type TranscriptStatus } from './CallTranscript'
+import { SyncTranscripts } from './SyncTranscripts'
 import { useNavigate } from 'react-router'
 import { PhoneCall, RefreshCw } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
@@ -90,6 +91,7 @@ export function CallyzerLogsPage() {
       <PageHead
         title="History logs"
         subtitle={`Calls to numbers that are leads${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}, with type, duration and recording.`}
+        actions={<SyncTranscripts />}
       />
       {error && <div className="alert alert-error">{error}</div>}
       <section className="panel">

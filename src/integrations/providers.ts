@@ -1,4 +1,4 @@
-import { ChartNoAxesColumn, CreditCard, Sparkles, Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
+import { Bot, ChartNoAxesColumn, CreditCard, Sparkles, Megaphone, MessageCircle, PhoneCall, PhoneOutgoing, Plug, Video, type LucideIcon } from 'lucide-react'
 
 /** the scopes a Zoom Server-to-Server app needs for BizDock (Add with keys) */
 export const ZOOM_KEYS_SCOPES: { label: string; items: string[] }[] = [
@@ -96,7 +96,15 @@ export const hellorixKeyPrompt = () => `In Chrome I'm logged in to HelloRix (app
 3. When the key is shown (it starts with hlx_live_), stop and tell me "Copy the API key now".
 4. Then tell me (no secrets): which mobile numbers are linked for calling (Numbers / Phone numbers), and the wallet balance. If no number is linked or the wallet is empty, tell me so; I'll do that myself.`
 
-export type ProviderId ='whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini' | 'hellorix'
+/** Claude API: a prompt for Claude in Chrome that makes an API key in the Anthropic Console */
+export const claudeKeyPrompt = () => `In Chrome I'm logged in to the Anthropic Console (console.anthropic.com) as the organisation's admin. Help me get a Claude API key for my CRM "BizDock". Never read out, copy or paste the API key into this chat — when it's on screen, stop and tell me to copy it myself. Ask me before any final Create / Save click. Don't buy credits or change billing or anything else. If a screen doesn't match, stop and tell me what you see.
+
+1. Open Settings → API keys (console.anthropic.com/settings/keys).
+2. Create a key named "BizDock" (in the default workspace).
+3. When the key is shown (it starts with sk-ant-), stop and tell me "Copy the API key now".
+4. Then open Settings → Billing and tell me (no secrets) the credit balance, so I know the key can be used.`
+
+export type ProviderId ='whatsapp' | 'facebook_ads' | 'callyzer' | 'zoom' | 'voice_call' | 'perisclaw' | 'razorpay' | 'google_ads' | 'gemini' | 'hellorix' | 'claude'
 export type ProviderField = {
   key: string
   label: string
@@ -219,6 +227,23 @@ export const PROVIDERS: Provider[] = [
       { key: 'monthly_limit', label: 'Monthly AI limit (₹)', placeholder: 'e.g. 500', hint: 'AI Insights stops for the month once the estimated cost reaches this. Empty: no limit.' },
       { key: 'price_in', label: 'Price per 1M input tokens (₹)', placeholder: '26', hint: 'Google’s price for your model (ai.google.dev/pricing) in ₹, for the estimate. Free tier: 0.' },
       { key: 'price_out', label: 'Price per 1M output tokens (₹)', placeholder: '215', hint: 'Output includes the model’s thinking.' },
+    ],
+  },
+  {
+    id: 'claude',
+    name: 'Claude API',
+    icon: Bot,
+    color: '#c2410c',
+    description: 'Your Anthropic Claude API key and model. Used to fix the speaker labels (Team / Customer) of old call transcripts.',
+    usedFor: 'Callyzer → History logs → Sync transcripts (fixes old transcripts)',
+    guide: [
+      'Log in at console.anthropic.com → Settings → API keys → Create key (e.g. “BizDock”). Copy it (sk-ant-…).',
+      'The key uses the credits on your Anthropic account (Settings → Billing).',
+      'Paste the key: the Model list fills with the models it can use. Pick one (Haiku is cheapest, Sonnet is a good balance) and press Connect. Untick the card when you don’t need it.',
+    ],
+    fields: [
+      { key: 'api_key', label: 'API key', secret: true, required: true, hint: 'Anthropic Console → Settings → API keys.' },
+      { key: 'model', label: 'Model', required: true, hint: 'The models this key can use (Haiku: cheapest · Sonnet: balanced · Opus: smartest, costs most).' },
     ],
   },
   {

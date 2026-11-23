@@ -1866,3 +1866,10 @@ details.rec-section summary { cursor: pointer; }
 /* Play on a call recording: a small floating audio player */
 .rec-pop { position: fixed; z-index: 80; width: 340px; display: flex; align-items: center; gap: 6px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-float); animation: pop .15s ease-out; }
 .rec-pop audio { flex: 1; min-width: 0; height: 40px; }
+
+/* Callyzer → Sync transcripts */
+.sync-row { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.sync-head { display: flex; flex-direction: column; gap: 2px; }
+.sync-progress { display: flex; align-items: center; gap: 10px; }
+.sync-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
+.sync-bar span { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .4s; }
