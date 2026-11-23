@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Modal } from '@/components/Modal'
-import { Filter, List, TrendingDown, TrendingUp } from 'lucide-react'
+import { Filter, List, Table2, TrendingDown, TrendingUp } from 'lucide-react'
 import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
+import { FunnelScorecard } from './FunnelScorecard'
 import { MetaSync } from './MetaSync'
 import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
@@ -73,7 +74,7 @@ export function FunnelAdsReport({
   const tenant = useTenant()
   const { from, to } = range
   const [reload, setReload] = useState(0)
-  const [view, setView] = useState<'funnel' | 'list'>('funnel')
+  const [view, setView] = useState<'funnel' | 'scorecard' | 'list'>('funnel')
   const [by, setBy] = useState<By>('day')
   const [gDays, setGDays] = useState<{ day: string; spend: number; spend_gst: number }[]>([])
   useEffect(() => {
@@ -390,6 +391,9 @@ export function FunnelAdsReport({
             <button type="button" className={view === 'funnel' ? 'is-active' : undefined} onClick={() => setView('funnel')} title="Funnel">
               <Filter size={15} /> Funnel
             </button>
+            <button type="button" className={view === 'scorecard' ? 'is-active' : undefined} onClick={() => setView('scorecard')} title="Scorecard">
+              <Table2 size={15} /> Scorecard
+            </button>
             <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
               <List size={15} /> List
             </button>
@@ -408,6 +412,13 @@ export function FunnelAdsReport({
               <FunnelFlow f={flow} gst={gst} />
             </>
           )}
+        </>
+      )}
+      {view === 'scorecard' && (
+        <>
+          {flow === undefined && !error && <div className="muted small">Loading…</div>}
+          {flow === null && <div className="muted small">You can’t see this funnel’s report.</div>}
+          {flow && <FunnelScorecard f={flow} gst={gst} />}
         </>
       )}
       {view === 'list' &&
