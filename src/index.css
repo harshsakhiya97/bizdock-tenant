@@ -1,10 +1,13 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/plus-jakarta-sans";
 
 /* Theme kit (Muzic Lover structure, BizDock colours). In the client panel --brand is
    replaced at runtime with the client's colour (src/tenant/branding.ts). */
 @import "./styles/theme.css" layer(components);
 @import "./styles/app.css" layer(components);
+/* the "Soft Indigo" look on top */
+@import "./styles/soft.css" layer(components);
 
 /* Tailwind utilities read the same tokens */
 @theme inline {
