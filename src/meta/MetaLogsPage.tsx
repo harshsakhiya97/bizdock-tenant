@@ -438,6 +438,7 @@ export function MetaLogsPage() {
         <MetaTokenConnect
           integrationId={tokenFor.id}
           label={tokenFor.label}
+          saved={tokenFor.config?.access_token}
           onClose={() => setTokenFor(null)}
           onDone={(msg) => {
             setTokenFor(null)

@@ -1873,3 +1873,7 @@ details.rec-section summary { cursor: pointer; }
 .sync-progress { display: flex; align-items: center; gap: 10px; }
 .sync-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--surface-muted); overflow: hidden; }
 .sync-bar span { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .4s; }
+
+/* System Connections: a saved key, masked, with Copy (password first) */
+.saved-key { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 8px 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
+.saved-key code { flex: 1; font-size: 13px; letter-spacing: 0.5px; background: none; padding: 0; }

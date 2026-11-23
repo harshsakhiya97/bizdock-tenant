@@ -18,7 +18,7 @@ import { FormPromptTabs, PromptBox } from './PromptBox'
 import { waHook, waHookUrl } from './waLogs'
 import { disconnectIntegration, listIntegrations, saveIntegration, setIntegrationEnabled, setZoomDefault, type IntegrationRow } from './api'
 import { db } from '@/lib/supabase'
-import { mask, PROVIDERS, claudeKeyPrompt, geminiKeyPrompt, hellorixKeyPrompt,googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
+import { PROVIDERS, claudeKeyPrompt, geminiKeyPrompt, hellorixKeyPrompt,googleAdsPrompts, razorpayKeysPrompt, WHATSAPP_VENDORS, watiPrompt, zoomKeysPrompt, type Provider, type WhatsAppVendor } from './providers'
 import { Flash } from '@/components/Flash'
 import { Modal } from '@/components/Modal'
 import { connectZoom, testZoom } from '@/zoom/api'
@@ -26,6 +26,7 @@ import { CallyzerConnect } from '@/callyzer/CallyzerConnect'
 import { syncCallyzer } from '@/callyzer/api'
 import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
 import { MetaTokenConnect } from '@/meta/MetaTokenConnect'
+import { SavedKey } from './SavedKey'
 import { FundsLine } from '@/meta/FundsLine'
 import { cidText, listGoogleAccounts, syncGoogle, testGoogle, updateGoogleAccount, type GAccount } from '@/google/api'
 
@@ -37,7 +38,7 @@ export function IntegrationsPage() {
   const [open, setOpen] = useState<{ p: Provider; row: IntegrationRow | null } | null>(null)
   const [removing, setRemoving] = useState<IntegrationRow | null>(null)
   // Connect Callyzer side panel (reconnect: Settings, change the key)
-  const [czOpen, setCzOpen] = useState<{ reconnect: boolean } | null>(null)
+  const [czOpen, setCzOpen] = useState<{ reconnect: boolean; row: IntegrationRow | null } | null>(null)
   const [czBusy, setCzBusy] = useState(false)
   async function czSync() {
     setCzBusy(true)
@@ -617,7 +618,7 @@ export function IntegrationsPage() {
                     </button>
                   )}
                   {p.id === 'callyzer' && !off && (
-                    <button type="button" className={cn('btn btn-sm', r ? 'btn-outline' : 'btn-primary')} onClick={() => setCzOpen({ reconnect: !!r })}>
+                    <button type="button" className={cn('btn btn-sm', r ? 'btn-outline' : 'btn-primary')} onClick={() => setCzOpen({ reconnect: !!r, row: r ?? null })}>
                       {r ? 'Settings' : (
                         <>
                           <PlugZap size={14} /> Connect
@@ -660,6 +661,7 @@ export function IntegrationsPage() {
       {czOpen && (
         <CallyzerConnect
           reconnect={czOpen.reconnect}
+          row={czOpen.row}
           onClose={() => setCzOpen(null)}
           onDone={(msg) => {
             setCzOpen(null)
@@ -673,6 +675,7 @@ export function IntegrationsPage() {
         <MetaTokenConnect
           integrationId={metaToken.row?.id ?? null}
           label={metaToken.row?.label}
+          saved={metaToken.row?.config.access_token}
           onClose={() => setMetaToken(null)}
           onDone={(msg) => {
             setMetaToken(null)
@@ -1067,14 +1070,17 @@ function ConnectDrawer({
                 ))}
               </Select>
             ) : (
+              <>
+              {f.secret && existing && <SavedKey integrationId={existing.id} field={f.key} masked={existing.config[f.key]} />}
               <TextInput
                 id={`int-${f.key}`}
                 type={f.secret ? 'password' : 'text'}
                 autoComplete="off"
-                placeholder={f.secret && existing?.config[f.key] ? `${mask(existing.config[f.key])} (saved — leave blank to keep)` : f.placeholder}
+                placeholder={f.secret && existing?.config[f.key] ? 'Saved — paste a new one to replace it' : f.placeholder}
                 value={values[f.key]}
                 onChange={(e) => setValues({ ...values, [f.key]: e.target.value })}
               />
+              </>
             )}
             {f.hint && <Hint>{f.hint}</Hint>}
           </div>

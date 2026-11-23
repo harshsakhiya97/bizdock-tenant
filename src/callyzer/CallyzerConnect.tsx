@@ -6,6 +6,8 @@ import { Hint, Label, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
 import { FormPromptTabs, PromptBox } from '@/integrations/PromptBox'
 import { connectCallyzer } from './api'
+import type { IntegrationRow } from '@/integrations/api'
+import { SavedKey } from '@/integrations/SavedKey'
 
 /** a prompt for Claude in Chrome that opens Callyzer's API key page (the person is logged in to Callyzer as an admin) */
 const callyzerPrompt = () => `In Chrome I'm logged in to the Callyzer web dashboard (web.callyzer.co) as an admin. I want an API access key for BizDock. Don't change or delete anything else in Callyzer. Never read out or copy the API key into this chat; I'll copy it myself. Never type my password: when Callyzer asks for it, stop and let me type it. If something on screen doesn't match, stop and tell me what you see.
@@ -17,7 +19,7 @@ const callyzerPrompt = () => `In Chrome I'm logged in to the Callyzer web dashbo
 4. After I've done that, tell me only: "The key is on screen — copy it into BizDock".`
 
 /** Connect Callyzer (or change its key): Claude in Chrome prompt, the steps, and the key. BizDock checks the key with Callyzer on Connect. */
-export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boolean; onClose: () => void; onDone: (msg: string) => void }) {
+export function CallyzerConnect({ reconnect, row, onClose, onDone }: { reconnect: boolean; row?: IntegrationRow | null; onClose: () => void; onDone: (msg: string) => void }) {
   const tenant = useTenant()
   const [key, setKey] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -80,6 +82,7 @@ export function CallyzerConnect({ reconnect, onClose, onDone }: { reconnect: boo
             <Label htmlFor="cz-key" required>
               API access key
             </Label>
+            {row && <SavedKey integrationId={row.id} field="api_key" masked={row.config.api_key} />}
             <TextInput id="cz-key" type="password" autoComplete="off" placeholder={reconnect ? 'Saved — paste a new key to replace it' : 'Paste the key from Callyzer'} value={key} onChange={(e) => setKey(e.target.value)} />
             <Hint>
               No key yet? See Prompt &amp; steps. BizDock only reads calls (phone and WhatsApp calls) every 5 minutes{reconnect ? '' : ', and brings in the last 180 days on connect'}. Only calls to a lead’s number are kept; they show on the lead under Follow-ups →

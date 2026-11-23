@@ -6,6 +6,7 @@ import { Hint, Label, TextInput } from '@/components/Field'
 import { useTenant } from '@/tenant/useTenant'
 import { FormPromptTabs, PromptBox } from '@/integrations/PromptBox'
 import { connectMetaToken } from './api'
+import { SavedKey } from '@/integrations/SavedKey'
 
 const APP_ID = '4226204337511405'
 
@@ -23,7 +24,7 @@ const tokenPrompt = () => `In Chrome I'm logged in to Facebook as an admin of ou
 const approvePrompt = () => `In Chrome I'm logged in to Facebook as the owner of the BizDock app (App ID ${APP_ID}). Open https://business.facebook.com/settings and switch (top left) to the business portfolio that owns this app. Go to Requests (Received). Find the client business's request to access app ${APP_ID} and approve it, picking the lowest access offered (not "Manage app" / full control). Don't change anything else. If there's no such request, or the app isn't in this portfolio, stop and tell me what you see. Never type my password; if Facebook asks, stop and let me type it.`
 
 /** Add with a token (or a new token for a connection made with one): Claude in Chrome prompt, the steps, and the token. BizDock checks it with Facebook on Connect. */
-export function MetaTokenConnect({ integrationId, label, onClose, onDone }: { integrationId: string | null; label?: string | null; onClose: () => void; onDone: (msg: string) => void }) {
+export function MetaTokenConnect({ integrationId, label, saved, onClose, onDone }: { integrationId: string | null; label?: string | null; saved?: string | null; onClose: () => void; onDone: (msg: string) => void }) {
   const tenant = useTenant()
   const [token, setToken] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +88,7 @@ export function MetaTokenConnect({ integrationId, label, onClose, onDone }: { in
             <Label htmlFor="meta-token" required>
               Access token
             </Label>
+            {integrationId && <SavedKey integrationId={integrationId} field="access_token" masked={saved} />}
             <TextInput id="meta-token" type="password" autoComplete="off" placeholder={replace ? 'Saved — paste a new token to replace it' : 'Paste the token from Business Settings'} value={token} onChange={(e) => setToken(e.target.value)} />
             <Hint>No token yet? See Prompts &amp; steps. The token never expires and stays on BizDock’s server; it is never shown again. To stop it, press Remove here or delete the BizDock system user on Facebook.</Hint>
           </div>

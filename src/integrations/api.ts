@@ -17,7 +17,9 @@ export type IntegrationRow = {
 }
 
 export async function listIntegrations(tenantId: string): Promise<IntegrationRow[]> {
-  const { data, error } = await db().from('integrations').select('*').eq('tenant_id', tenantId).order('connected_at')
+  // keys / secrets / tokens come masked (AB••••••••YZ); the full key only through Copy (SavedKey). A save that sends a
+  // masked value back keeps the saved key (database trigger).
+  const { data, error } = await db().rpc('integrations_list', { p_tenant: tenantId })
   if (error) throw error
   return (data ?? []) as IntegrationRow[]
 }
