@@ -26,6 +26,7 @@ import { LeadPage } from '@/leads/LeadPage'
 import { BookingCalendarPage } from '@/bookings/BookingCalendarPage'
 import { InvoicePage } from '@/bookings/InvoicePage'
 import { InvoicesPage } from '@/bookings/InvoicesPage'
+import { TeamReportPage } from '@/reports/TeamReportPage'
 import { InvoicePaymentsPage } from '@/bookings/InvoicePaymentsPage'
 import { InvoicePrint } from '@/invoices/InvoicePrint'
 import { CustomersPage } from '@/leads/CustomersPage'
@@ -103,6 +104,7 @@ export default function App() {
                 <Route path="/customers" element={<RequirePermission area="leads"><CustomersPage /></RequirePermission>} />
                 <Route path="/customers/:id" element={<RequirePermission area="leads"><LeadPage /></RequirePermission>} />
                 <Route path="/invoices" element={<RequirePermission module="bookings"><InvoicesPage /></RequirePermission>} />
+                <Route path="/reports/team" element={<RequirePermission module="team_report"><TeamReportPage /></RequirePermission>} />
                 <Route path="/invoice-payments" element={<RequirePermission module="bookings"><InvoicePaymentsPage /></RequirePermission>} />
                 <Route path="/invoices/:id" element={<InvoiceRedirect />} />
                 <Route path="/orders" element={<RequirePermission module="orders"><OrdersPage key="orders" /></RequirePermission>} />

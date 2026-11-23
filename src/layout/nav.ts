@@ -1,4 +1,4 @@
-import { BadgeIndianRupee, Zap, Blocks, GraduationCap, TrendingUp, Wallet, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
+import { BarChart3, BadgeIndianRupee, Zap, Blocks, GraduationCap, TrendingUp, Wallet, Building2, CalendarCheck, CalendarClock, Clock3, Contact, CreditCard, Database, FileText, Handshake, LayoutGrid, Megaphone, MessageCircle, MessageSquareText, MessagesSquare, Network, PackageCheck, Phone, PhoneCall, PhoneOutgoing, Plug, ScrollText, ShieldCheck, Sparkles, Sun, User, Users, Users2, Workflow, type LucideIcon } from 'lucide-react'
 import { type SubBusinessType } from '@/auth/auth-context'
 
 /** `module` (+ `action`, default view): only shown to people with that permission */
@@ -48,6 +48,12 @@ export const navSections: { title: string; /** no heading shown in the side menu
           { to: '/invoice-payments', label: 'Payments', icon: BadgeIndianRupee, module: 'bookings' },
           { to: '/payments/logs', label: 'Razorpay', icon: ScrollText, module: 'payments' },
         ],
+      },
+      {
+        to: '/reports',
+        label: 'Reports',
+        icon: BarChart3,
+        children: [{ to: '/reports/team', label: 'Team Report', icon: Users2, module: 'team_report' }],
       },
       { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
       {
@@ -132,6 +138,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/orders': { title: 'Orders', crumb: 'Orders, invoices & payments', icon: PackageCheck },
   '/enrolled-courses': { title: 'Enrolled Courses', crumb: 'Course purchases & payments', icon: GraduationCap },
   '/upsell': { title: 'Upsell', crumb: 'Who to sell the next course to', icon: TrendingUp },
+  '/reports/team': { title: 'Reports', crumb: 'Team Report', icon: BarChart3 },
   '/invoice-payments': { title: 'Billing', crumb: 'Payments', icon: BadgeIndianRupee },
   '/expenses': { title: 'Expenses', crumb: 'Spending & net profit', icon: Wallet },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },

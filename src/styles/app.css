@@ -1877,3 +1877,23 @@ details.rec-section summary { cursor: pointer; }
 /* System Connections: a saved key, masked, with Copy (password first) */
 .saved-key { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 8px 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
 .saved-key code { flex: 1; font-size: 13px; letter-spacing: 0.5px; background: none; padding: 0; }
+
+/* Reports → Team Report */
+.tr-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 13px; }
+.tr-date { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tr-h { margin: 20px 0 10px; font-size: 15px; }
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.tr-card { position: relative; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.tr-card.is-best { border-color: color-mix(in oklab, var(--warning) 55%, white); }
+.tr-day { display: block; width: fit-content; margin: 0 auto 10px; padding: 2px 10px; border-radius: 999px; background: var(--surface-muted); border: 1px solid var(--line); font-size: 12px; font-weight: 600; }
+.tr-who { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
+.tr-who b { display: block; font-size: 15px; }
+.tr-av { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; }
+.tr-best, .tr-role { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; }
+.tr-boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tr-box { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-muted); border: 1px solid var(--line); }
+.tr-box span { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.tr-box b { font-size: 18px; color: var(--ink); }
+.tr-box b.tr-success { color: var(--success); }
+.tr-box b.tr-danger { color: var(--danger); }
+.tr-box b.tr-warning { color: var(--warning); }
