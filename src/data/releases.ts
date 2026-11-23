@@ -13,6 +13,19 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.33',
+    date: '2026-11-23',
+    title: 'Masked keys with Copy, Callyzer Report, Team Report',
+    summary: 'Saved keys show masked with a password-protected Copy; Callyzer → Report and Reports → Team Report show each day’s work of the team, with the records behind every number.',
+    new: [
+      'System Connections: every saved key, secret and token shows masked (e.g. AB••••••••YZ) with Copy. Copy asks for your BizDock password and puts the key straight on the clipboard; it is never shown on screen. Also in Callyzer settings and the Meta token panel.',
+      'Callyzer → Report: pick a day (Today / Yesterday); calls, completion %, average talk time and missed calls, and a card per Callyzer number: first and last call, calls, connected, not picked, AI review, over 1 min, connect %, talk time, average talk, calls in 7 days; the best performer is marked.',
+      'Reports → Team Report: a card per team member for the day: follow-ups done, due, overdue, first call pending, no follow-up date and follow-ups in 7 days, with first and last follow-up time. Access control → Team Report.',
+      'Click any number on either report: the list behind it (calls with recording and transcript, or follow-ups / leads; a row opens the lead).',
+    ],
+    improved: ['System Connections no longer sends full keys to the browser; a save without a new key keeps the saved one.'],
+  },
+  {
     version: '0.32',
     date: '2026-11-23',
     title: 'Call transcripts as a chat, Claude API, Sync transcripts',
