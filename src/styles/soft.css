@@ -115,3 +115,5 @@ body { background: var(--bg); }
 .drawer { border-radius: 20px 0 0 20px; }
 .modal-backdrop, .drawer-backdrop { background: rgba(30, 27, 75, 0.32); }
 .count-pill { background: var(--brand-grad); }
+/* small buttons in rows: the gradient without the glow */
+.btn-sm.btn-primary, .table .btn-primary { box-shadow: none; }
