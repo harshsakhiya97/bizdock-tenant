@@ -46,6 +46,7 @@ import { CampaignsPage } from '@/whatsapp/CampaignsPage'
 import { CallyzerLogsPage } from '@/callyzer/CallyzerLogsPage'
 import { PaymentsLogsPage } from '@/payments/PaymentsLogsPage'
 import { CallyzerTeamPage } from '@/callyzer/CallyzerTeamPage'
+import { CallyzerReportPage } from '@/callyzer/CallyzerReportPage'
 import { MetaLogsPage } from '@/meta/MetaLogsPage'
 import { GoogleLogsPage } from '@/google/GoogleLogsPage'
 import { MastersPage } from '@/masters/MastersPage'
@@ -177,6 +178,14 @@ export default function App() {
                   element={
                     <RequirePermission module="call_logs" orModule="settings" orAction="edit">
                       <CallyzerTeamPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="/callyzer/report"
+                  element={
+                    <RequirePermission module="call_logs" orModule="settings" orAction="edit">
+                      <CallyzerReportPage />
                     </RequirePermission>
                   }
                 />

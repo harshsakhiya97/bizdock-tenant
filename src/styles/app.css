@@ -1878,22 +1878,28 @@ details.rec-section summary { cursor: pointer; }
 .saved-key { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding: 6px 8px 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-muted); }
 .saved-key code { flex: 1; font-size: 13px; letter-spacing: 0.5px; background: none; padding: 0; }
 
-/* Reports → Team Report */
-.tr-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 4px; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 13px; }
+/* Reports → Team Report, Callyzer → Report: person cards */
+.tr-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); font-size: 13px; }
+.tr-sum { color: var(--text-muted); }
+.tr-sum b { color: var(--text); }
 .tr-date { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.tr-h { margin: 20px 0 10px; font-size: 15px; }
-.tr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-.tr-card { position: relative; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
-.tr-card.is-best { border-color: color-mix(in oklab, var(--warning) 55%, white); }
-.tr-day { display: block; width: fit-content; margin: 0 auto 10px; padding: 2px 10px; border-radius: 999px; background: var(--surface-muted); border: 1px solid var(--line); font-size: 12px; font-weight: 600; }
-.tr-who { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 12px; }
-.tr-who b { display: block; font-size: 15px; }
-.tr-av { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; }
-.tr-best, .tr-role { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; }
+.tr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+.tr-card { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.tr-card.is-best { border-color: color-mix(in oklab, var(--warning) 50%, white); box-shadow: 0 0 0 3px var(--warning-soft); }
+.tr-who { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; }
+.tr-av { flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 16px; }
+.tr-id { min-width: 0; flex: 1; }
+.tr-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tr-name b { font-size: 15px; margin-right: 2px; }
+.tr-name .badge { display: inline-flex; align-items: center; gap: 4px; }
+.tr-facts { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 3px; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+.tr-facts b { color: var(--text); font-weight: 600; }
 .tr-boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.tr-box { padding: 8px 10px; border-radius: var(--radius); background: var(--surface-muted); border: 1px solid var(--line); }
-.tr-box span { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
-.tr-box b { font-size: 18px; color: var(--ink); }
+.tr-box { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 9px 10px; text-align: left; font: inherit; border-radius: var(--radius); background: var(--surface-muted); border: 1px solid var(--line); cursor: pointer; transition: border-color .12s, background .12s; }
+.tr-box:hover:not(:disabled) { border-color: var(--brand); background: var(--brand-soft); }
+.tr-box:disabled { cursor: default; }
+.tr-box span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.tr-box b { white-space: nowrap; font-size: 19px; line-height: 1.25; color: var(--ink); }
 .tr-box b.tr-success { color: var(--success); }
 .tr-box b.tr-danger { color: var(--danger); }
 .tr-box b.tr-warning { color: var(--warning); }

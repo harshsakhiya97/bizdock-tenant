@@ -93,6 +93,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
         children: [
           { to: '/callyzer/logs', label: 'History logs', icon: PhoneCall, module: 'call_logs', or: { module: 'settings', action: 'edit' } },
           { to: '/callyzer/team', label: 'Team numbers', icon: Users2, module: 'call_logs', or: { module: 'settings', action: 'edit' } },
+          { to: '/callyzer/report', label: 'Report', icon: BarChart3, module: 'call_logs', or: { module: 'settings', action: 'edit' } },
         ],
       },
     ],
@@ -154,6 +155,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/payments/logs': { title: 'Billing', crumb: 'Razorpay', icon: CreditCard },
   '/callyzer/logs': { title: 'Callyzer', crumb: 'History logs', icon: PhoneCall },
   '/callyzer/team': { title: 'Callyzer', crumb: 'Team numbers', icon: Users2 },
+  '/callyzer/report': { title: 'Callyzer', crumb: 'Report', icon: BarChart3 },
   '/whatsapp': { title: 'WhatsApp', crumb: 'Chats & campaigns', icon: MessageCircle },
   '/businesses': { title: 'Businesses', crumb: 'Overview', icon: Building2 },
   '/integrations': { title: 'System Connections', crumb: 'Third-party integrations', icon: Plug },
