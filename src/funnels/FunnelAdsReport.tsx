@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import { Modal } from '@/components/Modal'
-import { Filter, List, Table2, TrendingDown, TrendingUp } from 'lucide-react'
+import { Filter, List, Table2, Waypoints, TrendingDown, TrendingUp } from 'lucide-react'
 import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { FunnelScorecard } from './FunnelScorecard'
+import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
 import { MetaSync } from './MetaSync'
 import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
@@ -36,8 +37,10 @@ type Row = {
   received: number
   ls: Lead[]
 }
-type Lead = { id: string; created_at: string; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+type Lead = { id: string; created_at: string; next_follow_up_at?: string | null; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
 /** where a lead came from, by its UTM source: Facebook / Instagram (fb, ig…) or Google (google, adwords, youtube…) */
+/** an ad lead: its UTM source is Facebook / Instagram or Google */
+const isAds = (l: Pick<Lead, 'utm_source'>) => fromSrc(l, 'fb') || fromSrc(l, 'google')
 const FB_UTM = new Set(['fb', 'ig', 'facebook', 'instagram', 'meta', 'an', 'msg', 'messenger', 'threads', 'th'])
 const GOOGLE_UTM = new Set(['google', 'adwords', 'gads', 'googleads', 'google_ads', 'youtube', 'yt', 'gdn'])
 export type Src = 'all' | 'fb' | 'google'
@@ -74,7 +77,7 @@ export function FunnelAdsReport({
   const tenant = useTenant()
   const { from, to } = range
   const [reload, setReload] = useState(0)
-  const [view, setView] = useState<'funnel' | 'scorecard' | 'list'>('funnel')
+  const [view, setView] = useState<'funnel' | 'scorecard' | 'flow' | 'list'>('funnel')
   const [by, setBy] = useState<By>('day')
   const [gDays, setGDays] = useState<{ day: string; spend: number; spend_gst: number }[]>([])
   useEffect(() => {
@@ -356,6 +359,14 @@ export function FunnelAdsReport({
       <td className="num">{pct(r.showed, r.booked, 'Show ups ÷ bookings')}</td>
     </>
   )
+  // Lead flow: the period's leads (by creation date, the source picked)
+  const periodLeads = useMemo(
+    () => (leads ?? []).filter((l) => !l.is_archived && fromSrc(l, src) && leadDay(l.created_at) >= from && leadDay(l.created_at) <= to),
+    [leads, src, from, to],
+  )
+  const bookedSet = useMemo(() => new Set(meet.booked.keys()), [meet])
+  const showedSet = useMemo(() => new Set(meet.showed.keys()), [meet])
+  const revOf = useCallback((id: string) => (money2.billed.get(id) ?? 0) + (money2.pays.get(id)?.amt ?? 0), [money2])
   const money = (gstAmt: number, ex: number) => <span title={ex ? `${inr(gstAmt)} with GST (${inr(gstAmt - ex)} GST)` : undefined}>{ex ? inr(ex) : '—'}</span>
   const cpl = (gstAmt: number, ex: number, n: number, onClick?: () => void) =>
     n && gstAmt ? (
@@ -394,6 +405,9 @@ export function FunnelAdsReport({
             <button type="button" className={view === 'scorecard' ? 'is-active' : undefined} onClick={() => setView('scorecard')} title="Scorecard">
               <Table2 size={15} /> Scorecard
             </button>
+            <button type="button" className={view === 'flow' ? 'is-active' : undefined} onClick={() => setView('flow')} title="Lead flow">
+              <Waypoints size={15} /> Lead flow
+            </button>
             <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
               <List size={15} /> List
             </button>
@@ -420,6 +434,15 @@ export function FunnelAdsReport({
           {flow === null && <div className="muted small">You can’t see this funnel’s report.</div>}
           {flow && <FunnelScorecard f={flow} gst={gst} />}
         </>
+      )}
+      {view === 'flow' && (
+        <FunnelLeadFlow
+          leads={periodLeads as FlowLead[]}
+          isAds={isAds}
+          booked={bookedSet}
+          showed={showedSet}
+          revenue={revOf}
+        />
       )}
       {view === 'list' &&
         (!report && !error ? (
