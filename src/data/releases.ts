@@ -23,7 +23,10 @@ export const releases: Release[] = [
       'Reports → Team Report: a card per team member for the day: follow-ups done, due, overdue, first call pending, no follow-up date and follow-ups in 7 days, with first and last follow-up time. Access control → Team Report.',
       'Click any number on either report: the list behind it (calls with recording and transcript, or follow-ups / leads; a row opens the lead).',
     ],
-    improved: ['System Connections no longer sends full keys to the browser; a save without a new key keeps the saved one.'],
+    improved: [
+      'System Connections no longer sends full keys to the browser; a save without a new key keeps the saved one.',
+      'Leads: a Funnel column and a Funnel filter (All funnels, one funnel, or No funnel).',
+    ],
   },
   {
     version: '0.32',
