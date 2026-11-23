@@ -117,3 +117,7 @@ body { background: var(--bg); }
 .count-pill { background: var(--brand-grad); }
 /* small buttons in rows: the gradient without the glow */
 .btn-sm.btn-primary, .table .btn-primary { box-shadow: none; }
+/* the side menu never scrolls sideways (a group heading is 100% wide; with the item margins it overflowed) */
+.sidebar-nav { overflow-x: hidden; }
+.nav-group-head { width: calc(100% - 24px); }
+.sidebar.is-collapsed .nav-group-head { width: calc(100% - 20px); }
