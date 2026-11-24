@@ -1946,7 +1946,11 @@ details.rec-section summary { cursor: pointer; }
 
 /* ---------- Lead page → Details: fields (left) + At a glance & AI Insights (right) ---------- */
 .lead-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px; align-items: start; }
-.lead-main .info-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); }
+.lead-main .info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; border-top: 1px solid var(--line); }
+.lead-main .info-grid > div { display: grid; grid-template-columns: 118px minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.lead-main .info-grid > div.info-wide { grid-column: 1 / -1; }
+.lead-main .info-grid dt { margin: 0; }
+@media (max-width: 640px) { .lead-main .info-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .lead-split { grid-template-columns: 1fr; } }
 .acc-list { display: flex; flex-direction: column; gap: 8px; }
 .acc { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
