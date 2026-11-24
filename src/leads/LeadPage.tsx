@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ChevronDown, ClipboardList, GraduationCap, Handshake, History, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, CalendarClock, ChevronDown, ClipboardList, GraduationCap, Handshake, History, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -12,7 +12,7 @@ import { FollowUpsTab } from '@/bookings/FollowUpsTab'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import { WhatsAppModal } from '@/bookings/WhatsAppModal'
 import type { BookingRow } from '@/bookings/types'
-import { ConfirmModal, Empty, StatCard } from '@/components/ui'
+import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
@@ -446,22 +446,29 @@ export function LeadPage() {
         {tab === 'payments' && (canPay || canInv) && (
           <div className="stack">
             {isCustomer && (
-              <div className="stat-grid">
-                {isWebinar ? (
-                  <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} onClick={() => setTab('purchases')} />
-                ) : (
-                  <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} onClick={() => setTab('bookings')} />
-                )}
-                <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" onClick={toMoneyTab} />
-                <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" onClick={toMoneyTab} />
-                <StatCard
-                  icon={Receipt}
-                  tone="warning"
-                  value={money(Math.max(0, billed - received))}
-                  label="Balance"
-                  hint={overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : undefined}
-                  onClick={toMoneyTab}
-                />
+              <div className="flow-cards pay-cards">
+                {(
+                  [
+                    isWebinar
+                      ? [String(bought.length), 'Purchases', `Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`, '#6366f1', () => setTab('purchases')]
+                      : [String(won.length), isPodcast ? 'Podcasts' : 'Bookings', `Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`, '#6366f1', () => setTab('bookings')],
+                    [money(billed), 'Revenue', 'Billed, with GST', '#0ea5e9', toMoneyTab],
+                    [money(received), 'Received', billed ? `${Math.round((received / billed) * 100)}% of the billed amount` : 'Payments received', '#22c55e', toMoneyTab],
+                    [
+                      money(Math.max(0, billed - received)),
+                      'Balance',
+                      overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : billed - received > 0 ? 'Still to be paid' : 'Nothing pending',
+                      overdue.length ? '#ef4444' : '#f59e0b',
+                      toMoneyTab,
+                    ],
+                  ] as [string, string, string, string, () => void][]
+                ).map(([v, l, sub, c, go]) => (
+                  <button key={l} type="button" className="flow-card" style={{ ['--c' as string]: c }} onClick={go}>
+                    <b>{v}</b>
+                    <span>{l}</span>
+                    <small className="muted">{sub}</small>
+                  </button>
+                ))}
               </div>
             )}
             {canPay && canInv && (

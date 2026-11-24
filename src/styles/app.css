@@ -2012,3 +2012,7 @@ details.rec-section summary { cursor: pointer; }
 .ai-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .ai-foot { grid-column: 1 / -1; }
 @media (max-width: 900px) { .ai-body { grid-template-columns: 1fr; } }
+/* Lead page → Payments: the funnel's breakdown cards, 4 in a row */
+.pay-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
+.pay-cards .flow-card { text-align: left; font: inherit; cursor: pointer; }
+@media (max-width: 900px) { .pay-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
