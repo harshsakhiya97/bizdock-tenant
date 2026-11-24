@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { ChartNoAxesColumn, Plus, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Label } from '@/components/Field'
+import { Label, Select } from '@/components/Field'
 import { ConfirmModal, Empty, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
@@ -238,14 +238,14 @@ function AddCampaigns({
           <Label htmlFor="g-add-acc" required>
             Ad account
           </Label>
-          <select id="g-add-acc" className="input" value={acc} onChange={(e) => (setAcc(e.target.value), setSel(new Set()))}>
+          <Select id="g-add-acc" className="input" value={acc} onChange={(e) => (setAcc(e.target.value), setSel(new Set()))}>
             <option value="">Choose an ad account</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name ?? cidText(a.customer_id)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {acc && (
           <>

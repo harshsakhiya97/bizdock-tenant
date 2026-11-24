@@ -322,14 +322,14 @@ export function WaTemplateNewPage() {
             <div className="row-between">
               <b>Body</b>
               <div className="row" style={{ gap: 6 }}>
-                <select className="input input-sm" style={{ width: 150 }} value="" onChange={(e) => e.target.value && insertVar(e.target.value)} aria-label="Add variable">
+                <Select className="input input-sm" style={{ width: 150 }} value="" onChange={(e) => e.target.value && insertVar(e.target.value)} aria-label="Add variable">
                   <option value="">+ Add variable</option>
                   {SUGGESTED_VARS.map((v) => (
                     <option key={v} value={v}>
                       {`{{${v}}}`}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <input className="input input-sm" style={{ width: 120 }} placeholder="custom_name" value={newVar} onChange={(e) => setNewVar(slug(e.target.value))} onKeyDown={(e) => e.key === 'Enter' && insertVar(newVar)} />
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => insertVar(newVar)} disabled={!newVar}>
                   <Plus size={14} />

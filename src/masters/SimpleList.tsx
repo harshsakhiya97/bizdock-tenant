@@ -4,6 +4,7 @@ import { GripVertical, Plus } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { listSimple, saveSimple } from './api'
 import { EVENT_KINDS, type SimpleRow, type SimpleTable } from './types'
+import { Select } from '@/components/Field'
 
 type Draft = SimpleRow & { dirty?: boolean }
 
@@ -184,13 +185,13 @@ export function SimpleList({
                   </td>
                   {hasKind && (
                     <td>
-                      <select className="input input-sm" value={r.kind ?? 'event'} disabled={!canEdit} onChange={(e) => edit(r.id, { kind: e.target.value })} aria-label={`Kind of ${r.name}`}>
+                      <Select className="input input-sm" value={r.kind ?? 'event'} disabled={!canEdit} onChange={(e) => edit(r.id, { kind: e.target.value })} aria-label={`Kind of ${r.name}`}>
                         {EVENT_KINDS.map((k) => (
                           <option key={k.value} value={k.value}>
                             {k.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </td>
                   )}
                   {hasColor && (
@@ -241,13 +242,13 @@ export function SimpleList({
                   </td>
                   {hasKind && (
                     <td>
-                      <select className="input input-sm" value={adding.kind} onChange={(e) => setAdding((a) => ({ ...a, kind: e.target.value }))} aria-label="Kind of the new entry">
+                      <Select className="input input-sm" value={adding.kind} onChange={(e) => setAdding((a) => ({ ...a, kind: e.target.value }))} aria-label="Kind of the new entry">
                         {EVENT_KINDS.map((k) => (
                           <option key={k.value} value={k.value}>
                             {k.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </td>
                   )}
                   {hasColor && (

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { CreditCard, Plus, X } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Label } from '@/components/Field'
+import { Label, Select } from '@/components/Field'
 import { ConfirmModal, Empty, Paged } from '@/components/ui'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
@@ -321,14 +321,14 @@ function AddProducts({ options, busy, onClose, onAdd }: { options: [string, numb
         <Label htmlFor="add-product" required>
           Razorpay product
         </Label>
-        <select id="add-product" className="input" value={sel} onChange={(e) => setSel(e.target.value)}>
+        <Select id="add-product" className="input" value={sel} onChange={(e) => setSel(e.target.value)}>
           <option value="">{options.length ? 'Choose a product' : 'No more products'}</option>
           {options.map(([d, n]) => (
             <option key={d} value={d}>
               {d} ({n})
             </option>
           ))}
-        </select>
+        </Select>
         <div className="muted small" style={{ marginTop: 6 }}>
           The payment description in Razorpay. Its payments from this funnel’s leads (phone or email) count here.
         </div>

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight, Inbox, Search, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { Modal } from './Modal'
+import { Select } from '@/components/Field'
 
 export function PageHead({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
@@ -286,13 +287,13 @@ export function PageFoot({
         Showing {total === 0 ? 0 : (current - 1) * perPage + 1}–{Math.min(current * perPage, total)} of {total}
         <label className="page-size">
           Rows
-          <select className="input input-sm" value={perPage} onChange={(e) => onPerPage(Number(e.target.value))} aria-label="Rows per page">
+          <Select className="input input-sm" value={perPage} onChange={(e) => onPerPage(Number(e.target.value))} aria-label="Rows per page">
             {sizes.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       </span>
       {pages > 1 && (

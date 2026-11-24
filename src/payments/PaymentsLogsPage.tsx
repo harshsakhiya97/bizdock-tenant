@@ -7,6 +7,7 @@ import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { Select } from '@/components/Field'
 
 /** Payments → History logs: every Razorpay payment (synced every 5 minutes), matched to a lead by phone / email. */
 type Pay = {
@@ -174,27 +175,27 @@ export function PaymentsLogsPage() {
       <section className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or payment ID" value={q} onChange={setQ} width={260} />
-          <select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <Select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             {Object.entries(STATUS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v.label} ({n((r) => r.status === k)})
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" aria-label="Method" value={method} onChange={(e) => setMethod(e.target.value)}>
+          </Select>
+          <Select className="input input-sm filter-select" aria-label="Method" value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="">All methods</option>
             {methods.map((m) => (
               <option key={m} value={m}>
                 {METHOD[m] ?? m} ({n((r) => r.method === m)})
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" aria-label="Lead" value={matched} onChange={(e) => setMatched(e.target.value)}>
+          </Select>
+          <Select className="input input-sm filter-select" aria-label="Lead" value={matched} onChange={(e) => setMatched(e.target.value)}>
             <option value="">Lead: all</option>
             <option value="yes">Matched to a lead ({n((r) => !!r.lead_id)})</option>
             <option value="no">No lead ({n((r) => !r.lead_id)})</option>
-          </select>
+          </Select>
           <DateRangePicker value={range} onChange={setRange} allDates />
           {(q || status || method || matched) && (
             <button

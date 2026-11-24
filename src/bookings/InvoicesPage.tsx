@@ -16,6 +16,7 @@ import { InvoicePanel } from '@/invoices/InvoicePanel'
 import { useBookingRefs } from './useBookingRefs'
 import { Flash } from '@/components/Flash'
 import { StatRecords, type StatShow, type StatCol } from '@/components/StatRecords'
+import { Select } from '@/components/Field'
 
 type PayState = 'paid' | 'part' | 'due' | 'overdue'
 const PAY_META: Record<PayState, { label: string; tone: string }> = {
@@ -136,14 +137,14 @@ export function InvoicesPage() {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Invoice no., client or phone" value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={240} />
-          <select className="input input-sm filter-select" value={f.state} onChange={(e) => setF((x) => ({ ...x, state: e.target.value }))} aria-label="Payment status">
+          <Select className="input input-sm filter-select" value={f.state} onChange={(e) => setF((x) => ({ ...x, state: e.target.value }))} aria-label="Payment status">
             <option value="">Payment status</option>
             {(Object.keys(PAY_META) as PayState[]).map((k) => (
               <option key={k} value={k}>
                 {PAY_META[k].label}
               </option>
             ))}
-          </select>
+          </Select>
           <DateRangePicker value={range} onChange={setRange} allDates />
           {(f.q || f.state || range.key !== 'all') && (
             <button

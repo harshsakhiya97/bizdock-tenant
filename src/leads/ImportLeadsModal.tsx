@@ -248,7 +248,7 @@ export function ImportLeadsModal({
                       <tr key={i}>
                         <td className="strong">{h || `Column ${i + 1}`}</td>
                         <td>
-                          <select
+                          <Select
                             className="input input-sm"
                             aria-label={`Save ${h} as`}
                             value={map[i] ?? ''}
@@ -259,7 +259,7 @@ export function ImportLeadsModal({
                                 {t.value === '@extra' ? `Extra field (${keyOf(h) || '—'})` : t.label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </td>
                         <td className="muted small">
                           <span className="cell-clip" style={{ maxWidth: 260 }}>

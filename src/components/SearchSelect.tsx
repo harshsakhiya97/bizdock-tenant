@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useClickOutside } from '@/lib/useClickOutside'
 
-export type SearchOption = { value: string; label: string }
+/** `group`: a heading shown above the options that share it · `disabled`: shown, can't be picked */
+export type SearchOption = { value: string; label: string; group?: string; disabled?: boolean }
 
 /**
  * Dropdown with a search box: the trigger is a theme-kit .input, the list is the kit's .multi-menu.
@@ -19,6 +21,11 @@ export function SearchSelect({
   disabled,
   allowCustom,
   emptyText = 'No matches',
+  className,
+  style,
+  ariaLabel,
+  title,
+  name,
 }: {
   id?: string
   value: string | null
@@ -29,6 +36,13 @@ export function SearchSelect({
   disabled?: boolean
   allowCustom?: boolean
   emptyText?: string
+  /** extra classes on the trigger (e.g. input-sm filter-select) */
+  className?: string
+  style?: CSSProperties
+  ariaLabel?: string
+  title?: string
+  /** a hidden input with this name carries the value in a form */
+  name?: string
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -48,8 +62,9 @@ export function SearchSelect({
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return options
+    // a search matches the label or its group
     const starts = options.filter((o) => o.label.toLowerCase().startsWith(q))
-    const contains = options.filter((o) => !o.label.toLowerCase().startsWith(q) && o.label.toLowerCase().includes(q))
+    const contains = options.filter((o) => !o.label.toLowerCase().startsWith(q) && (o.label.toLowerCase().includes(q) || (o.group ?? '').toLowerCase().includes(q)))
     return [...starts, ...contains]
   }, [options, query])
 
@@ -64,16 +79,21 @@ export function SearchSelect({
   }, [active])
 
   function pick(o: SearchOption) {
+    if (o.disabled) return
     onChange(o.value)
     close()
   }
 
   return (
-    <div ref={ref} className="ss">
+    <div ref={ref} className="ss" style={style?.width ? { width: style.width } : undefined}>
+      {name && <input type="hidden" name={name} value={value ?? ''} />}
       <button
         id={id}
         type="button"
         disabled={disabled}
+        aria-label={ariaLabel}
+        title={title}
+        style={style}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
@@ -81,7 +101,7 @@ export function SearchSelect({
           setActive(0)
           setOpen((o) => !o)
         }}
-        className={cn('input ss-trigger', open && 'is-open')}
+        className={cn('input ss-trigger', className, open && 'is-open')}
       >
         <span className={cn('ss-value', !label && 'ss-placeholder')}>{label || placeholder}</span>
         <ChevronDown size={15} />
@@ -127,10 +147,13 @@ export function SearchSelect({
             ) : (
               items.map((o, i) => {
                 const isSelected = o.value === value
+                const head = o.group && o.group !== items[i - 1]?.group ? o.group : null
                 return (
-                  <li key={`${o.value}-${i}`} data-index={i} role="option" aria-selected={isSelected}>
+                  <li key={`${o.value}-${i}`} data-index={i} role="option" aria-selected={isSelected} aria-disabled={o.disabled || undefined}>
+                    {head && <div className="ss-group">{head}</div>}
                     <button
                       type="button"
+                      disabled={o.disabled}
                       onMouseEnter={() => setActive(i)}
                       onClick={() => pick(o)}
                       className={cn('multi-opt', i === active && 'is-active', isSelected && 'is-on')}

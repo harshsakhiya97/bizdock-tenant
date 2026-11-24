@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react'
 import { Drawer } from '@/components/Drawer'
 import { useTenant } from '@/tenant/useTenant'
 import { adPreview } from './api'
+import { Select } from '@/components/Field'
 
 const FORMATS = [
   ['MOBILE_FEED_STANDARD', 'Facebook feed (mobile)'],
@@ -37,13 +38,13 @@ export function AdPreviewDrawer({ ad, onClose }: { ad: { id: string; name: strin
     <Drawer open onClose={onClose} width={560} title={ad.name ?? ad.id}>
       <div className="stack">
         <div className="muted small">{ad.sub}</div>
-        <select className="input" aria-label="Placement" value={format} onChange={(e) => setFormat(e.target.value)}>
+        <Select className="input" aria-label="Placement" value={format} onChange={(e) => setFormat(e.target.value)}>
           {FORMATS.map(([k, l]) => (
             <option key={k} value={k}>
               {l}
             </option>
           ))}
-        </select>
+        </Select>
         {error && <div className="alert alert-error">{error}</div>}
         {loading && !error && (
           <div className="row muted small" style={{ justifyContent: 'center', gap: 8, padding: '40px 0' }}>

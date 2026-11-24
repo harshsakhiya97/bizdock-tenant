@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { LEAD_TARGETS } from './fieldMap'
+import { Select } from '@/components/Field'
 
 const parentOf = (k: string) => (k.includes('.') ? k.slice(0, k.lastIndexOf('.')) : '')
 const leafOf = (k: string) => (k.includes('.') ? k.slice(k.lastIndexOf('.') + 1) : k)
@@ -50,7 +51,7 @@ export function PickPerField({
       <tr key={id}>
         <td>
           <div className="ppf-pick">
-            <select
+            <Select
               className="input input-sm"
               aria-label={`Object for ${t}`}
               value={parent}
@@ -65,8 +66,8 @@ export function PickPerField({
                   {pathLabel(p)}
                 </option>
               ))}
-            </select>
-            <select
+            </Select>
+            <Select
               className="input input-sm"
               aria-label={`Field for ${t}`}
               value={src ?? ''}
@@ -82,7 +83,7 @@ export function PickPerField({
                   {leafOf(k)} · {clip(sample?.[k])}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </td>
         <td className="muted small">

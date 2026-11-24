@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
-import { Label, TextInput } from '@/components/Field'
+import { Label, TextInput, Select } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { PageHead, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -157,13 +157,13 @@ export function AttendancePage() {
           </div>
           <div className="att-cal-tools">
             {canAll && people.length > 0 && (
-              <select className="input input-sm att-staff" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
+              <Select className="input input-sm att-staff" value={logPerson} onChange={(e) => setLogPerson(e.target.value)} aria-label="Staff">
                 {people.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
             <div className="att-month">
               <button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">
@@ -448,13 +448,13 @@ function CorrectCard({ people, onDone, onError }: { people: Person[]; onDone: (m
   return (
     <form className="card card-pad stack" style={{ gap: 10 }} onSubmit={submit}>
       <b>Correct attendance</b>
-      <select className="input input-sm" value={f.member} onChange={(e) => setF((d) => ({ ...d, member: e.target.value }))} aria-label="Member">
+      <Select className="input input-sm" value={f.member} onChange={(e) => setF((d) => ({ ...d, member: e.target.value }))} aria-label="Member">
         {people.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
           </option>
         ))}
-      </select>
+      </Select>
       <input type="date" className="input input-sm" max={isoDay(new Date())} value={f.date} onChange={(e) => setF((d) => ({ ...d, date: e.target.value }))} aria-label="Date" />
       <div className="row" style={{ gap: 8 }}>
         <input type="time" className="input input-sm" value={f.in} onChange={(e) => setF((d) => ({ ...d, in: e.target.value }))} aria-label="Check-in" title="Check-in" />

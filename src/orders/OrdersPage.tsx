@@ -27,6 +27,7 @@ import { listInvoices } from '@/invoices/api'
 import { InvoicePanel } from '@/invoices/InvoicePanel'
 import { InvoiceDrawer } from '@/invoices/InvoiceDrawer'
 import { isFullyPaid, type InvoicePayment, type InvoiceRow } from '@/invoices/types'
+import { Select } from '@/components/Field'
 
 type PayState = 'paid' | 'part' | 'unpaid'
 const PAY: Record<PayState, string> = { paid: 'Fully paid', part: 'Part paid', unpaid: 'Unpaid' }
@@ -196,7 +197,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder={`${noun.one}, invoice, customer, phone or service`} value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={260} />
-          <select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
+          <Select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
             <option value="">Status</option>
             {bookings
               ? (Object.keys(STATUS_META) as BookingStatus[]).map((k) => (
@@ -209,23 +210,23 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                 {ORDER_STATUS[k].label}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={f.pay} onChange={(e) => setF((x) => ({ ...x, pay: e.target.value }))} aria-label="Payment">
+          </Select>
+          <Select className="input input-sm filter-select" value={f.pay} onChange={(e) => setF((x) => ({ ...x, pay: e.target.value }))} aria-label="Payment">
             <option value="">Payment</option>
             {(Object.keys(PAY) as PayState[]).map((k) => (
               <option key={k} value={k}>
                 {PAY[k]}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={f.member} onChange={(e) => setF((x) => ({ ...x, member: e.target.value }))} aria-label="Team member">
+          </Select>
+          <Select className="input input-sm filter-select" value={f.member} onChange={(e) => setF((x) => ({ ...x, member: e.target.value }))} aria-label="Team member">
             <option value="">Team member</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
           <label className="row small" style={{ gap: 6 }}>
             <input type="checkbox" checked={f.overdue} onChange={(e) => setF((x) => ({ ...x, overdue: e.target.checked }))} /> Overdue parts
           </label>
@@ -355,7 +356,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                           <td onClick={(e) => !bookings && e.stopPropagation()}>
                             {!bookings && can('bookings', 'edit') && !cancelled(b) ? (
                               // orders / brand deals: change the status right here
-                              <select
+                              <Select
                                 className={cn('input status-select', st?.tone)}
                                 value={b.order_status ?? 'not_started'}
                                 aria-label="Status"
@@ -366,7 +367,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                                     {ORDER_STATUS[k].label}
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                             ) : (
                               st && <span className={`badge ${st.tone}`}>{st.label}</span>
                             )}

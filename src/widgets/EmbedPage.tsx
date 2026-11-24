@@ -4,6 +4,7 @@ import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Loader2, User } 
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { bookSlot, publicWidget, widgetSlots, type ProfileField, type PublicWidget, type Slot } from './api'
+import { Select } from '@/components/Field'
 
 const TZ = 'Asia/Kolkata'
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
@@ -295,7 +296,7 @@ export function EmbedPage() {
               <div className="bk-head">Date &amp; Time</div>
               <div className="bk-body">
                 <div className="bk-nav">
-                  <select
+                  <Select
                     aria-label="Month"
                     value={view.m}
                     onChange={(e) => {
@@ -309,8 +310,8 @@ export function EmbedPage() {
                         {mn}
                       </option>
                     ))}
-                  </select>
-                  <select
+                  </Select>
+                  <Select
                     aria-label="Year"
                     value={view.y}
                     onChange={(e) => {
@@ -325,7 +326,7 @@ export function EmbedPage() {
                         {y}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <div className="bk-arrows">
                     <button type="button" aria-label="Previous month" disabled={!canPrev} onClick={() => setView(view.m === 0 ? { y: view.y - 1, m: 11 } : { ...view, m: view.m - 1 })}>
                       <ChevronLeft size={16} />
@@ -442,14 +443,14 @@ export function EmbedPage() {
                           })}
                         </div>
                       ) : f.type === 'select' ? (
-                        <select value={v} onChange={(e) => put(e.target.value)}>
+                        <Select value={v} onChange={(e) => put(e.target.value)}>
                           <option value="">Select…</option>
                           {(f.options ?? []).map((o) => (
                             <option key={o} value={o}>
                               {o}
                             </option>
                           ))}
-                        </select>
+                        </Select>
                       ) : (
                         <input
                           type={f.type === 'number' ? 'number' : f.type === 'email' ? 'email' : f.type === 'phone' ? 'tel' : f.type === 'date' ? 'date' : 'text'}

@@ -3,7 +3,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, FileUp, RefreshCw, Send } fro
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { Checkbox, Hint, Label, TextArea, TextInput, Select } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { ConfirmModal } from '@/components/ui'
 import { listFunnels } from '@/funnels/api'
@@ -350,7 +350,7 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
             <div className="form-grid form-grid-3">
               <div>
                 <Label htmlFor="c-biz">Business</Label>
-                <select id="c-biz" className="input" value={lf.biz} onChange={(e) => setL('biz', e.target.value)}>
+                <Select id="c-biz" className="input" value={lf.biz} onChange={(e) => setL('biz', e.target.value)}>
                   <option value="">All businesses</option>
                   {businesses.flatMap((b) => [
                     <option key={b.id} value={b.id}>
@@ -362,13 +362,13 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                       </option>
                     )),
                   ])}
-                </select>
+                </Select>
               </div>
               {kind === 'leads' && (
                 <>
                   <div>
                     <Label htmlFor="c-funnel">Funnel</Label>
-                    <select id="c-funnel" className="input" value={lf.funnel} onChange={(e) => setL('funnel', e.target.value)}>
+                    <Select id="c-funnel" className="input" value={lf.funnel} onChange={(e) => setL('funnel', e.target.value)}>
                       <option value="">All funnels</option>
                       <option value="none">No funnel</option>
                       {bizFunnels.map((f) => (
@@ -376,46 +376,46 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                           {f.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="c-stage">Status</Label>
-                    <select id="c-stage" className="input" value={lf.stage} onChange={(e) => setL('stage', e.target.value)} disabled={!stages.length}>
+                    <Select id="c-stage" className="input" value={lf.stage} onChange={(e) => setL('stage', e.target.value)} disabled={!stages.length}>
                       <option value="">{stages.length ? 'All statuses' : 'Pick a funnel first'}</option>
                       {stages.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="c-temp">Category</Label>
-                    <select id="c-temp" className="input" value={lf.temp} onChange={(e) => setL('temp', e.target.value)}>
+                    <Select id="c-temp" className="input" value={lf.temp} onChange={(e) => setL('temp', e.target.value)}>
                       <option value="">All categories</option>
                       {TEMPERATURES.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </>
               )}
               <div>
                 <Label htmlFor="c-source">Source</Label>
-                <select id="c-source" className="input" value={lf.source} onChange={(e) => setL('source', e.target.value)}>
+                <Select id="c-source" className="input" value={lf.source} onChange={(e) => setL('source', e.target.value)}>
                   <option value="">All sources</option>
                   {sources.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="c-owner">Assigned to</Label>
-                <select id="c-owner" className="input" value={lf.owner} onChange={(e) => setL('owner', e.target.value)}>
+                <Select id="c-owner" className="input" value={lf.owner} onChange={(e) => setL('owner', e.target.value)}>
                   <option value="">Anyone</option>
                   <option value="none">Not assigned</option>
                   {owners.map((m) => (
@@ -423,7 +423,7 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                       {m.name}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               {kind === 'leads' && (
                 <>
@@ -491,24 +491,24 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                 <div className="form-grid">
                   <div>
                     <Label htmlFor="c-csv-phone">Number column</Label>
-                    <select id="c-csv-phone" className="input" value={csv.phone} onChange={(e) => setCsv({ ...csv, phone: Number(e.target.value) })}>
+                    <Select id="c-csv-phone" className="input" value={csv.phone} onChange={(e) => setCsv({ ...csv, phone: Number(e.target.value) })}>
                       {csv.head.map((h, i) => (
                         <option key={i} value={i}>
                           {h}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <Label htmlFor="c-csv-name">Name column</Label>
-                    <select id="c-csv-name" className="input" value={csv.name} onChange={(e) => setCsv({ ...csv, name: Number(e.target.value) })}>
+                    <Select id="c-csv-name" className="input" value={csv.name} onChange={(e) => setCsv({ ...csv, name: Number(e.target.value) })}>
                       <option value={-1}>— none —</option>
                       {csv.head.map((h, i) => (
                         <option key={i} value={i}>
                           {h}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
               )}
@@ -574,7 +574,7 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                   return (
                     <div key={v} className="wa-var-row">
                       <code>{`{{${v}}}`}</code>
-                      <select
+                      <Select
                         className="input"
                         value={choice}
                         aria-label={`${v} comes from`}
@@ -600,7 +600,7 @@ export function NewCampaignDrawer({ onClose, onDone }: { onClose: () => void; on
                           </optgroup>
                         )}
                         <option value="text:">Same text for everyone</option>
-                      </select>
+                      </Select>
                       {s.src === 'text' && (
                         <TextInput value={s.value} placeholder={where[v] ? `Text ${where[v]}` : 'Text'} onChange={(e) => setMap((m) => ({ ...m, [v]: { src: 'text', value: e.target.value } }))} />
                       )}

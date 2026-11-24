@@ -9,6 +9,7 @@ import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
 import { cidText, googleDays, googleStructure, gTone, gWord, listGoogleAccounts, syncGoogle, type GAccount, type GAd, type GDay } from './api'
 import { GoogleAdDrawer } from './GoogleAdDrawer'
+import { Select } from '@/components/Field'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const num = (n: number) => Number(n || 0).toLocaleString('en-IN')
@@ -156,7 +157,7 @@ export function GoogleLogsPage() {
           ))}
         </div>
         <div className="panel-filters">
-          <select className="input input-sm filter-select" aria-label="Ad account" value={account} onChange={(e) => (setAccount(e.target.value), setCampaign(null), setGroup(null))}>
+          <Select className="input input-sm filter-select" aria-label="Ad account" value={account} onChange={(e) => (setAccount(e.target.value), setCampaign(null), setGroup(null))}>
             <option value="">All ad accounts</option>
             {accounts
               .filter((a) => !a.is_manager)
@@ -165,13 +166,13 @@ export function GoogleLogsPage() {
                   {a.name ?? cidText(a.customer_id)}
                 </option>
               ))}
-          </select>
+          </Select>
           <SearchInput placeholder={`Search ${level === 'groups' ? 'ad groups' : level}`} value={q} onChange={setQ} width={220} />
-          <select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <Select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             <option value="ENABLED">Enabled</option>
             <option value="PAUSED">Paused</option>
-          </select>
+          </Select>
           <label className="check">
             <input type="checkbox" checked={hadDelivery} onChange={(e) => setHadDelivery(e.target.checked)} /> Had delivery
           </label>

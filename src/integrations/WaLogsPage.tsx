@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Check, CheckCheck, MessageCircle, RefreshCw, Send, X } from 'lucide-react'
-import { Hint, Label, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput, Select } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { Empty, PageHead, Paged, SearchInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -92,29 +92,29 @@ function LogsTab({
     <section className="panel">
       <div className="panel-filters">
         <SearchInput placeholder="Name, number or template" value={q} onChange={setQ} width={240} />
-        <select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as '' | WaLogStatus)}>
+        <Select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as '' | WaLogStatus)}>
           <option value="">All statuses</option>
           {(Object.keys(STATUS_META) as WaLogStatus[]).map((k) => (
             <option key={k} value={k}>
               {STATUS_META[k].label} ({count(k)})
             </option>
           ))}
-        </select>
-        <select className="input input-sm filter-select" aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
+        </Select>
+        <Select className="input input-sm filter-select" aria-label="Source" value={source} onChange={(e) => setSource(e.target.value)}>
           <option value="">All sources</option>
           <option value="workflow">Workflows</option>
           <option value="campaign">Campaigns</option>
           <option value="app">Chats</option>
           <option value="reply">Replies</option>
-        </select>
-        <select className="input input-sm filter-select" aria-label="Template" value={template} onChange={(e) => setTemplate(e.target.value)}>
+        </Select>
+        <Select className="input input-sm filter-select" aria-label="Template" value={template} onChange={(e) => setTemplate(e.target.value)}>
           <option value="">All templates</option>
           {templates.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
           ))}
-        </select>
+        </Select>
         <DateRangePicker value={range} onChange={setRange} />
         {(q || status || source || template) && (
           <button

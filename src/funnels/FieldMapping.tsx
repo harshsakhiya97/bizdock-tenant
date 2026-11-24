@@ -4,6 +4,7 @@ import { getWebhook, saveFieldMap, startWebhookTest, stopWebhookTest } from './a
 import { KNOWN_NAMES, guessTarget, targetLabel, targetsFor } from './fieldMap'
 import { PickPerField, pickTargets } from './PickPerField'
 import type { FunnelWebhook } from './types'
+import { Select } from '@/components/Field'
 
 /**
  * Test mode + field mapping for one landing page:
@@ -226,7 +227,7 @@ export function FieldMapping({
                     <td>
                       {canEdit ? (
                         <div className={target(k).startsWith('extra') ? 'fm-extra' : undefined}>
-                          <select
+                          <Select
                             className="input input-sm"
                             aria-label={`${k} saved as`}
                             value={target(k).startsWith('extra') ? 'extra' : target(k)}
@@ -240,7 +241,7 @@ export function FieldMapping({
                                 {t.value === 'extra' ? 'Extra field, named…' : t.label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                           {target(k).startsWith('extra') && (
                             <input
                               className="input input-sm"

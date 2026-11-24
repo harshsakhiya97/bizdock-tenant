@@ -10,6 +10,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { isoDate, listEvents, listEventTypes, listWebinarTypes, timeText, type EventRow, type EventType, type Option } from './api'
 import { EventDrawer } from './EventDrawer'
 import { Flash } from '@/components/Flash'
+import { Select } from '@/components/Field'
 
 type View = 'list' | 'day' | 'week' | 'month'
 const VIEWS: { id: View; label: string }[] = [
@@ -490,22 +491,22 @@ export function CalendarPage() {
           </div>
         </div>
         <div className="panel-filters">
-          <select className="input input-sm filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} aria-label="Event type">
+          <Select className="input input-sm filter-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} aria-label="Event type">
             <option value="">All event types</option>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Person">
+          </Select>
+          <Select className="input input-sm filter-select" value={person} onChange={(e) => setPerson(e.target.value)} aria-label="Person">
             <option value="">Everyone</option>
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {!events ? (

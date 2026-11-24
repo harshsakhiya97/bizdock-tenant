@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Plus, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, TextArea, TextInput, Select } from '@/components/Field'
 import { SearchSelect } from '@/components/SearchSelect'
 import { useTenant } from '@/tenant/useTenant'
 import { FIELD_TYPES, hx, KINDS, type CollectField, type TemplateForm } from './api'
@@ -110,10 +110,10 @@ export function TemplateDrawer({
           <b>Write it with AI</b>
           <div className="muted small">Gemini drafts the script from the goal; you can change everything after.</div>
           <div className="row" style={{ gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-            <select className="input input-sm" style={{ width: 120 }} value={lang} onChange={(e) => setLang(e.target.value as 'English' | 'Hinglish')} aria-label="Language">
+            <Select className="input input-sm" style={{ width: 120 }} value={lang} onChange={(e) => setLang(e.target.value as 'English' | 'Hinglish')} aria-label="Language">
               <option>English</option>
               <option>Hinglish</option>
-            </select>
+            </Select>
             <input className="input input-sm" style={{ flex: '1 1 240px' }} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="The goal, e.g. book a free demo class" />
             <Button size="sm" onClick={() => void write()} disabled={drafting}>
               <Sparkles size={14} /> {drafting ? 'Writing…' : 'Write script'}

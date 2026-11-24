@@ -11,6 +11,7 @@ import { MetaSync } from './MetaSync'
 import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
 import { db } from '@/lib/supabase'
+import { Select } from '@/components/Field'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const iso = (d: Date) => d.toLocaleDateString('en-CA')
@@ -384,18 +385,18 @@ export function FunnelAdsReport({
         <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
           <MetaSync tenantId={tenant.id} onDone={() => setReload((n) => n + 1)} />
           {(
-            <select className="input input-sm filter-select" value={src} onChange={(e) => setSrc(e.target.value as Src)} aria-label="Ads">
+            <Select className="input input-sm filter-select" value={src} onChange={(e) => setSrc(e.target.value as Src)} aria-label="Ads">
               <option value="all">Overall (Facebook + Google)</option>
               <option value="fb">Facebook</option>
               <option value="google">Google</option>
-            </select>
+            </Select>
           )}
           {view === 'list' && (
-            <select className="input input-sm filter-select" value={by} onChange={(e) => setBy(e.target.value as By)} aria-label="Group by">
+            <Select className="input input-sm filter-select" value={by} onChange={(e) => setBy(e.target.value as By)} aria-label="Group by">
               <option value="day">Day wise</option>
               <option value="week">Week wise</option>
               <option value="month">Month wise</option>
-            </select>
+            </Select>
           )}
           <DateRangePicker value={range} onChange={setRange} />
           <div className="seg" role="group" aria-label="View">

@@ -17,6 +17,7 @@ import { useBookingRefs } from './useBookingRefs'
 import { STATUS_META, type BookingRow, type BookingStatus } from './types'
 import { Flash } from '@/components/Flash'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
+import { Select } from '@/components/Field'
 /**
  * Studio Schedule: the studio's own schedule, whatever business is picked in the top bar: every Paid Podcast and Studio
  * Rental booking (all podcast studios, or one). Day / week / month; drag over free time to book it.
@@ -193,23 +194,23 @@ export function BookingCalendarPage() {
         filters={
           <>
           {shared && refs.studios.length > 0 && (
-            <select className="input input-sm filter-select" value={studioF} onChange={(e) => setStudioF(e.target.value)} aria-label="Podcast studio">
+            <Select className="input input-sm filter-select" value={studioF} onChange={(e) => setStudioF(e.target.value)} aria-label="Podcast studio">
               <option value="">All studios</option>
               {refs.studios.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | '')} aria-label="Status">
+          <Select className="input input-sm filter-select" value={status} onChange={(e) => setStatus(e.target.value as BookingStatus | '')} aria-label="Status">
             <option value="">All but cancelled</option>
             {(Object.keys(STATUS_META) as BookingStatus[]).map((s) => (
               <option key={s} value={s}>
                 {STATUS_META[s].label}
               </option>
             ))}
-          </select>
+          </Select>
           </>
         }
       />

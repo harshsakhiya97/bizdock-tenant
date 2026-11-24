@@ -14,6 +14,7 @@ import type { FollowUpRow } from './types'
 import { useFollowUpData } from './useFollowUpData'
 import { Flash } from '@/components/Flash'
 import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
+import { Select } from '@/components/Field'
 
 const TABS = [
   { id: 'pending', label: 'Pending' },
@@ -179,7 +180,7 @@ export function FollowUpsPage() {
         </div>
         <div className="panel-filters">
           <SearchInput placeholder="Search name or phone" value={q} onChange={setQ} width={210} />
-          <select className="input input-sm filter-select" value={assigned} onChange={(e) => setAssigned(e.target.value)} aria-label="Assigned to">
+          <Select className="input input-sm filter-select" value={assigned} onChange={(e) => setAssigned(e.target.value)} aria-label="Assigned to">
             <option value="">Assigned to</option>
             <option value="me">Me</option>
             {data.members.map((m) => (
@@ -187,23 +188,23 @@ export function FollowUpsPage() {
                 {m.name}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Mode">
+          </Select>
+          <Select className="input input-sm filter-select" value={mode} onChange={(e) => setMode(e.target.value)} aria-label="Mode">
             <option value="">Mode</option>
             {MODES.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+          </Select>
+          <Select className="input input-sm filter-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
             <option value="">Category</option>
             {TEMPERATURES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
             ))}
-          </select>
+          </Select>
           <DateRangePicker allDates future value={range} onChange={setRange} />
           {(q || assigned || mode || from || to) && (
             <button

@@ -182,3 +182,8 @@ body { background: var(--bg); }
 /* Ad performance: 4 cards a row */
 .flow-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 @media (max-width: 900px) { .flow-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Searchable dropdowns: a wider list than a small trigger, group headings */
+.ss-menu { min-width: max(100%, 220px); }
+.ss-group { padding: 8px 10px 4px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.ss-list .multi-opt:disabled { opacity: .45; cursor: not-allowed; }

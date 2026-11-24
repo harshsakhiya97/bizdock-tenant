@@ -3,6 +3,7 @@ import { cn } from '@/lib/cn'
 import { logActivity, updateLeads } from './api'
 import { TEMPERATURES, tempOf } from './labels'
 import type { Temperature } from './types'
+import { Select } from '@/components/Field'
 
 /** set a lead's category (New, Hot, Warm, Cold, Not interested, Closed) and log it */
 export async function setLeadCategory(tenantId: string, memberId: string | undefined, leadId: string, value: Temperature) {
@@ -31,7 +32,7 @@ export function CategorySelect({
   // a Closed lead is a customer: its category stays
   if (!canEdit || value === 'closed') return t ? <span className={cn('badge', t.tone)}>{t.label}</span> : null
   return (
-    <select
+    <Select
       className={cn('input input-sm cat-select', t?.tone)}
       aria-label="Category"
       title="Category"
@@ -54,6 +55,6 @@ export function CategorySelect({
           {x.label}
         </option>
       ))}
-    </select>
+    </Select>
   )
 }

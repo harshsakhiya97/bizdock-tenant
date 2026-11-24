@@ -69,7 +69,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
           <div className="muted small">Ready messages by situation, picked when you WhatsApp a lead or client.</div>
         </div>
         <div className="row" style={{ gap: 8 }}>
-        <select
+        <Select
           className="input input-sm filter-select"
           aria-label="Situation"
           value={cat}
@@ -81,7 +81,7 @@ export function TemplatesTab({ canEdit, onNotice }: { canEdit: boolean; onNotice
               {CATEGORY_LABEL[c]} ({(rows ?? []).filter((t) => t.category === c).length})
             </option>
           ))}
-        </select>
+        </Select>
         {canEdit && (
           <button type="button" className="btn btn-primary btn-sm" onClick={() => { setError(null); setEdit({ category: cat || 'follow_up', is_active: true, title: '', body: '' }) }}>
             <Plus size={15} /> Add message
@@ -250,14 +250,14 @@ function MessageEditor({ value, onChange }: { value: string; onChange: (v: strin
           <button type="button" className="btn btn-ghost btn-icon btn-sm" title="Strikethrough (~text~)" aria-label="Strikethrough" onClick={() => wrap('~')}>
             <Strikethrough size={15} />
           </button>
-          <select className="input input-sm" aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(`{{${e.target.value}}}`)}>
+          <Select className="input input-sm" aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(`{{${e.target.value}}}`)}>
             <option value="">Insert a field…</option>
             {VARS.map((v) => (
               <option key={v} value={v}>
                 {`{{${v}}}`}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <textarea ref={ref} id="t-body" className="input tpl-textarea" rows={16} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Type or paste the message. Line breaks and emojis stay as they are." />
         <Hint>*bold* · _italic_ · ~strike~ · line breaks and emojis are kept. Fills in: {VARS.map((v) => `{{${v}}}`).join(' ')}</Hint>

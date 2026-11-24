@@ -28,6 +28,7 @@ import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { leadCols } from './statCols'
 import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/DateRange'
 import { listCustomerRevenue, type Revenue } from './customers'
+import { Select } from '@/components/Field'
 
 type Filters = { q: string; funnel: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string; range: Range }
 const EMPTY: Filters = { q: '', funnel: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest', range: ALL_DATES }
@@ -462,7 +463,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               searchPlaceholder="Search funnels…"
             />
           </div>
-          <select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
+          <Select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
             <option value="">Owner</option>
             <option value="none">Unassigned</option>
             {members.map((m) => (
@@ -470,41 +471,41 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                 {m.name}
               </option>
             ))}
-          </select>
+          </Select>
           {/* customers are always Closed: no Category filter there */}
           {!customers && (
-          <select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Category">
+          <Select className="input input-sm filter-select" value={filters.temp} onChange={(e) => setF('temp', e.target.value)} aria-label="Category">
             <option value="">Category</option>
             {TEMPERATURES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label} ({(cards.temps[t.value] ?? 0).toLocaleString('en-IN')})
               </option>
             ))}
-          </select>
+          </Select>
           )}
           {pp && (
-            <select className="input input-sm filter-select" value={filters.form} onChange={(e) => setF('form', e.target.value)} aria-label="Form">
+            <Select className="input input-sm filter-select" value={filters.form} onChange={(e) => setF('form', e.target.value)} aria-label="Form">
               <option value="">Form</option>
               {FORM_STEPS.map((f) => (
                 <option key={f.value} value={f.value}>
                   {f.label}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-          <select className="input input-sm filter-select" value={filters.followUp} onChange={(e) => setF('followUp', e.target.value)} aria-label="Follow-up">
+          <Select className="input input-sm filter-select" value={filters.followUp} onChange={(e) => setF('followUp', e.target.value)} aria-label="Follow-up">
             <option value="">Follow-up</option>
             <option value="overdue">Overdue</option>
             <option value="today">Today</option>
             <option value="upcoming">Upcoming</option>
             <option value="none">No follow-up set</option>
-          </select>
-          <select className="input input-sm filter-select" value={filters.sort} onChange={(e) => setF('sort', e.target.value)} aria-label="Sort">
+          </Select>
+          <Select className="input input-sm filter-select" value={filters.sort} onChange={(e) => setF('sort', e.target.value)} aria-label="Sort">
             <option value="newest">Newest</option>
             <option value="follow_up">Follow-up date</option>
             <option value="updated">Recently updated</option>
             <option value="name">Name</option>
-          </select>
+          </Select>
           <DateRangePicker value={filters.range} onChange={(r) => setF('range', r)} allDates />
           {JSON.stringify({ ...filters, sort: 'newest' }) !== JSON.stringify(EMPTY) && (
             <button type="button" className="clear-btn" onClick={() => setFilters(EMPTY)}>
@@ -518,7 +519,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             <b>{pickedIds.length} selected</b>
             {can('leads', 'assign') && (
               <span className="bulk-group">
-                <select className="input input-sm" value={bulk.owner} onChange={(e) => setBulk((b) => ({ ...b, owner: e.target.value }))} aria-label="Assign to">
+                <Select className="input input-sm" value={bulk.owner} onChange={(e) => setBulk((b) => ({ ...b, owner: e.target.value }))} aria-label="Assign to">
                   <option value="">Assign to…</option>
                   <option value="none">Unassigned</option>
                   {members.map((m) => (
@@ -526,7 +527,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                       {m.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
@@ -544,14 +545,14 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             )}
             {can('leads', 'edit') && !customers && (
               <span className="bulk-group">
-                <select className="input input-sm" value={bulk.temp} onChange={(e) => setBulk((b) => ({ ...b, temp: e.target.value }))} aria-label="Category">
+                <Select className="input input-sm" value={bulk.temp} onChange={(e) => setBulk((b) => ({ ...b, temp: e.target.value }))} aria-label="Category">
                   <option value="">Category…</option>
                   {TEMPERATURES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
@@ -595,14 +596,14 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             )}
             {funnel && can('leads', 'edit') && (
               <span className="bulk-group">
-                <select className="input input-sm" value={bulk.stage} onChange={(e) => setBulk((b) => ({ ...b, stage: e.target.value }))} aria-label="Move to stage">
+                <Select className="input input-sm" value={bulk.stage} onChange={(e) => setBulk((b) => ({ ...b, stage: e.target.value }))} aria-label="Move to stage">
                   <option value="">Move to…</option>
                   {funnel.funnel_stages.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"

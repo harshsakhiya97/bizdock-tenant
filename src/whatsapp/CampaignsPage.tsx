@@ -26,6 +26,7 @@ import {
   type PersonState,
 } from './api'
 import { NewCampaignDrawer } from './NewCampaignDrawer'
+import { Select } from '@/components/Field'
 
 const EMPTY_STATS = (c: Campaign): CampaignStats => ({ campaign_id: c.id, total: c.total, queued: 0, sent: 0, delivered: 0, seen: 0, replied: 0, failed: 0, cancelled: 0 })
 
@@ -153,14 +154,14 @@ export function CampaignsPage() {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Campaign or template" value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={240} />
-          <select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
+          <Select className="input input-sm filter-select" value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value }))} aria-label="Status">
             <option value="">All statuses</option>
             {Object.entries(CAMPAIGN_STATUS).map(([k, v]) => (
               <option key={k} value={k}>
                 {v.label}
               </option>
             ))}
-          </select>
+          </Select>
           {(f.q || f.status) && (
             <button type="button" className="clear-btn" onClick={() => setF({ q: '', status: '' })}>
               Reset

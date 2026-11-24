@@ -9,6 +9,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { WaBubble } from './WaBubble'
 import { deleteWatiTemplate, listWatiTemplates, type WatiTemplate } from './watiApi'
 import { Flash } from '@/components/Flash'
+import { Select } from '@/components/Field'
 
 const STATUS: Record<string, { label: string; tone: string }> = {
   APPROVED: { label: 'Approved', tone: 'badge-success' },
@@ -106,14 +107,14 @@ export function WaTemplatesPage() {
         </div>
         <div className="panel-filters">
           <SearchInput placeholder="Template name or text" value={q} onChange={setQ} width={240} />
-          <select className="input input-sm filter-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
+          <Select className="input input-sm filter-select" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Category">
             <option value="">All categories</option>
             {cats.map((c) => (
               <option key={c} value={c}>
                 {cap(c)}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         {!rows ? (
           <div className="empty">Loading templates from WATI…</div>

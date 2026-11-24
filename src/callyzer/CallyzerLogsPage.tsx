@@ -11,6 +11,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { useBusiness } from '@/business/useBusiness'
 import { DateRangePicker, type Range } from '@/components/DateRange'
 import { at, nicePhone as waPhone } from '@/integrations/waLogs'
+import { Select } from '@/components/Field'
 
 type CallLog = {
   id: string
@@ -97,32 +98,32 @@ export function CallyzerLogsPage() {
       <section className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, number or caller" value={q} onChange={setQ} width={240} />
-          <select className="input input-sm filter-select" aria-label="Call" value={method} onChange={(e) => setMethod(e.target.value)}>
+          <Select className="input input-sm filter-select" aria-label="Call" value={method} onChange={(e) => setMethod(e.target.value)}>
             <option value="">All calls</option>
             <option value="normal">Normal calls ({n((r) => r.call_method !== 'WhatsAppCall')})</option>
             <option value="wa">WhatsApp calls ({n((r) => r.call_method === 'WhatsAppCall')})</option>
-          </select>
-          <select className="input input-sm filter-select" aria-label="Type" value={dir} onChange={(e) => setDir(e.target.value)}>
+          </Select>
+          <Select className="input input-sm filter-select" aria-label="Type" value={dir} onChange={(e) => setDir(e.target.value)}>
             <option value="">All types</option>
             {['incoming', 'outgoing', 'missed', 'rejected'].map((d) => (
               <option key={d} value={d}>
                 {DIR[d]} ({n((r) => r.direction === d)})
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          </Select>
+          <Select className="input input-sm filter-select" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All statuses</option>
             <option value="yes">Connected ({n((r) => (r.duration_sec ?? 0) > 0)})</option>
             <option value="no">Not connected ({n((r) => !(r.duration_sec ?? 0))})</option>
-          </select>
-          <select className="input input-sm filter-select" aria-label="Caller" value={emp} onChange={(e) => setEmp(e.target.value)}>
+          </Select>
+          <Select className="input input-sm filter-select" aria-label="Caller" value={emp} onChange={(e) => setEmp(e.target.value)}>
             <option value="">All callers</option>
             {emps.map((e) => (
               <option key={e} value={e}>
                 {e}
               </option>
             ))}
-          </select>
+          </Select>
           <DateRangePicker value={range} onChange={setRange} />
           {(q || method || dir || status || emp) && (
             <button

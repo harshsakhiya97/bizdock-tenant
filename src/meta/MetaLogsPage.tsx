@@ -12,6 +12,7 @@ import { connectMeta, listAdAccounts, metaLogs, type AdAccount, type MetaDay, ty
 import { MetaSettingsDrawer } from './MetaSettingsDrawer'
 import { MetaTokenConnect } from './MetaTokenConnect'
 import { AdPreviewDrawer } from './AdPreviewDrawer'
+import { Select } from '@/components/Field'
 
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 const inr2 = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -310,20 +311,20 @@ export function MetaLogsPage() {
           ))}
         </div>
         <div className="panel-filters">
-          <select className="input input-sm filter-select" aria-label="Ad account" value={account} onChange={(e) => (setAccount(e.target.value), setCampaign(null), setAdset(null))}>
+          <Select className="input input-sm filter-select" aria-label="Ad account" value={account} onChange={(e) => (setAccount(e.target.value), setCampaign(null), setAdset(null))}>
             <option value="">All ad accounts</option>
             {accounts.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name || a.act_id}
               </option>
             ))}
-          </select>
+          </Select>
           <SearchInput placeholder={`Search ${LEVELS.find((l) => l[0] === level)?.[1].toLowerCase()}`} value={q} onChange={setQ} width={220} />
-          <select className="input input-sm filter-select" aria-label="Delivery" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <Select className="input input-sm filter-select" aria-label="Delivery" value={status} onChange={(e) => setStatus(e.target.value)}>
             <option value="">All delivery</option>
             <option value="active">Active</option>
             <option value="off">Not active</option>
-          </select>
+          </Select>
           <label className="row small" style={{ gap: 6 }}>
             <input type="checkbox" checked={hadDelivery} onChange={(e) => setHadDelivery(e.target.checked)} /> Had delivery
           </label>

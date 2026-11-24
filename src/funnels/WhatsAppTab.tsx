@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Bot, Check, ChevronDown, ChevronRight, Columns3, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
-import { Hint, Label, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput, Select } from '@/components/Field'
 import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -268,7 +268,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
                 </td>
                 <td>
                   {canEdit ? (
-                    <select
+                    <Select
                       className="input input-sm"
                       aria-label={`${k} saved as`}
                       value={target(k)}
@@ -282,7 +282,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
                           {t.value === 'extra' ? `Extra field (${k})` : t.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   ) : (
                     targetLabel(target(k))
                   )}
@@ -464,7 +464,7 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
                         </td>
                         <td>
                           <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                            <select
+                            <Select
                               className="input input-sm"
                               aria-label={`${p.label} goes to`}
                               disabled={!canEdit}
@@ -478,7 +478,7 @@ function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: Fu
                                 </option>
                               ))}
                               <option value="extra">Other / extra field…</option>
-                            </select>
+                            </Select>
                             {isExtra(col(p.label)) && (
                               <input
                                 className="input input-sm"

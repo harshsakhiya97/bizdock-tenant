@@ -261,7 +261,7 @@ export function fieldLabel(label: string): string {
     .join('')
 }
 
-/** <optgroup>s for a variable <select> */
+/** <optgroup>s for a variable <Select> */
 export function VarOptions({ groups, show }: { groups: VarGroup[]; show?: (key: string, label: string) => string }) {
   return (
     <>

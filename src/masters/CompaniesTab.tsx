@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Building2, Pencil, Plus } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { Checkbox, FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
+import { Checkbox, FormSection, Hint, Label, TextArea, TextInput, Select } from '@/components/Field'
 import { Empty, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
@@ -272,12 +272,12 @@ function CompanyDrawer({ company, nextOrder, onClose, onSaved }: { company: Bill
             <div>
               <Label htmlFor="co-fmt">Number format</Label>
               <input ref={fmtRef} id="co-fmt" className="input" placeholder="e.g. {N}/pride/{FY}" value={f.number_format} onChange={(e) => set('number_format', e.target.value)} />
-              <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insertToken(e.target.value)}>
+              <Select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insertToken(e.target.value)}>
                 <option value="">Insert a field…</option>
                 <option value="{N}">Number ({next})</option>
                 <option value="{NNNN}">Number with zeros ({String(next).padStart(4, '0')})</option>
                 <option value="{FY}">Financial year ({formatInvoiceNo('{FY}', null, 1)})</option>
-              </select>
+              </Select>
             </div>
             <div>
               <Label htmlFor="co-next" required>

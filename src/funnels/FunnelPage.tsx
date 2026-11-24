@@ -31,6 +31,7 @@ import { Flash } from '@/components/Flash'
 import { DateRangePicker, isoDay, presetRange, rangeLabel, type Range } from '@/components/DateRange'
 import { SpendLines, type Line } from './SpendLines'
 import { TEMPERATURES } from '@/leads/labels'
+import { Select } from '@/components/Field'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -394,14 +395,14 @@ export function FunnelPage() {
                 {rangedLeads.length} lead{rangedLeads.length === 1 ? '' : 's'}{leadTemp ? ` (${TEMPERATURES.find((t) => t.value === leadTemp)?.label})` : ''} in these dates (lead date)
               </span>
               <div className="row" style={{ flexWrap: 'wrap', gap: 6 }}>
-                <select className="input input-sm filter-select" value={leadTemp} onChange={(e) => setLeadTemp(e.target.value)} aria-label="Category">
+                <Select className="input input-sm filter-select" value={leadTemp} onChange={(e) => setLeadTemp(e.target.value)} aria-label="Category">
                   <option value="">Category</option>
                   {TEMPERATURES.map((t) => (
                     <option key={t.value} value={t.value}>
                       {t.label}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <DateRangePicker value={leadRange} onChange={setLeadRange} />
                 <div className="seg" role="group" aria-label="View">
                   <button type="button" className={leadView === 'graph' ? 'is-active' : undefined} onClick={() => setLeadView('graph')} title="Graph">

@@ -18,6 +18,7 @@ import { listLeads, listMemberOptions, listSources } from './api'
 import { empty, listCustomerRevenue, type Revenue } from './customers'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
+import { Select } from '@/components/Field'
 
 const day = (d: string) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
 const hrs = (h: number) => `${Math.round(h * 10) / 10} hr${h === 1 ? '' : 's'}`
@@ -211,7 +212,7 @@ export function CustomersPage() {
       <div className="panel">
         <div className="panel-filters">
           <SearchInput placeholder="Name, phone, email or city" value={f.q} onChange={(v) => setF((x) => ({ ...x, q: v }))} width={230} />
-          <select className="input input-sm filter-select" value={f.owner} onChange={(e) => setF((x) => ({ ...x, owner: e.target.value }))} aria-label="Owner">
+          <Select className="input input-sm filter-select" value={f.owner} onChange={(e) => setF((x) => ({ ...x, owner: e.target.value }))} aria-label="Owner">
             <option value="">All owners</option>
             <option value="none">Unassigned</option>
             {members.map((m) => (
@@ -219,26 +220,26 @@ export function CustomersPage() {
                 {m.name}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={f.source} onChange={(e) => setF((x) => ({ ...x, source: e.target.value }))} aria-label="Source">
+          </Select>
+          <Select className="input input-sm filter-select" value={f.source} onChange={(e) => setF((x) => ({ ...x, source: e.target.value }))} aria-label="Source">
             <option value="">All sources</option>
             {sources.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
-          </select>
-          <select className="input input-sm filter-select" value={f.pay} onChange={(e) => setF((x) => ({ ...x, pay: e.target.value as Pay }))} aria-label="Payment">
+          </Select>
+          <Select className="input input-sm filter-select" value={f.pay} onChange={(e) => setF((x) => ({ ...x, pay: e.target.value as Pay }))} aria-label="Payment">
             <option value="">Payment: all</option>
             <option value="paid">Fully paid</option>
             <option value="due">Balance due</option>
-          </select>
-          <select className="input input-sm filter-select" value={f.sort} onChange={(e) => setF((x) => ({ ...x, sort: e.target.value as Sort }))} aria-label="Sort">
+          </Select>
+          <Select className="input input-sm filter-select" value={f.sort} onChange={(e) => setF((x) => ({ ...x, sort: e.target.value as Sort }))} aria-label="Sort">
             <option value="newest">Newest customer first</option>
             <option value="balance">Highest balance</option>
             <option value="billed">Most billed</option>
             <option value="name">Name A–Z</option>
-          </select>
+          </Select>
           <DateRangePicker value={f.range} onChange={(r) => setF((x) => ({ ...x, range: r }))} allDates />
           {filtered && (
             <button type="button" className="clear-btn" onClick={() => setF({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })}>

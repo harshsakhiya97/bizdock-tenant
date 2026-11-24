@@ -23,6 +23,7 @@ import { WebinarDrawer } from '@/webinars/WebinarDrawer'
 import { listMeetings } from './api'
 import { MeetingDrawer } from './MeetingDrawer'
 import { KIND_LABEL, MEETING_STATUS, MODE_LABEL, TEAM_COLOR, type MeetingKind, type MeetingRow, type MeetingStatus } from './types'
+import { Select } from '@/components/Field'
 
 const WEBINAR_COLOR = '#8b5cf6'
 type TypeF = '' | MeetingKind | 'webinar'
@@ -317,7 +318,7 @@ export function MeetingsPage() {
         filters={
           <>
             {canSeeOthers && (
-              <select className="input input-sm filter-select cal-filter" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
+              <Select className="input input-sm filter-select cal-filter" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
                 <option value={me}>My calendar</option>
                 <option value="">All team members</option>
                 {members
@@ -327,9 +328,9 @@ export function MeetingsPage() {
                       {m.name}
                     </option>
                   ))}
-              </select>
+              </Select>
             )}
-            <select
+            <Select
               className="input input-sm filter-select cal-filter"
               value={typeF}
               onChange={(e) => {
@@ -343,25 +344,25 @@ export function MeetingsPage() {
               <option value="lead">Lead meetings</option>
               <option value="team">Team meetings</option>
               <option value="webinar">Webinars</option>
-            </select>
+            </Select>
             {typeF === 'lead' && (
-              <select className="input input-sm filter-select cal-filter" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
+              <Select className="input input-sm filter-select cal-filter" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="Lead category">
                 <option value="">All categories</option>
                 {TEMPERATURES.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
-            <select className="input input-sm filter-select cal-filter" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
+            <Select className="input input-sm filter-select cal-filter" value={status} onChange={(e) => setStatus(e.target.value as MeetingStatus | '')} aria-label="Status">
               <option value="">All statuses</option>
               {statusOptions.map((s) => (
                 <option key={s} value={s}>
                   {MEETING_STATUS[s].label}
                 </option>
               ))}
-            </select>
+            </Select>
           </>
         }
       />

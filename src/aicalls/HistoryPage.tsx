@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { fieldLabel, hx, listAiCalls, OUTCOME, resultOf, rupees, secs, type AiCall } from './api'
 import { CallDrawer } from './CallDrawer'
+import { Select } from '@/components/Field'
 
 const ist = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -214,7 +215,7 @@ export function AiHistoryPage() {
           <b>Calls</b>
           <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <input className="input input-sm" style={{ width: 200 }} placeholder="Name, phone or summary" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className="input input-sm filter-select" value={outcomeF} onChange={(e) => setOutcomeF(e.target.value)} aria-label="Result">
+            <Select className="input input-sm filter-select" value={outcomeF} onChange={(e) => setOutcomeF(e.target.value)} aria-label="Result">
               <option value="">All results</option>
               <option value="live">Calling now</option>
               {Object.entries(OUTCOME).map(([k, o]) => (
@@ -222,16 +223,16 @@ export function AiHistoryPage() {
                   {o.label}
                 </option>
               ))}
-            </select>
-            <select className="input input-sm filter-select" value={tplF} onChange={(e) => setTplF(e.target.value)} aria-label="Template">
+            </Select>
+            <Select className="input input-sm filter-select" value={tplF} onChange={(e) => setTplF(e.target.value)} aria-label="Template">
               <option value="">All templates</option>
               {templates.map(([id, name]) => (
                 <option key={id} value={id}>
                   {name}
                 </option>
               ))}
-            </select>
-            <select className="input input-sm filter-select" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
+            </Select>
+            <Select className="input input-sm filter-select" value={memberF} onChange={(e) => setMemberF(e.target.value)} aria-label="Team member">
               <option value="">Everyone</option>
               <option value="workflow">Workflows</option>
               {members.map((m) => (
@@ -239,7 +240,7 @@ export function AiHistoryPage() {
                   {m.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
         {!calls ? (

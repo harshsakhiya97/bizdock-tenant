@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { FULL_ACCESS, MODE_ROW, MODULE_SECTIONS, SCOPES, getAction, getScope, setAction, setScope, type ActionRow, type ModuleDef, type Permissions, type Scope } from './catalog'
+import { Select } from '@/components/Field'
 
 export type MatrixColumn = {
   id: string
@@ -59,7 +60,7 @@ function ScopeCell({ c, area, label, onChange }: { c: MatrixColumn; area: string
   const p = c.locked ? FULL_ACCESS : c.perms
   return (
     <td className="am-col">
-      <select
+      <Select
         className="input input-sm am-select"
         aria-label={label}
         value={getScope(p, area)}
@@ -71,7 +72,7 @@ function ScopeCell({ c, area, label, onChange }: { c: MatrixColumn; area: string
             {s.label}
           </option>
         ))}
-      </select>
+      </Select>
     </td>
   )
 }

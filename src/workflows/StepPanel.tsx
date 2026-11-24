@@ -544,7 +544,7 @@ function BulkFields({
         {error && <Hint>Couldn’t load templates: {error}</Hint>}
         <div className="bulk-anchor">
           <span className="muted small">Times count from</span>
-          <select
+          <Select
             className="input input-sm"
             aria-label="Times count from"
             value={anchor === 'var' ? `v:${String(d.anchor_var ?? '')}` : 'start'}
@@ -565,7 +565,7 @@ function BulkFields({
                 ))}
               </optgroup>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="table-wrap bulk-wrap">
           <table className="table bulk-table">
@@ -610,20 +610,20 @@ function BulkFields({
                         )}
                       </td>
                       <td>
-                        <select className="input input-sm" aria-label="Send to" value={r.to} onChange={(e) => setRow(r.id, { to: e.target.value as BulkRow['to'] })} disabled={disabled}>
+                        <Select className="input input-sm" aria-label="Send to" value={r.to} onChange={(e) => setRow(r.id, { to: e.target.value as BulkRow['to'] })} disabled={disabled}>
                           <option value="lead">Lead</option>
                           <option value="team">Team</option>
                           <option value="custom">Custom</option>
-                        </select>
+                        </Select>
                         {r.to === 'team' && (
-                          <select className="input input-sm" aria-label="Team member" value={r.member_id} onChange={(e) => setRow(r.id, { member_id: e.target.value })} disabled={disabled}>
+                          <Select className="input input-sm" aria-label="Team member" value={r.member_id} onChange={(e) => setRow(r.id, { member_id: e.target.value })} disabled={disabled}>
                             <option value="">— member —</option>
                             {ctx.members.map((m) => (
                               <option key={m.id} value={m.id}>
                                 {m.name}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         )}
                         {r.to === 'custom' && (
                           <div className="input-prefix input-prefix-sm">
@@ -664,17 +664,17 @@ function BulkFields({
                       <td>
                         <div className="bulk-when">
                           <input className="input input-sm" type="number" min={0} aria-label="Amount" value={r.amount} onChange={(e) => setRow(r.id, { amount: Math.max(0, Number(e.target.value) || 0) })} disabled={disabled} />
-                          <select className="input input-sm" aria-label="Unit" value={r.unit} onChange={(e) => setRow(r.id, { unit: e.target.value as Unit })} disabled={disabled}>
+                          <Select className="input input-sm" aria-label="Unit" value={r.unit} onChange={(e) => setRow(r.id, { unit: e.target.value as Unit })} disabled={disabled}>
                             {UNITS.map((u) => (
                               <option key={u} value={u}>
                                 {u}
                               </option>
                             ))}
-                          </select>
-                          <select className="input input-sm" aria-label="Before or after" value={rowDir(r, d)} onChange={(e) => setRow(r.id, { dir: e.target.value as 'before' | 'after' })} disabled={disabled || anchor === 'start'}>
+                          </Select>
+                          <Select className="input input-sm" aria-label="Before or after" value={rowDir(r, d)} onChange={(e) => setRow(r.id, { dir: e.target.value as 'before' | 'after' })} disabled={disabled || anchor === 'start'}>
                             <option value="after">after</option>
                             {anchor !== 'start' && <option value="before">before</option>}
-                          </select>
+                          </Select>
                         </div>
                         <span className="bulk-when-label">{anchor === 'start' ? 'the start' : anchorName}</span>
                       </td>
@@ -787,7 +787,7 @@ function GotoFields({ d, set, disabled, extras }: { d: Record<string, unknown>; 
               disabled={disabled}
               onChange={(e) => put(rows.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))}
             />
-            <select
+            <Select
               className="input"
               aria-label="Variable"
               value={/^\{\{\w+\}\}$/.test(r.value) ? r.value.slice(2, -2) : ''}
@@ -799,7 +799,7 @@ function GotoFields({ d, set, disabled, extras }: { d: Record<string, unknown>; 
             >
               <option value="">— variable —</option>
               <VarOptions groups={groups} />
-            </select>
+            </Select>
             {!disabled && (
               <button type="button" className="btn btn-ghost btn-sm" aria-label="Remove" onClick={() => put(rows.filter((_, j) => j !== i))}>
                 <Trash2 size={14} />
@@ -1020,10 +1020,10 @@ function GenerateLinkFields({ d, ctx, set, disabled }: { d: Record<string, unkno
           disabled={disabled}
         />
         {!disabled && (
-          <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
+          <Select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a lead field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
             <option value="">Insert a field…</option>
             <VarOptions groups={linkGroups} />
-          </select>
+          </Select>
         )}
         <Hint>Each {'{field}'} is replaced with the lead’s value (e.g. {'{full_name}'}, {'{phone}'}, {'{email}'}, {'{city}'} or a form field like {'{role}'}).</Hint>
       </div>
@@ -1076,10 +1076,10 @@ function MessageField({
       </Label>
       <textarea ref={ref} id={id} className="input" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
       {!disabled && (
-        <select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
+        <Select className="input input-sm" style={{ marginTop: 6 }} aria-label="Insert a field" value="" onChange={(e) => e.target.value && insert(e.target.value)}>
           <option value="">Insert a field…</option>
           <VarOptions groups={groups} />
-        </select>
+        </Select>
       )}
       {hint && <Hint>{hint}</Hint>}
     </div>

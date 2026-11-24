@@ -1,7 +1,7 @@
 import { VarOptions, useVarGroups } from './varGroups'
 import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
-import { Hint, Label, TextInput } from '@/components/Field'
+import { Hint, Label, TextInput, Select } from '@/components/Field'
 import { SearchSelect, type SearchOption } from '@/components/SearchSelect'
 import { WaBubble } from '@/integrations/WaBubble'
 import { listWatiTemplates, type WatiTemplate } from '@/integrations/watiApi'
@@ -106,10 +106,10 @@ export function TemplateParams({
             {where[v] && <small className="muted"> · {where[v]}</small>}
           </span>
           <TextInput value={params[v] ?? ''} placeholder="Text or a lead field" onChange={(e) => onChange({ ...params, [v]: e.target.value })} disabled={disabled} />
-          <select className="input input-sm" aria-label="Lead field" value="" onChange={(e) => e.target.value && onChange({ ...params, [v]: `{{${e.target.value}}}` })} disabled={disabled}>
+          <Select className="input input-sm" aria-label="Lead field" value="" onChange={(e) => e.target.value && onChange({ ...params, [v]: `{{${e.target.value}}}` })} disabled={disabled}>
             <option value="">Variable…</option>
             <VarOptions groups={groups} />
-          </select>
+          </Select>
         </div>
       ))}
     </div>
