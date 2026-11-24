@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CalendarClock, Handshake, MessageCircle, PhoneCall, Tag, UserRound, Wallet } from 'lucide-react'
+import { CalendarClock, ChevronRight, Handshake, MessageCircle, PhoneCall, Receipt, Tag, UserRound, Wallet } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { money, tempOf } from './labels'
@@ -15,16 +15,17 @@ const day = (d: string | null | undefined, t?: string | null) =>
 const dur = (s: number | null) => (s ? (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`) : '')
 const cap = (s: string | null | undefined) => (s ? s.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '')
 
-function Item({ icon: Icon, label, children, tone }: { icon: typeof Tag; label: string; children: ReactNode; tone?: 'danger' }) {
+function Item({ icon: Icon, label, children, tone, onClick }: { icon: typeof Tag; label: string; children: ReactNode; tone?: 'danger' | 'success'; onClick?: () => void }) {
   return (
-    <div className={cn('glance-item', tone && `is-${tone}`)}>
+    <div className={cn('glance-item', tone && `is-${tone}`, onClick && 'is-link')} onClick={onClick} role={onClick ? 'button' : undefined}>
       <span className="glance-ic">
         <Icon size={15} />
       </span>
       <div className="glance-text">
         <span className="glance-label">{label}</span>
-        <div>{children}</div>
+        <div className="glance-val">{children}</div>
       </div>
+      {onClick && <ChevronRight size={15} className="glance-go" />}
     </div>
   )
 }
@@ -35,15 +36,18 @@ export function LeadGlance({
   temperature,
   createdAt,
   owner,
-  money: m,
+  billing: m,
+  onBilling,
   refreshKey,
 }: {
   leadId: string
   temperature: Temperature | null
   createdAt: string
   owner: string | null
-  /** billed / received (null: no bookings or purchases) */
-  money: { billed: number; received: number } | null
+  /** billed / received / overdue (bookings & purchases), invoices count, billing details */
+  billing: { billed: number; received: number; overdue: number; invoices: number | null; company: string | null; gstin: string | null }
+  /** opens Payments */
+  onBilling?: () => void
   refreshKey?: number
 }) {
   const [g, setG] = useState<Glance | null>(null)
@@ -116,11 +120,40 @@ export function LeadGlance({
           <span className="muted">None</span>
         )}
       </Item>
-      {m && (
-        <Item icon={Wallet} label="Billed · Paid · Due">
-          <b>{money(m.billed)}</b> · {money(m.received)} · <span className={m.billed - m.received > 0 ? 'danger-text' : undefined}>{money(Math.max(0, m.billed - m.received))}</span>
-        </Item>
-      )}
+      <Item icon={Wallet} label="Billing" tone={m.overdue > 0 ? 'danger' : m.billed > 0 && m.billed <= m.received ? 'success' : undefined} onClick={onBilling}>
+        {m.billed > 0 ? (
+          <>
+            <div className="glance-money">
+              <span>
+                <small>Billed</small>
+                <b>{money(m.billed)}</b>
+              </span>
+              <span>
+                <small>Paid</small>
+                <b className="success-text">{money(m.received)}</b>
+              </span>
+              <span>
+                <small>Due</small>
+                <b className={m.billed - m.received > 0 ? 'danger-text' : undefined}>{money(Math.max(0, m.billed - m.received))}</b>
+              </span>
+            </div>
+            {m.overdue > 0 && <div className="small danger-text">{money(m.overdue)} overdue</div>}
+          </>
+        ) : (
+          <span className="muted">Nothing billed yet</span>
+        )}
+        {m.invoices ? <div className="muted small">{m.invoices} invoice{m.invoices === 1 ? '' : 's'}</div> : null}
+      </Item>
+      <Item icon={Receipt} label="Bill to">
+        {m.company || m.gstin ? (
+          <>
+            {m.company || '—'}
+            {m.gstin && <div className="muted small">GSTIN {m.gstin}</div>}
+          </>
+        ) : (
+          <span className="muted">Billing details not added</span>
+        )}
+      </Item>
       <Item icon={MessageCircle} label="WhatsApp">
         {g?.whatsapp ? (
           <>

@@ -24,7 +24,6 @@ import { LeadDrawer } from './LeadDrawer'
 import { ExtraFields, extraOf, LeadOrigin } from './LeadOrigin'
 import { LeadGlance } from './LeadGlance'
 import { LeadInsightCard } from './LeadInsightCard'
-import { SummarizeLeads } from './SummarizeLeads'
 import { Modal } from '@/components/Modal'
 import { BillingCard } from '@/invoices/Billing'
 import { fullName, money } from './labels'
@@ -430,11 +429,18 @@ export function LeadPage() {
                 temperature={lead.temperature}
                 createdAt={lead.created_at}
                 owner={ownerName}
-                money={isCustomer || billed > 0 ? { billed, received } : null}
+                billing={{
+                  billed,
+                  received,
+                  overdue: overdue.reduce((n, p) => n + Number(p.amount), 0),
+                  invoices: canInv ? invCount : null,
+                  company: lead.bill_company ?? null,
+                  gstin: lead.bill_gstin ?? null,
+                }}
+                onBilling={canInv || canPay ? toMoneyTab : undefined}
                 refreshKey={refresh}
               />
               <LeadInsightCard leadId={lead.id} refreshKey={refresh} />
-              <SummarizeLeads canRun={canEdit} />
             </aside>
           </div>
         )}
