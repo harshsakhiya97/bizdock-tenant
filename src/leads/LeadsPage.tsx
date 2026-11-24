@@ -279,6 +279,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       due: due.length,
       overdue: due.filter((l) => new Date(l.next_follow_up_at!) < now).length,
       hot: base.filter((l) => l.temperature === 'hot').length,
+      // per category (the Category filter's numbers)
+      temps: Object.fromEntries(TEMPERATURES.map((t) => [t.value, base.filter((l) => l.temperature === t.value).length])) as Record<string, number>,
       // every category's count (the Leads card)
       cats: [...TEMPERATURES.map((t) => `${base.filter((l) => l.temperature === t.value).length} ${t.label.toLowerCase()}`), ...(base.some((l) => !l.temperature) ? [`${base.filter((l) => !l.temperature).length} no category`] : [])].join(' · '),
       won: base.filter((l) => kindOf(l) === 'won').length,
@@ -299,6 +301,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           due: srvStats.due,
           overdue: srvStats.overdue,
           hot: srvStats.temps.hot ?? 0,
+          temps: Object.fromEntries(TEMPERATURES.map((t) => [t.value, srvStats.temps[t.value] ?? 0])) as Record<string, number>,
           won: srvStats.won,
           cats: [...TEMPERATURES.map((t) => `${srvStats.temps[t.value] ?? 0} ${t.label.toLowerCase()}`), ...(srvStats.temps.none ? [`${srvStats.temps.none} no category`] : [])].join(' · '),
         }
@@ -474,7 +477,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             <option value="">Category</option>
             {TEMPERATURES.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.label}
+                {t.label} ({(cards.temps[t.value] ?? 0).toLocaleString('en-IN')})
               </option>
             ))}
           </select>
