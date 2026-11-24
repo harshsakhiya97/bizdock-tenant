@@ -7,6 +7,15 @@ const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : '�
 const x = (a: number, b: number) => (b ? `${(a / b).toFixed(2)}x` : '—')
 const NA = <span className="sc-na">NA</span>
 
+/** Paid Podcast: one Funnel row — per column the leads it counts (n), out of the opt-ins (of), and its list */
+export type PodCell = { n: number; of: number; open: () => void }
+export type PodRow = { label: string; ads: PodCell; organic: PodCell; total: PodCell }
+const podCell = (c: PodCell) => (
+  <button type="button" className="sc-link" onClick={c.open} title="See the leads">
+    {c.of ? `${Math.round((c.n / c.of) * 100)}%` : '—'} <span className="muted">({c.n.toLocaleString('en-IN')})</span>
+  </button>
+)
+
 type Line = { label: ReactNode; ads: ReactNode; organic: ReactNode; total: ReactNode; strong?: boolean }
 type Group = { name: string; tone: string; lines: Line[] }
 
@@ -14,7 +23,7 @@ type Group = { name: string; tone: string; lines: Line[] }
  * Funnel → Overview → Scorecard: the same numbers as the funnel, as one table in sections (Marketing, Funnel, Data,
  * Business) with Ads / Organic / Total columns. Ad numbers (spend, impressions, clicks…) are Ads only: Organic shows NA.
  */
-export function FunnelScorecard({ f, gst }: { f: Flow; gst: number }) {
+export function FunnelScorecard({ f, gst, pod }: { f: Flow; gst: number; pod?: PodRow[] }) {
   const spend = Number(f.spend)
   const spendGst = f.spend_gst != null ? Number(f.spend_gst) : spend * gst
   const src = f.source ?? 'fb'
@@ -45,14 +54,16 @@ export function FunnelScorecard({ f, gst }: { f: Flow; gst: number }) {
     { label: 'CPL', ...{ ads: leadsAds ? inr(spend / leadsAds) : '—', organic: NA, total: f.leads ? inr(spend / f.leads) : '—' } },
   ]
 
-  const funnel: Line[] = stages.map((s) => ({
+  const funnel: Line[] = pod
+    ? pod.map((r) => ({ label: r.label, ads: podCell(r.ads), organic: podCell(r.organic), total: podCell(r.total) }))
+    : stages.map((s) => ({
     label: s.name,
     ads: num(s.ads),
     organic: num(s.n - s.ads),
     total: num(s.n),
     strong: s.kind === 'won',
   }))
-  if (f.lost) funnel.push({ label: 'Lost', ads: NA, organic: NA, total: num(f.lost) })
+  if (f.lost && !pod) funnel.push({ label: 'Lost', ads: NA, organic: NA, total: num(f.lost) })
 
   const data: Line[] = stages.map((s) => ({
     label: `Lead → ${s.name}`,
@@ -74,7 +85,7 @@ export function FunnelScorecard({ f, gst }: { f: Flow; gst: number }) {
   const groups: Group[] = [
     { name: 'Marketing', tone: 'green', lines: marketing },
     ...(funnel.length ? [{ name: 'Funnel', tone: 'blue', lines: funnel }] : []),
-    ...(data.length ? [{ name: 'Data', tone: 'yellow', lines: data }] : []),
+    ...(data.length && !pod ? [{ name: 'Data', tone: 'yellow', lines: data }] : []),
     { name: 'Business', tone: 'peach', lines: business },
   ]
 

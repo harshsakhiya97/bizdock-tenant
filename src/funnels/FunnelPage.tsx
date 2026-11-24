@@ -12,6 +12,7 @@ import { listFunnelSubmissions, listFunnels, listLandingPages, listSheets, listW
 import { FunnelDrawer } from './FunnelDrawer'
 import { FunnelLeadsTable } from './FunnelLeadsTable'
 import { activeType } from '@/business/activeType'
+import { BT } from '@/auth/auth-context'
 import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
@@ -138,6 +139,7 @@ export function FunnelPage() {
   useEffect(load, [load])
 
   const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
+  const wonIds = useMemo(() => new Set((funnel?.funnel_stages ?? []).filter((s) => s.kind === 'won').map((s) => s.id)), [funnel])
   const biz = businesses.find((b) => b.id === funnel?.business_id)
   const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
   const businessName = biz ? (subName ? `${biz.name} · ${subName}` : biz.name) : '—'
@@ -271,7 +273,16 @@ export function FunnelPage() {
               <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
               <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
 
-              <FunnelAdsReport funnelId={funnel.id} leads={leads} range={repRange} setRange={setRepRange} src={repSrc} setSrc={setRepSrc} />
+              <FunnelAdsReport
+                funnelId={funnel.id}
+                leads={leads}
+                range={repRange}
+                setRange={setRepRange}
+                src={repSrc}
+                setSrc={setRepSrc}
+                podcast={activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null) === BT.PAID_PODCAST}
+                wonIds={wonIds}
+              />
 
               <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>

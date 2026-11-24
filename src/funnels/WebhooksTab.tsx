@@ -12,7 +12,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { addWebhook, deleteWebhook, regenerateWebhookKey, setWebhookActive, updateWebhook, webhookUrl } from './api'
 import { FieldMapping } from './FieldMapping'
 import { curlSnippet, htmlSnippet, jsSnippet } from './snippets'
-import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type SubmissionRow, type WebhookAction, type WebhookInput } from './types'
+import { MATCH_BY, WEBHOOK_ACTIONS, type FunnelWebhook, type MatchBy, type SubmissionRow, type WebhookAction, type WebhookInput, type FormStep } from './types'
 import { useCopy } from './useCopy'
 
 type Kind = 'html' | 'js' | 'curl'
@@ -55,6 +55,7 @@ export function WebhooksTab({
   const [hookName, setHookName] = useState('')
   const [hookAction, setHookAction] = useState<WebhookAction>('create_lead')
   const [hookMatch, setHookMatch] = useState<MatchBy>('phone')
+  const [hookStep, setHookStep] = useState<FormStep | ''>('')
   const [formError, setFormError] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const [snippet, setSnippet] = useState<Record<string, Kind | undefined>>({})
@@ -64,6 +65,7 @@ export function WebhooksTab({
     setHookName(naming?.hook?.name ?? '')
     setHookAction(naming?.hook?.action ?? 'create_lead')
     setHookMatch(naming?.hook?.match_by ?? 'phone')
+    setHookStep(naming?.hook?.step ?? '')
     setFormError(null)
   }, [naming])
 
@@ -247,6 +249,7 @@ export function WebhooksTab({
                       name: hookName,
                       action: hookAction,
                       match_by: hookMatch,
+                      step: hookStep || null,
                     }
                     void run(
                       () => (n.hook ? updateWebhook(n.hook.id, w) : addWebhook(tenant.id, funnelId, w).then(() => undefined)),
@@ -295,6 +298,15 @@ export function WebhooksTab({
               <Hint>Looked up among this business’s leads. If no lead matches, the post is only logged (shown as “no match”).</Hint>
             </div>
           )}
+          <div style={{ marginTop: 14 }}>
+            <Label htmlFor="hook-step">Form step</Label>
+            <Select id="hook-step" value={hookStep} onChange={(e) => setHookStep(e.target.value as FormStep | '')}>
+              <option value="">Not set</option>
+              <option value="optin">Opt-in form</option>
+              <option value="vsl">VSL form</option>
+            </Select>
+            <Hint>Paid Podcast Scorecard: leads who sent a VSL form count as “VSL form filled”.</Hint>
+          </div>
           {formError && (
             <div className="alert alert-error small" style={{ marginTop: 12 }}>
               {formError}

@@ -5,7 +5,8 @@ import { Filter, List, Table2, Waypoints, TrendingDown, TrendingUp } from 'lucid
 import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
-import { FunnelScorecard } from './FunnelScorecard'
+import { FunnelScorecard, type PodRow } from './FunnelScorecard'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
 import { MetaSync } from './MetaSync'
 import { DateRangePicker, type Range } from '@/components/DateRange'
@@ -38,7 +39,7 @@ type Row = {
   received: number
   ls: Lead[]
 }
-type Lead = { id: string; created_at: string; next_follow_up_at?: string | null; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+type Lead = { id: string; created_at: string; stage_id?: string | null; next_follow_up_at?: string | null; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
 /** where a lead came from, by its UTM source: Facebook / Instagram (fb, ig…) or Google (google, adwords, youtube…) */
 /** an ad lead: its UTM source is Facebook / Instagram or Google */
 const isAds = (l: Pick<Lead, 'utm_source'>) => fromSrc(l, 'fb') || fromSrc(l, 'google')
@@ -66,7 +67,13 @@ export function FunnelAdsReport({
   setRange,
   src,
   setSrc,
+  podcast,
+  wonIds,
 }: {
+  /** a Paid Podcast funnel: the Scorecard's Funnel section is opt-in → VSL → meetings → closed / not interested */
+  podcast?: boolean
+  /** the funnel's won stages */
+  wonIds?: Set<string>
   funnelId: string
   leads?: Lead[] | null
   /** the period and the source: kept by the funnel page, so the Overview tiles follow them too */
@@ -95,7 +102,7 @@ export function FunnelAdsReport({
   const [show, setShow] = useState<{ r: Row; k: 'leads' | 'paid' | 'booked' | 'showed' | 'closed' | 'revenue' } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // the funnel's leads with a meeting (Booking) and with a meeting done (Showup)
-  const [meet, setMeet] = useState<{ booked: Map<string, string>; showed: Map<string, string> }>({ booked: new Map(), showed: new Map() })
+  const [meet, setMeet] = useState<{ booked: Map<string, string>; showed: Map<string, string>; noshow?: Set<string> }>({ booked: new Map(), showed: new Map() })
   const ids = useMemo(() => (leads ?? []).map((l) => l.id), [leads])
   useEffect(() => {
     if (!ids.length) return
@@ -104,6 +111,7 @@ export function FunnelAdsReport({
       // per lead: its first meeting (Booking) and its last meeting done (Show up), as 'YYYY-MM-DD HH:MM'
       const booked = new Map<string, string>()
       const showed = new Map<string, string>()
+      const noshow = new Set<string>()
       for (let i = 0; i < ids.length; i += 300) {
         const { data } = await db()
           .from('meetings')
@@ -112,17 +120,42 @@ export function FunnelAdsReport({
           .in('lead_id', ids.slice(i, i + 300))
         for (const m of (data ?? []) as { lead_id: string; status: string; meeting_date: string; start_time: string }[]) {
           if (m.status === 'cancelled') continue
+          if (m.status === 'no_show') noshow.add(m.lead_id)
           const at = `${m.meeting_date} ${String(m.start_time).slice(0, 5)}`
           if (!booked.has(m.lead_id) || at < booked.get(m.lead_id)!) booked.set(m.lead_id, at)
           if (m.status === 'done' && (!showed.has(m.lead_id) || at > showed.get(m.lead_id)!)) showed.set(m.lead_id, at)
         }
       }
-      if (live) setMeet({ booked, showed })
+      if (live) setMeet({ booked, showed, noshow })
     })()
     return () => {
       live = false
     }
   }, [ids, tenant.id, reload])
+
+  // Paid Podcast: the leads that sent a VSL form (Webhooks → Form step: VSL)
+  const [vsl, setVsl] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    if (!podcast) return
+    let live = true
+    void (async () => {
+      const { data: hooks } = await db().from('funnel_webhooks').select('id').eq('funnel_id', funnelId).eq('step', 'vsl')
+      const hookIds = ((hooks ?? []) as { id: string }[]).map((h) => h.id)
+      const out = new Set<string>()
+      if (hookIds.length) {
+        for (let from = 0; ; from += 1000) {
+          const { data } = await db().from('lead_submissions').select('lead_id').in('webhook_id', hookIds).not('lead_id', 'is', null).range(from, from + 999)
+          for (const r of (data ?? []) as { lead_id: string }[]) out.add(r.lead_id)
+          if (!data || data.length < 1000) break
+        }
+      }
+      if (live) setVsl(out)
+    })()
+    return () => {
+      live = false
+    }
+  }, [podcast, funnelId, reload])
+  const [podShow, setPodShow] = useState<StatShow<Lead> | null>(null)
 
   // per lead: Razorpay payments (the funnel's products, else all) by phone / email, and invoice totals (bookings)
   const [money2, setMoney2] = useState<{ pays: Map<string, { n: number; amt: number; last: string }>; billed: Map<string, number> }>({ pays: new Map(), billed: new Map() })
@@ -365,6 +398,39 @@ export function FunnelAdsReport({
     () => (leads ?? []).filter((l) => !l.is_archived && fromSrc(l, src) && leadDay(l.created_at) >= from && leadDay(l.created_at) <= to),
     [leads, src, from, to],
   )
+  const podRows = useMemo<PodRow[] | undefined>(() => {
+    if (!podcast) return undefined
+    const won = wonIds ?? new Set<string>()
+    const steps: [string, (l: Lead) => boolean][] = [
+      ['Opt-in form filled', () => true],
+      ['VSL form filled', (l) => vsl.has(l.id)],
+      ['Meeting booked', (l) => meet.booked.has(l.id)],
+      ['Meeting done', (l) => meet.showed.has(l.id)],
+      ['Meeting no-show', (l) => !!meet.noshow?.has(l.id) && !meet.showed.has(l.id)],
+      ['Closed', (l) => l.temperature === 'closed' || won.has(l.stage_id ?? '')],
+      ['Not interested', (l) => l.temperature === 'not_interested'],
+    ]
+    const ads = periodLeads.filter((l) => isAds(l))
+    const org = periodLeads.filter((l) => !isAds(l))
+    const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    const open = (title: string, rows: Lead[]) =>
+      setPodShow({
+        title,
+        rows,
+        cols: [
+          { label: 'Lead', render: (l) => <><b>{who(l)}</b>{l.phone && <div className="muted small">{l.phone}</div>}</> },
+          { label: 'Lead date', render: (l) => <span className="nowrap">{dt(l.created_at)}</span> },
+          { label: 'Category', render: (l) => (l.temperature ? l.temperature.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '—') },
+        ],
+      })
+    return steps.map(([label, pick]) => {
+      const cell = (set: Lead[], col: string) => {
+        const rows = set.filter(pick)
+        return { n: rows.length, of: set.length, open: () => open(`${label} · ${col}`, rows) }
+      }
+      return { label, ads: cell(ads, 'Ads'), organic: cell(org, 'Organic'), total: cell(periodLeads, 'Total') }
+    })
+  }, [podcast, wonIds, vsl, meet, periodLeads])
   const bookedSet = useMemo(() => new Set(meet.booked.keys()), [meet])
   const showedSet = useMemo(() => new Set(meet.showed.keys()), [meet])
   const revOf = useCallback((id: string) => (money2.billed.get(id) ?? 0) + (money2.pays.get(id)?.amt ?? 0), [money2])
@@ -433,7 +499,8 @@ export function FunnelAdsReport({
         <>
           {flow === undefined && !error && <div className="muted small">Loading…</div>}
           {flow === null && <div className="muted small">You can’t see this funnel’s report.</div>}
-          {flow && <FunnelScorecard f={flow} gst={gst} />}
+          {flow && <FunnelScorecard f={flow} gst={gst} pod={podRows} />}
+          <StatRecords show={podShow} onClose={() => setPodShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
         </>
       )}
       {view === 'flow' && (
