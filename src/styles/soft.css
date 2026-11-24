@@ -173,3 +173,9 @@ body { background: var(--bg); }
 .flow-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px color-mix(in srgb, var(--c, var(--brand)) 18%, transparent); }
 .flow-card b { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: color-mix(in oklab, var(--c, var(--brand)) 55%, var(--ink)); }
 .flow-card span { font-size: 12.5px; font-weight: 700; color: var(--text); }
+
+/* Dashboard number cards: the same indigo highlight as the stat cards, on hover */
+.db-card { transition: transform .15s, box-shadow .15s, background .15s; }
+.db-card:hover { background: var(--brand-grad); border-color: transparent; color: #fff; transform: translateY(-2px); box-shadow: 0 14px 30px color-mix(in srgb, var(--brand) 30%, transparent); }
+.db-card:hover :is(b, span, small) { color: #fff !important; }
+.db-card:hover small { opacity: .88; }
