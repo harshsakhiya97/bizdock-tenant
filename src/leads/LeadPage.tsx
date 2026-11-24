@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, Bot, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, MessageCircle, Package, Route, UserRound, Video, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, MessageCircle, Package, Route, UserRound, Video, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -63,7 +63,9 @@ export function LeadPage() {
   // ?tab=followups / bookings opens that tab (e.g. from the dashboard)
   const [tab, setTab] = useState<Tab>(() => {
     const t = new URLSearchParams(window.location.search).get('tab')
-    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' || t === 'ai_calls' || t === 'profile' || t === 'journey' ? t : 'details'
+    // ?tab=ai_calls: AI Calls is inside Follow-ups now
+    if (t === 'ai_calls') return 'followups'
+    return t === 'followups' || t === 'bookings' || t === 'meetings' || t === 'webinars' || t === 'purchases' || t === 'payments' || t === 'profile' || t === 'journey' ? t : 'details'
   })
   const [editing, setEditing] = useState(false)
   const [bk, setBk] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
@@ -83,6 +85,8 @@ export function LeadPage() {
   // AI Calling: Call from AI (the drawer) and the AI Calls tab's count
   const [aiCall, setAiCall] = useState(false)
   const [aiCount, setAiCount] = useState<number | null>(null)
+  // bump: Follow-ups opens on its AI Calls sub-tab (?tab=ai_calls, or a call just placed)
+  const [openAi, setOpenAi] = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'ai_calls' ? 1 : 0))
   const [refresh, setRefresh] = useState(0)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
 
@@ -254,7 +258,6 @@ export function LeadPage() {
         ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
         : []),
     ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments', count: (canInv ? (invCount ?? 0) : 0) + (canPay ? directCount : 0) }] : []),
-    ...(can('ai_calling', 'view') || aiCount ? [{ id: 'ai_calls' as Tab, label: 'AI Calls', count: aiCount ?? undefined }] : []),
   ]
 
   // each tab's icon
@@ -268,7 +271,6 @@ export function LeadPage() {
     journey: Route,
     bookings: Package,
     payments: Wallet,
-    ai_calls: Bot,
   }
 
   return (
@@ -398,13 +400,21 @@ export function LeadPage() {
           </div>
         )}
         {tab === 'followups' && (
-          <FollowUpsTab leadId={lead.id} members={members} canEdit={canFollow} onWhatsApp={() => setWa(true)} onChanged={done} refreshKey={refresh} />
+          <FollowUpsTab
+            leadId={lead.id}
+            members={members}
+            canEdit={canFollow}
+            onWhatsApp={() => setWa(true)}
+            onChanged={done}
+            refreshKey={refresh}
+            ai={can('ai_calling', 'view') || aiCount ? { count: aiCount, node: <LeadAiCalls leadId={lead.id} members={members} refreshKey={refresh} onCount={setAiCount} /> } : undefined}
+            openAi={openAi}
+          />
         )}
         {tab === 'meetings' && (
           <MeetingsTab meetings={meetings} members={members} canAdd onAdd={() => setMt({ meeting: null })} onOpen={(m) => setMt({ meeting: m })} />
         )}
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
-        {tab === 'ai_calls' && <LeadAiCalls leadId={lead.id} members={members} refreshKey={refresh} onCount={setAiCount} />}
         {tab === 'payments' && (canPay || canInv) && (
           <div className="stack">
             {canPay && canInv && (
@@ -463,7 +473,8 @@ export function LeadPage() {
           onPlaced={(c) => {
             setAiCall(false)
             setNotice({ ok: `Calling ${c.to_name || c.to_phone} now: the result shows in AI Calls.` })
-            setTab('ai_calls')
+            setTab('followups')
+            setOpenAi((n) => n + 1)
             setRefresh((r) => r + 1)
           }}
         />

@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { PlayRecording } from '@/callyzer/PlayRecording'
 import { TranscriptCell, type TranscriptStatus } from '@/callyzer/CallTranscript'
 import { Paged } from '@/components/ui'
-import { MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
+import { Bot, MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
 import { clearLeadFollowUps, listOutcomes, scheduleFollowUp } from '@/followups/api'
@@ -65,6 +65,8 @@ export function FollowUpsTab({
   onWhatsApp,
   onChanged,
   refreshKey,
+  ai,
+  openAi,
 }: {
   leadId: string
   members: MemberOption[]
@@ -73,11 +75,19 @@ export function FollowUpsTab({
   onChanged: (msg: string) => void
   /** bump to reload (after a WhatsApp is sent from the header) */
   refreshKey: number
+  /** the AI Calls sub-tab (the lead page's AI calls list and its count) */
+  ai?: { count: number | null; node: ReactNode }
+  /** bump to open the AI Calls sub-tab (after a call is placed) */
+  openAi?: number
 }) {
   const tenant = useTenant()
   const { membership } = useAuth()
   const me = membership?.id
-  const [tab, setTab] = useState<'calls' | 'callyzer' | 'whatsapp'>('calls')
+  const [tab, setTab] = useState<'calls' | 'callyzer' | 'whatsapp' | 'ai'>(() => (openAi && ai ? 'ai' : 'calls'))
+  useEffect(() => {
+    if (openAi && ai) setTab('ai')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openAi])
   const [phoneCalls, setPhoneCalls] = useState<CallRow[] | null>(null)
   const [wati, setWati] = useState<WaLog[]>([])
   const [fus, setFus] = useState<Fu[] | null>(null)
@@ -194,6 +204,11 @@ export function FollowUpsTab({
           <button type="button" className={cn(tab === 'whatsapp' && 'is-active')} onClick={() => setTab('whatsapp')}>
             <MessageCircle size={14} /> WhatsApp <span className="muted small">{(msgs?.length ?? 0) + wati.length}</span>
           </button>
+          {ai && (
+            <button type="button" className={cn(tab === 'ai' && 'is-active')} onClick={() => setTab('ai')}>
+              <Bot size={14} /> AI Calls <span className="muted small">{ai.count ?? 0}</span>
+            </button>
+          )}
         </div>
         {tab === 'whatsapp' && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onWhatsApp}>
@@ -202,6 +217,7 @@ export function FollowUpsTab({
         )}
       </div>
 
+      {tab === 'ai' && ai?.node}
       {tab === 'calls' && (
         <>
           {canEdit && (
