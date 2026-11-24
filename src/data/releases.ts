@@ -13,6 +13,27 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.34',
+    date: '2026-11-24',
+    title: 'Soft Indigo look, Scorecard & Lead flow, invoice GST type',
+    summary: 'A new look across the app, two new funnel report views, a date range on the Team Report and Invoices, and With / Without GST on an existing invoice.',
+    new: [
+      'New look ("Soft Indigo"): a lavender page, white rounded cards with soft shadows, the indigo gradient on buttons and the active menu item, new heading font. Stat and dashboard cards turn indigo on hover (and while their filter is on).',
+      'Funnel → Overview → Scorecard: the funnel’s numbers in one table (Marketing, Funnel, Data, Business) with Ads / Organic / Total columns.',
+      'Funnel → Overview → Lead flow: leads from Source → Meeting → Category → Outcome as bands; hover to follow a path, click a box for its leads.',
+      'Edit invoice: With GST / Without GST, From (company) and GST % — like a new invoice. A different company gives the invoice that company’s next number; the bookings, totals and the unpaid parts follow.',
+      'Team Report: a date range (This month by default) instead of one day.',
+    ],
+    improved: [
+      'One design for the small number boxes (funnel cards, funnel overview, reports): tinted, full labels, hover lift.',
+      'Funnel → Overview: colourful Ad performance cards, 4 a row, and an Ad leads card on Overall / Google.',
+      'Leads: the Category filter shows each category’s count, e.g. New (6).',
+      'Invoices: a date range filter (All dates by default) instead of the month list.',
+      'Razorpay history logs and Callyzer Team numbers open on All dates.',
+      'Side menu: no more sideways scrolling.',
+    ],
+  },
+  {
     version: '0.33',
     date: '2026-11-23',
     title: 'Masked keys with Copy, Callyzer Report, Team Report',
