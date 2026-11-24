@@ -403,17 +403,17 @@ export function FunnelAdsReport({
     const won = wonIds ?? new Set<string>()
     const steps: [string, (l: Lead) => boolean][] = [
       ['Opt-in form filled', () => true],
+      // nothing after the opt-in: no VSL form, no meeting, not closed, not marked not interested
+      [
+        'Only opted in (no next step)',
+        (l) => !vsl.has(l.id) && !meet.booked.has(l.id) && !meet.noshow?.has(l.id) && l.temperature !== 'closed' && !won.has(l.stage_id ?? '') && l.temperature !== 'not_interested',
+      ],
       ['VSL form filled', (l) => vsl.has(l.id)],
       ['Meeting booked', (l) => meet.booked.has(l.id)],
       ['Meeting done', (l) => meet.showed.has(l.id)],
       ['Meeting no-show', (l) => !!meet.noshow?.has(l.id) && !meet.showed.has(l.id)],
       ['Closed', (l) => l.temperature === 'closed' || won.has(l.stage_id ?? '')],
       ['Not interested', (l) => l.temperature === 'not_interested'],
-      // nothing after the opt-in: no VSL form, no meeting, not closed, not marked not interested
-      [
-        'Only opted in (no next step)',
-        (l) => !vsl.has(l.id) && !meet.booked.has(l.id) && !meet.noshow?.has(l.id) && l.temperature !== 'closed' && !won.has(l.stage_id ?? '') && l.temperature !== 'not_interested',
-      ],
     ]
     const ads = periodLeads.filter((l) => isAds(l))
     const org = periodLeads.filter((l) => !isAds(l))
