@@ -10,6 +10,7 @@ import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { useAiRows } from '@/ai/insights'
+import { SummarizeLeads } from './SummarizeLeads'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
 import { listFunnels } from '@/funnels/api'
@@ -405,6 +406,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         subtitle={`Showing ${scopeText}${selected ? ` in ${selected.name}${sub ? ` · ${sub.name}` : ''}` : ''}.`}
         actions={
           <>
+            {!customers && <SummarizeLeads canRun={can('leads', 'edit')} />}
             {can('leads', 'export') && (
               <button type="button" className="btn btn-outline" onClick={exportCsv} disabled={!visible.length}>
                 <Download size={15} /> Export CSV

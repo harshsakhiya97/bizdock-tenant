@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { FormSection } from '@/components/Field'
 import { listLeadSubmissions } from '@/funnels/api'
 import type { SubmissionRow } from '@/funnels/types'
@@ -19,7 +19,7 @@ const fmtDate = (v: string) => {
 const isLong = (v: string) => v.length > 60 || /^https?:\/\//i.test(v)
 
 /** Where a lead came from (landing page, UTMs, extra form fields) and every form post / import for it. */
-export function LeadOrigin({ lead }: { lead: LeadRow }) {
+export function LeadOrigin({ lead, part }: { lead: LeadRow; part?: 'source' }) {
   const [subs, setSubs] = useState<SubmissionRow[] | null>(null)
   const [pages, setPages] = useState<Map<string, string>>(new Map())
   const [hooks, setHooks] = useState<Map<string, string>>(new Map())
@@ -48,13 +48,14 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
   const leadDate = fmtDate(sent ? String(sent[1]) : lead.created_at)
   const extra = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && !isLong(String(v)))
   const wide = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && isLong(String(v)))
-  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !all.length && !subs?.length) return null
+  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !all.length && !subs?.length) return part === 'source' ? <div className="muted small">No form or source details.</div> : null
   const pageName = (id: string | null) => (id ? pages.get(id) ?? 'Landing page' : null)
   const hookName = (id: string | null) => (id ? hooks.get(id) ?? 'Webhook' : null)
   const formOf = (s: Pick<SubmissionRow, 'webhook_id' | 'landing_page_id'>) => hookName(s.webhook_id) ?? pageName(s.landing_page_id)
 
+  const Wrap = part === 'source' ? Bare : Section
   return (
-    <FormSection title="Source & form submissions" description="Filled in by a webhook form, a Google Sheet or an import.">
+    <Wrap>
       <dl className="info-grid">
         <FragmentRow k="Lead date" v={leadDate} />
         {lead.webhook_id && <FragmentRow k="Form" v={hookName(lead.webhook_id) ?? ''} />}
@@ -62,12 +63,14 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
         {utms.map((k) => (
           <FragmentRow key={k} k={k} v={lead[k] as string} />
         ))}
-        {extra.map(([k, v]) => (
-          <FragmentRow key={k} k={label(k)} v={String(v)} />
-        ))}
-        {wide.map(([k, v]) => (
-          <FragmentRow key={k} k={label(k)} v={String(v)} wide />
-        ))}
+        {part !== 'source' &&
+          extra.map(([k, v]) => (
+            <FragmentRow key={k} k={label(k)} v={String(v)} />
+          ))}
+        {part !== 'source' &&
+          wide.map(([k, v]) => (
+            <FragmentRow key={k} k={label(k)} v={String(v)} wide />
+          ))}
       </dl>
 
       {subs && subs.length > 0 && (
@@ -113,7 +116,29 @@ export function LeadOrigin({ lead }: { lead: LeadRow }) {
           })}
         </ol>
       )}
-    </FormSection>
+    </Wrap>
+  )
+}
+
+const Section = ({ children }: { children: ReactNode }) => (
+  <FormSection title="Source & form submissions" description="Filled in by a webhook form, a Google Sheet or an import.">
+    {children}
+  </FormSection>
+)
+const Bare = ({ children }: { children: ReactNode }) => <div className="stack">{children}</div>
+
+/** the form's own fields (not name / phone / email / UTMs / the sent time) */
+export const extraOf = (lead: LeadRow) =>
+  Object.entries(lead.extra ?? {}).filter(([k, v]) => String(v ?? '').trim() && !DATE_KEYS.has(k.toLowerCase()) && !HIDDEN.has(k))
+
+export function ExtraFields({ lead }: { lead: LeadRow }) {
+  const all = extraOf(lead)
+  return (
+    <dl className="info-grid">
+      {all.map(([k, v]) => (
+        <FragmentRow key={k} k={label(k)} v={typeof v === 'object' ? JSON.stringify(v) : String(v)} wide={isLong(String(v))} />
+      ))}
+    </dl>
   )
 }
 

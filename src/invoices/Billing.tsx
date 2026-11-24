@@ -62,7 +62,10 @@ export function BillingCard({
   lead,
   canEdit,
   onSaved,
+  bare,
 }: {
+  /** inside the lead page's Billing details section: no heading of its own */
+  bare?: boolean
   lead: { id: string; bill_company?: string | null; bill_address?: string | null; bill_state?: string | null; bill_state_code?: string | null; bill_gstin?: string | null }
   canEdit: boolean
   onSaved: (b: Buyer) => void
@@ -73,7 +76,7 @@ export function BillingCard({
   return (
     <div>
       <div className="row-between">
-        <span className="field-label">Billing details (for invoices)</span>
+        {bare ? <span className="muted small">Used on invoices.</span> : <span className="field-label">Billing details (for invoices)</span>}
         {canEdit && (
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => setOpen(true)}>
             <Pencil size={13} /> Edit

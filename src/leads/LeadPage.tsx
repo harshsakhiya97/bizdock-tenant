@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ChevronDown, ClipboardList, GraduationCap, Handshake, History, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -21,7 +21,10 @@ import { CategorySelect } from './CategorySelect'
 import { LeadDescription } from './LeadDescription'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
-import { LeadOrigin } from './LeadOrigin'
+import { ExtraFields, extraOf, LeadOrigin } from './LeadOrigin'
+import { LeadGlance } from './LeadGlance'
+import { LeadInsightCard } from './LeadInsightCard'
+import { Modal } from '@/components/Modal'
 import { BillingCard } from '@/invoices/Billing'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
@@ -81,6 +84,8 @@ export function LeadPage() {
   const [fuCount, setFuCount] = useState<number | null>(null)
   const [invCount, setInvCount] = useState<number | null>(null)
   const [removing, setRemoving] = useState(false)
+  // the activity timeline, in a pop-up (header → History)
+  const [history, setHistory] = useState(false)
   const [wa, setWa] = useState(false)
   // AI Calling: Call from AI (the drawer) and the AI Calls tab's count
   const [aiCall, setAiCall] = useState(false)
@@ -202,6 +207,7 @@ export function LeadPage() {
   const today = new Date().toISOString().slice(0, 10)
   const overdue = [...won.flatMap((b) => b.booking_payments), ...bought.flatMap((p) => p.purchase_payments)].filter((p) => p.status !== 'paid' && p.due_on && p.due_on < today)
   const sourceName = refs.sources.find((s) => s.id === lead.source_id)?.name
+  const ownerName = members.find((m) => m.id === lead.owner_id)?.name ?? null
 
   const vars = {
     first_name: lead.first_name,
@@ -236,7 +242,16 @@ export function LeadPage() {
       ),
     ],
     ['Business', biz ? (subName ? `${biz} · ${subName}` : biz) : '—'],
+    ['Owner', ownerName ?? '—'],
   ]
+  // Details → More fields (the less used ones and the form's own fields)
+  const more: [string, React.ReactNode][] = [
+    ...(lead.estimated_amount ? ([['Estimated amount', money(lead.estimated_amount)]] as [string, React.ReactNode][]) : []),
+    ...(lead.required_on ? ([['Required on', fmtDay(lead.required_on)]] as [string, React.ReactNode][]) : []),
+    ...(lead.referred_by ? ([['Referred by', lead.referred_by]] as [string, React.ReactNode][]) : []),
+    ...(lead.whatsapp && lead.whatsapp !== lead.phone ? ([['WhatsApp', lead.whatsapp]] as [string, React.ReactNode][]) : []),
+  ]
+  const hasMore = more.length > 0 || extraOf(lead).length > 0
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
@@ -317,6 +332,9 @@ export function LeadPage() {
           </div>
         </div>
         <div className="row rec-actions">
+          <button type="button" className="btn btn-outline btn-icon" onClick={() => setHistory(true)} title="History (activity)" aria-label="History">
+            <History size={16} />
+          </button>
           {can('leads', 'delete') && (
             <button type="button" className="btn btn-outline danger-text" onClick={() => setRemoving(true)}>
               <Trash2 size={15} /> Delete
@@ -365,25 +383,57 @@ export function LeadPage() {
 
       <section className="card card-pad">
         {tab === 'details' && (
-          <div className="stack">
-            <dl className="info-grid">
-              {info.map(([k, v]) => (
-                <div key={k}>
-                  <dt>{k}</dt>
-                  <dd>{v}</dd>
-                </div>
-              ))}
-            </dl>
-            <div>
-              <span className="field-label">Description</span>
-              <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
+          <div className="lead-split">
+            <div className="stack lead-main">
+              <dl className="info-grid">
+                {info.map(([k, v]) => (
+                  <div key={k}>
+                    <dt>{k}</dt>
+                    <dd>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              <div>
+                <span className="field-label">Description</span>
+                <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
+              </div>
+              <div className="acc-list">
+                <Acc title="Billing details">
+                  <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
+                </Acc>
+                <Acc title="Source & form submissions">
+                  <LeadOrigin lead={lead} part="source" />
+                </Acc>
+                {hasMore && (
+                  <Acc title="More fields">
+                    <div className="stack">
+                      {more.length > 0 && (
+                        <dl className="info-grid">
+                          {more.map(([k, v]) => (
+                            <div key={k}>
+                              <dt>{k}</dt>
+                              <dd>{v}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      )}
+                      <ExtraFields lead={lead} />
+                    </div>
+                  </Acc>
+                )}
+              </div>
             </div>
-            <BillingCard lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
-            <LeadOrigin lead={lead} />
-            <div>
-              <span className="field-label">Activity</span>
-              <ActivityLog leadId={lead.id} stageName={stageName} members={members} canNote={false} refreshKey={refresh} />
-            </div>
+            <aside className="stack lead-side">
+              <LeadGlance
+                leadId={lead.id}
+                temperature={lead.temperature}
+                createdAt={lead.created_at}
+                owner={ownerName}
+                money={isCustomer || billed > 0 ? { billed, received } : null}
+                refreshKey={refresh}
+              />
+              <LeadInsightCard leadId={lead.id} refreshKey={refresh} />
+            </aside>
           </div>
         )}
         {tab === 'followups' && (
@@ -529,6 +579,9 @@ export function LeadPage() {
           }}
         />
       )}
+      <Modal open={history} onClose={() => setHistory(false)} title="History" width={720}>
+        <ActivityLog leadId={lead.id} stageName={stageName} members={members} canNote={false} refreshKey={refresh} />
+      </Modal>
       <ConfirmModal
         open={removing}
         danger
@@ -548,5 +601,18 @@ export function LeadPage() {
         }}
       />
     </>
+  )
+}
+
+/** a closed-by-default section of the Details tab */
+function Acc({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="acc">
+      <summary>
+        <span>{title}</span>
+        <ChevronDown size={16} className="acc-chev" />
+      </summary>
+      <div className="acc-body">{children}</div>
+    </details>
   )
 }
