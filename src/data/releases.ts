@@ -37,6 +37,9 @@ export const releases: Release[] = [
     ],
     fixed: [
       'System Connections: connections’ status and last sync (Razorpay, Callyzer, …) stopped updating since 23 Nov — Razorpay showed an old “Too many requests”.',
+      'Searchable dropdowns: the list floats over the page (and opens upward near the bottom), so the panel behind it no longer scrolls with it.',
+      'AI Insights chat: back to one column (it had split into two).',
+      'Funnel → Facebook Ads: an ad’s preview opens for anyone who can see the funnel (it asked for edit access).',
     ],
   },
   {
