@@ -134,6 +134,8 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
                   ]
                 : []),
               [pct(f.leads_ads, base), withLpv ? 'Page conversion' : 'Click conversion', `${num(f.leads_ads)} ad leads from ${num(base)} ${baseWord}`],
+              // Overall / Google (no page-view cards): the ad leads themselves and their cost
+              ...(withLpv ? [] : [[num(f.leads_ads), 'Ad leads', f.leads_ads ? `${inr(spendEx / f.leads_ads)} per ad lead` : 'Leads from the linked campaigns']]),
               ...(src !== 'google'
                 ? [
                     [num(f.meta_leads), 'Facebook leads', f.meta_leads ? `${inr(spendEx / f.meta_leads)} per lead (Facebook’s count)` : 'Facebook’s count'],
