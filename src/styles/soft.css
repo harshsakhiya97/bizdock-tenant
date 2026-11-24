@@ -78,18 +78,14 @@ body { background: var(--bg); }
 .stat-hint { font-size: 12px; color: var(--text-muted); }
 .stat.is-clickable:hover { border-color: color-mix(in srgb, var(--brand) 35%, var(--line)); transform: translateY(-1px); }
 .stat { transition: border-color .15s, box-shadow .15s, transform .15s; }
-/* the first card of a row: the gradient card */
-.stat-grid > .stat:first-child { background: var(--brand-grad); border-color: transparent; color: #fff; box-shadow: 0 14px 30px color-mix(in srgb, var(--brand) 30%, transparent); }
-.stat-grid > .stat:first-child .stat-icon { background: rgba(255, 255, 255, 0.2) !important; color: #fff !important; }
-.stat-grid > .stat:first-child .stat-label, .stat-grid > .stat:first-child .stat-hint { color: rgba(255, 255, 255, 0.88); }
-.stat-grid > .stat.is-active { box-shadow: 0 0 0 2px var(--brand); }
+/* every card white; a card turns indigo while hovered (clickable) or while its filter is applied */
+.stat-grid > .stat.is-clickable:hover, .stat-grid > .stat.is-active { background: var(--brand-grad); border-color: transparent; color: #fff; box-shadow: 0 14px 30px color-mix(in srgb, var(--brand) 30%, transparent); }
+.stat-grid > .stat.is-clickable:hover .stat-icon, .stat-grid > .stat.is-active .stat-icon { background: rgba(255, 255, 255, 0.2) !important; color: #fff !important; }
+.stat-grid > .stat.is-clickable:hover :is(.stat-label, .stat-hint, .stat-value), .stat-grid > .stat.is-active :is(.stat-label, .stat-hint, .stat-value) { color: #fff; }
 
 /* Dashboards */
 .db-card { padding: 18px 20px; border-color: var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
 .db-card b { font-family: var(--font-head); font-weight: 800; }
-.db-cards > .db-card:first-child { background: var(--brand-grad); border-color: transparent; color: #fff; }
-.db-cards > .db-card:first-child span, .db-cards > .db-card:first-child small, .db-cards > .db-card:first-child b { color: #fff; }
-.db-cards > .db-card:first-child small { opacity: .88; }
 
 /* Tabs and chips: pills */
 .tab { height: 34px; border-radius: 999px; padding: 0 14px; }
