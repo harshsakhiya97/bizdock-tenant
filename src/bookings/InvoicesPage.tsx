@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, Printer, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
+import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 import { Empty, PageHead, SearchInput, StatCard, Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { money } from '@/leads/labels'
@@ -39,7 +40,9 @@ export function InvoicesPage() {
   const { selected, sub, inScope } = useBusiness()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', state: '', month: '' })
+  const [f, setF] = useState({ q: '', state: '' })
+  // the invoice date (or the booking's date before an invoice no.); All dates by default
+  const [range, setRange] = useState<Range>(ALL_DATES)
   // invoices of orders (Default / Brand Deals): their order numbers, by invoice id
   const [orderNos, setOrderNos] = useState<Map<string, string>>(new Map())
   // Print: the company details again from Masters (as the invoice's Print / PDF), then the print page in a new tab
@@ -71,11 +74,13 @@ export function InvoicesPage() {
   }, [tenant.id])
   useEffect(load, [load])
 
-  const months = useMemo(() => [...new Set((rows ?? []).map((b) => (b.invoice_date ?? b.booking_date).slice(0, 7)))].sort().reverse(), [rows])
-
   const scoped = (rows ?? []).filter((b) => inScope(b.business_id, b.sub_business_id))
   const visible = scoped
-    .filter((b) => !f.month || (b.invoice_date ?? b.booking_date).startsWith(f.month))
+    .filter((b) => {
+      if (range.key === 'all') return true
+      const d = (b.invoice_date ?? b.booking_date).slice(0, 10)
+      return d >= range.from && d <= range.to
+    })
     .filter((b) => !f.state || payState(b) === f.state)
     .filter((b) => {
       const q = f.q.trim().toLowerCase()
@@ -139,16 +144,16 @@ export function InvoicesPage() {
               </option>
             ))}
           </select>
-          <select className="input input-sm filter-select" value={f.month} onChange={(e) => setF((x) => ({ ...x, month: e.target.value }))} aria-label="Month">
-            <option value="">All months</option>
-            {months.map((m) => (
-              <option key={m} value={m}>
-                {new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-              </option>
-            ))}
-          </select>
-          {(f.q || f.state || f.month) && (
-            <button type="button" className="clear-btn" onClick={() => setF({ q: '', state: '', month: '' })}>
+          <DateRangePicker value={range} onChange={setRange} allDates />
+          {(f.q || f.state || range.key !== 'all') && (
+            <button
+              type="button"
+              className="clear-btn"
+              onClick={() => {
+                setF({ q: '', state: '' })
+                setRange(ALL_DATES)
+              }}
+            >
               Reset
             </button>
           )}
