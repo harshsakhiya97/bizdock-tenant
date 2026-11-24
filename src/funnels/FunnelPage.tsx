@@ -196,7 +196,8 @@ export function FunnelPage() {
       <div className="panel">
         <div className="panel-bar">
           <div className="tabs">
-            {TABS.filter((t) => t.key !== 'payments' || can('payments', 'view')).map((t) => (
+            {/* a funnel you can see: every tab (Payments / Workflows don't need their own view permission here) */}
+            {TABS.map((t) => (
               <button key={t.key} type="button" className={cn('tab', tab === t.key && 'is-active')} onClick={() => setTab(t.key)}>
                 {t.label}
                 {t.key === 'pages' && pages && <span className="muted small"> {pages.length}</span>}
@@ -327,7 +328,7 @@ export function FunnelPage() {
               }}
             />
           )}
-          {tab === 'payments' && can('payments', 'view') && <FunnelPaymentsTab funnelId={funnel.id} leads={leads} canEdit={can('funnels', 'edit')} />}
+          {tab === 'payments' && <FunnelPaymentsTab funnelId={funnel.id} leads={leads} canEdit={can('funnels', 'edit')} />}
           {tab === 'workflows' && <FunnelWorkflowsTab funnelId={funnel.id} eventId={funnel.event_id ?? null} />}
 
           {tab === 'leads' && leads && leads.length > 0 && (
