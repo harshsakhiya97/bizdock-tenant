@@ -27,6 +27,7 @@ import { syncCallyzer } from '@/callyzer/api'
 import { connectMeta, listAdAccounts, syncMeta, updateAdAccount, type AdAccount } from '@/meta/api'
 import { MetaTokenConnect } from '@/meta/MetaTokenConnect'
 import { SavedKey } from './SavedKey'
+import { ClaudeLeadAi, GeminiLeadAi, LEAD_AI_KEYS } from './LeadAiSettings'
 import { FundsLine } from '@/meta/FundsLine'
 import { cidText, listGoogleAccounts, syncGoogle, testGoogle, updateGoogleAccount, type GAccount } from '@/google/api'
 
@@ -740,7 +741,11 @@ function ConnectDrawer({
   const HX_DEFAULTS: Record<string, string> = { hours_start: '10:00', hours_end: '19:00', hours_days: '0,1,2,3,4,5,6' }
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(
-      provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (provider.id === 'hellorix' && HX_DEFAULTS[f.key] !== undefined ? HX_DEFAULTS[f.key] : f.options ? f.options[0] : ''))]),
+      [
+        ...provider.fields.map((f) => [f.key, f.secret ? '' : (existing?.config[f.key] ?? (provider.id === 'hellorix' && HX_DEFAULTS[f.key] !== undefined ? HX_DEFAULTS[f.key] : f.options ? f.options[0] : ''))]),
+        // Lead AI Insights settings (Prompt & steps tab)
+        ...(LEAD_AI_KEYS[provider.id] ?? []).filter((k) => existing?.config[k] != null).map((k) => [k, String(existing?.config[k])]),
+      ],
     ),
   )
   const [label, setLabel] = useState(existing?.label ?? '')
@@ -831,6 +836,7 @@ function ConnectDrawer({
       if (f.required && !v) return setError(`${f.label} is required.`)
       config[f.key] = v
     }
+    for (const k of LEAD_AI_KEYS[provider.id] ?? []) if (values[k] != null) config[k] = values[k]
     if (provider.id === 'zoom' && !existing) {
       config.cloud_record = 'Yes'
       config.is_default = zoomCount ? 'No' : 'Yes'
@@ -967,6 +973,7 @@ function ConnectDrawer({
             text={geminiKeyPrompt()}
           />
         )}
+        {tabbed && tab === 'prompt' && provider.id === 'gemini' && <GeminiLeadAi values={values} setValues={setValues} />}
         {tabbed && tab === 'prompt' && provider.id === 'claude' && (
           <PromptBox
             title="Let Claude in Chrome make the Claude API key"
@@ -974,6 +981,7 @@ function ConnectDrawer({
             text={claudeKeyPrompt()}
           />
         )}
+        {tabbed && tab === 'prompt' && provider.id === 'claude' && <ClaudeLeadAi values={values} setValues={setValues} models={gModels} />}
         {tabbed && tab === 'prompt' && provider.id === 'hellorix' && (
           <PromptBox
             title="Let Claude in Chrome make the HelloRix API key"

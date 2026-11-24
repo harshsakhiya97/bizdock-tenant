@@ -215,7 +215,7 @@ export const PROVIDERS: Provider[] = [
     icon: Sparkles,
     color: '#1a73e8',
     description: 'Your Google Gemini API key and the model BizDock’s AI features (AI Insights) use.',
-    usedFor: 'AI Insights (the AI button on every page), Write with AI in AI Calling templates',
+    usedFor: 'AI Insights (the AI button on every page), Lead AI Insights (each lead’s summary), Write with AI in AI Calling templates',
     guide: [
       'Open Google AI Studio → Get API key (aistudio.google.com/apikey) → Create API key (in a project, e.g. “BizDock AI”). Copy the key.',
       'Free tier: no bill, but daily limits, and Google may use the data to improve its models. Paid tier: billed by Google Cloud for what you use.',
@@ -234,8 +234,8 @@ export const PROVIDERS: Provider[] = [
     name: 'Claude API',
     icon: Bot,
     color: '#c2410c',
-    description: 'Your Anthropic Claude API key and model. Used to fix the speaker labels (Team / Customer) of old call transcripts.',
-    usedFor: 'Callyzer → History logs → Sync transcripts (fixes old transcripts)',
+    description: 'Your Anthropic Claude API key and model. Used to fix the speaker labels (Team / Customer) of old call transcripts, and to write lead summaries when Gemini fails.',
+    usedFor: 'Callyzer → History logs → Sync transcripts (fixes old transcripts), Lead AI Insights when Gemini fails',
     guide: [
       'Log in at console.anthropic.com → Settings → API keys → Create key (e.g. “BizDock”). Copy it (sk-ant-…).',
       'The key uses the credits on your Anthropic account (Settings → Billing).',
