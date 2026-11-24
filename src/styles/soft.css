@@ -155,3 +155,21 @@ body { background: var(--bg); }
   border-color: color-mix(in oklab, var(--brand) 45%, var(--line));
   background: linear-gradient(180deg, color-mix(in oklab, var(--brand) 5%, white) 0%, color-mix(in oklab, var(--brand) 12%, white) 100%);
 }
+
+/* Funnel overview: the coloured money tiles and the Ad performance cards */
+.flow-tiles { gap: 12px; }
+.flow-tile { flex: 0 1 168px; padding: 16px 12px; border-radius: 16px; box-shadow: 0 10px 22px rgba(30, 27, 75, 0.14); background-image: linear-gradient(160deg, rgba(255,255,255,.18), rgba(255,255,255,0) 60%); transition: transform .15s; }
+.flow-tile:hover { transform: translateY(-2px); }
+.flow-tile b { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
+.flow-cards { gap: 12px; margin-top: 10px; }
+.flow-card {
+  position: relative; overflow: hidden; gap: 3px; padding: 14px 16px 14px 18px; border-radius: 14px;
+  border: 1px solid color-mix(in oklab, var(--c, var(--brand)) 22%, var(--line));
+  background: linear-gradient(160deg, color-mix(in oklab, var(--c, var(--brand)) 10%, white) 0%, #ffffff 70%);
+  box-shadow: 0 1px 2px rgba(30, 27, 75, 0.05), 0 6px 16px rgba(30, 27, 75, 0.05);
+  transition: transform .15s, box-shadow .15s;
+}
+.flow-card::before { content: ''; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; border-radius: 0 3px 3px 0; background: var(--c, var(--brand)); }
+.flow-card:hover { transform: translateY(-2px); box-shadow: 0 12px 24px color-mix(in srgb, var(--c, var(--brand)) 18%, transparent); }
+.flow-card b { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: color-mix(in oklab, var(--c, var(--brand)) 55%, var(--ink)); }
+.flow-card span { font-size: 12.5px; font-weight: 700; color: var(--text); }

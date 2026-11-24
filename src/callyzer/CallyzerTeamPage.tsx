@@ -3,7 +3,7 @@ import { PlayRecording } from './PlayRecording'
 import { Link } from 'react-router'
 import { Drawer } from '@/components/Drawer'
 import { CheckCircle2, MicOff, PhoneOff, RefreshCw, TriangleAlert } from 'lucide-react'
-import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
+import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 import { Empty, PageHead, Paged, StatCard } from '@/components/ui'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { cn } from '@/lib/cn'
@@ -44,6 +44,12 @@ const gap = (iso: string | null) => {
 
 /** the picked days as times: from the first day's start to the day after the last */
 const bounds = (r: Range) => {
+  // All dates: from long ago to the end of today
+  if (r.key === 'all' || !r.from) {
+    const end = new Date()
+    end.setHours(24, 0, 0, 0)
+    return { from: new Date('2000-01-01T00:00:00').toISOString(), to: end.toISOString() }
+  }
   const from = new Date(`${r.from}T00:00:00`)
   const to = new Date(`${r.to}T00:00:00`)
   to.setDate(to.getDate() + 1)
@@ -53,7 +59,7 @@ const bounds = (r: Range) => {
 /** Callyzer → Team numbers: per staff number, are recordings reaching Callyzer? (every call, not only to leads) */
 export function CallyzerTeamPage() {
   const tenant = useTenant()
-  const [range, setRange] = useState<Range>(() => presetRange('today'))
+  const [range, setRange] = useState<Range>(ALL_DATES)
   const [rows, setRows] = useState<Row[] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,7 +109,7 @@ export function CallyzerTeamPage() {
         subtitle="Are recordings reaching Callyzer? Every call of each staff number (not only calls to leads)."
         actions={
           <>
-            <DateRangePicker value={range} onChange={setRange} />
+            <DateRangePicker value={range} onChange={setRange} allDates />
             <button type="button" className="btn btn-outline" onClick={load} title="Refresh">
               <RefreshCw size={15} />
             </button>

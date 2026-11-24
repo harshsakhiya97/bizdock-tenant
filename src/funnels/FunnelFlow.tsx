@@ -6,6 +6,9 @@ const num = (n: number) => Number(n || 0).toLocaleString('en-IN')
 const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—')
 const COLORS = ['#7c3aed', '#9333ea', '#c026d3', '#2563eb', '#0d9488', '#d97706', '#ea580c', '#16a34a', '#0891b2', '#4f46e5']
 
+/** the Ad performance cards' accent colours, in turn */
+const CARD_TONES = ['#6366f1', '#0ea5e9', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#22c55e', '#f97316']
+
 type Stage = { tag: string; value: string; title: string; sub: string; color: string }
 type Step = { stage: Stage; rate?: string }
 
@@ -138,8 +141,8 @@ export function FunnelFlow({ f, gst }: { f: Flow; gst: number }) {
                   ]
                 : []),
               ...(src !== 'fb' ? [[num(Number(f.conversions ?? 0)), 'Google conversions', f.conversions ? `${inr(spendEx / Number(f.conversions))} per conversion (Google’s count)` : 'Google’s count']] : []),
-            ].map(([v, l, s]) => (
-              <div key={l} className="flow-card">
+            ].map(([v, l, s], k) => (
+              <div key={l} className="flow-card" style={{ ['--c' as string]: CARD_TONES[k % CARD_TONES.length] }}>
                 <b>{v}</b>
                 <span>{l}</span>
                 <small className="muted">{s}</small>
