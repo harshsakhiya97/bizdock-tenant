@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, MessageCircle, Package, Route, UserRound, Video, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -317,19 +317,6 @@ export function LeadPage() {
           </div>
         </div>
         <div className="row rec-actions">
-          <button type="button" className="btn btn-outline" onClick={() => setWa(true)}>
-            <MessageCircle size={15} /> WhatsApp
-          </button>
-          {canFollow && (
-            <button type="button" className="btn btn-outline" onClick={() => setTab('followups')}>
-              <PhoneCall size={15} /> Log call
-            </button>
-          )}
-          {can('ai_calling', 'view') && (
-            <button type="button" className="btn btn-outline" onClick={() => setAiCall(true)}>
-              <PhoneOutgoing size={15} /> Call from AI
-            </button>
-          )}
           {can('leads', 'delete') && (
             <button type="button" className="btn btn-outline danger-text" onClick={() => setRemoving(true)}>
               <Trash2 size={15} /> Delete
@@ -407,7 +394,7 @@ export function LeadPage() {
             onWhatsApp={() => setWa(true)}
             onChanged={done}
             refreshKey={refresh}
-            ai={can('ai_calling', 'view') || aiCount ? { count: aiCount, node: <LeadAiCalls leadId={lead.id} members={members} refreshKey={refresh} onCount={setAiCount} /> } : undefined}
+            ai={can('ai_calling', 'view') || aiCount ? { count: aiCount, onCall: can('ai_calling', 'view') ? () => setAiCall(true) : undefined, node: <LeadAiCalls leadId={lead.id} members={members} refreshKey={refresh} onCount={setAiCount} /> } : undefined}
             openAi={openAi}
           />
         )}

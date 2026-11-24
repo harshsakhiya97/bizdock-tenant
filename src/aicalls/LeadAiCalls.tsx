@@ -42,7 +42,7 @@ export function LeadAiCalls({ leadId, members, refreshKey, onCount }: { leadId: 
   }, [calls, load])
 
   if (!calls) return <div className="empty">Loading…</div>
-  if (!calls.length) return <Empty icon={PhoneOutgoing}>No AI calls yet. Use Call from AI at the top.</Empty>
+  if (!calls.length) return <Empty icon={PhoneOutgoing}>No AI calls yet. Use Call from AI above.</Empty>
   return (
     <>
       <Paged rows={calls}>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { PlayRecording } from '@/callyzer/PlayRecording'
 import { TranscriptCell, type TranscriptStatus } from '@/callyzer/CallTranscript'
 import { Paged } from '@/components/ui'
-import { Bot, MessageCircle, PhoneCall, PhoneIncoming, X } from 'lucide-react'
+import { Bot, MessageCircle, PhoneCall, PhoneIncoming, PhoneOutgoing, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
 import { clearLeadFollowUps, listOutcomes, scheduleFollowUp } from '@/followups/api'
@@ -76,7 +76,7 @@ export function FollowUpsTab({
   /** bump to reload (after a WhatsApp is sent from the header) */
   refreshKey: number
   /** the AI Calls sub-tab (the lead page's AI calls list and its count) */
-  ai?: { count: number | null; node: ReactNode }
+  ai?: { count: number | null; node: ReactNode; onCall?: () => void }
   /** bump to open the AI Calls sub-tab (after a call is placed) */
   openAi?: number
 }) {
@@ -210,6 +210,11 @@ export function FollowUpsTab({
             </button>
           )}
         </div>
+        {tab === 'ai' && ai?.onCall && (
+          <button type="button" className="btn btn-primary btn-sm" onClick={ai.onCall}>
+            <PhoneOutgoing size={14} /> Call from AI
+          </button>
+        )}
         {tab === 'whatsapp' && (
           <button type="button" className="btn btn-primary btn-sm" onClick={onWhatsApp}>
             <MessageCircle size={14} /> Send WhatsApp
