@@ -2025,3 +2025,6 @@ details.rec-section summary { cursor: pointer; }
 .ai-order-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
 .ai-level { display: grid; grid-template-columns: auto 150px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 @media (max-width: 560px) { .ai-level { grid-template-columns: auto 1fr; } }
+/* SearchSelect: the list floats over the page (fixed), its own scroll never moves the page / panel behind */
+.ss-menu.ss-float { z-index: 200; right: auto; top: auto; display: flex; flex-direction: column; min-width: 0; }
+.ss-float .ss-list { max-height: none; flex: 1; min-height: 0; overscroll-behavior: contain; }

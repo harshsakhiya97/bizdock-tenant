@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { CSSProperties } from 'react'
 import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { useClickOutside } from '@/lib/useClickOutside'
 
 /** `group`: a heading shown above the options that share it · `disabled`: shown, can't be picked */
 export type SearchOption = { value: string; label: string; group?: string; disabled?: boolean }
 
 /**
  * Dropdown with a search box: the trigger is a theme-kit .input, the list is the kit's .multi-menu.
+ * The list opens in a layer over the page (not inside the card / panel it sits in), below the field or above it when
+ * there's no room — so the panel never has to scroll to show it, and scrolling the list doesn't scroll the page.
  * - `allowCustom`: if nothing matches, offer to use what was typed (e.g. a small town not in the list)
  */
 export function SearchSelect({
@@ -48,13 +50,48 @@ export function SearchSelect({
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const listId = useId()
+  const [pos, setPos] = useState<CSSProperties | null>(null)
   const close = useCallback(() => {
     setOpen(false)
     setQuery('')
   }, [])
-  useClickOutside(ref, open, close)
+  // a click outside the field and the list closes it
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      if (!ref.current?.contains(t) && !menuRef.current?.contains(t)) close()
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open, close])
+  // where the list goes: under the field, or above it when there's no room below; it follows the field while the
+  // page / panel scrolls, and closes when the field scrolls out of sight
+  const place = useCallback(() => {
+    const r = ref.current?.getBoundingClientRect()
+    if (!r) return
+    if (r.bottom < 0 || r.top > window.innerHeight) return close()
+    const below = window.innerHeight - r.bottom - 8
+    const above = r.top - 8
+    const up = below < 280 && above > below
+    const room = Math.max(160, Math.min(330, up ? above : below))
+    const width = Math.max(r.width, 220)
+    const left = Math.min(r.left, window.innerWidth - width - 8)
+    setPos({ position: 'fixed', left: Math.max(8, left), width, ...(up ? { bottom: window.innerHeight - r.top + 4 } : { top: r.bottom + 4 }), maxHeight: room })
+  }, [close])
+  useLayoutEffect(() => {
+    if (!open) return setPos(null)
+    place()
+    window.addEventListener('scroll', place, true)
+    window.addEventListener('resize', place)
+    return () => {
+      window.removeEventListener('scroll', place, true)
+      window.removeEventListener('resize', place)
+    }
+  }, [open, place])
 
   const selected = options.find((o) => o.value === value)
   const label = selected?.label ?? value ?? ''
@@ -107,8 +144,9 @@ export function SearchSelect({
         <ChevronDown size={15} />
       </button>
 
-      {open && (
-        <div data-popover className="multi-menu ss-menu">
+      {open && pos &&
+        createPortal(
+        <div ref={menuRef} data-popover className="multi-menu ss-menu ss-float" style={pos} onMouseDown={(e) => e.stopPropagation()}>
           <div className="ss-search">
             <div className="input-wrap">
               <Search size={15} />
@@ -166,8 +204,9 @@ export function SearchSelect({
               })
             )}
           </ul>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </div>
   )
 }
