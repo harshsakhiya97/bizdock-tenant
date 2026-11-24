@@ -70,7 +70,7 @@ export function LeadInsightCard({ leadId, refreshKey }: { leadId: string; refres
       ) : !c ? (
         <div className="muted small">{busy ? 'Reading this lead’s details, follow-ups and calls…' : row?.stale ? 'No summary yet: it’s written a minute after the lead changes, or press Summarize.' : 'No summary yet. Press Summarize.'}</div>
       ) : (
-        <div className="ai-body">
+        <div className="li-body">
           <div className="ai-col">
           {lv && (
             <div className="ai-interest">
