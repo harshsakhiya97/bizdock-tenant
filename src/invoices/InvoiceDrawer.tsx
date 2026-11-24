@@ -97,15 +97,30 @@ export function InvoiceDrawer({
   const [links, setLinks] = useState<{ biz: Links | null; sub: Links | null } | null>(null)
   // edit: the invoice number can be changed (must stay unique in the workspace)
   const [invNo, setInvNo] = useState(invoice?.invoice_no ?? '')
-  async function saveNumber() {
-    if (!invoice) return
-    const no = invNo.trim()
-    if (no === invoice.invoice_no) return
+  /** edit: With / Without GST, the company and the GST %; returns the invoice (a new company: its next number) */
+  async function saveKind() {
+    if (!invoice) return invoice
+    const kindNow = invoice.kind ?? (invoice.gst_applicable ? 'gst' : 'nongst')
+    const sameCo = (input.billing_company_id || null) === (invoice.billing_company_id || null)
+    if (input.kind === kindNow && sameCo && (input.kind !== 'gst' || Number(input.gst_rate) === Number(invoice.gst_rate))) return invoice
+    const { data, error } = await db().rpc('invoice_set_kind', { p_invoice: invoice.id, p_kind: input.kind, p_company: input.billing_company_id || null, p_rate: Number(input.gst_rate) || null })
+    if (error) throw new Error(error.message)
+    const no = String(data ?? invoice.invoice_no)
+    // the number box shows the new number unless it was typed over
+    if (invNo.trim() === invoice.invoice_no) setInvNo(no)
+    return { ...invoice, invoice_no: no, kind: input.kind, gst_applicable: input.kind === 'gst', gst_rate: Number(input.gst_rate) || invoice.gst_rate }
+  }
+  async function saveNumber(current = invoice) {
+    if (!current) return
+    const typed = invNo.trim()
+    // typed over: that number; else the (maybe new) number stays
+    const no = typed === invoice?.invoice_no ? current.invoice_no : typed
+    if (no === current.invoice_no) return
     if (!no) throw new Error('Enter the invoice number.')
-    const { data: same, error: e1 } = await db().from('invoices').select('id').eq('tenant_id', tenant.id).eq('invoice_no', no).neq('id', invoice.id).limit(1)
+    const { data: same, error: e1 } = await db().from('invoices').select('id').eq('tenant_id', tenant.id).eq('invoice_no', no).neq('id', current.id).limit(1)
     if (e1) throw new Error(e1.message)
     if (same?.length) throw new Error(`Invoice number ${no} is already used by another invoice.`)
-    const { error } = await db().from('invoices').update({ invoice_no: no }).eq('id', invoice.id)
+    const { error } = await db().from('invoices').update({ invoice_no: no }).eq('id', current.id)
     if (error) throw new Error(error.message)
   }
   const [error, setError] = useState<string | null>(null)
@@ -113,17 +128,18 @@ export function InvoiceDrawer({
 
   // a new invoice: the client's saved billing details and the business's companies
   useEffect(() => {
-    if (invoice || !first) return
+    if (!first) return
     let live = true
     void Promise.all([
-      first.lead_id ? db().from('leads').select('bill_company, bill_address, bill_state, bill_state_code, bill_gstin').eq('id', first.lead_id).maybeSingle() : Promise.resolve({ data: null }),
+      !invoice && first.lead_id ? db().from('leads').select('bill_company, bill_address, bill_state, bill_state_code, bill_gstin').eq('id', first.lead_id).maybeSingle() : Promise.resolve({ data: null }),
       db().from('businesses').select('company_id, nongst_company_id').eq('id', first.business_id).maybeSingle(),
       first.sub_business_id ? db().from('sub_businesses').select('company_id, nongst_company_id').eq('id', first.sub_business_id).maybeSingle() : Promise.resolve({ data: null }),
     ]).then(([l, b, s]) => {
       if (!live) return
       const L = { biz: b.data as Links | null, sub: s.data as Links | null }
       setLinks(L)
-      setInput((d) => ({ ...d, buyer: buyerOfLead(l.data as Parameters<typeof buyerOfLead>[0]), billing_company_id: companyFor(d.kind, L.biz, L.sub) }))
+      // edit: keep the invoice's own company and Bill to
+      if (!invoice) setInput((d) => ({ ...d, buyer: buyerOfLead(l.data as Parameters<typeof buyerOfLead>[0]), billing_company_id: companyFor(d.kind, L.biz, L.sub) }))
     })
     return () => {
       live = false
@@ -133,6 +149,8 @@ export function InvoiceDrawer({
   const gst = input.kind === 'gst'
   const t = invoiceTotals(list, gst, Number(input.gst_rate) || 0)
   const company = refs.companies.find((c) => c.id === input.billing_company_id) ?? null
+  // edit: a different company gives the invoice that company's next number
+  const coChanged = !!invoice && (input.billing_company_id || null) !== (invoice.billing_company_id || null)
   const companyOptions = refs.companies.filter((c) => c.is_active || c.id === input.billing_company_id)
 
   function pickKind(kind: 'gst' | 'nongst') {
@@ -157,8 +175,9 @@ export function InvoiceDrawer({
       setBusy(true)
       setError(null)
       try {
-        await saveNumber()
-        await saveInvoice(tenant.id, membership?.id, invoice, input)
+        const cur = await saveKind()
+        await saveNumber(cur)
+        await saveInvoice(tenant.id, membership?.id, cur!, input)
         await refreshInvoiceSeller(invoice.id)
       } catch (e) {
         tab?.close()
@@ -181,8 +200,9 @@ export function InvoiceDrawer({
     setError(null)
     try {
       if (invoice) {
-        await saveNumber()
-        await saveInvoice(tenant.id, membership?.id, invoice, input)
+        const cur = await saveKind()
+        await saveNumber(cur)
+        await saveInvoice(tenant.id, membership?.id, cur!, input)
         onSaved(`Invoice ${invNo.trim() || invoice.invoice_no} updated.`, invoice.id)
       } else {
         const id = await createInvoice(
@@ -257,37 +277,25 @@ export function InvoiceDrawer({
             {invoice && <div />}
             <div className="span-2">
               <Label>Type</Label>
-              {invoice ? (
-                <div>
-                  <b>{gst ? 'With GST (Tax Invoice)' : 'Without GST (Invoice)'}</b>
-                </div>
-              ) : (
-                <div className="seg" role="group" aria-label="Invoice type">
-                  <button type="button" className={gst ? 'is-active' : undefined} onClick={() => pickKind('gst')}>
-                    With GST
-                  </button>
-                  <button type="button" className={!gst ? 'is-active' : undefined} onClick={() => pickKind('nongst')}>
-                    Without GST
-                  </button>
-                </div>
-              )}
+              <div className="seg" role="group" aria-label="Invoice type">
+                <button type="button" className={gst ? 'is-active' : undefined} onClick={() => pickKind('gst')} disabled={!canEdit || locked}>
+                  With GST
+                </button>
+                <button type="button" className={!gst ? 'is-active' : undefined} onClick={() => pickKind('nongst')} disabled={!canEdit || locked}>
+                  Without GST
+                </button>
+              </div>
             </div>
             <div>
               <Label htmlFor="inv-co">From (company)</Label>
-              {invoice ? (
-                <div>
-                  <b>{invoice.seller?.name ?? '—'}</b>
-                </div>
-              ) : (
-                <Select id="inv-co" value={input.billing_company_id} onChange={(e) => setInput((d) => ({ ...d, billing_company_id: e.target.value }))}>
-                  <option value="">— the business’s own details —</option>
-                  {companyOptions.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.legal_name || c.name}
-                    </option>
-                  ))}
-                </Select>
-              )}
+              <Select id="inv-co" value={input.billing_company_id} onChange={(e) => setInput((d) => ({ ...d, billing_company_id: e.target.value }))} disabled={!canEdit || locked}>
+                <option value="">— the business’s own details —</option>
+                {companyOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.legal_name || c.name}
+                  </option>
+                ))}
+              </Select>
             </div>
             {gst && (
               <div>
@@ -295,11 +303,11 @@ export function InvoiceDrawer({
                 <TextInput id="inv-rate" type="number" min={0} value={input.gst_rate} onChange={(e) => setInput((d) => ({ ...d, gst_rate: e.target.value }))} disabled={!canEdit || locked} />
               </div>
             )}
-            {!invoice && (
+            {(!invoice || coChanged) && (
               <div className="span-2">
                 <Hint>
                   {company
-                    ? `Invoice no. ${formatInvoiceNo(company.number_format, company.invoice_prefix, company.next_no)} · ${[company.gst_number ? `GSTIN ${company.gst_number}` : null, company.state ? `${company.state}${company.state_code ? ` (${company.state_code})` : ''}` : null].filter(Boolean).join(' · ') || 'add its details in Masters → Company Master'}`
+                    ? `${invoice ? 'New invoice no. (this company’s series)' : 'Invoice no.'} ${formatInvoiceNo(company.number_format, company.invoice_prefix, company.next_no)} · ${[company.gst_number ? `GSTIN ${company.gst_number}` : null, company.state ? `${company.state}${company.state_code ? ` (${company.state_code})` : ''}` : null].filter(Boolean).join(' · ') || 'add its details in Masters → Company Master'}`
                     : 'No company picked: the invoice shows the business’s own details and number series. Set a company on the business (Businesses → edit).'}
                 </Hint>
               </div>
