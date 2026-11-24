@@ -252,23 +252,21 @@ export function FunnelPage() {
               <div className="muted small">
                 {rangeLabel(repRange)} · {repSrc === 'all' ? 'Overall (Facebook + Google)' : repSrc === 'fb' ? 'Facebook' : 'Google'}: the Funnel report’s period and source (change them below).
               </div>
-              <div className="pl-tiles fp-tiles">
-                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Leads', () => true)}>
-                  <div className="pl-tile-label">Leads</div>
-                  <div className="pl-tile-value">{leads ? tileLeads.length : '—'}</div>
-                </div>
-                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('From forms & sheets', (l) => !!(l.webhook_id || l.landing_page_id || l.sheet_id))}>
-                  <div className="pl-tile-label">From forms & sheets</div>
-                  <div className="pl-tile-value">{fromForms}</div>
-                </div>
-                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the form posts" onClick={showPosts}>
-                  <div className="pl-tile-label">Form posts</div>
-                  <div className="pl-tile-value">{tilePosts.length}</div>
-                </div>
-                <div className="pl-tile is-clickable" role="button" tabIndex={0} title="See the leads" onClick={() => showLeads('Won', (l) => stageOf.get(l.stage_id ?? '')?.kind === 'won')}>
-                  <div className="pl-tile-label">Won</div>
-                  <div className="pl-tile-value tone-success">{won}</div>
-                </div>
+              <div className="flow-cards pay-cards">
+                {(
+                  [
+                    [leads ? String(tileLeads.length) : '—', 'Leads', 'Every lead of this funnel, these dates', '#6366f1', () => showLeads('Leads', () => true)],
+                    [String(fromForms), 'From forms & sheets', leads && tileLeads.length ? `${Math.round((fromForms / tileLeads.length) * 100)}% of the leads` : 'Webhooks, landing pages, sheets', '#0ea5e9', () => showLeads('From forms & sheets', (l) => !!(l.webhook_id || l.landing_page_id || l.sheet_id))],
+                    [String(tilePosts.length), 'Form posts', 'Every form sent (new + repeat)', '#f59e0b', showPosts],
+                    [String(won), 'Won', leads && tileLeads.length ? `${((won / tileLeads.length) * 100).toFixed(1)}% conversion` : 'Leads that reached a won stage', '#22c55e', () => showLeads('Won', (l) => stageOf.get(l.stage_id ?? '')?.kind === 'won')],
+                  ] as [string, string, string, string, () => void][]
+                ).map(([v, l, sub, c, go]) => (
+                  <button key={l} type="button" className="flow-card" style={{ ['--c' as string]: c }} onClick={go}>
+                    <b>{v}</b>
+                    <span>{l}</span>
+                    <small className="muted">{sub}</small>
+                  </button>
+                ))}
               </div>
               <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
               <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
