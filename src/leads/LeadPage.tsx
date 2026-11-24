@@ -348,25 +348,6 @@ export function LeadPage() {
         </div>
       </section>
 
-      {isCustomer && (
-        <div className="stat-grid">
-          {isWebinar ? (
-            <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} onClick={() => setTab('purchases')} />
-          ) : (
-            <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} onClick={() => setTab('bookings')} />
-          )}
-          <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" onClick={toMoneyTab} />
-          <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" onClick={toMoneyTab} />
-          <StatCard
-            icon={Receipt}
-            tone="warning"
-            value={money(Math.max(0, billed - received))}
-            label="Balance"
-            hint={overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : undefined}
-            onClick={toMoneyTab}
-          />
-        </div>
-      )}
 
       <div className="rec-tabs" role="tablist">
         {TABS.map((t) => {
@@ -464,6 +445,25 @@ export function LeadPage() {
         {tab === 'webinars' && isWebinar && <LeadWebinarsTab leadId={lead.id} />}
         {tab === 'payments' && (canPay || canInv) && (
           <div className="stack">
+            {isCustomer && (
+              <div className="stat-grid">
+                {isWebinar ? (
+                  <StatCard icon={CalendarCheck} tone="info" value={bought.length} label="Purchases" hint={`Last on ${fmtDay(bought.map((p) => p.purchase_date).sort().at(-1) ?? null)}`} onClick={() => setTab('purchases')} />
+                ) : (
+                  <StatCard icon={CalendarCheck} tone="info" value={won.length} label={isPodcast ? 'Podcasts' : 'Bookings'} hint={`Last on ${fmtDay(won.map((b) => b.booking_date).sort().at(-1) ?? null)}`} onClick={() => setTab('bookings')} />
+                )}
+                <StatCard icon={BadgeIndianRupee} tone="brand" value={money(billed)} label="Revenue" hint="Billed, with GST" onClick={toMoneyTab} />
+                <StatCard icon={Wallet} tone="success" value={money(received)} label="Received" onClick={toMoneyTab} />
+                <StatCard
+                  icon={Receipt}
+                  tone="warning"
+                  value={money(Math.max(0, billed - received))}
+                  label="Balance"
+                  hint={overdue.length ? `${money(overdue.reduce((n, p) => n + Number(p.amount), 0))} overdue` : undefined}
+                  onClick={toMoneyTab}
+                />
+              </div>
+            )}
             {canPay && canInv && (
               <div className="row-between">
                 <div className="seg seg-sm" role="group" aria-label="Payments">
