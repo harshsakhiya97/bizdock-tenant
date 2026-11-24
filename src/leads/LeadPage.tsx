@@ -405,15 +405,15 @@ export function LeadPage() {
         {tab === 'payments' && (canPay || canInv) && (
           <div className="stack">
             {canPay && canInv && (
-              <div className="seg" role="group" aria-label="Payments">
-                <button type="button" className={paySub === 'invoice' ? 'is-active' : undefined} onClick={() => setPaySub('invoice')}>
-                  Invoice
-                  {invCount != null && <span className="muted small"> {invCount}</span>}
-                </button>
-                <button type="button" className={paySub === 'direct' ? 'is-active' : undefined} onClick={() => setPaySub('direct')}>
-                  Direct Payments
-                  {payments && <span className="muted small"> {directCount}</span>}
-                </button>
+              <div className="row-between">
+                <div className="seg seg-sm" role="group" aria-label="Payments">
+                  <button type="button" className={paySub === 'invoice' ? 'is-active' : undefined} onClick={() => setPaySub('invoice')}>
+                    <Receipt size={14} /> Invoice <span className="muted small">{invCount ?? 0}</span>
+                  </button>
+                  <button type="button" className={paySub === 'direct' ? 'is-active' : undefined} onClick={() => setPaySub('direct')}>
+                    <Wallet size={14} /> Direct Payments <span className="muted small">{payments ? directCount : 0}</span>
+                  </button>
+                </div>
               </div>
             )}
             {canInv && (!canPay || paySub === 'invoice') ? <LeadInvoices leadId={lead.id} refs={refs} onChanged={done} /> : <LeadPaymentsTab payments={payments} error={payError} />}

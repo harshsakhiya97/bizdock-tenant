@@ -201,3 +201,8 @@ body { background: var(--bg); }
 .panel-filters .ss-placeholder, .filter-ss .ss-placeholder, .tr-date .ss-placeholder { color: var(--text); }
 /* the tab bar sits close to the section it opens (the page's 20px gap minus 12) */
 .rec-tabs { margin: -6px 0 -12px; }
+
+/* sub-tabs inside a section (Follow-ups, Payments…): one size, icon + label + count */
+.seg.seg-sm { padding: 4px; gap: 2px; }
+.seg.seg-sm button { height: 34px; padding: 0 14px; gap: 7px; font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; }
+.seg.seg-sm button .muted { font-weight: 600; }
