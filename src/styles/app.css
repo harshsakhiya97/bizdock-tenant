@@ -1981,3 +1981,12 @@ details.rec-section summary { cursor: pointer; }
 .ai-list { margin: 3px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 2px; }
 .ai-risks li::marker { color: var(--danger); }
 .ai-next { border-radius: 10px; padding: 9px 11px; background: var(--surface); border: 1px dashed color-mix(in srgb, var(--brand) 45%, transparent); }
+/* At a glance: label | value rows */
+.glance-card > .glance-item { align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.glance-card > .glance-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.glance-card > .glance-title + .glance-item { border-top: 1px solid var(--line); }
+.glance-card { gap: 0; }
+.glance-card > .glance-title { margin-bottom: 10px; }
+.glance-item .glance-text { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.glance-item .glance-label { margin: 0; }
+.glance-ic { width: 26px; height: 26px; }
