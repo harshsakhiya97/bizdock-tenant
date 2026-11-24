@@ -24,6 +24,7 @@ import { LeadDrawer } from './LeadDrawer'
 import { ExtraFields, extraOf, LeadOrigin } from './LeadOrigin'
 import { LeadGlance } from './LeadGlance'
 import { LeadInsightCard } from './LeadInsightCard'
+import { SummarizeLeads } from './SummarizeLeads'
 import { Modal } from '@/components/Modal'
 import { BillingCard } from '@/invoices/Billing'
 import { fullName, money } from './labels'
@@ -433,6 +434,7 @@ export function LeadPage() {
                 refreshKey={refresh}
               />
               <LeadInsightCard leadId={lead.id} refreshKey={refresh} />
+              <SummarizeLeads canRun={canEdit} />
             </aside>
           </div>
         )}
