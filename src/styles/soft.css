@@ -206,3 +206,10 @@ body { background: var(--bg); }
 .seg.seg-sm { padding: 4px; gap: 2px; }
 .seg.seg-sm button { height: 34px; padding: 0 14px; gap: 7px; font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; }
 .seg.seg-sm button .muted { font-weight: 600; }
+
+/* AI Insights button never sits on top of the page's last buttons:
+   room at the bottom of every page, and it steps aside while scrolling or while a side panel / pop-up is open */
+.page { padding-bottom: 104px; }
+.ai-fab { transition: transform .2s, box-shadow .2s, opacity .2s; }
+.ai-fab.is-away { opacity: 0; transform: translateY(16px); pointer-events: none; }
+body:has(.drawer-backdrop, .modal-backdrop) .ai-fab:not(.is-open) { opacity: 0; transform: translateY(16px); pointer-events: none; }

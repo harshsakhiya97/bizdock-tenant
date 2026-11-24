@@ -84,6 +84,21 @@ export function AiInsights({ page }: { page: string }) {
       () => setStatus(null),
     )
   }, [allowed, tenant.id])
+  // while the page scrolls the button steps aside (it comes back a moment after the scrolling stops)
+  const [scrolling, setScrolling] = useState(false)
+  useEffect(() => {
+    let t = 0
+    const on = () => {
+      setScrolling(true)
+      window.clearTimeout(t)
+      t = window.setTimeout(() => setScrolling(false), 700)
+    }
+    window.addEventListener('scroll', on, true)
+    return () => {
+      window.removeEventListener('scroll', on, true)
+      window.clearTimeout(t)
+    }
+  }, [])
   // a new page: a fresh chat
   useEffect(() => {
     setOpen(false)
@@ -196,7 +211,7 @@ export function AiInsights({ page }: { page: string }) {
           </form>
         </section>
       )}
-      <button type="button" className={`ai-fab${open ? ' is-open' : ''}`} title="AI Insights: summary of this screen" aria-label="AI Insights" onClick={() => (open ? setOpen(false) : void start())}>
+      <button type="button" className={`ai-fab${open ? ' is-open' : ''}${scrolling && !open ? ' is-away' : ''}`} title="AI Insights: summary of this screen" aria-label="AI Insights" onClick={() => (open ? setOpen(false) : void start())}>
         {open ? <X size={18} /> : <Sparkles size={18} />} AI Insights
       </button>
     </>
