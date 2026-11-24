@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, BadgeIndianRupee, CalendarCheck, MessageCircle, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, BadgeIndianRupee, Bot, CalendarCheck, CalendarClock, ClipboardList, GraduationCap, Handshake, MessageCircle, Package, Route, UserRound, Video, Pencil, PhoneCall, PhoneOutgoing, Receipt, Star, Trash2, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -257,6 +257,20 @@ export function LeadPage() {
     ...(can('ai_calling', 'view') || aiCount ? [{ id: 'ai_calls' as Tab, label: 'AI Calls', count: aiCount ?? undefined }] : []),
   ]
 
+  // each tab's icon
+  const TAB_ICON: Partial<Record<Tab, typeof Star>> = {
+    details: ClipboardList,
+    followups: CalendarClock,
+    meetings: Handshake,
+    webinars: Video,
+    purchases: GraduationCap,
+    profile: UserRound,
+    journey: Route,
+    bookings: Package,
+    payments: Wallet,
+    ai_calls: Bot,
+  }
+
   return (
     <>
       <div className="row page-top" style={{ gap: 8 }}>
@@ -347,13 +361,17 @@ export function LeadPage() {
         </div>
       )}
 
-      <div className="tabs rec-tabs">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" className={cn('tab', tab === t.id && 'is-active')} onClick={() => setTab(t.id)}>
-            {t.label}
-            {t.count ? <span className="muted small"> {t.count}</span> : null}
-          </button>
-        ))}
+      <div className="rec-tabs" role="tablist">
+        {TABS.map((t) => {
+          const Icon = TAB_ICON[t.id]
+          return (
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} className={cn('rec-tab', tab === t.id && 'is-active')} onClick={() => setTab(t.id)}>
+              {Icon && <Icon size={16} />}
+              {t.label}
+              {t.count ? <span className="rec-tab-count">{t.count}</span> : null}
+            </button>
+          )
+        })}
       </div>
 
       <section className="card card-pad">
