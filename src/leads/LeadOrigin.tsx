@@ -19,7 +19,7 @@ const fmtDate = (v: string) => {
 const isLong = (v: string) => v.length > 60 || /^https?:\/\//i.test(v)
 
 /** Where a lead came from (landing page, UTMs, extra form fields) and every form post / import for it. */
-export function LeadOrigin({ lead, part }: { lead: LeadRow; part?: 'source' }) {
+export function LeadOrigin({ lead, part, funnelName }: { lead: LeadRow; part?: 'source'; funnelName?: string | null }) {
   const [subs, setSubs] = useState<SubmissionRow[] | null>(null)
   const [pages, setPages] = useState<Map<string, string>>(new Map())
   const [hooks, setHooks] = useState<Map<string, string>>(new Map())
@@ -48,7 +48,8 @@ export function LeadOrigin({ lead, part }: { lead: LeadRow; part?: 'source' }) {
   const leadDate = fmtDate(sent ? String(sent[1]) : lead.created_at)
   const extra = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && !isLong(String(v)))
   const wide = all.filter(([k, v]) => !DATE_KEYS.has(k.toLowerCase()) && isLong(String(v)))
-  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !all.length && !subs?.length) return part === 'source' ? <div className="muted small">No form or source details.</div> : null
+  if (!lead.landing_page_id && !lead.webhook_id && !utms.length && !all.length && !subs?.length && !funnelName)
+    return part === 'source' ? <div className="muted small">No form or source details.</div> : null
   const pageName = (id: string | null) => (id ? pages.get(id) ?? 'Landing page' : null)
   const hookName = (id: string | null) => (id ? hooks.get(id) ?? 'Webhook' : null)
   const formOf = (s: Pick<SubmissionRow, 'webhook_id' | 'landing_page_id'>) => hookName(s.webhook_id) ?? pageName(s.landing_page_id)
@@ -58,6 +59,7 @@ export function LeadOrigin({ lead, part }: { lead: LeadRow; part?: 'source' }) {
     <Wrap>
       <dl className="info-grid">
         <FragmentRow k="Lead date" v={leadDate} />
+        {funnelName && <FragmentRow k="Funnel" v={funnelName} />}
         {lead.webhook_id && <FragmentRow k="Form" v={hookName(lead.webhook_id) ?? ''} />}
         {lead.landing_page_id && <FragmentRow k="Landing page" v={pageName(lead.landing_page_id) ?? ''} />}
         {utms.map((k) => (

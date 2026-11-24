@@ -395,11 +395,8 @@ export function LeadPage() {
                 <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
               </section>
               <div className="acc-list">
-                <Acc title="Billing Details" icon={CreditCard}>
-                  <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
-                </Acc>
                 <Acc title="Source & Form Submissions" icon={ClipboardList}>
-                  <LeadOrigin lead={lead} part="source" />
+                  <LeadOrigin lead={lead} part="source" funnelName={funnel?.name ?? null} />
                 </Acc>
                 {hasMore && (
                   <Acc title="More Fields" icon={Layers}>
@@ -437,6 +434,11 @@ export function LeadPage() {
                 onBilling={canInv || canPay ? toMoneyTab : undefined}
                 refreshKey={refresh}
               />
+              <div className="acc-list">
+                  <Acc title="Billing Details" icon={CreditCard}>
+                    <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
+                  </Acc>
+              </div>
             </aside>
           </div>
         )}
