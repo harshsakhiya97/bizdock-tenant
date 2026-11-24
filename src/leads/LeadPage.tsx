@@ -388,12 +388,6 @@ export function LeadPage() {
                   })}
                 </dl>
               </section>
-              <section className="card lead-sec">
-                <h3 className="lead-sec-title">
-                  <FileText size={17} /> Description
-                </h3>
-                <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
-              </section>
               <div className="acc-list">
                 <Acc title="Source & Form Submissions" icon={ClipboardList}>
                   <LeadOrigin lead={lead} part="source" funnelName={funnel?.name ?? null} />
@@ -434,6 +428,12 @@ export function LeadPage() {
                 onBilling={canInv || canPay ? toMoneyTab : undefined}
                 refreshKey={refresh}
               />
+              <section className="card lead-sec">
+                <h3 className="lead-sec-title">
+                  <FileText size={17} /> Description
+                </h3>
+                <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
+              </section>
               <div className="acc-list">
                   <Acc title="Billing Details" icon={CreditCard}>
                     <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
