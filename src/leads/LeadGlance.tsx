@@ -117,7 +117,7 @@ export function LeadGlance({
         )}
       </Item>
       {m && (
-        <Item icon={Wallet} label="Billed · Received · Balance">
+        <Item icon={Wallet} label="Billed · Paid · Due">
           <b>{money(m.billed)}</b> · {money(m.received)} · <span className={m.billed - m.received > 0 ? 'danger-text' : undefined}>{money(Math.max(0, m.billed - m.received))}</span>
         </Item>
       )}
@@ -131,7 +131,7 @@ export function LeadGlance({
           <span className="muted">No messages</span>
         )}
       </Item>
-      <Item icon={UserRound} label="Lead age · Owner">
+      <Item icon={UserRound} label="Age · Owner">
         {ago(createdAt).replace(' ago', '')} · {owner ?? <span className="muted">Unassigned</span>}
       </Item>
     </div>

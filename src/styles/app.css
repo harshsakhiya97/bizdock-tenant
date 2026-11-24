@@ -1990,3 +1990,4 @@ details.rec-section summary { cursor: pointer; }
 .glance-item .glance-text { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 10px; align-items: baseline; }
 .glance-item .glance-label { margin: 0; }
 .glance-ic { width: 26px; height: 26px; }
+.glance-card.ai-card { gap: 10px; }
