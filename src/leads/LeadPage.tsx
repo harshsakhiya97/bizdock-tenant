@@ -115,9 +115,11 @@ export function LeadPage() {
       .catch(() => setMeetings([]))
   }, [id, tenant.id, can])
   useEffect(load, [load])
-  const canPay = can('payments', 'view')
+  // a lead you can see: everything on its page too (Payments → Invoice and Direct payments, Bookings, Meetings),
+  // whatever the Payments / Bookings / Meetings view permissions — they still decide those modules' own pages
+  const canPay = true
   // Payments tab: Invoice (with Bookings) and Direct payments (Razorpay)
-  const canInv = can('bookings', 'view')
+  const canInv = true
   useEffect(() => {
     if (!id) return
     db()
@@ -269,9 +271,7 @@ export function LeadPage() {
               ]
             : []),
         ]
-      : can('bookings', 'view')
-        ? [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]
-        : []),
+      : [{ id: 'bookings' as Tab, label: isPodcast ? 'Podcasts' : isDefault ? orderNoun(leadType).many : 'Bookings', count: (bookings ?? []).filter((b) => b.status !== 'cancelled').length }]),
     ...(canPay || canInv ? [{ id: 'payments' as Tab, label: 'Payments', count: (canInv ? (invCount ?? 0) : 0) + (canPay ? directCount : 0) }] : []),
   ]
 
