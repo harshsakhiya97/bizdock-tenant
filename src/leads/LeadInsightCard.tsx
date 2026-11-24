@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { RefreshCw, Sparkles } from 'lucide-react'
+import { MessageCircleWarning, RefreshCw, Sparkles, TriangleAlert, Zap } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { getLeadInsight, refreshLeadInsight, type InsightRow } from './insights'
@@ -90,33 +90,42 @@ export function LeadInsightCard({ leadId, refreshKey }: { leadId: string; refres
             </dl>
           )}
           </div>
-          <div className="ai-col">
-          {c.objections?.length > 0 && (
-            <div>
-              <span className="ai-label">Objections</span>
-              <ul className="ai-list">
-                {c.objections.map((o, i) => (
-                  <li key={i}>{o}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {known(c.next_action) && (
-            <div className="ai-next">
-              <span className="ai-label">Next best action</span>
-              <div>{c.next_action}</div>
-            </div>
-          )}
-          {c.risks?.length > 0 && (
-            <div>
-              <span className="ai-label">Risks</span>
-              <ul className="ai-list ai-risks">
-                {c.risks.map((o, i) => (
-                  <li key={i}>{o}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <div className="ai-col ai-side">
+            {known(c.next_action) && (
+              <div className="ai-side-item">
+                <Zap size={15} className="ai-side-ic" />
+                <div>
+                  <span className="ai-side-h">Next Best Action</span>
+                  <div>{c.next_action}</div>
+                </div>
+              </div>
+            )}
+            {c.objections?.length > 0 && (
+              <div className="ai-side-item">
+                <MessageCircleWarning size={15} className="ai-side-ic" />
+                <div>
+                  <span className="ai-side-h">Objections</span>
+                  <ul className="ai-list">
+                    {c.objections.map((o, i) => (
+                      <li key={i}>{o}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+            {c.risks?.length > 0 && (
+              <div className="ai-side-item is-risk">
+                <TriangleAlert size={15} className="ai-side-ic" />
+                <div>
+                  <span className="ai-side-h">Risks</span>
+                  <ul className="ai-list">
+                    {c.risks.map((o, i) => (
+                      <li key={i}>{o}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
           <div className="muted small ai-foot">
             Updated {ago(row?.generated_at ?? null)}

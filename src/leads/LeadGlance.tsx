@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { CalendarClock, ChevronRight, Handshake, MessageCircle, PhoneCall, Receipt, Tag, UserRound, Wallet } from 'lucide-react'
+import { CalendarClock, ChartColumnBig, ChevronRight, Handshake, MessageCircle, PhoneCall, Receipt, Tag, UserRound, Wallet } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { money, tempOf } from './labels'
@@ -62,7 +62,9 @@ export function LeadGlance({
 
   return (
     <div className="glance-card">
-      <span className="glance-title">At a glance</span>
+      <span className="glance-title">
+        <ChartColumnBig size={17} /> At a glance
+      </span>
       <Item icon={Tag} label="Category">
         {t ? <span className={cn('badge', t.tone)}>{t.label}</span> : '—'}
         {g?.category_since && <span className="muted small"> · since {at(g.category_since)}</span>}

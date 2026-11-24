@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, CalendarClock, ChevronDown, ClipboardList, GraduationCap, Handshake, History, Package, Route, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarClock, ChevronDown, ClipboardList, Clock3, CreditCard, FileText, GraduationCap, Handshake, History, Layers, Link2, Mail, MapPin, Package, Phone, Route, Tag, Target, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -325,10 +325,13 @@ export function LeadPage() {
               </span>
             )}
           </div>
-          <div className="muted small">
-            {lead.phone}
-            {sourceName ? ` · ${sourceName}` : ''}
-            {lead.purpose ? ` · ${lead.purpose}` : ''} · received {ago(lead.created_at)}
+          <div className="muted small rec-sub">
+            <span>{lead.phone}</span>
+            {sourceName && <span>{sourceName}</span>}
+            {lead.purpose && <span>{lead.purpose}</span>}
+            <span className="rec-sub-time">
+              <Clock3 size={13} /> Received {ago(lead.created_at)}
+            </span>
           </div>
         </div>
         <div className="row rec-actions">
@@ -362,33 +365,44 @@ export function LeadPage() {
         })}
       </div>
 
-      <section className="card card-pad">
+      <section className={tab === 'details' ? 'rec-body-plain' : 'card card-pad'}>
         {tab === 'details' && (
-          <div className="stack">
-            <LeadInsightCard leadId={lead.id} refreshKey={refresh} />
-            <div className="lead-split">
+          <div className="lead-split">
             <div className="stack lead-main">
-              <dl className="info-grid">
-                {info.map(([k, v]) => (
-                  <div key={k}>
-                    <dt>{k}</dt>
-                    <dd>{v}</dd>
-                  </div>
-                ))}
-              </dl>
-              <div>
-                <span className="field-label">Description</span>
+              <LeadInsightCard leadId={lead.id} refreshKey={refresh} />
+              <section className="card lead-sec">
+                <h3 className="lead-sec-title">
+                  <UserRound size={17} /> Lead Information
+                </h3>
+                <dl className="info-grid">
+                  {info.map(([k, v]) => {
+                    const Icon = FIELD_ICON[k] ?? Tag
+                    return (
+                      <div key={k}>
+                        <dt>
+                          <Icon size={14} /> {k}
+                        </dt>
+                        <dd>{v}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </section>
+              <section className="card lead-sec">
+                <h3 className="lead-sec-title">
+                  <FileText size={17} /> Description
+                </h3>
                 <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
-              </div>
+              </section>
               <div className="acc-list">
-                <Acc title="Billing details">
+                <Acc title="Billing Details" icon={CreditCard}>
                   <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
                 </Acc>
-                <Acc title="Source & form submissions">
+                <Acc title="Source & Form Submissions" icon={ClipboardList}>
                   <LeadOrigin lead={lead} part="source" />
                 </Acc>
                 {hasMore && (
-                  <Acc title="More fields">
+                  <Acc title="More Fields" icon={Layers}>
                     <div className="stack">
                       {more.length > 0 && (
                         <dl className="info-grid">
@@ -424,7 +438,6 @@ export function LeadPage() {
                 refreshKey={refresh}
               />
             </aside>
-            </div>
           </div>
         )}
         {tab === 'followups' && (
@@ -621,12 +634,28 @@ export function LeadPage() {
   )
 }
 
+/** Details → Lead Information: a small icon per field */
+const FIELD_ICON: Record<string, LucideIcon> = {
+  Phone,
+  Email: Mail,
+  City: MapPin,
+  Source: Link2,
+  Purpose: Target,
+  'Webinar category': GraduationCap,
+  Tags: Tag,
+  Business: Building2,
+  Owner: UserRound,
+}
+
 /** a closed-by-default section of the Details tab */
-function Acc({ title, children }: { title: string; children: React.ReactNode }) {
+function Acc({ title, icon: Icon, children }: { title: string; icon?: LucideIcon; children: React.ReactNode }) {
   return (
     <details className="acc">
       <summary>
-        <span>{title}</span>
+        <span className="acc-title">
+          {Icon && <Icon size={16} />}
+          {title}
+        </span>
         <ChevronDown size={16} className="acc-chev" />
       </summary>
       <div className="acc-body">{children}</div>
