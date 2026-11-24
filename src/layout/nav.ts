@@ -53,7 +53,10 @@ export const navSections: { title: string; /** no heading shown in the side menu
         to: '/reports',
         label: 'Reports',
         icon: BarChart3,
-        children: [{ to: '/reports/team', label: 'Team Report', icon: Users2, module: 'team_report' }],
+        children: [
+          { to: '/reports/team', label: 'Team Report', icon: Users2, module: 'team_report' },
+          { to: '/reports/funnel', label: 'Funnel Report', icon: Workflow, module: 'funnels' },
+        ],
       },
       { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
       {
@@ -140,6 +143,7 @@ export const pageMeta: Record<string, { title: string; crumb: string; icon: Luci
   '/enrolled-courses': { title: 'Enrolled Courses', crumb: 'Course purchases & payments', icon: GraduationCap },
   '/upsell': { title: 'Upsell', crumb: 'Who to sell the next course to', icon: TrendingUp },
   '/reports/team': { title: 'Reports', crumb: 'Team Report', icon: BarChart3 },
+  '/reports/funnel': { title: 'Reports', crumb: 'Funnel Report', icon: BarChart3 },
   '/invoice-payments': { title: 'Billing', crumb: 'Payments', icon: BadgeIndianRupee },
   '/expenses': { title: 'Expenses', crumb: 'Spending & net profit', icon: Wallet },
   '/booking-list': { title: 'Bookings', crumb: 'Bookings, invoices & payments', icon: PackageCheck },

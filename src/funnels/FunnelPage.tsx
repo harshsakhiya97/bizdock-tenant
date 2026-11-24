@@ -12,24 +12,21 @@ import { listFunnelSubmissions, listFunnels, listLandingPages, listSheets, listW
 import { FunnelDrawer } from './FunnelDrawer'
 import { FunnelLeadsTable } from './FunnelLeadsTable'
 import { activeType } from '@/business/activeType'
-import { BT } from '@/auth/auth-context'
 import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
 import { WhatsAppTab } from './WhatsAppTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
 import { FunnelGoogleTab } from './FunnelGoogleTab'
-import { StatRecords, type StatShow } from '@/components/StatRecords'
-import { leadCols } from '@/leads/statCols'
 import { db } from '@/lib/supabase'
 import { FunnelPaymentsTab } from './FunnelPaymentsTab'
-import { FunnelAdsReport, fromSrc, leadDay, type Src } from './FunnelAdsReport'
+import { FunnelOverviewReport } from './FunnelOverviewReport'
 import { listWorkflows } from '@/workflows/api'
 import { funnelCampaignCount } from '@/meta/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
-import { DateRangePicker, isoDay, presetRange, rangeLabel, type Range } from '@/components/DateRange'
+import { DateRangePicker, isoDay, presetRange, type Range } from '@/components/DateRange'
 import { SpendLines, type Line } from './SpendLines'
 import { TEMPERATURES } from '@/leads/labels'
 import { Select } from '@/components/Field'
@@ -65,10 +62,6 @@ export function FunnelPage() {
   const [sheets, setSheets] = useState<FunnelSheet[] | null>(null)
   const [subs, setSubs] = useState<SubmissionRow[]>([])
   const [leads, setLeads] = useState<LeadRow[] | null>(null)
-  // Overview: the funnel report's period and source (Overall / Facebook / Google); the tiles above it follow them too.
-  // Same presets as Facebook Ads Manager (Last 30 days ends yesterday), so the numbers match
-  const [repRange, setRepRange] = useState<Range>(() => presetRange('last30'))
-  const [repSrc, setRepSrc] = useState<Src>('all')
   // Leads tab: a date range (lead date), and Graph (leads per day, a line per category) or List
   const [leadRange, setLeadRange] = useState<Range>(() => presetRange('last30'))
   const [leadView, setLeadView] = useState<'graph' | 'list'>('graph')
@@ -138,16 +131,10 @@ export function FunnelPage() {
   }, [id, tenant.id, loadAds])
   useEffect(load, [load])
 
-  const stageOf = useMemo(() => new Map((funnel?.funnel_stages ?? []).map((s) => [s.id, s])), [funnel])
-  const wonIds = useMemo(() => new Set((funnel?.funnel_stages ?? []).filter((s) => s.kind === 'won').map((s) => s.id)), [funnel])
   const biz = businesses.find((b) => b.id === funnel?.business_id)
   const subName = biz?.subs.find((x) => x.id === funnel?.sub_business_id)?.name
   const businessName = biz ? (subName ? `${biz.name} · ${subName}` : biz.name) : '—'
 
-  // overview tiles: their records in a modal
-  const [leadShow, setLeadShow] = useState<StatShow<LeadRow> | null>(null)
-  const [subShow, setSubShow] = useState<StatShow<SubmissionRow> | null>(null)
-  const leadName = useMemo(() => new Map((leads ?? []).map((l) => [l.id, [l.first_name, l.last_name].filter(Boolean).join(' ')])), [leads])
   if (funnel === undefined) return <div className="empty">Loading funnel…</div>
   if (!funnel)
     return (
@@ -174,30 +161,6 @@ export function FunnelPage() {
     navigate(`/leads?open=${leadId}`)
   }
 
-  // the tiles: the leads created in the report's period, from its source (and their form posts)
-  const inRep = (ts: string) => {
-    const d = leadDay(ts)
-    return d >= repRange.from && d <= repRange.to
-  }
-  const tileLeads = (leads ?? []).filter((l) => inRep(l.created_at) && fromSrc(l, repSrc))
-  const leadOf = new Map((leads ?? []).map((l) => [l.id, l]))
-  const tilePosts = subs.filter((x) => x.via === 'webhook' && inRep(x.created_at) && (repSrc === 'all' || (!!x.lead_id && !!leadOf.get(x.lead_id) && fromSrc(leadOf.get(x.lead_id)!, repSrc))))
-  const fromForms = tileLeads.filter((l) => l.webhook_id || l.landing_page_id || l.sheet_id).length
-  const won = tileLeads.filter((l) => stageOf.get(l.stage_id ?? '')?.kind === 'won').length
-  // the tiles open their records: leads, or the form posts
-  const showLeads = (title: string, f: (l: LeadRow) => boolean) => setLeadShow({ title, rows: tileLeads.filter(f), cols: leadCols(members) })
-  const showPosts = () =>
-    setSubShow({
-      title: 'Form posts',
-      rows: tilePosts,
-      cols: [
-        { label: 'Received', render: (x) => <span className="nowrap">{new Date(x.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span> },
-        { label: 'Lead', render: (x) => (x.lead_id ? <b>{leadName.get(x.lead_id) || 'Lead'}</b> : <span className="muted">—</span>) },
-        { label: 'New / existing', render: (x) => (x.is_new ? <span className="badge badge-success">New lead</span> : <span className="badge badge-muted">Existing lead</span>) },
-        { label: 'Result', render: (x) => x.result || x.action || <span className="muted">—</span> },
-        { label: 'UTM', render: (x) => <span className="small">{[x.utm_source, x.utm_campaign].filter(Boolean).join(' · ') || '—'}</span> },
-      ],
-    })
   const daysTo = event ? Math.round((new Date(`${event.event_date}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86400000) : null
 
   return (
@@ -251,38 +214,7 @@ export function FunnelPage() {
         <div className="panel-body">
           {tab === 'overview' && (
             <div className="stack">
-              <div className="muted small">
-                {rangeLabel(repRange)} · {repSrc === 'all' ? 'Overall (Facebook + Google)' : repSrc === 'fb' ? 'Facebook' : 'Google'}: the Funnel report’s period and source (change them below).
-              </div>
-              <div className="flow-cards pay-cards">
-                {(
-                  [
-                    [leads ? String(tileLeads.length) : '—', 'Leads', 'Every lead of this funnel, these dates', '#6366f1', () => showLeads('Leads', () => true)],
-                    [String(fromForms), 'From forms & sheets', leads && tileLeads.length ? `${Math.round((fromForms / tileLeads.length) * 100)}% of the leads` : 'Webhooks, landing pages, sheets', '#0ea5e9', () => showLeads('From forms & sheets', (l) => !!(l.webhook_id || l.landing_page_id || l.sheet_id))],
-                    [String(tilePosts.length), 'Form posts', 'Every form sent (new + repeat)', '#f59e0b', showPosts],
-                    [String(won), 'Won', leads && tileLeads.length ? `${((won / tileLeads.length) * 100).toFixed(1)}% conversion` : 'Leads that reached a won stage', '#22c55e', () => showLeads('Won', (l) => stageOf.get(l.stage_id ?? '')?.kind === 'won')],
-                  ] as [string, string, string, string, () => void][]
-                ).map(([v, l, sub, c, go]) => (
-                  <button key={l} type="button" className="flow-card" style={{ ['--c' as string]: c }} onClick={go}>
-                    <b>{v}</b>
-                    <span>{l}</span>
-                    <small className="muted">{sub}</small>
-                  </button>
-                ))}
-              </div>
-              <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
-              <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
-
-              <FunnelAdsReport
-                funnelId={funnel.id}
-                leads={leads}
-                range={repRange}
-                setRange={setRepRange}
-                src={repSrc}
-                setSrc={setRepSrc}
-                podcast={activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null) === BT.PAID_PODCAST}
-                wonIds={wonIds}
-              />
+              <FunnelOverviewReport funnel={funnel} leads={leads} subs={subs} members={members} />
 
               <div>
                 <section className="card card-pad stack" style={{ gap: 12 }}>
