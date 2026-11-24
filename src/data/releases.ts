@@ -13,6 +13,33 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.35',
+    date: '2026-11-24',
+    title: 'New lead page, AI lead summaries, AI order, Funnel Report',
+    summary: 'The lead page in two columns with At a glance and an AI summary of every lead; an AI order to choose which AI each feature uses (with a backup); Reports → Funnel Report; a lead or funnel you can see now shows everything inside it.',
+    new: [
+      'Lead page → Details: the fields as a neat table on the left, Billing details / Source & form submissions / More fields in sections you open, and “At a glance” on the right (category and since when, next follow-up, calls, meetings, billing, bill to, WhatsApp, age and owner).',
+      'AI Insights on every lead: a short summary (Hot / Warm / Cold and why, needs, budget, timeline, objections, next best action, risks) from the lead’s details, follow-ups, call transcripts, meetings, payments and WhatsApp — names and phone numbers hidden from the AI. Written again by itself a minute after anything changes; Summarize / Refresh writes it now.',
+      'History: the lead’s activity timeline opens from the clock button next to Delete / Edit.',
+      'System Connections → AI order: for Lead AI Insights, AI Insights and Write with AI, choose Level 1 / 2 / 3 (Gemini or Claude, and the model) and when to move on to the next one (busy, error, unreadable answer, not connected); on / off, and the lead summary prompt. One monthly AI limit for every AI.',
+      'Reports → Funnel Report: pick a funnel and see its whole Overview report (tiles, Funnel, Scorecard, Lead flow, List) — the same report as the funnel’s Overview, so changes show in both.',
+      'Paid Podcast funnels → Scorecard: the Funnel rows are Opt-in form filled, Only opted in (no next step), VSL form filled, Meeting booked / done / no-show, Closed and Not interested, as 49% (122); click any for its leads.',
+      'Webhooks: a Form step (Opt-in / VSL form) on each form.',
+    ],
+    improved: [
+      'A lead you can see shows all of it: Meetings, Bookings / Podcasts / Orders and Payments, without their own view permissions. A funnel you can see shows all its tabs too (Payments, Workflows).',
+      'Customer page: Bookings / Revenue / Received / Balance moved into the Payments tab, as colourful cards.',
+      'Funnel → Overview: the Leads / Forms / Form posts / Won tiles as colourful cards with a line each.',
+      'Every dropdown can be searched.',
+      'Lead page: new tab bar with icons and counts; AI Calls moved inside Follow-ups (with Call from AI there); the header keeps Delete and Edit; Payments sub-tabs like Follow-ups.',
+      'The AI Insights button moves aside while you scroll and when a side panel or pop-up is open; pages have room at the bottom so it never covers a button.',
+      'Filters no longer look greyed out.',
+    ],
+    fixed: [
+      'System Connections: connections’ status and last sync (Razorpay, Callyzer, …) stopped updating since 23 Nov — Razorpay showed an old “Too many requests”.',
+    ],
+  },
+  {
     version: '0.34',
     date: '2026-11-24',
     title: 'Soft Indigo look, Scorecard & Lead flow, invoice GST type',
