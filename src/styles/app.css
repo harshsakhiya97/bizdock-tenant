@@ -2007,3 +2007,8 @@ details.rec-section summary { cursor: pointer; }
 .ai-risks li::marker { color: var(--danger); }
 .ai-next { border-radius: 10px; padding: 10px 12px; background: var(--surface); border: 1px dashed color-mix(in srgb, var(--brand) 45%, transparent); }
 .ai-next .ai-label { color: var(--brand); }
+/* AI Insights: full width above the Details columns, in two columns */
+.ai-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 22px; align-items: start; }
+.ai-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ai-foot { grid-column: 1 / -1; }
+@media (max-width: 900px) { .ai-body { grid-template-columns: 1fr; } }
