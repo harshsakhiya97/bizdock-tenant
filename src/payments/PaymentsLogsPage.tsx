@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { BadgeIndianRupee, CircleX, CreditCard, RefreshCw, Undo2 } from 'lucide-react'
 import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
-import { DateRangePicker, type Range } from '@/components/DateRange'
+import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
@@ -39,12 +39,6 @@ const STATUS: Record<string, { label: string; cls: string }> = {
 }
 const METHOD: Record<string, string> = { upi: 'UPI', card: 'Card', netbanking: 'Netbanking', wallet: 'Wallet', emi: 'EMI', cardless_emi: 'Cardless EMI', paylater: 'Pay later', bank_transfer: 'Bank transfer' }
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const day = (d: Date) => d.toLocaleDateString('en-CA')
-const ago = (n: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return day(d)
-}
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 const nicePhone = (p: string | null) => {
   const d = (p ?? '').replace(/\D/g, '')
@@ -59,7 +53,7 @@ const noteName = (n: Record<string, unknown>) => {
 export function PaymentsLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
-  const [range, setRange] = useState<Range>(() => ({ key: 'custom', from: ago(30), to: day(new Date()) }))
+  const [range, setRange] = useState<Range>(ALL_DATES)
   const { from, to } = range
   const [rows, setRows] = useState<Pay[] | null>(null)
   const [q, setQ] = useState('')
@@ -73,15 +67,13 @@ export function PaymentsLogsPage() {
   const load = useCallback(() => {
     setRows(null)
     setError(null)
-    const start = new Date(`${from}T00:00:00`).toISOString()
-    const end = new Date(`${to}T23:59:59.999`).toISOString()
-    db()
+    let q = db()
       .from('razorpay_payments')
       .select('id, payment_id, order_id, amount, status, method, email, phone, description, notes, amount_refunded, error_description, vpa, bank, wallet, paid_at, lead_id, leads(first_name, last_name)')
       .eq('tenant_id', tenant.id)
-      .gte('paid_at', start)
-      .lte('paid_at', end)
-      .order('paid_at', { ascending: false })
+    // All dates: no date limits
+    if (from && to) q = q.gte('paid_at', new Date(`${from}T00:00:00`).toISOString()).lte('paid_at', new Date(`${to}T23:59:59.999`).toISOString())
+    q.order('paid_at', { ascending: false })
       .limit(10000)
       .then(({ data, error: e }) => {
         if (e) setError(e.message)
@@ -203,7 +195,7 @@ export function PaymentsLogsPage() {
             <option value="yes">Matched to a lead ({n((r) => !!r.lead_id)})</option>
             <option value="no">No lead ({n((r) => !r.lead_id)})</option>
           </select>
-          <DateRangePicker value={range} onChange={setRange} />
+          <DateRangePicker value={range} onChange={setRange} allDates />
           {(q || status || method || matched) && (
             <button
               type="button"

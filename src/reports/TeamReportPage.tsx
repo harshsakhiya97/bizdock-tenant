@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { isoDay } from '@/components/DateRange'
+import { DateRangePicker, presetRange, rangeLabel, type Range } from '@/components/DateRange'
 import { StatRecords, type StatCol, type StatShow } from '@/components/StatRecords'
 import { Empty, PageHead } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { tempOf } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
-import { Box, DayBar, PersonCard, dayLabel, time, when } from './parts'
+import { Box, PersonCard, dayLabel, time, when } from './parts'
 
 type Mem = {
   id: string
@@ -39,7 +39,7 @@ type Kind = 'done' | 'done_7d' | 'due' | 'overdue' | 'first_call_pending' | 'no_
 const LABEL: Record<Kind, string> = {
   done: 'Follow-ups done',
   done_7d: 'Follow-ups (7 days)',
-  due: 'Due that day',
+  due: 'Due',
   overdue: 'Overdue follow-ups',
   first_call_pending: 'First call pending',
   no_follow_up: 'No follow-up date',
@@ -78,13 +78,15 @@ const COLS: Record<'done' | 'pending' | 'leads', StatCol<Item>[]> = {
   ],
 }
 
-/** Reports → Team Report: one day's follow-up work, a card per team member; click any number for its records */
+/** Reports → Team Report: the follow-up work of a date range (this month by default), a card per team member; click any number for its records */
 export function TeamReportPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
-  const today = isoDay(new Date())
-  const [day, setDay] = useState(today)
-  const [pick, setPick] = useState(today)
+  const [range, setRange] = useState<Range>(() => presetRange('thisMonth'))
+  const { from, to } = range
+  const oneDay = from === to
+  // a time on one day, else the date and time
+  const at = (s: string | null) => (oneDay ? time(s) : when(s))
   const [members, setMembers] = useState<Mem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [show, setShow] = useState<StatShow<Item> | null>(null)
@@ -93,25 +95,20 @@ export function TeamReportPage() {
   const load = useCallback(() => {
     setError(null)
     db()
-      .rpc('team_report', { p_tenant: tenant.id, p_day: day })
+      .rpc('team_report_range', { p_tenant: tenant.id, p_from: from, p_to: to })
       .then(({ data, error: e }) => (e ? setError(e.message) : setMembers(((data as { members?: Mem[] } | null)?.members ?? []) as Mem[])))
-  }, [tenant.id, day])
+  }, [tenant.id, from, to])
   useEffect(load, [load])
-
-  const go = (d: string) => {
-    setPick(d)
-    setDay(d)
-  }
 
   async function open(kind: Kind, m: Mem) {
     if (busy) return
     setBusy(true)
     setError(null)
-    const { data, error: e } = await db().rpc('team_report_list', { p_tenant: tenant.id, p_day: day, p_member: m.id, p_kind: kind })
+    const { data, error: e } = await db().rpc('team_report_range_list', { p_tenant: tenant.id, p_from: from, p_to: to, p_member: m.id, p_kind: kind })
     setBusy(false)
     if (e) return setError(e.message)
     setShow({
-      title: `${LABEL[kind]} · ${m.name} · ${kind === 'done_7d' ? `7 days to ${dayLabel(day)}` : kind === 'done' || kind === 'due' ? dayLabel(day) : `as of now`}`,
+      title: `${LABEL[kind]} · ${m.name} · ${kind === 'done_7d' ? `7 days to ${dayLabel(to)}` : kind === 'done' || kind === 'due' ? rangeLabel(range) : `as of now`}`,
       rows: (data ?? []) as Item[],
       cols: COLS[kind === 'done' || kind === 'done_7d' ? 'done' : kind === 'due' || kind === 'overdue' ? 'pending' : 'leads'],
     })
@@ -121,13 +118,16 @@ export function TeamReportPage() {
   const top = list.reduce((x, m) => Math.max(x, m.done), 0)
   return (
     <>
-      <PageHead title="Team Report" subtitle={`Follow-ups of every team member · ${dayLabel(day)}`} />
+      <PageHead title="Team Report" subtitle={`Follow-ups of every team member · ${rangeLabel(range)}`} />
       {error && <div className="alert alert-error">{error}</div>}
 
-      <DayBar day={day} pick={pick} setPick={setPick} go={go}>
-        <b>{list.filter((m) => m.done > 0).length}</b> of {list.length} team members with follow-ups done · <b>{list.reduce((s, m) => s + m.done, 0).toLocaleString('en-IN')}</b> done that day
-        {busy && <span className="muted"> · Loading…</span>}
-      </DayBar>
+      <div className="tr-bar">
+        <div className="tr-sum">
+          <b>{list.filter((m) => m.done > 0).length}</b> of {list.length} team members with follow-ups done · <b>{list.reduce((s, m) => s + m.done, 0).toLocaleString('en-IN')}</b> done in this period
+          {busy && <span className="muted"> · Loading…</span>}
+        </div>
+        <DateRangePicker value={range} onChange={setRange} />
+      </div>
 
       {!members ? (
         <div className="panel">
@@ -143,15 +143,15 @@ export function TeamReportPage() {
               best={top > 0 && m.done === top}
               facts={[
                 <>
-                  First follow-up <b>{time(m.first_done)}</b>
+                  First follow-up <b>{at(m.first_done)}</b>
                 </>,
                 <>
-                  Last follow-up <b>{time(m.last_done)}</b>
+                  Last follow-up <b>{at(m.last_done)}</b>
                 </>,
               ]}
             >
               <Box label="Follow-ups done" value={m.done} tone="success" onClick={() => void open('done', m)} />
-              <Box label="Due that day" value={m.due} onClick={() => void open('due', m)} />
+              <Box label={oneDay ? 'Due that day' : 'Due in period'} value={m.due} onClick={() => void open('due', m)} />
               <Box label="Overdue" value={m.overdue} tone={m.overdue ? 'danger' : 'success'} onClick={() => void open('overdue', m)} />
               <Box label="First call pending" value={m.first_call_pending} tone={m.first_call_pending ? 'warning' : 'success'} onClick={() => void open('first_call_pending', m)} />
               <Box label="No follow-up date" value={m.no_follow_up} tone={m.no_follow_up ? 'warning' : undefined} onClick={() => void open('no_follow_up', m)} />
