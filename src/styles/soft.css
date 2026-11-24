@@ -199,3 +199,5 @@ body { background: var(--bg); }
 @media (max-width: 640px) { .rec-tabs { flex-wrap: nowrap; overflow-x: auto; } .rec-tab { flex: none; } }
 /* filter bars: an unpicked filter's name reads like the others (not grey) */
 .panel-filters .ss-placeholder, .filter-ss .ss-placeholder, .tr-date .ss-placeholder { color: var(--text); }
+/* the tab bar sits close to the section it opens (the page's 20px gap minus 12) */
+.rec-tabs { margin: -6px 0 -12px; }
