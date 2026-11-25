@@ -319,13 +319,6 @@ export function FollowUpsTab({
                         {f.purpose ? `${f.purpose} · ` : ''}for {name(f.assigned_to)}
                       </div>
                     </div>
-                    {canEdit && (
-                      <div className="row">
-                        <button type="button" className="btn btn-outline btn-sm" onClick={() => setCompleting(f)}>
-                          Done
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )
               })}
