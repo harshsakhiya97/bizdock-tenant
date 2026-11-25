@@ -223,6 +223,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     const endToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
     // a sub-business narrows by the lead's own sub-business (below), so every funnel of the business counts here
     const scopedIds = new Set(funnels.filter((f) => !selected || f.business_id === selected.id).map((f) => f.id))
+    // a lead of a funnel that's turned off (not in the list) still counts in its own business, as in the cards
+    const known = new Set(funnels.map((f) => f.id))
     return (leads ?? [])
       .filter((l) => l.is_archived === filters.archived)
       // leads imported without a funnel: in "All funnels" (their business) and "No funnel"
@@ -231,7 +233,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           ? !l.funnel_id && (!selected || l.business_id === selected.id)
           : funnel
             ? l.funnel_id === funnel.id
-            : l.funnel_id
+            : l.funnel_id && known.has(l.funnel_id)
               ? scopedIds.has(l.funnel_id)
               : !selected || l.business_id === selected.id,
       )
