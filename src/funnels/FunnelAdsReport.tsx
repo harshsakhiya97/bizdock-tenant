@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react
 import { useNavigate } from 'react-router'
 import { Modal } from '@/components/Modal'
 import { Filter, List, Table2, Waypoints, TrendingDown, TrendingUp } from 'lucide-react'
-import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } from '@/meta/api'
+import { funnelAdsReport, funnelFlow, funnelFlowDetail, type AdsReport, type FlowAd, type FlowDetail, type FunnelFlow as Flow } from '@/meta/api'
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
-import { FunnelScorecard, type PodRow } from './FunnelScorecard'
+import { FunnelScorecard, type MarketingOpen, type PodRow } from './FunnelScorecard'
 import { POD_STEPS, type PodFacts } from './podSteps'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
@@ -40,7 +40,7 @@ type Row = {
   received: number
   ls: Lead[]
 }
-type Lead = { id: string; created_at: string; stage_id?: string | null; next_follow_up_at?: string | null; utm_source?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
+type Lead = { id: string; created_at: string; stage_id?: string | null; next_follow_up_at?: string | null; utm_source?: string | null; utm_campaign?: string | null; is_archived?: boolean; phone?: string | null; email?: string | null; temperature?: string | null; first_name?: string | null; last_name?: string | null }
 /** where a lead came from, by its UTM source: Facebook / Instagram (fb, ig…) or Google (google, adwords, youtube…) */
 /** an ad lead: its UTM source is Facebook / Instagram or Google */
 const isAds = (l: Pick<Lead, 'utm_source'>) => fromSrc(l, 'fb') || fromSrc(l, 'google')
@@ -425,6 +425,75 @@ export function FunnelAdsReport({
       return { label, ads: cell(ads, 'Ads'), organic: cell(org, 'Organic'), total: cell(periodLeads, 'Total') }
     })
   }, [podcast, wonIds, vsl, meet, periodLeads])
+  // Scorecard → Marketing: the ads and the leads behind each number (loaded when the Scorecard is open)
+  const [detail, setDetail] = useState<FlowDetail | null>(null)
+  const [adShow, setAdShow] = useState<StatShow<FlowAd> | null>(null)
+  useEffect(() => {
+    if (view !== 'scorecard') return
+    let live = true
+    setDetail(null)
+    funnelFlowDetail(funnelId, from, to, src).then(
+      (d) => live && setDetail(d),
+      () => live && setDetail(null),
+    )
+    return () => {
+      live = false
+    }
+  }, [view, funnelId, from, to, src, reload])
+  const marketingOpen = useMemo<MarketingOpen | undefined>(() => {
+    if (!detail) return undefined
+    const byId = new Map((leads ?? []).map((l) => [l.id, l]))
+    const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    const n = (v: number | null) => (v == null ? '—' : Number(v).toLocaleString('en-IN'))
+    const per = (a: number, b: number | null, k = 1) => (b ? inr((a / b) * k) : '—')
+    const lpvCol = src === 'fb'
+    return {
+      ads: (metric) =>
+        setAdShow({
+          title: `${metric} · ${detail.ads.length === 1 ? 'the ad' : 'each ad'}`,
+          rows: detail.ads,
+          cols: [
+            {
+              label: 'Ad',
+              render: (a) => (
+                <>
+                  <b>{a.ad || a.campaign || '—'}</b>
+                  <div className="muted small">
+                    {a.platform}
+                    {a.ad && a.campaign ? ` · ${a.campaign}` : ''}
+                    {a.group ? ` · ${a.group}` : ''}
+                  </div>
+                </>
+              ),
+            },
+            { label: 'Spent', num: true, render: (a) => <span title={`${inr(a.spend_gst)} with GST`}>{inr(a.spend)}</span> },
+            { label: 'Impressions', num: true, render: (a) => n(a.impressions) },
+            { label: 'CPM', num: true, render: (a) => per(a.spend, a.impressions, 1000) },
+            { label: 'Link clicks', num: true, render: (a) => n(a.clicks) },
+            { label: 'CTR', num: true, render: (a) => (a.impressions ? `${((Number(a.clicks ?? 0) / a.impressions) * 100).toFixed(1)}%` : '—') },
+            { label: 'CPC', num: true, render: (a) => per(a.spend, a.clicks) },
+            ...(lpvCol ? [{ label: 'LP views', num: true, render: (a: FlowAd) => n(a.lpv) }] : []),
+          ],
+        }),
+      leads: (col, metric) => {
+        const rows = detail.leads
+          .filter((x) => (col === 'total' ? true : col === 'ads' ? x.ads : !x.ads))
+          .map((x) => byId.get(x.id))
+          .filter((l): l is Lead => !!l)
+          .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        setPodShow({
+          title: `${metric} · ${col === 'ads' ? 'Ads' : col === 'organic' ? 'Organic' : 'Total'}`,
+          rows,
+          cols: [
+            { label: 'Lead', render: (l) => <><b>{who(l)}</b>{l.phone && <div className="muted small">{l.phone}</div>}</> },
+            { label: 'Lead date', render: (l) => <span className="nowrap">{dt(l.created_at)}</span> },
+            { label: 'Source', render: (l) => [l.utm_source, l.utm_campaign].filter(Boolean).join(' · ') || '—' },
+            { label: 'Category', render: (l) => (l.temperature ? l.temperature.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '—') },
+          ],
+        })
+      },
+    }
+  }, [detail, leads, src])
   const bookedSet = useMemo(() => new Set(meet.booked.keys()), [meet])
   const showedSet = useMemo(() => new Set(meet.showed.keys()), [meet])
   const revOf = useCallback((id: string) => (money2.billed.get(id) ?? 0) + (money2.pays.get(id)?.amt ?? 0), [money2])
@@ -493,8 +562,9 @@ export function FunnelAdsReport({
         <>
           {flow === undefined && !error && <div className="muted small">Loading…</div>}
           {flow === null && <div className="muted small">You can’t see this funnel’s report.</div>}
-          {flow && <FunnelScorecard f={flow} gst={gst} pod={podRows} />}
+          {flow && <FunnelScorecard f={flow} gst={gst} pod={podRows} open={marketingOpen} />}
           <StatRecords show={podShow} onClose={() => setPodShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
+          <StatRecords show={adShow} onClose={() => setAdShow(null)} rowKey={(a) => a.key} />
         </>
       )}
       {view === 'flow' && (

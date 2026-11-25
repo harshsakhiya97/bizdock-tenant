@@ -16,6 +16,17 @@ const podCell = (c: PodCell) => (
   </button>
 )
 
+/** the Marketing numbers' records: the ads (spend, impressions, clicks… rows) and the leads (Ads / Organic / Total) */
+export type MarketingOpen = { ads: (metric: string) => void; leads: (col: 'ads' | 'organic' | 'total', metric: string) => void }
+const link = (v: ReactNode, onClick?: () => void) =>
+  onClick ? (
+    <button type="button" className="sc-link" onClick={onClick} title="See the list">
+      {v}
+    </button>
+  ) : (
+    v
+  )
+
 type Line = { label: ReactNode; ads: ReactNode; organic: ReactNode; total: ReactNode; strong?: boolean }
 type Group = { name: string; tone: string; lines: Line[] }
 
@@ -23,7 +34,7 @@ type Group = { name: string; tone: string; lines: Line[] }
  * Funnel → Overview → Scorecard: the same numbers as the funnel, as one table in sections (Marketing, Funnel, Data,
  * Business) with Ads / Organic / Total columns. Ad numbers (spend, impressions, clicks…) are Ads only: Organic shows NA.
  */
-export function FunnelScorecard({ f, gst, pod }: { f: Flow; gst: number; pod?: PodRow[] }) {
+export function FunnelScorecard({ f, gst, pod, open }: { f: Flow; gst: number; pod?: PodRow[]; open?: MarketingOpen }) {
   const spend = Number(f.spend)
   const spendGst = f.spend_gst != null ? Number(f.spend_gst) : spend * gst
   const src = f.source ?? 'fb'
@@ -34,24 +45,29 @@ export function FunnelScorecard({ f, gst, pod }: { f: Flow; gst: number; pod?: P
   const revOrg = Number(f.revenue) - revAds
   const stages = f.stages.slice(1)
   const won = f.stages.find((s) => s.kind === 'won')
-  const adOnly = (v: ReactNode): Pick<Line, 'ads' | 'organic' | 'total'> => ({ ads: v, organic: NA, total: v })
+  // an ad number: the ads list; NA for Organic
+  const adOnly = (v: ReactNode, metric: string): Pick<Line, 'ads' | 'organic' | 'total'> => {
+    const go = open ? () => open.ads(metric) : undefined
+    return { ads: link(v, go), organic: NA, total: link(v, go) }
+  }
+  const leadsOf = (v: ReactNode, col: 'ads' | 'organic' | 'total', metric: string) => link(v, open ? () => open.leads(col, metric) : undefined)
 
   const marketing: Line[] = [
-    { label: 'Amount spent', ...adOnly(<span title={`${inr(spendGst)} with GST`}>{inr(spend)}</span>), strong: true },
-    { label: 'Impressions', ...adOnly(num(f.impressions)) },
-    { label: 'CPM', ...adOnly(f.impressions ? inr((spend / f.impressions) * 1000) : '—') },
-    { label: 'Link clicks', ...adOnly(num(f.link_clicks)) },
-    { label: 'CTR', ...adOnly(pct(f.link_clicks, f.impressions)) },
-    { label: 'Cost per click', ...adOnly(f.link_clicks ? inr(spend / f.link_clicks) : '—') },
+    { label: 'Amount spent', ...adOnly(<span title={`${inr(spendGst)} with GST`}>{inr(spend)}</span>, 'Amount spent'), strong: true },
+    { label: 'Impressions', ...adOnly(num(f.impressions), 'Impressions') },
+    { label: 'CPM', ...adOnly(f.impressions ? inr((spend / f.impressions) * 1000) : '—', 'CPM') },
+    { label: 'Link clicks', ...adOnly(num(f.link_clicks), 'Link clicks') },
+    { label: 'CTR', ...adOnly(pct(f.link_clicks, f.impressions), 'CTR') },
+    { label: 'Cost per click', ...adOnly(f.link_clicks ? inr(spend / f.link_clicks) : '—', 'Cost per click') },
     ...(withLpv
       ? [
-          { label: 'Landing page views', ...adOnly(num(f.lpv)) },
-          { label: 'Cost per LP view', ...adOnly(f.lpv ? inr(spend / f.lpv) : '—') },
-          { label: 'Page conversion (LP view → lead)', ...adOnly(pct(leadsAds, f.lpv)) },
+          { label: 'Landing page views', ...adOnly(num(f.lpv), 'Landing page views') },
+          { label: 'Cost per LP view', ...adOnly(f.lpv ? inr(spend / f.lpv) : '—', 'Cost per LP view') },
+          { label: 'Page conversion (LP view → lead)', ...adOnly(pct(leadsAds, f.lpv), 'Page conversion') },
         ]
-      : [{ label: 'Click conversion (click → lead)', ...adOnly(pct(leadsAds, f.link_clicks)) }]),
-    { label: 'Leads', ads: num(leadsAds), organic: num(leadsOrg), total: num(f.leads), strong: true },
-    { label: 'CPL', ...{ ads: leadsAds ? inr(spend / leadsAds) : '—', organic: NA, total: f.leads ? inr(spend / f.leads) : '—' } },
+      : [{ label: 'Click conversion (click → lead)', ...adOnly(pct(leadsAds, f.link_clicks), 'Click conversion') }]),
+    { label: 'Leads', ads: leadsOf(num(leadsAds), 'ads', 'Leads'), organic: leadsOf(num(leadsOrg), 'organic', 'Leads'), total: leadsOf(num(f.leads), 'total', 'Leads'), strong: true },
+    { label: 'CPL', ads: leadsAds ? leadsOf(inr(spend / leadsAds), 'ads', 'CPL') : '—', organic: NA, total: f.leads ? leadsOf(inr(spend / f.leads), 'total', 'CPL') : '—' },
   ]
 
   const funnel: Line[] = pod

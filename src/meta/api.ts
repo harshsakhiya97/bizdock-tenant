@@ -338,6 +338,15 @@ export async function funnelFlow(funnelId: string, from: string, to: string, sou
   return (data ?? null) as FunnelFlow | null
 }
 
+/** the records behind the Scorecard's Marketing numbers: each ad (Facebook) / campaign (Google), and the leads (ads or not) */
+export type FlowAd = { key: string; platform: 'Facebook' | 'Google'; campaign: string | null; group: string | null; ad: string | null; spend: number; spend_gst: number; impressions: number | null; clicks: number | null; lpv: number | null }
+export type FlowDetail = { ads: FlowAd[]; leads: { id: string; ads: boolean }[] }
+export async function funnelFlowDetail(funnelId: string, from: string, to: string, source: 'fb' | 'google' | 'all' = 'fb'): Promise<FlowDetail | null> {
+  const { data, error } = await db().rpc('funnel_flow_detail', { p_funnel: funnelId, p_from: from, p_to: to, p_source: source })
+  if (error) throw new Error(error.message)
+  return (data ?? null) as FlowDetail | null
+}
+
 /** how many Facebook campaigns are added to a funnel (Facebook Ads tab count) */
 export async function funnelCampaignCount(funnelId: string) {
   const { data, error } = await db().from('funnel_ad_links').select('campaign_id').eq('funnel_id', funnelId)
