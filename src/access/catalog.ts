@@ -83,7 +83,47 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       },
 
       { key: 'booking_list', label: 'Bookings', open: { kind: 'action', module: 'booking_list', action: 'view', hint: 'The list of bookings (add / edit / delete as in Studio Schedule)' }, actions: [] },
+    ],
+  },
+  {
+    title: 'Billing',
+    modules: [
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
+      { key: 'invoice_payments', label: 'Payments', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
+      {
+        key: 'payments',
+        label: 'Razorpay',
+        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Billing → Razorpay: the Razorpay payments' },
+        actions: [{ module: 'payments', action: 'verify', label: 'Capture payments', hint: 'Capture an authorized Razorpay payment' }],
+      },
+    ],
+  },
+  {
+    title: 'Reports',
+    modules: [
+      { key: 'team_report', label: 'Team Report', open: { kind: 'action', module: 'team_report', action: 'view', hint: 'Reports → Team Report: each team member’s follow-ups over the dates picked' }, actions: [] },
+      {
+        key: 'funnel_report',
+        label: 'Funnel Report',
+        open: { kind: 'action', module: 'funnel_report', action: 'view', hint: 'Reports → Funnel Report: a funnel’s Overview report (leads, ad spend, Funnel / Scorecard / Lead flow / List)' },
+        actions: [],
+      },
+    ],
+  },
+  {
+    title: 'Expenses',
+    modules: [
+      {
+        key: 'expenses',
+        label: 'Expenses',
+        open: { kind: 'action', module: 'expenses', action: 'view', hint: 'Expenses: what the business spends, and net profit' },
+        actions: [{ module: 'expenses', action: 'edit', label: 'Add / edit / delete expenses' }],
+      },
+    ],
+  },
+  {
+    title: 'Automation',
+    modules: [
       {
         key: 'funnels',
         label: 'Funnels',
@@ -104,25 +144,11 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
           { module: 'workflows', action: 'delete', label: 'Delete workflows' },
         ],
       },
-      {
-        key: 'ai_calling',
-        label: 'AI Calling',
-        open: { kind: 'action', module: 'ai_calling', action: 'view', hint: 'Individual call, Call from AI on a lead (HelloRix)' },
-        extraScopes: [{ area: 'ai_calls', label: 'Call history', hint: 'Whose AI calls they see in Call history (Own: the calls they placed)' }],
-        actions: [{ module: 'ai_calling', action: 'templates', label: 'Manage templates', hint: 'Make, edit and delete the call scripts (also Write with AI)' }],
-      },
-      {
-        key: 'expenses',
-        label: 'Expenses',
-        open: { kind: 'action', module: 'expenses', action: 'view', hint: 'Expenses: what the business spends, and net profit' },
-        actions: [{ module: 'expenses', action: 'edit', label: 'Add / edit / delete expenses' }],
-      },
-      {
-        key: 'payments',
-        label: 'Payments',
-        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments → History logs: Razorpay payments' },
-        actions: [],
-      },
+    ],
+  },
+  {
+    title: 'WhatsApp',
+    modules: [
       {
         key: 'whatsapp',
         label: 'WhatsApp',
@@ -135,15 +161,21 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
     ],
   },
   {
-    title: 'Reports',
+    title: 'AI Calling',
     modules: [
-      { key: 'team_report', label: 'Team Report', open: { kind: 'action', module: 'team_report', action: 'view', hint: 'Reports → Team Report: each team member’s follow-ups over the dates picked' }, actions: [] },
       {
-        key: 'funnel_report',
-        label: 'Funnel Report',
-        open: { kind: 'action', module: 'funnel_report', action: 'view', hint: 'Reports → Funnel Report: a funnel’s Overview report (leads, ad spend, Funnel / Scorecard / Lead flow / List)' },
-        actions: [],
+        key: 'ai_calling',
+        label: 'AI Calling',
+        open: { kind: 'action', module: 'ai_calling', action: 'view', hint: 'Individual call, Call from AI on a lead (HelloRix)' },
+        extraScopes: [{ area: 'ai_calls', label: 'Call history', hint: 'Whose AI calls they see in Call history (Own: the calls they placed)' }],
+        actions: [{ module: 'ai_calling', action: 'templates', label: 'Manage templates', hint: 'Make, edit and delete the call scripts (also Write with AI)' }],
       },
+    ],
+  },
+  {
+    title: 'Callyzer',
+    modules: [
+      { key: 'call_logs', label: 'Callyzer', open: { kind: 'action', module: 'call_logs', action: 'view', hint: 'History logs, Team numbers and Report: the call logs of every lead (System Connections people see them too)' }, actions: [] },
     ],
   },
   {
@@ -192,8 +224,12 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
         ],
       },
       { key: 'integrations', label: 'System Connections', open: { kind: 'action', module: 'settings', action: 'edit', hint: 'WhatsApp, Facebook ads and other connections' }, actions: [] },
+    ],
+  },
+  {
+    title: 'On every page',
+    modules: [
       { key: 'ai_insights', label: 'AI Insights', open: { kind: 'action', module: 'ai_insights', action: 'view', hint: 'The AI button on every page: a summary of the screen and a chat about it (Gemini AI)' }, actions: [] },
-      { key: 'call_logs', label: 'Call logs', open: { kind: 'action', module: 'call_logs', action: 'view', hint: 'Callyzer call logs of every lead (System Connections people see them too)' }, actions: [] },
     ],
   },
 ]
