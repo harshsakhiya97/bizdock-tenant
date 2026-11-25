@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CircleAlert, RefreshCw, Video } from 'lucide-react'
+import { Check, CircleAlert, Copy, RefreshCw, Video } from 'lucide-react'
 import { Link } from 'react-router'
 import { Tabs, Paged } from '@/components/ui'
 import { db } from '@/lib/supabase'
@@ -27,6 +27,7 @@ export function ZoomPanel(props: {
 }) {
   // just saved: the Zoom meeting is made on the server in a few seconds; look for it every 3 seconds (up to a minute)
   const [fresh, setFresh] = useState<Partial<{ zoomId: string | null; joinUrl: string | null; startUrl: string | null; password: string | null; error: string | null }>>({})
+  const [copied, setCopied] = useState(false)
   const waiting = !(fresh.zoomId ?? props.zoomId) && !(fresh.error ?? props.error)
   const { kind: tk, id: tid } = props.target
   useEffect(() => {
@@ -146,6 +147,21 @@ function ZoomPanelInner({
             <a className="btn btn-outline btn-sm" href={joinUrl} target="_blank" rel="noreferrer">
               Join
             </a>
+          )}
+          {joinUrl?.startsWith('http') && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              title="Copy the join link"
+              onClick={() => {
+                void navigator.clipboard.writeText(joinUrl).then(() => {
+                  setCopied(true)
+                  window.setTimeout(() => setCopied(false), 1500)
+                })
+              }}
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy link'}
+            </button>
           )}
           {startUrl?.startsWith('http') && (
             <a className="btn btn-outline btn-sm" href={startUrl} target="_blank" rel="noreferrer" title="Opens Zoom as the host">
