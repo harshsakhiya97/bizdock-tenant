@@ -25,6 +25,7 @@ export const releases: Release[] = [
       'Reports → Funnel Report: pick a funnel and see its whole Overview report (tiles, Funnel, Scorecard, Lead flow, List) — the same report as the funnel’s Overview, so changes show in both.',
       'Paid Podcast funnels → Scorecard: the Funnel rows are Opt-in form filled, Only opted in (no next step), VSL form filled, Meeting booked / done / no-show, Closed and Not interested, as 49% (122); click any for its leads.',
       'Webhooks: a Form step (Opt-in / VSL form) on each form.',
+      'Leads (Paid Podcast): a Funnel step filter (Only opted in, VSL form filled, Meeting booked / done / no-show, Closed, Not interested, with counts) in place of Follow-up — the same steps as the Scorecard.',
     ],
     improved: [
       'A lead you can see shows all of it: Meetings, Bookings / Podcasts / Orders and Payments, without their own view permissions. A funnel you can see shows all its tabs too (Payments, Workflows).',
@@ -39,6 +40,7 @@ export const releases: Release[] = [
       'System Connections: connections’ status and last sync (Razorpay, Callyzer, …) stopped updating since 23 Nov — Razorpay showed an old “Too many requests”.',
       'Searchable dropdowns: the list floats over the page (and opens upward near the bottom), so the panel behind it no longer scrolls with it.',
       'AI Insights chat: back to one column (it had split into two).',
+      'Lead → Follow-ups → WhatsApp: a workflow’s message showed twice (it was sent once).',
       'Funnel → Facebook Ads: an ad’s preview opens for anyone who can see the funnel (it asked for edit access).',
     ],
   },
