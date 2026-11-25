@@ -190,10 +190,6 @@ export function FollowUpsTab({
     }
   }
 
-  async function cancel(f: Fu) {
-    await db().from('follow_ups').update({ status: 'cancelled' }).eq('id', f.id)
-    load()
-  }
 
   return (
     <div className="stack">
@@ -327,9 +323,6 @@ export function FollowUpsTab({
                       <div className="row">
                         <button type="button" className="btn btn-outline btn-sm" onClick={() => setCompleting(f)}>
                           Done
-                        </button>
-                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => void cancel(f)}>
-                          Cancel
                         </button>
                       </div>
                     )}
