@@ -135,6 +135,18 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
     ],
   },
   {
+    title: 'Reports',
+    modules: [
+      { key: 'team_report', label: 'Team Report', open: { kind: 'action', module: 'team_report', action: 'view', hint: 'Reports → Team Report: each team member’s follow-ups over the dates picked' }, actions: [] },
+      {
+        key: 'funnel_report',
+        label: 'Funnel Report',
+        open: { kind: 'action', module: 'funnel_report', action: 'view', hint: 'Reports → Funnel Report: a funnel’s Overview report (leads, ad spend, Funnel / Scorecard / Lead flow / List)' },
+        actions: [],
+      },
+    ],
+  },
+  {
     title: 'Company',
     modules: [
       {
@@ -181,7 +193,6 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
       },
       { key: 'integrations', label: 'System Connections', open: { kind: 'action', module: 'settings', action: 'edit', hint: 'WhatsApp, Facebook ads and other connections' }, actions: [] },
       { key: 'ai_insights', label: 'AI Insights', open: { kind: 'action', module: 'ai_insights', action: 'view', hint: 'The AI button on every page: a summary of the screen and a chat about it (Gemini AI)' }, actions: [] },
-      { key: 'team_report', label: 'Team Report', open: { kind: 'action', module: 'team_report', action: 'view', hint: 'Reports → Team Report: each day’s follow-ups of every team member' }, actions: [] },
       { key: 'call_logs', label: 'Call logs', open: { kind: 'action', module: 'call_logs', action: 'view', hint: 'Callyzer call logs of every lead (System Connections people see them too)' }, actions: [] },
     ],
   },

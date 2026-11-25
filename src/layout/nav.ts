@@ -55,7 +55,7 @@ export const navSections: { title: string; /** no heading shown in the side menu
         icon: BarChart3,
         children: [
           { to: '/reports/team', label: 'Team Report', icon: Users2, module: 'team_report' },
-          { to: '/reports/funnel', label: 'Funnel Report', icon: Workflow, module: 'funnels' },
+          { to: '/reports/funnel', label: 'Funnel Report', icon: Workflow, module: 'funnel_report' },
         ],
       },
       { to: '/expenses', label: 'Expenses', icon: Wallet, module: 'expenses', optIn: true },
