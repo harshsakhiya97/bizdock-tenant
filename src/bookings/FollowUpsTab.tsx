@@ -153,6 +153,10 @@ export function FollowUpsTab({
   const pending = calls.filter((f) => f.status === 'pending').sort((a, b) => a.due_at.localeCompare(b.due_at))
   const done = calls.filter((f) => f.status === 'done')
   const waPending = (fus ?? []).filter((f) => f.mode === 'whatsapp' && f.status === 'pending')
+  // a workflow's WhatsApp is kept twice (WATI's log and a copy on the lead): show it once
+  const ownMsgs = (msgs ?? []).filter(
+    (m) => !wati.some((w) => w.direction === 'out' && w.template && w.template === m.title && Math.abs(new Date(w.sent_at).getTime() - new Date(m.sent_at).getTime()) < 120_000),
+  )
 
   async function logCall() {
     if (!summary.trim()) return setError('Write what was discussed.')
@@ -202,7 +206,7 @@ export function FollowUpsTab({
             <PhoneIncoming size={14} /> Callyzer <span className="muted small">{phoneCalls?.length ?? 0}</span>
           </button>
           <button type="button" className={cn(tab === 'whatsapp' && 'is-active')} onClick={() => setTab('whatsapp')}>
-            <MessageCircle size={14} /> WhatsApp <span className="muted small">{(msgs?.length ?? 0) + wati.length}</span>
+            <MessageCircle size={14} /> WhatsApp <span className="muted small">{ownMsgs.length + wati.length}</span>
           </button>
           {ai && (
             <button type="button" className={cn(tab === 'ai' && 'is-active')} onClick={() => setTab('ai')}>
@@ -443,7 +447,7 @@ export function FollowUpsTab({
                 phones={[leadPhone, `91${leadPhone}`, `+91${leadPhone}`]}
                 leadId={leadId}
                 hideHead
-                extra={msgs.map((m) => ({ id: m.id, at: m.sent_at, title: m.title ?? null, body: m.body, by: name(m.sent_by) }))}
+                extra={ownMsgs.map((m) => ({ id: m.id, at: m.sent_at, title: m.title ?? null, body: m.body, by: name(m.sent_by) }))}
                 onSent={() => undefined}
               />
             </div>
