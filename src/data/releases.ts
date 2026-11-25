@@ -41,6 +41,7 @@ export const releases: Release[] = [
       'Searchable dropdowns: the list floats over the page (and opens upward near the bottom), so the panel behind it no longer scrolls with it.',
       'AI Insights chat: back to one column (it had split into two).',
       'Lead → Follow-ups → WhatsApp: a workflow’s message showed twice (it was sent once).',
+      'Leads: the count changed after loading (e.g. 496 → 494) — leads of a turned-off funnel now count and show in their business.',
       'Funnel → Facebook Ads: an ad’s preview opens for anyone who can see the funnel (it asked for edit access).',
     ],
   },
