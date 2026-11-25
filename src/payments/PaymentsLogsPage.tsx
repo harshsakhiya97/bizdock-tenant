@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { BadgeIndianRupee, CircleX, CreditCard, RefreshCw, Undo2 } from 'lucide-react'
-import { Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
+import { BadgeIndianRupee, CircleCheck, CircleX, CreditCard, RefreshCw, Undo2 } from 'lucide-react'
+import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
+import { useAuth } from '@/auth/useAuth'
 import { ALL_DATES, DateRangePicker, type Range } from '@/components/DateRange'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { db } from '@/lib/supabase'
@@ -27,6 +28,7 @@ type Pay = {
   bank: string | null
   wallet: string | null
   paid_at: string
+  capture_error: string | null
   lead_id: string | null
   leads: { first_name: string; last_name: string | null } | null
 }
@@ -54,6 +56,12 @@ const noteName = (n: Record<string, unknown>) => {
 export function PaymentsLogsPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
+  const { can } = useAuth()
+  // Capture an authorized payment (Payments → Verify / Add, or System Connections)
+  const canCapture = can('payments', 'verify') || can('payments', 'add') || can('settings', 'edit')
+  const [capturing, setCapturing] = useState<Pay | null>(null)
+  const [capBusy, setCapBusy] = useState(false)
+  const [capError, setCapError] = useState<string | null>(null)
   const [range, setRange] = useState<Range>(ALL_DATES)
   const { from, to } = range
   const [rows, setRows] = useState<Pay[] | null>(null)
@@ -70,7 +78,7 @@ export function PaymentsLogsPage() {
     setError(null)
     let q = db()
       .from('razorpay_payments')
-      .select('id, payment_id, order_id, amount, status, method, email, phone, description, notes, amount_refunded, error_description, vpa, bank, wallet, paid_at, lead_id, leads(first_name, last_name)')
+      .select('id, payment_id, order_id, amount, status, method, email, phone, description, notes, amount_refunded, error_description, vpa, bank, wallet, paid_at, capture_error, lead_id, leads(first_name, last_name)')
       .eq('tenant_id', tenant.id)
     // All dates: no date limits
     if (from && to) q = q.gte('paid_at', new Date(`${from}T00:00:00`).toISOString()).lte('paid_at', new Date(`${to}T23:59:59.999`).toISOString())
@@ -256,6 +264,22 @@ export function PaymentsLogsPage() {
                           <td>
                             <span className={cn('badge', st.cls)}>{st.label}</span>
                             {r.status === 'failed' && r.error_description && <div className="muted small">{r.error_description}</div>}
+                            {r.status === 'authorized' && r.capture_error && <div className="small danger-text">Capture: {r.capture_error}</div>}
+                            {r.status === 'authorized' && canCapture && (
+                              <div style={{ marginTop: 6 }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-primary btn-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setCapError(null)
+                                    setCapturing(r)
+                                  }}
+                                >
+                                  <CircleCheck size={14} /> Capture
+                                </button>
+                              </div>
+                            )}
                           </td>
                           <td className="nowrap">
                             {r.method ? (METHOD[r.method] ?? r.method) : '—'}
@@ -289,6 +313,34 @@ export function PaymentsLogsPage() {
           </Paged>
         )}
       </section>
+      <ConfirmModal
+        open={!!capturing}
+        icon={CircleCheck}
+        title="Capture this payment?"
+        message={
+          capturing && (
+            <>
+              <b>{inr(capturing.amount)}</b> from {name(capturing) || nicePhone(capturing.phone) || capturing.email || 'this payer'} (<code>{capturing.payment_id}</code>) is captured in Razorpay and settled to your account. An authorized payment that isn’t captured is refunded by Razorpay after a few days.
+              {capError && <p className="err-text">{capError}</p>}
+            </>
+          )
+        }
+        confirmLabel="Capture"
+        busy={capBusy}
+        onCancel={() => setCapturing(null)}
+        onConfirm={async () => {
+          if (!capturing) return
+          setCapBusy(true)
+          setCapError(null)
+          const { data, error: e } = await db().functions.invoke('razorpay', { body: { action: 'capture', tenant_id: tenant.id, payment_id: capturing.payment_id } })
+          setCapBusy(false)
+          const ctx = e ? (e as { context?: Response }).context : undefined
+          const msg = e ? ((ctx ? await ctx.json().then((j) => j?.error).catch(() => null) : null) || e.message) : data?.error
+          if (msg) return setCapError(String(msg))
+          setCapturing(null)
+          load()
+        }}
+      />
     </>
   )
 }
