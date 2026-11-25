@@ -25,6 +25,7 @@ export const releases: Release[] = [
       'Reports → Funnel Report: pick a funnel and see its whole Overview report (tiles, Funnel, Scorecard, Lead flow, List) — the same report as the funnel’s Overview, so changes show in both.',
       'Paid Podcast funnels → Scorecard: the Funnel rows are Opt-in form filled, Only opted in (no next step), VSL form filled, Meeting booked / done / no-show, Closed and Not interested, as 49% (122); click any for its leads.',
       'Webhooks: a Form step (Opt-in / VSL form) on each form.',
+      'Meetings and webinars → Zoom: Copy link and Copy invite (the invitation as Zoom words it: topic, time, link, meeting ID and passcode).',
       'Razorpay: payments still Authorized are captured automatically (a backup to Razorpay’s own setting; on by default), and a Capture button on Payments → Razorpay for authorized payments.',
       'Leads (Paid Podcast): a Funnel step filter (Only opted in, VSL form filled, Meeting booked / done / no-show, Closed, Not interested, with counts) in place of Follow-up — the same steps as the Scorecard.',
     ],
