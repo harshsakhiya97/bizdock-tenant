@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Clock, Percent, PhoneCall, PhoneMissed } from 'lucide-react'
-import { isoDay } from '@/components/DateRange'
+import { DateRangePicker, presetRange, rangeLabel, type Range } from '@/components/DateRange'
 import { StatRecords, type StatCol, type StatShow } from '@/components/StatRecords'
 import { Empty, PageHead, StatCard } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
-import { Box, DayBar, PersonCard, dayBounds, dayLabel, dur, pct, time, when } from '@/reports/parts'
+import { Box, PersonCard, dayBounds, dayLabel, dur, pct, time, when } from '@/reports/parts'
 import { PlayRecording } from './PlayRecording'
 
 type Cz = {
@@ -49,12 +49,12 @@ const KIND: Record<Kind, { label: string; test: (c: Call) => boolean }> = {
 }
 const TYPE: Record<string, string> = { Incoming: 'Incoming', Outgoing: 'Outgoing', Missed: 'Missed', Rejected: 'Rejected' }
 
-/** Callyzer → Report: one day's calls, a card per Callyzer number; click any number for its calls */
+/** Callyzer → Report: the calls of a date range (today by default), a card per Callyzer number; click any number for its calls */
 export function CallyzerReportPage() {
   const tenant = useTenant()
-  const today = isoDay(new Date())
-  const [day, setDay] = useState(today)
-  const [pick, setPick] = useState(today)
+  const [range, setRange] = useState<Range>(() => presetRange('today'))
+  const { from: dFrom, to: dTo } = range
+  const oneDay = dFrom === dTo
   const [rows, setRows] = useState<Cz[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [show, setShow] = useState<StatShow<Call> | null>(null)
@@ -63,15 +63,10 @@ export function CallyzerReportPage() {
   const load = useCallback(() => {
     setError(null)
     db()
-      .rpc('callyzer_day_report', { p_tenant: tenant.id, p_day: day })
+      .rpc('callyzer_range_report', { p_tenant: tenant.id, p_from: dFrom, p_to: dTo })
       .then(({ data, error: e }) => (e ? setError(e.message) : setRows((data ?? []) as Cz[])))
-  }, [tenant.id, day])
+  }, [tenant.id, dFrom, dTo])
   useEffect(load, [load])
-
-  const go = (d: string) => {
-    setPick(d)
-    setDay(d)
-  }
   const all = rows ?? []
   const working = all.filter((c) => c.calls > 0)
   const t = working.reduce((a, c) => ({ calls: a.calls + c.calls, conn: a.conn + c.connected, over: a.over + c.over_1min, talk: a.talk + c.talk_sec, missed: a.missed + c.not_picked }), { calls: 0, conn: 0, over: 0, talk: 0, missed: 0 })
@@ -83,7 +78,7 @@ export function CallyzerReportPage() {
     if (busy) return
     setBusy(true)
     setError(null)
-    const { from, to } = dayBounds(day, kind === 'week' ? 7 : 1)
+    const { from, to } = kind === 'week' ? dayBounds(dTo, 7) : { from: dayBounds(dFrom).from, to: dayBounds(dTo).to }
     const emps = emp ? [emp] : working
     const lists = await Promise.all(
       emps.map((e) =>
@@ -130,7 +125,7 @@ export function CallyzerReportPage() {
     ]
     const talk = calls.reduce((s, c) => s + c.duration_sec, 0)
     setShow({
-      title: `${KIND[kind].label} · ${emp ? (emp.emp_name ?? emp.emp_number) : 'All numbers'} · ${kind === 'week' ? `7 days to ${dayLabel(day)}` : dayLabel(day)}`,
+      title: `${KIND[kind].label} · ${emp ? (emp.emp_name ?? emp.emp_number) : 'All numbers'} · ${kind === 'week' ? `7 days to ${dayLabel(dTo)}` : rangeLabel(range)}`,
       rows: calls,
       cols,
       foot: `Talk time ${dur(talk)}`,
@@ -139,7 +134,7 @@ export function CallyzerReportPage() {
 
   return (
     <>
-      <PageHead title="Report" subtitle={`Calls of every Callyzer number · ${dayLabel(day)}`} />
+      <PageHead title="Report" subtitle={`Calls of every Callyzer number · ${rangeLabel(range)}`} />
       {error && <div className="alert alert-error">{error}</div>}
 
       <div className="stat-grid">
@@ -149,10 +144,13 @@ export function CallyzerReportPage() {
         <StatCard icon={PhoneMissed} tone="danger" value={t.missed.toLocaleString('en-IN')} label="Missed / not picked" hint="Retry these calls" onClick={() => void open('not_picked', null)} />
       </div>
 
-      <DayBar day={day} pick={pick} setPick={setPick} go={go}>
-        <b>{working.length}</b> of {all.length} numbers calling · <b>{t.calls.toLocaleString('en-IN')}</b> calls that day
-        {busy && <span className="muted"> · Loading…</span>}
-      </DayBar>
+      <div className="tr-bar">
+        <div className="tr-sum">
+          <b>{working.length}</b> of {all.length} numbers calling · <b>{t.calls.toLocaleString('en-IN')}</b> calls {oneDay ? 'that day' : 'in this period'}
+          {busy && <span className="muted"> · Loading…</span>}
+        </div>
+        <DateRangePicker value={range} onChange={setRange} />
+      </div>
 
       {!rows ? (
         <div className="panel">
@@ -160,7 +158,7 @@ export function CallyzerReportPage() {
         </div>
       ) : !all.length ? (
         <div className="panel">
-          <Empty>No Callyzer calls in the 7 days up to this date.</Empty>
+          <Empty>No Callyzer calls in this period (or the 7 days up to its end).</Empty>
         </div>
       ) : (
         <div className="tr-grid">
@@ -172,10 +170,10 @@ export function CallyzerReportPage() {
               facts={[
                 c.emp_number,
                 <>
-                  First call <b>{time(c.first_call)}</b>
+                  First call <b>{oneDay ? time(c.first_call) : c.first_call ? when(c.first_call) : '—'}</b>
                 </>,
                 <>
-                  Last call <b>{time(c.last_call)}</b>
+                  Last call <b>{oneDay ? time(c.last_call) : c.last_call ? when(c.last_call) : '—'}</b>
                 </>,
               ]}
             >
