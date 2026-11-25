@@ -37,6 +37,7 @@ export const releases: Release[] = [
       'Lead page: new tab bar with icons and counts; AI Calls moved inside Follow-ups (with Call from AI there); the header keeps Delete and Edit; Payments sub-tabs like Follow-ups.',
       'The AI Insights button moves aside while you scroll and when a side panel or pop-up is open; pages have room at the bottom so it never covers a button.',
       'Filters no longer look greyed out.',
+      'Access Control follows the side menu: Workspace, Billing (Invoices, Payments, Razorpay), Reports (Team Report, Funnel Report), Expenses, Automation, WhatsApp, AI Calling, Callyzer, Company, Admin — and Razorpay → Capture payments can be given to a role.',
     ],
     fixed: [
       'System Connections: connections’ status and last sync (Razorpay, Callyzer, …) stopped updating since 23 Nov — Razorpay showed an old “Too many requests”.',
