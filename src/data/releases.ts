@@ -25,6 +25,7 @@ export const releases: Release[] = [
       'Reports → Funnel Report: pick a funnel and see its whole Overview report (tiles, Funnel, Scorecard, Lead flow, List) — the same report as the funnel’s Overview, so changes show in both.',
       'Paid Podcast funnels → Scorecard: the Funnel rows are Opt-in form filled, Only opted in (no next step), VSL form filled, Meeting booked / done / no-show, Closed and Not interested, as 49% (122); click any for its leads.',
       'Webhooks: a Form step (Opt-in / VSL form) on each form.',
+      'Razorpay: payments still Authorized are captured automatically (a backup to Razorpay’s own setting; on by default), and a Capture button on Payments → Razorpay for authorized payments.',
       'Leads (Paid Podcast): a Funnel step filter (Only opted in, VSL form filled, Meeting booked / done / no-show, Closed, Not interested, with counts) in place of Follow-up — the same steps as the Scorecard.',
     ],
     improved: [
@@ -42,6 +43,7 @@ export const releases: Release[] = [
       'AI Insights chat: back to one column (it had split into two).',
       'Lead → Follow-ups → WhatsApp: a workflow’s message showed twice (it was sent once).',
       'Leads: the count changed after loading (e.g. 496 → 494) — leads of a turned-off funnel now count and show in their business.',
+      'Lead → Follow-ups: the next call card has no Cancel / Done any more (a stray click cancelled the next follow-up just set); the next call changes only by logging a call. The next follow-ups cancelled this way were restored.',
       'Funnel → Facebook Ads: an ad’s preview opens for anyone who can see the funnel (it asked for edit access).',
     ],
   },
