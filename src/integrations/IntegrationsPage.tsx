@@ -543,6 +543,11 @@ export function IntegrationsPage() {
                   <CircleAlert size={14} /> {r.last_error}
                 </div>
               )}
+              {p.id === 'razorpay' && r?.config.last_capture_error && Date.now() - new Date(r.config.last_capture_error_at ?? 0).getTime() < 7 * 864e5 && (
+                <div className="int-err">
+                  <CircleAlert size={14} /> {r.config.last_capture_error} ({ago(r.config.last_capture_error_at ?? null)})
+                </div>
+              )}
               <div className="int-foot">
                 <span className="muted small">
                   {p.id === 'callyzer' && r && !off
@@ -557,7 +562,7 @@ export function IntegrationsPage() {
                       : 'Connected'
                     : p.id === 'razorpay' && r && !off
                     ? r.config.last_sync_at
-                      ? `Payments checked ${ago(r.config.last_sync_at)} · every 5 min`
+                      ? `Payments checked ${ago(r.config.last_sync_at)} · every 5 min${String(r.config.auto_capture ?? '').toLowerCase() === 'off' ? '' : ' · auto-capture on'}`
                       : 'Connected · first check within 5 minutes'
                     : (p.id === 'facebook_ads' && !off && accounts.length) || (p.id === 'google_ads' && !off && r && r.status === 'connected')
                       ? 'Numbers every 3 hours · last 7 days again every night'

@@ -183,6 +183,12 @@ export const PROVIDERS: Provider[] = [
     fields: [
       { key: 'key_id', label: 'Key ID', required: true, placeholder: 'rzp_live_…', hint: 'The public key (starts with rzp_live_ or rzp_test_).' },
       { key: 'key_secret', label: 'Key Secret', secret: true, required: true, hint: 'The secret key, shown once when the key is generated.' },
+      {
+        key: 'auto_capture',
+        label: 'Auto-capture authorized payments',
+        options: ['On', 'Off'],
+        hint: 'A backup to Razorpay’s own auto-capture: every 5 minutes, a payment still “Authorized” is captured for its full amount (once each).',
+      },
     ],
   },
   {
