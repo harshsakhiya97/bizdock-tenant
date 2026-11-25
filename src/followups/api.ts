@@ -1,5 +1,6 @@
 import { clearLeadsCache } from '@/leads/api'
 import { logActivity } from '@/leads/api'
+import { rpcAll } from '@/lib/fetchAll'
 import { db } from '@/lib/supabase'
 import type { Option } from '@/leads/types'
 import type { FollowUpRow, ScheduleInput } from './types'
@@ -7,10 +8,9 @@ import type { FollowUpRow, ScheduleInput } from './types'
 const COLS =
   'id, tenant_id, lead_id, assigned_to, due_at, mode, purpose, status, outcome_id, result_note, completed_at, completed_by, created_at, leads(id, first_name, last_name, phone, whatsapp, business_id, sub_business_id, funnel_id, stage_id, owner_id, purpose, required_on, temperature)'
 
+/** every follow-up of the workspace with its lead (list_follow_ups: the access checked once per call, all pages) */
 export async function listFollowUps(tenantId: string): Promise<FollowUpRow[]> {
-  const { data, error } = await db().from('follow_ups').select(COLS).eq('tenant_id', tenantId).order('due_at')
-  if (error) throw error
-  return (data ?? []) as unknown as FollowUpRow[]
+  return rpcAll<FollowUpRow>((offset, limit) => db().rpc('list_follow_ups', { p_tenant: tenantId, p_offset: offset, p_limit: limit }), 1000, 3)
 }
 
 export async function listOutcomes(tenantId: string): Promise<Option[]> {
