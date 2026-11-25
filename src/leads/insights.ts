@@ -10,6 +10,8 @@ export type LeadInsight = {
   objections: string[]
   next_action: string
   risks: string[]
+  /** what the lead asked the business for (newer summaries) */
+  asked_for?: string[]
 }
 export type InsightRow = { content: LeadInsight | null; generated_at: string | null; stale: boolean; error: string | null; tries: number }
 

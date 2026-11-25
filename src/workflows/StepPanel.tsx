@@ -10,7 +10,7 @@ import { WaBubble } from '@/integrations/WaBubble'
 import { DateVarsContext, HasEventContext, HookVarsContext, LeadLookupContext, STEP_VAR_LABEL, StepOrderContext, fieldLabel, orderedGroups, stepGroups, VarOptions, useVarGroups } from './varGroups'
 import { SearchSelect } from '@/components/SearchSelect'
 import { TemplateParams, WhatsAppFields, findTemplate, pickTemplate, templateOptions, templateVars, useWatiTemplates, watiVars } from './WhatsAppFields'
-import { ALL_TRIGGERS, STEP_META, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, problem, rowsOf } from './steps'
+import { ALL_TRIGGERS, STEP_META, aiGap, aiTries, anchorText, bulkAnchor, rowDir, rowOffset, meetingHooks, TRIGGERS, casesOf, problem, rowsOf } from './steps'
 import { LEAD_FIELDS, OP_LABEL, choicesFor, fieldDef, listValues, needsValue, normalize, opsFor } from './conditions'
 import { TRIGGER_DEFAULTS, VARIABLES, newBulkRow, type BulkRow, type ConditionData, type SwitchCase, type FlowContext, type StepKind, type StepNode, type TriggerData, type TriggerEvent, type Unit, varKey } from './types'
 
@@ -127,10 +127,24 @@ export function StepPanel({
           <>
             <RecipientField d={d} ctx={ctx} set={set} disabled={ro} custom label="Call" />
             <AiCallTemplate d={d} onChange={onChange} disabled={ro} />
+            <div className="row" style={{ gap: 12, alignItems: 'flex-end' }}>
+              <div>
+                <Label htmlFor="cb-ai-gap">If not received, try again after</Label>
+                <div className="row" style={{ flexWrap: 'nowrap', gap: 6 }}>
+                  <input id="cb-ai-gap" className="input" type="number" min={5} max={1440} style={{ width: 90 }} value={aiGap(d)} onChange={(e) => set('retry_every', Math.max(5, Math.min(1440, Number(e.target.value) || 30)))} disabled={ro} />
+                  <span className="muted small">min</span>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="cb-ai-tries">Calls in all</Label>
+                <input id="cb-ai-tries" className="input" type="number" min={1} max={10} style={{ width: 90 }} value={aiTries(d)} onChange={(e) => set('tries', Math.max(1, Math.min(10, Number(e.target.value) || 3)))} disabled={ro} />
+              </div>
+            </div>
             <Hint>
-              The AI calls (within the calling hours of System Connections → AI Calling) and the workflow waits for the result, then goes down its path:
-              Interested, Call back, Not interested or Not reached (no answer, busy, failed, or no result in 3 hours). A lead call also sets the lead’s
-              category and adds a note. Later steps can use {'{{ai_call_outcome}}'}, {'{{ai_call_summary}}'} and each answer as {'{{ai_<field>}}'}.
+              The AI calls (within the calling hours of System Connections → AI Calling; a retry outside them waits for them). Paths: <b>Received</b> — right
+              when the lead picks up and the call ends; <b>Received &amp; lead updated</b> — a few seconds later, once the lead’s category and note, the
+              call’s transcript and AI Insights are updated (it goes on as its own run); <b>Not received</b> — no answer, busy, failed or no result in 3
+              hours on every call. Later steps can use {'{{ai_call_outcome}}'}, {'{{ai_call_summary}}'} and each answer as {'{{ai_<field>}}'}.
             </Hint>
           </>
         )}

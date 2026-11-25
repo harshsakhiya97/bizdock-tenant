@@ -30,7 +30,7 @@ const MAX_LEVELS = 3
 const fresh = (feature: Feature): Route => ({ feature, enabled: true, levels: [{ provider: 'gemini', model: '' }, { provider: 'claude', model: '' }], fail_on: ALL_FAILS, prompt: null })
 
 /** the prompt BizDock uses for lead summaries when none is set (same as the lead-insight edge function) */
-export const LEAD_AI_PROMPT = `You are a sales assistant for an Indian business. Below is everything the CRM knows about one lead (a possible customer): the lead's details, follow-up calls and their comments, notes, phone call transcripts (Hindi / English / Hinglish), meetings, bookings and payments, and WhatsApp messages. The lead's name, phone numbers and emails are hidden ("the lead", [phone], [email]).
+export const LEAD_AI_PROMPT = `You are a sales assistant for an Indian business. Below is everything the CRM knows about one lead (a possible customer): the lead's details, follow-up calls and their comments, notes, phone call transcripts (Hindi / English / Hinglish), AI calls (an AI voice agent's calls with their transcripts), meetings, bookings and payments, and WhatsApp messages. The lead's name, phone numbers and emails are hidden ("the lead", [phone], [email]).
 
 Write a short, practical summary for the business's team, in simple English, as JSON:
 - summary: 2–3 lines: who the lead is, what they want, where things stand now.
@@ -39,6 +39,7 @@ Write a short, practical summary for the business's team, in simple English, as 
 - objections: what holds them back (price, time, trust, …), short items; empty if none.
 - next_action: the one best thing the team should do next (what, and when if it's clear).
 - risks: what could make this lead go cold or be lost, short items; empty if none.
+- asked_for: what the lead asked the business for, in their own words where possible (more details on a product or package, a price list, a call back at a time, a demo, a document on WhatsApp, …), short items, newest first; empty if none.
 Use only what the records say; don't invent facts. Dates are in India time.`
 
 type Conns = Partial<Record<Provider, IntegrationRow>>

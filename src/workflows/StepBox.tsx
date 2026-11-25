@@ -3,7 +3,7 @@ import { Handle, Position, useUpdateNodeInternals, type NodeProps } from '@xyflo
 import { AlertCircle, Check, Copy, Plus as PlusIcon } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { AddCtx } from './addCtx'
-import { AI_EXITS, STEP_META, caseLabel, casesOf, messageBlocks, problem, summary, triggerLabel } from './steps'
+import { STEP_META, aiExits, caseLabel, casesOf, messageBlocks, problem, summary, triggerLabel } from './steps'
 import { copyStep } from './stepClipboard'
 import type { FlowContext, StepKind, StepNode, TriggerData } from './types'
 
@@ -140,17 +140,17 @@ function StepBoxInner({ id, type, data, selected }: NodeProps<StepNode>) {
       ) : type === 'ai_call' ? (
         <>
           <div className="cb-paths">
-            {AI_EXITS.map((x) => (
+            {aiExits(data).map((x) => (
               <span key={x.id} title={x.label}>
                 {x.label}
               </span>
             ))}
           </div>
-          {AI_EXITS.map((x, i) => (
-            <Handle key={x.id} id={x.id} type="source" position={Position.Bottom} className="cb-handle" style={{ left: `${((i + 0.5) / AI_EXITS.length) * 100}%` }} />
+          {aiExits(data).map((x, i, all) => (
+            <Handle key={x.id} id={x.id} type="source" position={Position.Bottom} className="cb-handle" style={{ left: `${((i + 0.5) / all.length) * 100}%` }} />
           ))}
-          {AI_EXITS.map((x, i) => (
-            <Plus key={x.id} show={free(x.id)} left={`${((i + 0.5) / AI_EXITS.length) * 100}%`} label={`Add a step on “${x.label}”`} onClick={() => add.onAdd(id, x.id)} />
+          {aiExits(data).map((x, i, all) => (
+            <Plus key={x.id} show={free(x.id)} left={`${((i + 0.5) / all.length) * 100}%`} label={`Add a step on “${x.label}”`} onClick={() => add.onAdd(id, x.id)} />
           ))}
         </>
       ) : type === 'goto' ? null : type === 'condition' ? (

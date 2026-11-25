@@ -2060,5 +2060,6 @@ details.rec-section summary { cursor: pointer; }
 .ai-side-item.is-risk .ai-side-ic { color: var(--warning, #d97706); }
 .ai-side-h { display: block; font-size: 12.5px; font-weight: 700; color: var(--brand); margin-bottom: 2px; }
 .ai-side-item.is-risk .ai-side-h { color: var(--text); }
+.ai-side-item.is-ask .ai-side-ic { color: var(--success, #16a34a); }
 .ai-side .ai-list { margin-top: 2px; }
 @media (max-width: 900px) { .ai-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; } }

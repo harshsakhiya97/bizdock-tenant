@@ -19,17 +19,22 @@ export const STEP_META: Record<StepKind, { label: string; hint: string; icon: Lu
   goto: { label: 'Go to workflow', hint: 'Continue in another workflow', icon: Workflow, color: '#0d9488' },
   register_webinar: { label: 'Register for webinar', hint: 'Registers the lead on Zoom for the webinar’s coming date; later messages use their joining link', icon: CalendarPlus, color: '#7c3aed' },
   wait_zoom: { label: 'Wait until Zoom data is in', hint: 'After the webinar ends: waits until its attendance, Q&A, chat and polls are fetched from Zoom', icon: CloudDownload, color: '#0b5cff' },
-  ai_call: { label: 'AI call', hint: 'An AI voice call (HelloRix) with a template; then a path for each result: Interested, Call back, Not interested, Not reached', icon: PhoneOutgoing, color: '#0f766e' },
+  ai_call: { label: 'AI call', hint: 'An AI voice call (HelloRix) with a template, tried again if not received; then Received, Received & lead updated, or Not received', icon: PhoneOutgoing, color: '#0f766e' },
   webinar_analytics: { label: 'Get webinar analytics', hint: 'How long the lead attended, their questions / chat / polls, and their category (Super Hot / Hot / Warm / Cold)', icon: BarChart3, color: '#db2777' },
 }
 
 /** an AI call's paths, by the call's result */
-export const AI_EXITS: { id: string; label: string }[] = [
-  { id: 'interested', label: 'Interested' },
-  { id: 'callback', label: 'Call back' },
-  { id: 'declined', label: 'Not interested' },
-  { id: 'not_reached', label: 'Not reached' },
-]
+/** the AI call step's paths (tries: how many calls in all before Not received) */
+export const aiExits = (data?: Record<string, unknown>): { id: string; label: string }[] => {
+  const n = aiTries(data)
+  return [
+    { id: 'received', label: 'Received' },
+    { id: 'updated', label: 'Received & lead updated' },
+    { id: 'not_reached', label: `Not received after ${n} ${n === 1 ? 'try' : 'tries'}` },
+  ]
+}
+export const aiTries = (data?: Record<string, unknown>) => Math.max(1, Math.min(10, Math.round(Number(data?.tries ?? 3)) || 3))
+export const aiGap = (data?: Record<string, unknown>) => Math.max(5, Math.min(1440, Math.round(Number(data?.retry_every ?? 30)) || 30))
 
 /** every trigger, including ones no longer offered (older workflows still use them) */
 export const ALL_TRIGGERS: { value: TriggerEvent; label: string; hint: string }[] = [

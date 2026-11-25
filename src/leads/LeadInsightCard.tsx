@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { MessageCircleWarning, RefreshCw, Sparkles, TriangleAlert, Zap } from 'lucide-react'
+import { HandHelping, MessageCircleWarning, RefreshCw, Sparkles, TriangleAlert, Zap } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { getLeadInsight, refreshLeadInsight, type InsightRow } from './insights'
@@ -97,6 +97,19 @@ export function LeadInsightCard({ leadId, refreshKey }: { leadId: string; refres
                 <div>
                   <span className="ai-side-h">Next Best Action</span>
                   <div>{c.next_action}</div>
+                </div>
+              </div>
+            )}
+            {(c.asked_for?.length ?? 0) > 0 && (
+              <div className="ai-side-item is-ask">
+                <HandHelping size={15} className="ai-side-ic" />
+                <div>
+                  <span className="ai-side-h">Lead asked for</span>
+                  <ul className="ai-list">
+                    {c.asked_for!.map((o, i) => (
+                      <li key={i}>{o}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             )}
