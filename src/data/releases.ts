@@ -16,7 +16,7 @@ export const releases: Release[] = [
     version: '0.35',
     date: '2026-11-24',
     title: 'New lead page, AI lead summaries, AI order, Funnel Report',
-    summary: 'The lead page in two columns with At a glance and an AI summary of every lead; an AI order to choose which AI each feature uses (with a backup); Reports → Funnel Report; a lead or funnel you can see now shows everything inside it.',
+    summary: 'The lead page in two columns with At a glance and an AI summary of every lead; an AI order to choose which AI each feature uses (with a backup); Reports → Funnel Report; AI call step with retries and Received / Lead updated paths; faster follow-ups; a lead or funnel you can see now shows everything inside it.',
     new: [
       'Lead page → Details, in cards with small icons: on the left AI Insights, Lead Information and Source & Form Submissions (now with the funnel) / More Fields; on the right “At a glance” (category and since when, next follow-up, calls, meetings, billing, bill to, WhatsApp, age and owner), the Description and Billing Details. The header shows when the lead came in.',
       'AI Insights on every lead: a short summary (Hot / Warm / Cold and why, needs, budget, timeline, objections, next best action, risks) from the lead’s details, follow-ups, call transcripts, meetings, payments and WhatsApp — names and phone numbers hidden from the AI. Written again by itself a minute after anything changes; Summarize / Refresh writes it now.',
@@ -28,6 +28,10 @@ export const releases: Release[] = [
       'Meetings and webinars → Zoom: Copy link and Copy invite (the invitation as Zoom words it: topic, time, link, meeting ID and passcode).',
       'Razorpay: payments still Authorized are captured automatically (a backup to Razorpay’s own setting; on by default), and a Capture button on Payments → Razorpay for authorized payments.',
       'Leads (Paid Podcast): a Funnel step filter (Only opted in, VSL form filled, Meeting booked / done / no-show, Closed, Not interested, with counts) in place of Follow-up — the same steps as the Scorecard.',
+      'Workflows → AI call step: three paths — Received (right when the call ends), Received & lead updated (once the lead’s category and note, the call’s transcript and AI Insights are updated) and Not received after N tries. If not received it calls again after 30 min, up to 3 calls (both can be changed on the step), within the calling hours.',
+      'AI Insights read AI calls too (result, summary, answers, transcript) and show “Lead asked for”: what the lead asked for (more details, a price list, a call back…) from AI calls, phone calls, WhatsApp and follow-ups. An AI call’s transcript is saved and shows on the lead’s AI Calls tab.',
+      'Funnel → Scorecard: every Marketing number opens its list — the ads (spend, impressions, CPM, clicks, CTR, CPC, LP views) or the leads (Ads / Organic / Total).',
+      'Callyzer → Report: a date range (Today, Yesterday, Last 7 days, This month, custom…) like everywhere else.',
     ],
     improved: [
       'A lead you can see shows all of it: Meetings, Bookings / Podcasts / Orders and Payments, without their own view permissions. A funnel you can see shows all its tabs too (Payments, Workflows).',
@@ -37,6 +41,8 @@ export const releases: Release[] = [
       'Lead page: new tab bar with icons and counts; AI Calls moved inside Follow-ups (with Call from AI there); the header keeps Delete and Edit; Payments sub-tabs like Follow-ups.',
       'The AI Insights button moves aside while you scroll and when a side panel or pop-up is open; pages have room at the bottom so it never covers a button.',
       'Filters no longer look greyed out.',
+      'Follow-ups, My Day and the dashboards load follow-ups much faster (about 7 s → under a second).',
+      'WhatsApp delivered / read ticks are taken in batches every minute (a burst of updates from WATI can no longer slow the app); customer replies still come in at once.',
       'Access Control follows the side menu: Workspace, Billing (Invoices, Payments, Razorpay), Reports (Team Report, Funnel Report), Expenses, Automation, WhatsApp, AI Calling, Callyzer, Company, Admin — and Razorpay → Capture payments can be given to a role.',
     ],
     fixed: [
@@ -47,6 +53,8 @@ export const releases: Release[] = [
       'Leads: the count changed after loading (e.g. 496 → 494) — leads of a turned-off funnel now count and show in their business.',
       'Lead → Follow-ups: the next call card has no Cancel / Done any more (a stray click cancelled the next follow-up just set); the next call changes only by logging a call. The next follow-ups cancelled this way were restored.',
       'Funnel → Facebook Ads: an ad’s preview opens for anyone who can see the funnel (it asked for edit access).',
+      'Follow-ups: the list stopped at 1,000 follow-ups, so the newest ones were missing (and their counts).',
+      'The app stopped loading for a while on 25 Nov (about 19:00–19:15) after a burst of WhatsApp updates.',
     ],
   },
   {
