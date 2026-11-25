@@ -9,6 +9,7 @@ import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Link2, Phone,
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
+import { POD_STEPS, listPodFacts, type PodFacts } from '@/funnels/podSteps'
 import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
@@ -30,8 +31,8 @@ import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/Dat
 import { listCustomerRevenue, type Revenue } from './customers'
 import { Select } from '@/components/Field'
 
-type Filters = { q: string; funnel: string; source: string; temp: string; owner: string; followUp: string; form: string; archived: boolean; sort: string; range: Range }
-const EMPTY: Filters = { q: '', funnel: '', source: '', temp: '', owner: '', followUp: '', form: '', archived: false, sort: 'newest', range: ALL_DATES }
+type Filters = { q: string; funnel: string; source: string; temp: string; owner: string; followUp: string; form: string; step: string; archived: boolean; sort: string; range: Range }
+const EMPTY: Filters = { q: '', funnel: '', source: '', temp: '', owner: '', followUp: '', form: '', step: '', archived: false, sort: 'newest', range: ALL_DATES }
 // the lead's creation date in the picked range
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
 
@@ -79,6 +80,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const studio = activeType(selected, sub) === BT.STUDIO_RENTAL
   // Paid Podcast leads: the old CRM's columns (Received, Call booking, Last comment, Follow-ups done, Status) and row buttons
   const pp = !customers && !!sub && activeType(selected, sub) === BT.PAID_PODCAST
+  // Paid Podcast (business or sub-business): the Funnel step filter (the Scorecard's steps) instead of Follow-up
+  const pod = !customers && activeType(selected, sub) === BT.PAID_PODCAST
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const first = useRef(true)
@@ -149,6 +152,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     listOutcomes(tenant.id).then(setOutcomes)
   }, [customers, sub, tenant.id])
   useEffect(loadExtras, [loadExtras])
+  // Paid Podcast: each lead's VSL form / meetings, for the Funnel step filter
+  const [podFacts, setPodFacts] = useState<Map<string, PodFacts>>(new Map())
+  useEffect(() => {
+    if (!pod) return
+    listPodFacts(tenant.id).then(setPodFacts, () => setPodFacts(new Map()))
+  }, [pod, tenant.id])
 
   /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
   async function openLogFollowUp(l: LeadRow) {
@@ -205,6 +214,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const noFunnel = false
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
+  const wonStages = useMemo(() => new Set([...stageById.values()].filter((x) => x.kind === 'won').map((x) => x.id)), [stageById])
 
   // leads before the stage tab (for tab counts)
   const base = useMemo(() => {
@@ -242,7 +252,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .filter((l) => !pp || !filters.form || formStep(l, extras.get(l.id)) === filters.form)
       .filter((l) => !filters.owner || (filters.owner === 'none' ? !l.owner_id : l.owner_id === filters.owner))
       .filter((l) => {
-        if (!filters.followUp) return true
+        if (!pod || !filters.step) return true
+        const st = POD_STEPS.find((x) => x.key === filters.step)
+        return !st || st.pick(l, podFacts.get(l.id), wonStages)
+      })
+      .filter((l) => {
+        if (pod || !filters.followUp) return true
         const d = l.next_follow_up_at ? new Date(l.next_follow_up_at) : null
         if (filters.followUp === 'none') return !d
         if (!d) return false
@@ -257,8 +272,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras])
+  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras, pod, podFacts, wonStages])
 
+  // Funnel step filter: how many of this business's leads are at each step
+  const stepCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    if (!pod) return m
+    const mine = (leads ?? []).filter((l) => (!selected || l.business_id === selected.id) && (!sub || inScope(l.business_id, l.sub_business_id)))
+    for (const st of POD_STEPS) m.set(st.key, mine.filter((l) => st.pick(l, podFacts.get(l.id), wonStages)).length)
+    return m
+  }, [pod, leads, selected, sub, inScope, podFacts, wonStages])
   const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =
     stageTab === 'all'
@@ -493,13 +516,24 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               ))}
             </Select>
           )}
-          <Select className="input input-sm filter-select" value={filters.followUp} onChange={(e) => setF('followUp', e.target.value)} aria-label="Follow-up">
-            <option value="">Follow-up</option>
-            <option value="overdue">Overdue</option>
-            <option value="today">Today</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="none">No follow-up set</option>
-          </Select>
+          {pod ? (
+            <Select className="input input-sm filter-select" value={filters.step} onChange={(e) => setF('step', e.target.value)} aria-label="Funnel step">
+              <option value="">Funnel step</option>
+              {POD_STEPS.filter((x) => x.key !== 'optin').map((x) => (
+                <option key={x.key} value={x.key}>
+                  {x.label} ({(stepCounts.get(x.key) ?? 0).toLocaleString('en-IN')})
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Select className="input input-sm filter-select" value={filters.followUp} onChange={(e) => setF('followUp', e.target.value)} aria-label="Follow-up">
+              <option value="">Follow-up</option>
+              <option value="overdue">Overdue</option>
+              <option value="today">Today</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="none">No follow-up set</option>
+            </Select>
+          )}
           <Select className="input input-sm filter-select" value={filters.sort} onChange={(e) => setF('sort', e.target.value)} aria-label="Sort">
             <option value="newest">Newest</option>
             <option value="follow_up">Follow-up date</option>

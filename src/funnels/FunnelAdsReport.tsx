@@ -6,6 +6,7 @@ import { funnelAdsReport, funnelFlow, type AdsReport, type FunnelFlow as Flow } 
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { FunnelScorecard, type PodRow } from './FunnelScorecard'
+import { POD_STEPS, type PodFacts } from './podSteps'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
 import { MetaSync } from './MetaSync'
@@ -401,20 +402,8 @@ export function FunnelAdsReport({
   const podRows = useMemo<PodRow[] | undefined>(() => {
     if (!podcast) return undefined
     const won = wonIds ?? new Set<string>()
-    const steps: [string, (l: Lead) => boolean][] = [
-      ['Opt-in form filled', () => true],
-      // nothing after the opt-in: no VSL form, no meeting, not closed, not marked not interested
-      [
-        'Only opted in (no next step)',
-        (l) => !vsl.has(l.id) && !meet.booked.has(l.id) && !meet.noshow?.has(l.id) && l.temperature !== 'closed' && !won.has(l.stage_id ?? '') && l.temperature !== 'not_interested',
-      ],
-      ['VSL form filled', (l) => vsl.has(l.id)],
-      ['Meeting booked', (l) => meet.booked.has(l.id)],
-      ['Meeting done', (l) => meet.showed.has(l.id)],
-      ['Meeting no-show', (l) => !!meet.noshow?.has(l.id) && !meet.showed.has(l.id)],
-      ['Closed', (l) => l.temperature === 'closed' || won.has(l.stage_id ?? '')],
-      ['Not interested', (l) => l.temperature === 'not_interested'],
-    ]
+    const facts = (l: Lead): PodFacts => ({ vsl: vsl.has(l.id), booked: meet.booked.has(l.id), done: meet.showed.has(l.id), noshow: !!meet.noshow?.has(l.id) })
+    const steps: [string, (l: Lead) => boolean][] = POD_STEPS.map((st) => [st.label, (l: Lead) => st.pick(l, facts(l), won)])
     const ads = periodLeads.filter((l) => isAds(l))
     const org = periodLeads.filter((l) => !isAds(l))
     const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
