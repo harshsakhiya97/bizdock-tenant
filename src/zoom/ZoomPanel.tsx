@@ -23,11 +23,14 @@ export function ZoomPanel(props: {
   error: string | null
   pulledAt: string | null
   accountName?: string
+  /** for Copy invite: the meeting's name, day (YYYY-MM-DD) and start time (HH:MM, India time) */
+  topic?: string
+  day?: string | null
+  time?: string | null
   onChanged?: () => void
 }) {
   // just saved: the Zoom meeting is made on the server in a few seconds; look for it every 3 seconds (up to a minute)
   const [fresh, setFresh] = useState<Partial<{ zoomId: string | null; joinUrl: string | null; startUrl: string | null; password: string | null; error: string | null }>>({})
-  const [copied, setCopied] = useState(false)
   const waiting = !(fresh.zoomId ?? props.zoomId) && !(fresh.error ?? props.error)
   const { kind: tk, id: tid } = props.target
   useEffect(() => {
@@ -69,6 +72,9 @@ function ZoomPanelInner({
   error,
   pulledAt,
   accountName,
+  topic,
+  day: inviteDay,
+  time: inviteTime,
   onChanged,
 }: {
   target: ZoomTarget
@@ -79,6 +85,9 @@ function ZoomPanelInner({
   error: string | null
   pulledAt: string | null
   accountName?: string
+  topic?: string
+  day?: string | null
+  time?: string | null
   onChanged?: () => void
 }) {
   const [data, setData] = useState<{ attendees: ZoomAttendee[]; comments: ZoomComment[] } | null>(null)
@@ -125,6 +134,39 @@ function ZoomPanelInner({
 
   const qa = data?.comments.filter((c) => c.kind === 'qa') ?? []
   const chat = data?.comments.filter((c) => c.kind === 'chat') ?? []
+  // Copy link / Copy invite (the invitation as Zoom words it)
+  const [copied, setCopied] = useState<'' | 'link' | 'invite'>('')
+  const copy = (what: 'link' | 'invite', text: string) =>
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(what)
+      window.setTimeout(() => setCopied(''), 1500)
+    })
+  const invite = () => {
+    const when =
+      inviteDay &&
+      `${new Date(`${inviteDay.slice(0, 10)}T${(inviteTime ?? '00:00').slice(0, 5)}:00+05:30`).toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        ...(inviteTime ? { hour: 'numeric', minute: '2-digit' } : {}),
+      })}${inviteTime ? ' India' : ''}`
+    return [
+      `${accountName || 'You are'} ${accountName ? 'is inviting you' : 'invited'} to a scheduled Zoom ${target.kind === 'event' ? 'webinar' : 'meeting'}.`,
+      '',
+      topic ? `Topic: ${topic}` : '',
+      when ? `Time: ${when}` : '',
+      '',
+      `Join Zoom ${target.kind === 'event' ? 'Webinar' : 'Meeting'}`,
+      joinUrl ?? '',
+      '',
+      zoomId ? `Meeting ID: ${zoomId.replace(/(\d{3})(\d{4})(\d+)/, '$1 $2 $3')}` : '',
+      password ? `Passcode: ${password}` : '',
+    ]
+      .filter((x, i, all) => x !== '' || (all[i - 1] !== '' && i > 0))
+      .join('\n')
+      .trim()
+  }
 
   return (
     <div className="zp">
@@ -149,19 +191,14 @@ function ZoomPanelInner({
             </a>
           )}
           {joinUrl?.startsWith('http') && (
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              title="Copy the join link"
-              onClick={() => {
-                void navigator.clipboard.writeText(joinUrl).then(() => {
-                  setCopied(true)
-                  window.setTimeout(() => setCopied(false), 1500)
-                })
-              }}
-            >
-              {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy link'}
-            </button>
+            <>
+              <button type="button" className="btn btn-outline btn-sm" title="Copy the join link" onClick={() => copy('link', joinUrl)}>
+                {copied === 'link' ? <Check size={14} /> : <Copy size={14} />} {copied === 'link' ? 'Copied' : 'Copy link'}
+              </button>
+              <button type="button" className="btn btn-outline btn-sm" title="Copy the invitation: topic, time, link, meeting ID and passcode" onClick={() => copy('invite', invite())}>
+                {copied === 'invite' ? <Check size={14} /> : <Copy size={14} />} {copied === 'invite' ? 'Copied' : 'Copy invite'}
+              </button>
+            </>
           )}
           {startUrl?.startsWith('http') && (
             <a className="btn btn-outline btn-sm" href={startUrl} target="_blank" rel="noreferrer" title="Opens Zoom as the host">

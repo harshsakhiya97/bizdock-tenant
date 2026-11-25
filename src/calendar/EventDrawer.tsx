@@ -362,6 +362,9 @@ export function EventDrawer({
               error={event.zoom_error}
               pulledAt={event.zoom_pulled_at}
               accountName={zooms.find((z) => z.id === event.zoom_account_id)?.name}
+              topic={event.title}
+              day={event.event_date}
+              time={event.start_time}
             />
           </FormSection>
         )}

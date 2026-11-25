@@ -522,6 +522,9 @@ export function MeetingDrawer({
               error={meeting.zoom_error}
               pulledAt={meeting.zoom_pulled_at}
               accountName={zooms.find((z) => z.id === meeting.zoom_account_id)?.name}
+              topic={meeting.kind === 'team' ? (meeting.title ?? 'Team meeting') : meeting.title || `Meeting with ${guest ? fullName(guest) : 'us'}`}
+              day={meeting.meeting_date}
+              time={meeting.start_time}
             />
           </FormSection>
         )}
