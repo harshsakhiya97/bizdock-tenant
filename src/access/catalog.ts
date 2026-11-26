@@ -86,14 +86,14 @@ export const MODULE_SECTIONS: { title: string; modules: ModuleDef[] }[] = [
     ],
   },
   {
-    title: 'Billing',
+    title: 'Payments',
     modules: [
       { key: 'invoices', label: 'Invoices', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
       { key: 'invoice_payments', label: 'Payments', open: { kind: 'with', note: 'With Studio Schedule' }, actions: [] },
       {
         key: 'payments',
         label: 'Razorpay',
-        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Billing → Razorpay: the Razorpay payments' },
+        open: { kind: 'action', module: 'payments', action: 'view', hint: 'Payments → Razorpay: the Razorpay payments' },
         actions: [{ module: 'payments', action: 'verify', label: 'Capture payments', hint: 'Capture an authorized Razorpay payment' }],
       },
     ],
