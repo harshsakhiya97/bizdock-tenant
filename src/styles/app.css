@@ -2102,3 +2102,7 @@ details.rec-section summary { cursor: pointer; }
 .table td .btn-sm { height: 32px; }
 .act.is-main { background: var(--brand); border-color: var(--brand); color: #fff; }
 .act.is-main:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
+.camp-tags { padding: 14px 16px; display: grid; gap: 10px; }
+.camp-tags-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.camp-tags-head .muted { flex-basis: 100%; }
+.ad-tree-tag { font-size: 11px; }
