@@ -316,7 +316,7 @@ export function InvoiceDrawer({
         </FormSection>
 
         <FormSection title="Bill to" description={`${first?.client_name ?? ''}${first?.phone ? ` · ${first.phone}` : ''}. Optional; saved on the client for next time.`}>
-          <BuyerFields id="inv-b" value={input.buyer} onChange={(buyer) => setInput((d) => ({ ...d, buyer }))} disabled={!canEdit} />
+          <BuyerFields id="inv-b" gst={gst} value={input.buyer} onChange={(buyer) => setInput((d) => ({ ...d, buyer }))} disabled={!canEdit} />
         </FormSection>
 
         <FormSection title={`${noun}s on this invoice`}>

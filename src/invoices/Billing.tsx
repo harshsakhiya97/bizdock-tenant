@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Pencil } from 'lucide-react'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
-import { FormSection, Label, TextArea, TextInput } from '@/components/Field'
+import { FormSection, Hint, Label, TextArea, TextInput } from '@/components/Field'
 import { updateLeads } from '@/leads/api'
 
 /** a client's billing details (Bill to), all optional */
@@ -22,15 +22,31 @@ export const buyerOfJson = (b: Record<string, unknown> | null | undefined): Buye
   state_code: String(b?.state_code ?? ''),
   gstin: String(b?.gstin ?? ''),
 })
+/** GST state codes (the first 2 digits of a GSTIN) → state */
+const GST_STATES: Record<string, string> = {
+  '01': 'Jammu and Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab', '04': 'Chandigarh', '05': 'Uttarakhand', '06': 'Haryana', '07': 'Delhi',
+  '08': 'Rajasthan', '09': 'Uttar Pradesh', '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh', '13': 'Nagaland', '14': 'Manipur',
+  '15': 'Mizoram', '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam', '19': 'West Bengal', '20': 'Jharkhand', '21': 'Odisha', '22': 'Chhattisgarh',
+  '23': 'Madhya Pradesh', '24': 'Gujarat', '25': 'Daman and Diu', '26': 'Dadra and Nagar Haveli and Daman and Diu', '27': 'Maharashtra',
+  '28': 'Andhra Pradesh (old)', '29': 'Karnataka', '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu', '34': 'Puducherry',
+  '35': 'Andaman and Nicobar Islands', '36': 'Telangana', '37': 'Andhra Pradesh', '38': 'Ladakh', '97': 'Other Territory', '99': 'Centre Jurisdiction',
+}
+/** the state and its code, from a GSTIN's first 2 digits (null: not a known code) */
+export const stateOfGstin = (gstin: string) => {
+  const code = gstin.trim().slice(0, 2)
+  return /^\d{2}$/.test(code) && GST_STATES[code] ? { state: GST_STATES[code], state_code: code } : null
+}
+
 export function buyerError(b: Buyer) {
-  if (b.state_code.trim() && !/^\d{1,2}$/.test(b.state_code.trim())) return 'State code is a number, e.g. 27 for Maharashtra.'
   if (b.gstin.trim() && b.gstin.trim().length !== 15) return 'GSTIN should be 15 characters.'
+  if (b.gstin.trim() && !stateOfGstin(b.gstin)) return 'GSTIN should start with the 2-digit state code, e.g. 27 for Maharashtra.'
   return null
 }
 
-/** the Bill to fields */
-export function BuyerFields({ id, value, onChange, disabled }: { id: string; value: Buyer; onChange: (b: Buyer) => void; disabled?: boolean }) {
+/** the Bill to fields: company name, address and (with GST) the GSTIN — its first 2 digits give the state and state code */
+export function BuyerFields({ id, value, onChange, disabled, gst = true }: { id: string; value: Buyer; onChange: (b: Buyer) => void; disabled?: boolean; gst?: boolean }) {
   const set = (k: keyof Buyer) => (e: { target: { value: string } }) => onChange({ ...value, [k]: e.target.value })
+  const st = stateOfGstin(value.gstin)
   return (
     <div className="form-grid">
       <div className="span-2">
@@ -39,20 +55,31 @@ export function BuyerFields({ id, value, onChange, disabled }: { id: string; val
       </div>
       <div className="span-2">
         <Label htmlFor={`${id}-addr`}>Address</Label>
-        <TextArea id={`${id}-addr`} rows={2} value={value.address} onChange={set('address')} disabled={disabled} />
+        <TextArea id={`${id}-addr`} rows={3} value={value.address} onChange={set('address')} disabled={disabled} />
       </div>
-      <div>
-        <Label htmlFor={`${id}-st`}>State</Label>
-        <TextInput id={`${id}-st`} placeholder="West Bengal" value={value.state} onChange={set('state')} disabled={disabled} />
-      </div>
-      <div>
-        <Label htmlFor={`${id}-sc`}>State code</Label>
-        <TextInput id={`${id}-sc`} placeholder="19" value={value.state_code} onChange={set('state_code')} disabled={disabled} />
-      </div>
-      <div className="span-2">
-        <Label htmlFor={`${id}-gst`}>GSTIN</Label>
-        <TextInput id={`${id}-gst`} className="input-upper" placeholder="19AAECE5361R1ZY" value={value.gstin} onChange={set('gstin')} disabled={disabled} />
-      </div>
+      {gst && (
+        <div className="span-2">
+          <Label htmlFor={`${id}-gst`}>GST No.</Label>
+          <TextInput
+            id={`${id}-gst`}
+            className="input-upper"
+            placeholder="19AAECE5361R1ZY"
+            maxLength={15}
+            value={value.gstin}
+            onChange={(e) => {
+              const gstin = e.target.value.toUpperCase().replace(/\s/g, '')
+              const s2 = stateOfGstin(gstin)
+              onChange({ ...value, gstin, state: s2?.state ?? '', state_code: s2?.state_code ?? '' })
+            }}
+            disabled={disabled}
+          />
+          {st && (
+            <Hint>
+              State: {st.state} · Code {st.state_code}
+            </Hint>
+          )}
+        </div>
+      )}
     </div>
   )
 }

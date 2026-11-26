@@ -545,7 +545,7 @@ export function BookingDrawer({
                 </div>
                 <div>
                   <Label>Bill to</Label>
-                  <BuyerFields id="bk-inv-b" value={inv.buyer} onChange={(buyer) => setInv((d) => ({ ...d, buyer }))} />
+                  <BuyerFields id="bk-inv-b" gst={invGst} value={inv.buyer} onChange={(buyer) => setInv((d) => ({ ...d, buyer }))} />
                 </div>
                 <div className="bk-total" style={{ alignItems: 'flex-end' }}>
                   <span className="muted small">
