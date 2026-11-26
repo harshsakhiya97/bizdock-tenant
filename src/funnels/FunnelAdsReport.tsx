@@ -174,11 +174,8 @@ export function FunnelAdsReport({
           .in('lead_id', ids.slice(i, i + 300))
         for (const b of (data ?? []) as { lead_id: string; total_amount: number }[]) billed.set(b.lead_id, (billed.get(b.lead_id) ?? 0) + Number(b.total_amount || 0))
       }
-      const { data: f } = await db().from('funnels').select('payment_descriptions').eq('id', funnelId).maybeSingle()
-      const products = ((f?.payment_descriptions ?? []) as string[]).filter(Boolean)
-      let q = db().from('razorpay_payments').select('phone, email, amount, amount_refunded, description, paid_at').eq('tenant_id', tenant.id).in('status', ['captured', 'refunded'])
-      if (products.length) q = q.in('description', products)
-      const { data: rz } = await q.limit(20000)
+      // every Razorpay payment (all accounts) from this funnel's leads, by phone or email (as Funnel → Payments)
+      const { data: rz } = await db().from('razorpay_payments').select('phone, email, amount, amount_refunded, paid_at').eq('tenant_id', tenant.id).in('status', ['captured', 'refunded']).limit(20000)
       const byPhone = new Map<string, string>()
       const byEmail = new Map<string, string>()
       for (const l of leads ?? []) {
