@@ -243,8 +243,8 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .fu-overdue { color: var(--danger); font-weight: 600; }
 .fu-today { color: var(--warning); font-weight: 600; }
 .seg button:disabled { opacity: .45; cursor: not-allowed; }
-.board { display: flex; gap: 12px; overflow-x: auto; padding: 16px; align-items: flex-start; min-height: 420px; }
-.board-col { flex: 0 0 262px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; max-height: calc(100vh - 290px); transition: border-color .15s, background .15s; }
+.board { display: flex; gap: 12px; overflow-x: auto; padding: 16px; align-items: flex-start; min-height: calc(100vh - 120px); }
+.board-col { flex: 0 0 262px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; max-height: calc(100vh - 120px); transition: border-color .15s, background .15s; }
 .board-col.is-over { border-color: var(--brand); background: var(--brand-soft); }
 .board-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
 .board-title { font-weight: 700; font-size: 13px; }
