@@ -8,7 +8,7 @@ const label = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN
 export type Line = { key: string; name: string; values: number[] }
 
 /** A multi-line chart: one line per series over the days; legend toggles lines, hover shows the day's values (₹, or counts). */
-export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; lines: Line[]; unit?: 'money' | 'count' }) {
+export function SpendLines({ days, lines, unit = 'money', labelOf = label }: { days: string[]; lines: Line[]; unit?: 'money' | 'count'; /** x-axis / hover label of a point (default: 26 Nov) */ labelOf?: (d: string) => string }) {
   const full = unit === 'count' ? (n: number) => String(Math.round(n)) : inr
   const axis = unit === 'count' ? (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1)) : short
   const [hidden, setHidden] = useState<Set<string>>(new Set())
@@ -55,7 +55,7 @@ export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; li
           {days.map((d, i) =>
             i % every === 0 || i === days.length - 1 ? (
               <text key={d} x={x(i)} y={H - 8} textAnchor="middle" fontSize={11} fill="var(--text-muted)">
-                {label(d)}
+                {labelOf(d)}
               </text>
             ) : null,
           )}
@@ -74,7 +74,7 @@ export function SpendLines({ days, lines, unit = 'money' }: { days: string[]; li
         </svg>
         {hover != null && (
           <div className="card card-pad small" style={{ position: 'absolute', top: 8, left: `${Math.min(70, (x(hover) / W) * 100 + 2)}%`, pointerEvents: 'none', minWidth: 180, maxWidth: 300, boxShadow: 'var(--shadow-float)', padding: 10 }}>
-            <b>{label(days[hover])}</b>
+            <b>{labelOf(days[hover])}</b>
             {shown
               .map((l) => ({ l, v: l.values[hover] }))
               .filter((r) => r.v > 0)
