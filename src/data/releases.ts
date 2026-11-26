@@ -16,7 +16,7 @@ export const releases: Release[] = [
     version: '0.35',
     date: '2026-11-24',
     title: 'New lead page, AI lead summaries, AI order, Funnel Report',
-    summary: 'The lead page in two columns with At a glance and an AI summary of every lead; an AI order to choose which AI each feature uses (with a backup); Reports → Funnel Report; AI call step with retries and Received / Lead updated paths; faster follow-ups; a lead or funnel you can see now shows everything inside it.',
+    summary: 'The lead page in two columns with At a glance and an AI summary of every lead; an AI order to choose which AI each feature uses (with a backup); Reports → Funnel Report; AI call step with retries and Received / Lead updated paths; faster follow-ups; Funnel → Sheets; a lead or funnel you can see now shows everything inside it.',
     new: [
       'Lead page → Details, in cards with small icons: on the left AI Insights, Lead Information and Source & Form Submissions (now with the funnel) / More Fields; on the right “At a glance” (category and since when, next follow-up, calls, meetings, billing, bill to, WhatsApp, age and owner), the Description and Billing Details. The header shows when the lead came in.',
       'AI Insights on every lead: a short summary (Hot / Warm / Cold and why, needs, budget, timeline, objections, next best action, risks) from the lead’s details, follow-ups, call transcripts, meetings, payments and WhatsApp — names and phone numbers hidden from the AI. Written again by itself a minute after anything changes; Summarize / Refresh writes it now.',
@@ -32,6 +32,8 @@ export const releases: Release[] = [
       'AI Insights read AI calls too (result, summary, answers, transcript) and show “Lead asked for”: what the lead asked for (more details, a price list, a call back…) from AI calls, phone calls, WhatsApp and follow-ups. An AI call’s transcript is saved and shows on the lead’s AI Calls tab.',
       'Funnel → Scorecard: every Marketing number opens its list — the ads (spend, impressions, CPM, clicks, CTR, CPC, LP views) or the leads (Ads / Organic / Total).',
       'Callyzer → Report: a date range (Today, Yesterday, Last 7 days, This month, custom…) like everywhere else.',
+      'Funnel → Sheets (was WhatsApp): Google Sheets with leads, no Perisclaw setup. Only the phone is needed (no name: the phone; a wrong email is left out); source Google Sheet. Each sheet shows rows in the sheet, synced, waiting, new leads, updated and skipped; Sync now when rows are waiting; Skipped opens the rows with why, to sync them again; Re-check adds rows whose phone isn’t a lead yet. Column mapping: Lead date (a new lead’s date from the sheet).',
+      'Leads: a lead from a sheet shows “Google Sheet · <sheet name>” as its source, and a Sheet filter (Leads page and the funnel’s Leads tab).',
     ],
     improved: [
       'A lead you can see shows all of it: Meetings, Bookings / Podcasts / Orders and Payments, without their own view permissions. A funnel you can see shows all its tabs too (Payments, Workflows).',
