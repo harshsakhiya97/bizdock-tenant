@@ -18,7 +18,7 @@ type Status = {
 const when = (s: string | null | undefined) => (s ? new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : '')
 
 /**
- * Callyzer → History logs → Sync transcripts: the old transcripts whose speaker labels need fixing (Claude API) and
+ * Callyzer → History logs → Sync transcripts: the transcripts whose speaker labels Claude hasn't checked yet (Claude API) and
  * the calls with no transcript (Gemini); Start runs both in the background (every minute) with live progress here.
  */
 export function SyncTranscripts({ onChanged }: { onChanged?: () => void }) {
@@ -99,20 +99,20 @@ export function SyncTranscripts({ onChanged }: { onChanged?: () => void }) {
 
             <div className="sync-row">
               <div className="sync-head">
-                <b>Fix old transcripts</b>
-                <span className="muted small">Claude API · speaker labels (Team / Customer), same words</span>
+                <b>Check who said what</b>
+                <span className="muted small">Claude API · fixes the Team / Customer labels, same words</span>
               </div>
               {!st.claude ? (
                 <div className="small">
-                  {st.relabel_left.toLocaleString('en-IN')} old transcript{st.relabel_left === 1 ? '' : 's'} to fix.{' '}
+                  {st.relabel_left.toLocaleString('en-IN')} transcript{st.relabel_left === 1 ? '' : 's'} to check.{' '}
                   <span className="muted">
-                    Connect (or tick) <Link to="/integrations">System Connections → Claude API</Link> to fix them.
+                    Connect (or tick) <Link to="/integrations">System Connections → Claude API</Link> to check them.
                   </span>
                 </div>
               ) : active && s?.relabel_total ? (
                 <Progress done={fixed} total={s.relabel_total} pct={pct(fixed, s.relabel_total)} />
               ) : (
-                <div className="small">{st.relabel_left ? `${st.relabel_left.toLocaleString('en-IN')} to fix` : 'Nothing to fix.'}</div>
+                <div className="small">{st.relabel_left ? `${st.relabel_left.toLocaleString('en-IN')} to check` : 'All checked.'}</div>
               )}
             </div>
 
