@@ -2181,3 +2181,10 @@ details.rec-section summary { cursor: pointer; }
 .camp-dot.badge-success { background: var(--success); }
 .camp-dot.badge-warning { background: var(--warning); }
 .camp-dot.badge-danger { background: var(--danger); }
+.adsd-share { display: grid; gap: 6px; }
+.adsd-share-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.6fr) 84px; gap: 16px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.adsd-share-name { display: grid; gap: 3px; min-width: 0; }
+.adsd-share-bars { display: grid; gap: 5px; min-width: 0; }
+.adsd-share-line { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.adsd-share-bar { display: block; height: 9px; border-radius: 999px; min-width: 3px; flex-shrink: 0; max-width: calc(100% - 120px); }
+@media (max-width: 640px) { .adsd-share-row { grid-template-columns: minmax(0, 1fr) 70px; } .adsd-share-bars { grid-column: 1 / -1; grid-row: 2; } }

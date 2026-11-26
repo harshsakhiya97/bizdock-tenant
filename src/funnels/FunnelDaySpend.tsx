@@ -326,7 +326,7 @@ export function FunnelDaySpend({
           </PerfCard>
 
           <PerfCard title={`${setWord} Performance`} platform={platform} rows={sets} by="adset" openAd={openAd}>
-            <Bubbles rows={sets} />
+            <ShareBars rows={sets} />
           </PerfCard>
 
           <PerfCard title="Ads Performance" platform={platform} rows={ads} by="ad" openAd={openAd}>
@@ -688,97 +688,69 @@ function QualityBars({ rows }: { rows: Row[] }) {
   )
 }
 
-// ---------- Ad set: spend vs leads bubbles ----------
-function Bubbles({ rows }: { rows: Row[] }) {
-  const [ref, W] = useWidth()
-  const [hover, setHover] = useState<string | null>(null)
-  const H = 300
-  const P = { l: 52, r: 20, t: 18, b: 34 }
-  const maxS = Math.max(1, ...rows.map((r) => r.spend)) * 1.1
-  const maxL = Math.max(4, ...rows.map((r) => r.leads)) * 1.15
-  const x = (v: number) => P.l + (W - P.l - P.r) * (v / maxS)
-  const y = (v: number) => P.t + (H - P.t - P.b) * (1 - v / maxL)
-  const sumS = rows.reduce((t, r) => t + r.spend, 0)
+// ---------- Ad set: share of spend vs share of leads ----------
+/** each ad set: its share of the spend against its share of the leads (more leads than spend = it pulls its weight) */
+function ShareBars({ rows }: { rows: Row[] }) {
+  const [all, setAll] = useState(false)
+  const sumS = rows.reduce((t, r) => t + r.spend, 0) || 1
   const sumL = rows.reduce((t, r) => t + r.leads, 0)
-  // the average cost per lead as a line: above it = cheaper leads
   const avg = sumL ? sumS / sumL : 0
-  const maxW = Math.max(1, ...rows.map((r) => r.warm))
-  const h = rows.find((r) => r.key === hover)
-  const color = (r: Row) => (!r.leads ? Q.ni : cpl(r) <= avg ? Q.closed : Q.warm)
+  const list = [...rows].sort((a, b) => b.spend - a.spend)
+  const shown = all ? list : list.slice(0, 8)
+  const max = Math.max(1, ...list.map((r) => Math.max(pct(r.spend, sumS), pct(r.leads, sumL))))
+  const verdict = (r: Row) => (!r.leads ? { t: 'No leads', c: 'is-bad' } : cpl(r) <= avg * 0.9 ? { t: 'Efficient', c: 'is-good' } : cpl(r) >= avg * 1.4 ? { t: 'Costly', c: 'is-bad' } : { t: 'Average', c: 'is-warn' })
   return (
-    <div className="stack" style={{ gap: 8 }}>
-      <div className="adsd-legend">
-        <span>
-          <i style={{ background: Q.closed }} />
-          Cheaper than average per lead
-        </span>
-        <span>
-          <i style={{ background: Q.warm }} />
-          Costlier
-        </span>
-        <span>
-          <i style={{ background: Q.ni }} />
-          No leads
-        </span>
-        <span className="muted">Bubble size = warm leads</span>
+    <div className="stack" style={{ gap: 10 }}>
+      <div className="row-between" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <span className="muted small">Share of spend vs share of leads · average {avg ? inr0(avg) : '—'} per lead</span>
+        <div className="adsd-legend">
+          <span>
+            <i style={{ background: Q.spend }} />% of spend
+          </span>
+          <span>
+            <i style={{ background: Q.leads }} />% of leads
+          </span>
+        </div>
       </div>
-      <div ref={ref} style={{ position: 'relative' }}>
-        <svg width={W} height={H} style={{ display: 'block' }}>
-          {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-            <g key={f}>
-              <line x1={P.l} x2={W - P.r} y1={y(f * maxL)} y2={y(f * maxL)} stroke="var(--line)" />
-              <text x={P.l - 8} y={y(f * maxL) + 4} textAnchor="end" fontSize={11} fill="var(--text-muted)">
-                {Math.round(f * maxL)}
-              </text>
-              <text x={x(f * maxS)} y={H - 10} textAnchor="middle" fontSize={11} fill="var(--text-muted)">
-                {kshort(f * maxS)}
-              </text>
-            </g>
-          ))}
-          {avg > 0 && (
-            <>
-              <line x1={x(0)} y1={y(0)} x2={x(Math.min(maxS, maxL * avg))} y2={y(Math.min(maxL, maxS / avg))} stroke="var(--text-muted)" strokeDasharray="5 5" />
-              <text x={W - P.r - 4} y={P.t + 12} textAnchor="end" fontSize={11} fill="var(--text-muted)">
-                Average {inr0(avg)}/lead
-              </text>
-            </>
-          )}
-          <text x={P.l + 6} y={P.t + 12} fontSize={11} fill={Q.closed} fontWeight={600}>
-            ↖ Cheap leads
-          </text>
-          <text x={W - P.r - 4} y={H - P.b - 6} textAnchor="end" fontSize={11} fill={Q.ni} fontWeight={600}>
-            Costly ↘
-          </text>
-          {[...rows]
-            .sort((a, b) => b.warm - a.warm)
-            .map((r) => (
-              <circle
-                key={r.key}
-                cx={x(r.spend)}
-                cy={y(r.leads)}
-                r={7 + 15 * Math.sqrt(r.warm / maxW)}
-                fill={color(r)}
-                fillOpacity={hover == null || hover === r.key ? 0.55 : 0.2}
-                stroke={color(r)}
-                strokeWidth={hover === r.key ? 2.5 : 1.5}
-                onMouseEnter={() => setHover(r.key)}
-                onMouseLeave={() => setHover(null)}
-              />
-            ))}
-        </svg>
-        {h && (
-          <div className="adsd-tip" style={{ left: Math.min(W - 230, Math.max(0, x(h.spend) - 115)), top: Math.max(0, y(h.leads) - 110) }}>
-            <b>{h.name}</b>
-            <span className="muted">{h.sub}</span>
-            <span>
-              Spend {inr0(h.spend)} · {h.leads} leads · {h.leads ? `${inr0(cpl(h))}/lead` : '—'}
-            </span>
-            <span>
-              Warm {h.warm} · Closed {h.closed} · Not int. {h.ni}
-            </span>
-          </div>
-        )}
+      <div className="adsd-share">
+        {shown.map((r) => {
+          const v = verdict(r)
+          return (
+            <div key={r.key} className="adsd-share-row" title={`${r.name} — ${r.sub}`}>
+              <div className="adsd-share-name">
+                <span className="row" style={{ gap: 6, flexWrap: 'nowrap', minWidth: 0 }}>
+                  <b className="adsd-ellipsis">{r.name}</b>
+                  <span className={`adsd-tag ${v.c}`}>{v.t}</span>
+                </span>
+                <span className="muted small adsd-ellipsis">{r.sub}</span>
+              </div>
+              <div className="adsd-share-bars">
+                <div className="adsd-share-line">
+                  <span className="adsd-share-bar" style={{ width: `${(pct(r.spend, sumS) / max) * 100}%`, background: Q.spend }} />
+                  <span className="small nowrap">
+                    {pct(r.spend, sumS).toFixed(0)}% · {inr0(r.spend)}
+                  </span>
+                </div>
+                <div className="adsd-share-line">
+                  <span className="adsd-share-bar" style={{ width: `${(pct(r.leads, sumL) / max) * 100}%`, background: Q.leads }} />
+                  <span className="small nowrap">
+                    {pct(r.leads, sumL).toFixed(0)}% · {r.leads} lead{r.leads === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+              <div className="adsd-board-num">
+                <b>{r.leads ? inr0(cpl(r)) : '—'}</b>
+                <span className="muted small">per lead</span>
+              </div>
+            </div>
+          )
+        })}
       </div>
+      {list.length > 8 && (
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setAll((a) => !a)}>
+          {all ? 'Show top 8' : `Show all ${list.length}`}
+        </button>
+      )}
     </div>
   )
 }
