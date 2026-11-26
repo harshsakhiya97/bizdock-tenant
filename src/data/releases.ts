@@ -13,6 +13,25 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.37',
+    date: '2026-11-26',
+    title: 'Several Razorpay accounts, Funnel payments from leads, campaigns by tags, faster funnel leads',
+    summary: 'Add more than one Razorpay account; Billing is now Payments; a funnel’s Payments tab lists its leads’ payments by itself; Facebook and Google campaigns join a funnel by tags; the funnel Leads tab no longer times out.',
+    new: [
+      'Razorpay: several accounts (System Connections → Razorpay → Add account, each with its own name). Payments → Razorpay shows the Account and filters by it.',
+      'Funnel → Payments: no products to add — every Razorpay payment (any account) from the funnel’s leads, matched by phone or email, with Account and Status filters and totals. Overview revenue counts the same payments.',
+      'Funnel → Facebook Ads / Google Ads: Campaign tags. Any campaign, in any ad account, whose name has one of the tags joins the funnel — new campaigns too, as they come in. Each campaign shows its tag. A comma is part of a tag (₹30,000 Podcast Host).',
+    ],
+    improved: [
+      'Sidebar and Access Control: Billing is now Payments.',
+      'Funnel → Facebook Ads / Google Ads: no Add more side panel and no remove; the list and the tab count show only the campaigns that match a tag.',
+      'Leads lists: last comment, follow-ups done, connected calls and meeting load in milliseconds; the funnel Leads tab asks only for its own leads.',
+    ],
+    fixed: [
+      'Funnel → Leads: “canceling statement due to statement timeout”.',
+    ],
+  },
+  {
     version: '0.36',
     date: '2026-11-26',
     title: 'Paid Podcast boards, Bill to with GST No., standard row buttons, speaker check',
