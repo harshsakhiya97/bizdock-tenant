@@ -1,4 +1,6 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { AlertTriangle, ArrowDown, ArrowUp, ChartNoAxesColumn, CheckCircle2, ChevronDown, ChevronRight, Lightbulb, Table2, TrendingUp } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { db } from '@/lib/supabase'
@@ -33,12 +35,33 @@ type Period = 'day' | 'week' | 'month'
 type SortKey = 'name' | 'spend' | 'leads' | 'cpl' | 'warm' | 'ni' | 'closed'
 
 type Fact = { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number; gst: number; account: string; campaign: string; adset: string; name: string }
-type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number } & Partial<Counts>
+type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number; list?: LeadRef[] } & Partial<Counts>
 type Counts = { leads: number; warm: number; ni: number; closed: number }
 /** one report row: a period (Date) or a campaign / ad set / ad */
-type Row = Counts & { key: string; name: string; sub: string; spend: number; gst: number; items: Ad[]; ad?: Ad }
-/** the funnel's leads per day and ad (funnel_ad_lead_counts) */
-type LeadCount = { day: string; campaign: string | null; adset: string | null; ad: string | null; leads: number; warm: number; not_interested: number; closed: number }
+type Row = Counts & { key: string; name: string; sub: string; spend: number; gst: number; items: Ad[]; ad?: Ad; list: LeadRef[] }
+/** one of the funnel's leads (funnel_ad_leads) */
+type LeadRef = { id: string; name: string; phone: string | null; created_at: string; day: string; temperature: string | null; campaign: string | null; adset: string | null; ad: string | null; warm: boolean; not_interested: boolean; closed: boolean }
+/** a lead as counts, for adding up */
+type LeadCount = { day: string; campaign: string | null; adset: string | null; ad: string | null; leads: number; warm: number; not_interested: number; closed: number; ref?: LeadRef }
+/** a number opens its leads (a pop-up) */
+const LeadsOpen = createContext<(title: string, list: LeadRef[]) => void>(() => {})
+function N({ list, pick, title, children }: { list: LeadRef[] | undefined; pick?: (l: LeadRef) => boolean; title: string; children: ReactNode }) {
+  const open = useContext(LeadsOpen)
+  const ls = (list ?? []).filter(pick ?? (() => true))
+  if (!ls.length) return <>{children}</>
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className="adsd-n"
+      title="See these leads"
+      onClick={(e) => (e.stopPropagation(), open(title, ls))}
+      onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), open(title, ls))}
+    >
+      {children}
+    </span>
+  )
+}
 type SpendDays = { days: { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }[]; ads: Map<string, string>; objs?: Map<string, GAd> }
 
 /** the period a day falls in: the day, its week (Sunday–Saturday: the Sunday) or its month (the 1st) */
@@ -86,7 +109,7 @@ function useWidth(): [React.RefObject<HTMLDivElement | null>, number] {
 /** the rows of one report: spend from the ads, leads matched by the ad they came from (names), or by lead date */
 function buildRows(by: By, period: Period, facts: Fact[], counts: LeadCount[]) {
   const m = new Map<string, Row>()
-  const blank = (key: string, name: string, sub: string): Row => ({ key, name, sub, spend: 0, gst: 0, leads: 0, warm: 0, ni: 0, closed: 0, items: [] })
+  const blank = (key: string, name: string, sub: string): Row => ({ key, name, sub, spend: 0, gst: 0, leads: 0, warm: 0, ni: 0, closed: 0, items: [], list: [] })
   for (const f of facts) {
     const k = by === 'date' ? periodOf(f.day, period) : by === 'campaign' ? f.campaign_id : by === 'adset' ? `${f.campaign_id}|${f.adset_id}` : f.ad_id
     const r =
@@ -102,7 +125,7 @@ function buildRows(by: By, period: Period, facts: Fact[], counts: LeadCount[]) {
     if (by === 'date') {
       const a = r.items.find((x) => x.ad_id === f.ad_id)
       if (a) (a.spend += f.spend), (a.gst += f.gst)
-      else r.items.push({ ad_id: f.ad_id, name: f.name, account: f.account, campaign: f.campaign, adset: f.adset, spend: f.spend, gst: f.gst })
+      else r.items.push({ ad_id: f.ad_id, name: f.name, account: f.account, campaign: f.campaign, adset: f.adset, spend: f.spend, gst: f.gst, list: [] })
     }
     m.set(k, r)
   }
@@ -127,23 +150,27 @@ function buildRows(by: By, period: Period, facts: Fact[], counts: LeadCount[]) {
       if (!m.has(k)) m.set(k, blank(k, periodLabel(k, period), ''))
     } else if (by === 'campaign') k = c ? idx.get(c) : undefined
     else if (by === 'adset') k = s ? (idx.get(`${c}|${s}`) ?? (c ? undefined : idx.get(`|${s}`))) : undefined
-    else k = a ? (idx.get(`${c}|${s}|${a}`) ?? idx.get(`${c}||${a}`) ?? (c ? undefined : idx.get(`||${a}`))) : undefined
+    else k = a ? (idx.get(`${c}|${s}|${a}`) ?? idx.get(`${c}||${a}`) ?? idx.get(`||${a}`)) : undefined
     const r = k ? m.get(k) : undefined
     if (!r) continue
     r.leads += x.leads
     r.warm += x.warm
     r.ni += x.not_interested
     r.closed += x.closed
+    if (x.ref) r.list.push(x.ref)
     // Date: the day's ad the lead came from (same names)
     if (by === 'date' && a) {
       const hit =
         r.items.find((i) => norm(i.name) === a && norm(i.campaign) === c && norm(i.adset) === s) ??
-        r.items.find((i) => norm(i.name) === a && (!c || norm(i.campaign) === c) && (!s || norm(i.adset) === s))
+        r.items.find((i) => norm(i.name) === a && (!c || norm(i.campaign) === c) && (!s || norm(i.adset) === s)) ??
+        r.items.find((i) => norm(i.name) === a && (!c || norm(i.campaign) === c)) ??
+        r.items.find((i) => norm(i.name) === a)
       if (hit) {
         hit.leads = (hit.leads ?? 0) + x.leads
         hit.warm = (hit.warm ?? 0) + x.warm
         hit.ni = (hit.ni ?? 0) + x.not_interested
         hit.closed = (hit.closed ?? 0) + x.closed
+        if (x.ref) hit.list = [...(hit.list ?? []), x.ref]
       }
     }
   }
@@ -198,6 +225,20 @@ export function FunnelDaySpend({
   const [counts, setCounts] = useState<LeadCount[]>([])
   const [prevCounts, setPrevCounts] = useState<LeadCount[]>([])
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  const [leadShow, setLeadShow] = useState<StatShow<LeadRef> | null>(null)
+  const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+  const openLeads = (title: string, list: LeadRef[]) =>
+    setLeadShow({
+      title,
+      rows: [...list].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      cols: [
+        { label: 'Lead', render: (l) => <><b>{l.name || l.phone || '—'}</b>{l.phone && <div className="muted small">{l.phone}</div>}</> },
+        { label: 'Lead date', render: (l) => <span className="nowrap">{when(l.created_at)}</span> },
+        { label: 'Ad', render: (l) => <><span>{l.ad || '—'}</span><div className="muted small">{[l.campaign, l.adset].filter(Boolean).join(' · ')}</div></> },
+        { label: 'Category', render: (l) => (l.temperature ? l.temperature.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase()) : '—') },
+      ],
+    })
   const key = JSON.stringify(links)
 
   useEffect(() => {
@@ -211,10 +252,12 @@ export function FunnelDaySpend({
         : funnelDaySpend(tenant.id, ls, a, b)
     const leadsOf = (a: string, b: string) =>
       db()
-        .rpc('funnel_ad_lead_counts', { p_funnel: funnelId, p_from: a, p_to: b })
+        .rpc('funnel_ad_leads', { p_funnel: funnelId, p_from: a, p_to: b })
         .then(({ data: c, error: e }) => {
           if (e) throw new Error(e.message)
-          return (c ?? []) as LeadCount[]
+          return ((c ?? []) as LeadRef[]).map(
+            (l): LeadCount => ({ day: l.day, campaign: l.campaign, adset: l.adset, ad: l.ad, leads: 1, warm: l.warm ? 1 : 0, not_interested: l.not_interested ? 1 : 0, closed: l.closed ? 1 : 0, ref: l }),
+          )
         })
     Promise.all([spendOf(from, to), leadsOf(from, to)])
       .then(([s, c]) => (setCounts(c), setData(s)))
@@ -282,6 +325,7 @@ export function FunnelDaySpend({
   ]
 
   return (
+    <LeadsOpen.Provider value={openLeads}>
     <div className="adsd stack" style={{ gap: 16 }}>
       <section className="card card-pad adsd-head">
         <div>
@@ -348,7 +392,9 @@ export function FunnelDaySpend({
       ) : null}
       {preview && <AdPreviewDrawer ad={preview} onClose={() => setPreview(null)} />}
       {gPreview && <GoogleAdDrawer ad={gPreview.ad} sub={gPreview.sub} customerId={google?.customers?.get(gPreview.ad.account_id)} onClose={() => setGPreview(null)} />}
+      <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
     </div>
+    </LeadsOpen.Provider>
   )
 }
 
@@ -806,7 +852,9 @@ function Leaderboard({ rows, openAd }: { rows: Row[]; openAd: (a: Ad) => void })
                 </span>
               </span>
               <span className="adsd-board-num">
-                <b>{r.leads}</b>
+                <N list={r.list} title={`${r.name} · Leads`}>
+                  <b>{r.leads}</b>
+                </N>
                 <span className="muted small">leads</span>
               </span>
               <span className="adsd-board-num">
@@ -925,11 +973,11 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
                   <td className="num nowrap">
                     <b>{money(r.spend, r.gst)}</b>
                   </td>
-                  <td className="num">{r.leads}</td>
+                  <td className="num"><N list={r.list} title={`${r.name} · Leads`}>{r.leads}</N></td>
                   <td className="num nowrap">{r.leads ? inr0(r.spend / r.leads) : '—'}</td>
-                  <td className="num">{r.warm}</td>
-                  <td className="num">{r.ni}</td>
-                  <td className="num">{r.closed}</td>
+                  <td className="num"><N list={r.list} pick={(l) => l.warm} title={`${r.name} · Warm`}>{r.warm}</N></td>
+                  <td className="num"><N list={r.list} pick={(l) => l.not_interested} title={`${r.name} · Not interested`}>{r.ni}</N></td>
+                  <td className="num"><N list={r.list} pick={(l) => l.closed} title={`${r.name} · Closed`}>{r.closed}</N></td>
                 </tr>
                 {isOpen &&
                   r.items.map((a) => (
@@ -939,11 +987,11 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
                         <div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>
                       </td>
                       <td className="num nowrap">{money(a.spend, a.gst)}</td>
-                      <td className="num">{a.leads ?? 0}</td>
+                      <td className="num"><N list={a.list} title={`${a.name} · ${r.name} · Leads`}>{a.leads ?? 0}</N></td>
                       <td className="num nowrap">{a.leads ? inr0(a.spend / a.leads) : '—'}</td>
-                      <td className="num">{a.warm ?? 0}</td>
-                      <td className="num">{a.ni ?? 0}</td>
-                      <td className="num">{a.closed ?? 0}</td>
+                      <td className="num"><N list={a.list} pick={(l) => l.warm} title={`${a.name} · ${r.name} · Warm`}>{a.warm ?? 0}</N></td>
+                      <td className="num"><N list={a.list} pick={(l) => l.not_interested} title={`${a.name} · ${r.name} · Not interested`}>{a.ni ?? 0}</N></td>
+                      <td className="num"><N list={a.list} pick={(l) => l.closed} title={`${a.name} · ${r.name} · Closed`}>{a.closed ?? 0}</N></td>
                     </tr>
                   ))}
               </Fragment>
@@ -960,19 +1008,19 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
               <b>{money(tot.spend, tot.gst)}</b>
             </td>
             <td className="num">
-              <b>{tot.leads}</b>
+              <N list={rows.flatMap((r) => r.list)} title="All · Leads"><b>{tot.leads}</b></N>
             </td>
             <td className="num nowrap">
               <b>{tot.leads ? inr0(tot.spend / tot.leads) : '—'}</b>
             </td>
             <td className="num">
-              <b>{tot.warm}</b>
+              <N list={rows.flatMap((r) => r.list)} pick={(l) => l.warm} title="All · Warm"><b>{tot.warm}</b></N>
             </td>
             <td className="num">
-              <b>{tot.ni}</b>
+              <N list={rows.flatMap((r) => r.list)} pick={(l) => l.not_interested} title="All · Not interested"><b>{tot.ni}</b></N>
             </td>
             <td className="num">
-              <b>{tot.closed}</b>
+              <N list={rows.flatMap((r) => r.list)} pick={(l) => l.closed} title="All · Closed"><b>{tot.closed}</b></N>
             </td>
           </tr>
         </tfoot>
