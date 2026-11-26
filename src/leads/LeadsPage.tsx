@@ -11,6 +11,7 @@ import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
 import { POD_STEPS, listPodBoard, listPodFacts, type PodBoardFacts, type PodFacts } from '@/funnels/podSteps'
 import { Kanban, useBoardView, type KanbanCol } from '@/components/Kanban'
+import { Act, Acts } from '@/components/Acts'
 import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
@@ -1219,24 +1220,12 @@ function RowActions({
   onLose: () => void
 }) {
   return (
-    <td className="nowrap" onClick={(e) => e.stopPropagation()}>
-      <span className="row" style={{ gap: 6 }}>
-        {canFollowUp && (
-          <button type="button" className="btn btn-primary btn-sm" onClick={onFollowUp}>
-            <Phone size={13} /> Follow-up
-          </button>
-        )}
-        {canMeet && onMeeting && (
-          <button type="button" className="btn btn-outline btn-sm" onClick={onMeeting}>
-            <CalendarCheck size={13} /> Meeting
-          </button>
-        )}
-        {canLose && !closed && (
-          <button type="button" className="btn btn-outline btn-sm danger-text" onClick={onLose} title="Mark Lost" aria-label="Mark Lost">
-            <X size={14} />
-          </button>
-        )}
-      </span>
+    <td className="nowrap">
+      <Acts>
+        {canFollowUp && <Act main icon={Phone} label="Follow-up" onClick={onFollowUp} />}
+        {canMeet && onMeeting && <Act icon={CalendarCheck} label="Book meeting" onClick={onMeeting} />}
+        {canLose && !closed && <Act icon={X} label="Mark Lost" tone="danger" onClick={onLose} />}
+      </Acts>
     </td>
   )
 }

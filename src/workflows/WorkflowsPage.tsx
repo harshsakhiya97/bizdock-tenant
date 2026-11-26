@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Act, Acts } from '@/components/Acts'
 import { useNavigate } from 'react-router'
 import { Activity, Network, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -248,22 +249,12 @@ export function WorkflowsPage({ funnelId, eventId }: { funnelId?: string; eventI
                         )}
                       </td>
                       <td className="muted nowrap">{new Date(w.updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</td>
-                      <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'right' }} className="nowrap">
-                        {can('workflows', 'edit') && (
-                          <button type="button" className="btn btn-ghost btn-icon" aria-label={`Edit ${w.name}`} title="Name & funnel" onClick={() => setEditing(w)}>
-                            <Pencil size={15} />
-                          </button>
-                        )}
-                        {can('workflows', 'edit') && (
-                          <button type="button" className="btn btn-ghost btn-icon" aria-label={`Test run ${w.name}`} title="Test run" onClick={() => setTesting(w)}>
-                            <Play size={15} />
-                          </button>
-                        )}
-                        {can('workflows', 'delete') && (
-                          <button type="button" className="btn btn-ghost btn-icon danger-text" aria-label={`Delete ${w.name}`} onClick={() => setDeleting(w)}>
-                            <Trash2 size={15} />
-                          </button>
-                        )}
+                      <td className="nowrap">
+                        <Acts>
+                          {can('workflows', 'edit') && <Act icon={Pencil} label={`Edit ${w.name}: name & funnel`} onClick={() => setEditing(w)} />}
+                          {can('workflows', 'edit') && <Act icon={Play} label={`Test run ${w.name}`} onClick={() => setTesting(w)} />}
+                          {can('workflows', 'delete') && <Act icon={Trash2} tone="danger" label={`Delete ${w.name}`} onClick={() => setDeleting(w)} />}
+                        </Acts>
                       </td>
                     </tr>
                   )

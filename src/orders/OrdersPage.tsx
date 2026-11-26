@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Act, Acts } from '@/components/Acts'
 import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Trash2, Wallet } from 'lucide-react'
 import { BT } from '@/auth/auth-context'
@@ -395,17 +396,11 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
                               <span className="muted">—</span>
                             )}
                           </td>
-                          <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                            {can('bookings', 'add') && (
-                              <button type="button" className="btn btn-outline btn-sm" title={`A new ${one} with the same services`} onClick={() => setOpen({ booking: null, copy: b })}>
-                                <Repeat size={13} /> Repeat
-                              </button>
-                            )}
-                            {can('bookings', 'delete') && (
-                              <button type="button" className="btn btn-ghost btn-sm btn-icon" title={`Delete this ${one}`} aria-label={`Delete ${bookingRef(b)}`} onClick={() => setRemoving(b)}>
-                                <Trash2 size={14} />
-                              </button>
-                            )}
+                          <td className="nowrap">
+                            <Acts>
+                              {can('bookings', 'add') && <Act icon={Repeat} label={`Repeat: a new ${one} with the same services`} onClick={() => setOpen({ booking: null, copy: b })} />}
+                              {can('bookings', 'delete') && <Act icon={Trash2} tone="danger" label={`Delete ${bookingRef(b)}`} onClick={() => setRemoving(b)} />}
+                            </Acts>
                           </td>
                         </tr>
                       )

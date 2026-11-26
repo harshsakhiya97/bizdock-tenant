@@ -1,6 +1,7 @@
-import { Link } from 'react-router'
+import { useNavigate } from 'react-router'
+import { Act, Acts } from '@/components/Acts'
 import { Paged } from '@/components/ui'
-import { CalendarPlus, FileText, Plus, Repeat } from 'lucide-react'
+import { CalendarPlus, FileText, Pencil, Plus, Repeat } from 'lucide-react'
 import { money } from '@/leads/labels'
 import type { BookingRefs } from './useBookingRefs'
 import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingRow } from './types'
@@ -43,6 +44,7 @@ export function BookingsTab({
   /** what a service booking is called: Order, or Brand Deal */
   noun?: string
 }) {
+  const navigate = useNavigate()
   const one = service ? noun.toLowerCase() : podcast ? 'podcast' : 'booking'
   const live = (bookings ?? []).filter((b) => b.status !== 'cancelled')
   const total = live.reduce((s, b) => s + Number(b.total_amount), 0)
@@ -101,23 +103,12 @@ export function BookingsTab({
                   <td className="num">{money(b.total_amount)}</td>
                   <td className="num">{money(b.paid_amount)}</td>
                   <td className="num">{b.status === 'cancelled' ? '—' : money(Math.max(0, b.total_amount - b.paid_amount))}</td>
-                  <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="btn btn-outline btn-sm" onClick={() => onOpen(b)}>
-                      Edit
-                    </button>{' '}
-                    {b.invoice_id && (
-                      <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`} title={invoiceNo(b) ?? undefined}>
-                        Invoice
-                      </Link>
-                    )}
-                    {service && onRepeat && canAdd && (
-                      <>
-                        {' '}
-                        <button type="button" className="btn btn-outline btn-sm" title={`A new ${one} with the same services`} onClick={() => onRepeat(b)}>
-                          <Repeat size={13} /> Repeat
-                        </button>
-                      </>
-                    )}
+                  <td className="nowrap">
+                    <Acts>
+                      <Act icon={Pencil} label="Edit" onClick={() => onOpen(b)} />
+                      {b.invoice_id && <Act icon={FileText} label={`Invoice ${invoiceNo(b) ?? ''}`.trim()} onClick={() => navigate(`/invoices/${b.invoice_id}`)} />}
+                      {service && onRepeat && canAdd && <Act icon={Repeat} label={`Repeat: a new ${one} with the same services`} onClick={() => onRepeat(b)} />}
+                    </Acts>
                   </td>
                 </tr>
               ))}
@@ -178,10 +169,10 @@ export function InvoicesTab({
                   <td className="muted">{slotText(b)}</td>
                   <td className="num">{money(b.total_amount)}</td>
                   <td className="num">{money(Math.max(0, b.total_amount - b.paid_amount))}</td>
-                  <td className="num">
-                    <Link className="btn btn-outline btn-sm" to={`/bookings/${b.id}/invoice`} target="_blank">
-                      <FileText size={14} /> View
-                    </Link>
+                  <td className="nowrap">
+                    <Acts>
+                      <Act icon={FileText} label="View invoice" to={`/bookings/${b.id}/invoice`} target="_blank" />
+                    </Acts>
                   </td>
                 </tr>
               ))}

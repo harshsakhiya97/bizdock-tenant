@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router'
-import { CalendarCheck, Clock3, IndianRupee, Plus, Wallet } from 'lucide-react'
+import { Act, Acts } from '@/components/Acts'
+import { useNavigate } from 'react-router'
+import { CalendarCheck, Clock3, FileText, IndianRupee, Pencil, Plus, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { PageHead, StatCard } from '@/components/ui'
@@ -24,6 +25,7 @@ import { Select } from '@/components/Field'
  */
 export function BookingCalendarPage() {
   const tenant = useTenant()
+  const navigate = useNavigate()
   const { can, businesses } = useAuth()
   const { selected } = useBusiness()
   const title = 'Studio Schedule'
@@ -123,16 +125,10 @@ export function BookingCalendarPage() {
               </>
             ),
             actions: (
-              <>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => setDrawer({ booking: b })}>
-                  Edit
-                </button>
-                {b.invoice_id && (
-                  <Link className="btn btn-outline btn-sm" to={`/invoices/${b.invoice_id}`}>
-                    Invoice
-                  </Link>
-                )}
-              </>
+              <Acts>
+                <Act icon={Pencil} label="Edit" onClick={() => setDrawer({ booking: b })} />
+                {b.invoice_id && <Act icon={FileText} label="Invoice" onClick={() => navigate(`/invoices/${b.invoice_id}`)} />}
+              </Acts>
             ),
           }))
         : null,

@@ -9,6 +9,7 @@ import type { StageRow } from '@/funnels/types'
 import { followUp as fmtDue } from '@/leads/labels'
 import type { MemberOption, Option } from '@/leads/types'
 import { cn } from '@/lib/cn'
+import { Act, Acts } from '@/components/Acts'
 import { lateBy, modeOf, telHref } from './labels'
 import type { FollowUpRow } from './types'
 
@@ -126,34 +127,20 @@ export function FollowUpTable({
                 )}
                 {!hideAssigned && <td className="nowrap">{member(f.assigned_to) ?? <span className="muted">—</span>}</td>}
                 <td>
-                  <div className="row-actions" style={{ alignItems: 'center', gap: 4 }}>
+                  <Acts>
                     {l && (
                       <>
-                        <a className="btn btn-ghost btn-icon" href={telHref(l.phone)} title="Call" aria-label={`Call ${l.first_name}`}>
-                          <Phone size={15} />
-                        </a>
-                        <button type="button" className="btn btn-ghost btn-icon" title="WhatsApp" aria-label={`WhatsApp ${l.first_name}`} onClick={() => setWa(f)}>
-                          <MessageCircle size={15} />
-                        </button>
+                        <Act icon={Phone} label={`Call ${l.first_name}`} href={telHref(l.phone)} />
+                        <Act icon={MessageCircle} label={`WhatsApp ${l.first_name}`} onClick={() => setWa(f)} />
                       </>
                     )}
                     {canAct && f.status === 'pending' && (
                       <>
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-icon"
-                          title="Reschedule"
-                          aria-label="Reschedule"
-                          onClick={() => onReschedule(f)}
-                        >
-                          <CalendarClock size={15} />
-                        </button>
-                        <button type="button" className="btn btn-sm btn-success" onClick={() => onDone(f)}>
-                          <Check size={14} /> Done
-                        </button>
+                        <Act icon={CalendarClock} label="Reschedule" onClick={() => onReschedule(f)} />
+                        <Act main tone="success" icon={Check} label="Done" onClick={() => onDone(f)} />
                       </>
                     )}
-                  </div>
+                  </Acts>
                 </td>
               </tr>
             )

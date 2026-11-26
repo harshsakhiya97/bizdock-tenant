@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { AlertTriangle, CalendarCheck, Download, KanbanSquare, List, Plus, Users, Wallet } from 'lucide-react'
+import { AlertTriangle, CalendarCheck, Download, ExternalLink, KanbanSquare, List, Plus, Users, Wallet } from 'lucide-react'
+import { Act, Acts } from '@/components/Acts'
 import { useAuth } from '@/auth/useAuth'
 import { BT, isOrderType, type SubBusinessType } from '@/auth/auth-context'
 import { useBusiness } from '@/business/useBusiness'
@@ -377,15 +378,11 @@ export function CustomersPage() {
                           <td className="num nowrap tone-success">{money(r.paid)}</td>
                           <td className="nowrap">{balance > 0.01 ? <b className="tone-danger">{money(balance)}</b> : <span className="badge badge-success">Paid ✓</span>}</td>
                           <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
-                          <td className="nowrap" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                            <Link className="btn btn-outline btn-sm" to={`/customers/${l.id}`}>
-                              Open
-                            </Link>{' '}
-                            {canBook && (
-                              <button type="button" className="btn btn-outline btn-sm" onClick={() => void addBooking(l)}>
-                                <Plus size={13} /> {isOrderType(t) ? orderNoun(t).one : 'Booking'}
-                              </button>
-                            )}
+                          <td className="nowrap">
+                            <Acts>
+                              <Act icon={ExternalLink} label="Open" onClick={() => navigate(`/customers/${l.id}`)} />
+                              {canBook && <Act icon={Plus} label={`Add ${isOrderType(t) ? orderNoun(t).one.toLowerCase() : 'booking'}`} onClick={() => void addBooking(l)} />}
+                            </Acts>
                           </td>
                         </tr>
                       )

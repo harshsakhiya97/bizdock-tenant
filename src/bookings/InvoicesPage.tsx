@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Act, Acts } from '@/components/Acts'
 import { Link, useSearchParams } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, Printer, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
@@ -216,10 +217,10 @@ export function InvoicesPage() {
                       <td>
                         <span className={cn('badge', st.tone)}>{st.label}</span>
                       </td>
-                      <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                        <button type="button" className="btn btn-outline btn-sm" title="Print / PDF with the latest company details" onClick={() => void print(b.id)}>
-                          <Printer size={14} /> Print
-                        </button>
+                      <td>
+                        <Acts>
+                          <Act icon={Printer} label="Print / PDF with the latest company details" onClick={() => void print(b.id)} />
+                        </Acts>
                       </td>
                     </tr>
                   )

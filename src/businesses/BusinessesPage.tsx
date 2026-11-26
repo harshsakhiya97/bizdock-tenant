@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Act, Acts } from '@/components/Acts'
 import { MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { ConfirmModal, DataTable, PageHead, SearchInput, Tabs, type Column } from '@/components/ui'
@@ -100,30 +101,10 @@ export function BusinessesPage() {
       label: '',
       align: 'right',
       render: (b) => (
-        <div className="row-actions">
-          {can('businesses', 'edit') && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-icon"
-              title="Edit"
-              aria-label={`Edit ${b.name}`}
-              onClick={() => setDrawer({ business: b })}
-            >
-              <Pencil size={15} />
-            </button>
-          )}
-          {can('businesses', 'delete') && can('businesses', 'edit') && (
-            <button
-              type="button"
-              className="btn btn-ghost btn-icon danger-text"
-              title="Delete"
-              aria-label={`Delete ${b.name}`}
-              onClick={() => setArchiving(b)}
-            >
-              <Trash2 size={15} />
-            </button>
-          )}
-        </div>
+        <Acts>
+          {can('businesses', 'edit') && <Act icon={Pencil} label={`Edit ${b.name}`} onClick={() => setDrawer({ business: b })} />}
+          {can('businesses', 'delete') && can('businesses', 'edit') && <Act icon={Trash2} tone="danger" label={`Delete ${b.name}`} onClick={() => setArchiving(b)} />}
+        </Acts>
       ),
     },
   ]
