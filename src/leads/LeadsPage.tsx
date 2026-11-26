@@ -5,11 +5,12 @@ import { getFollowUp, listOutcomes, pendingFollowUpId, scheduleFollowUp } from '
 import { CompleteModal } from '@/followups/CompleteModal'
 import type { FollowUpRow } from '@/followups/types'
 import { MeetingDrawer } from '@/meetings/MeetingDrawer'
-import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, Link2, Phone, X, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
+import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, KanbanSquare, Link2, List, Phone, X, Wallet, Plus, RotateCcw, Trash2, Trophy, Upload, UserPlus, Users } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
-import { POD_STEPS, listPodFacts, type PodFacts } from '@/funnels/podSteps'
+import { POD_STEPS, listPodBoard, listPodFacts, type PodBoardFacts, type PodFacts } from '@/funnels/podSteps'
+import { Kanban, useBoardView, type KanbanCol } from '@/components/Kanban'
 import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
@@ -32,6 +33,14 @@ import { listCustomerRevenue, type Revenue } from './customers'
 import { Select } from '@/components/Field'
 
 type Filters = { q: string; funnel: string; sheet: string; source: string; temp: string; owner: string; followUp: string; form: string; step: string; archived: boolean; sort: string; range: Range }
+/** Paid Podcast → Leads board */
+const POD_COLS: KanbanCol[] = [
+  { key: 'leads', label: 'Leads', color: '#94a3b8' },
+  { key: 'followups', label: 'Follow-ups', color: '#0ea5e9' },
+  { key: 'meetings', label: 'Meetings', color: '#8b5cf6' },
+  { key: 'closed', label: 'Closed', color: '#22c55e' },
+  { key: 'not_interested', label: 'Not Interested', color: '#ef4444' },
+]
 const EMPTY: Filters = { q: '', funnel: '', sheet: '', source: '', temp: '', owner: '', followUp: '', form: '', step: '', archived: false, sort: 'newest', range: ALL_DATES }
 // the lead's creation date in the picked range
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
@@ -159,6 +168,10 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   useEffect(loadExtras, [loadExtras])
   // Paid Podcast: each lead's VSL form / meetings, for the Funnel step filter
   const [podFacts, setPodFacts] = useState<Map<string, PodFacts>>(new Map())
+  // Paid Podcast: List / Board (Leads → Follow-ups → Meetings → Closed / Not Interested)
+  const [view, setView] = useBoardView('pod-leads')
+  const [board, setBoard] = useState<Map<string, PodBoardFacts> | null>(null)
+  const [closing, setClosing] = useState<LeadRow | null>(null)
   useEffect(() => {
     if (!pod) return
     listPodFacts(tenant.id).then(setPodFacts, () => setPodFacts(new Map()))
@@ -303,6 +316,26 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       : funnel
         ? base.filter((l) => l.stage_id === stageTab)
         : base.filter((l) => kindOf(l) === stageTab)
+  useEffect(() => {
+    if (!pod || view !== 'board') return
+    let live = true
+    listPodBoard(tenant.id).then(
+      (m) => live && setBoard(m),
+      (e: Error) => live && setNotice({ error: e.message }),
+    )
+    return () => {
+      live = false
+    }
+  }, [pod, view, tenant.id, leads])
+  const podCol = (l: LeadRow) => {
+    const k = stageById.get(l.stage_id ?? '')?.kind
+    if (l.temperature === 'not_interested' || k === 'lost') return 'not_interested'
+    if (l.temperature === 'closed' || k === 'won') return 'closed'
+    const b = board?.get(l.id)
+    if (b && (b.m_booked || b.m_done || b.m_noshow)) return 'meetings'
+    if (b && b.fu_done > 0) return 'followups'
+    return 'leads'
+  }
   // a stat card's records
   const [statShow, setStatShow] = useState<StatShow<LeadRow> | null>(null)
   const showLeads = (title: string, f: (l: LeadRow) => boolean) => () => setStatShow({ title, rows: base.filter(f), cols: leadCols(members) })
@@ -567,6 +600,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             <option value="name">Name</option>
           </Select>
           <DateRangePicker value={filters.range} onChange={(r) => setF('range', r)} allDates />
+          {pod && (
+            <div className="seg" role="group" aria-label="View">
+              <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
+                <List size={15} /> List
+              </button>
+              <button type="button" className={view === 'board' ? 'is-active' : undefined} onClick={() => setView('board')} title="Board">
+                <KanbanSquare size={15} /> Board
+              </button>
+            </div>
+          )}
           {JSON.stringify({ ...filters, sort: 'newest' }) !== JSON.stringify(EMPTY) && (
             <button type="button" className="clear-btn" onClick={() => setFilters(EMPTY)}>
               Reset
@@ -705,6 +748,54 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           <Empty icon={Users}>Your access doesn’t include {word}s.</Empty>
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed (Paid Podcast: once a payment is received).' : 'No leads here yet.'}</Empty>
+        ) : pod && view === 'board' ? (
+          !board ? (
+            <div className="empty">Loading the board…</div>
+          ) : (
+            <Kanban
+              cols={POD_COLS}
+              items={visible}
+              keyOf={(l) => l.id}
+              colOf={podCol}
+              emptyText="No leads here"
+              onOpen={(l) => openRow(l.id)}
+              canDrop={(l, to) =>
+                to === 'followups'
+                  ? can('follow_ups', 'add') || can('leads', 'edit')
+                  : to === 'meetings'
+                    ? can('meetings', 'add')
+                    : to === 'not_interested'
+                      ? can('leads', 'edit') && !!lostStageOf(l)
+                      : to === 'closed' && can('leads', 'edit')
+              }
+              onDrop={(l, to) => {
+                if (to === 'followups') void openLogFollowUp(l)
+                else if (to === 'meetings') setMeetFor(l)
+                else if (to === 'closed') setClosing(l)
+                else if (to === 'not_interested') {
+                  const st = lostStageOf(l)
+                  if (st) requestMove([l.id], st)
+                }
+              }}
+              card={(l) => {
+                const t = tempOf(l.temperature)
+                const fu = followUp(l.next_follow_up_at)
+                const b = board.get(l.id)
+                return (
+                  <>
+                    <div className="row-between" style={{ gap: 6 }}>
+                      <b className="cell-clip">{fullName(l)}</b>
+                      {t && <span className={cn('badge', t.tone)}>{t.label}</span>}
+                    </div>
+                    <small className="muted">{l.phone}</small>
+                    <small className="muted cell-clip">{ownerName(l.owner_id) ?? 'Unassigned'}</small>
+                    {b?.meeting_on && <small>Meeting {new Date(`${b.meeting_on}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</small>}
+                    {fu.state !== 'none' && <span className={cn('small fu', `fu-${fu.state}`)}>Follow-up {fu.text}</span>}
+                  </>
+                )
+              }}
+            />
+          )
         ) : (
           <>
           <div className="table-wrap">
@@ -906,6 +997,23 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           }}
         />
       )}
+      <ConfirmModal
+        open={!!closing}
+        icon={Trophy}
+        title={`Mark ${closing ? fullName(closing) : ''} Closed?`}
+        message="The category becomes Closed and the lead shows in Customers."
+        confirmLabel="Mark Closed"
+        onCancel={() => setClosing(null)}
+        onConfirm={() => {
+          const l = closing
+          setClosing(null)
+          if (l)
+            void run(async () => {
+              await updateLeads([l.id], { temperature: 'closed' })
+              await logActivity(tenant.id, me, [l.id], { kind: 'temperature', note: tempOf('closed')?.label })
+            }, `${fullName(l)} marked Closed.`)
+        }}
+      />
       <ConfirmModal
         open={deleting}
         danger

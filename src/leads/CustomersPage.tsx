@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { AlertTriangle, CalendarCheck, Download, Plus, Users, Wallet } from 'lucide-react'
+import { AlertTriangle, CalendarCheck, Download, KanbanSquare, List, Plus, Users, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { BT, isOrderType, type SubBusinessType } from '@/auth/auth-context'
 import { useBusiness } from '@/business/useBusiness'
@@ -19,6 +19,7 @@ import { empty, listCustomerRevenue, type Revenue } from './customers'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Select } from '@/components/Field'
+import { Kanban, useBoardView, type KanbanCol } from '@/components/Kanban'
 
 const day = (d: string) => (d ? new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '')
 const hrs = (h: number) => `${Math.round(h * 10) / 10} hr${h === 1 ? '' : 's'}`
@@ -36,6 +37,16 @@ function words(t: SubBusinessType | null | undefined) {
 }
 
 type Row = { l: LeadRow; r: Revenue; balance: number }
+
+/** Paid Podcast → Customers board */
+const POD_CUST_COLS: KanbanCol[] = [
+  { key: 'customer', label: 'Customer', color: '#94a3b8' },
+  { key: 'podcast', label: 'Podcast', color: '#8b5cf6' },
+  { key: 'partial', label: 'Partial Payment', color: '#f59e0b' },
+  { key: 'paid', label: 'Payment Done', color: '#22c55e' },
+]
+/** the step a customer has reached: a shoot booked or done, then part paid, then fully paid */
+const custCol = ({ r, balance }: Row) => (r.count === 0 ? 'customer' : r.paid <= 0 ? 'podcast' : balance > 0.01 ? 'partial' : 'paid')
 type Pay = '' | 'paid' | 'due'
 type Sort = 'newest' | 'balance' | 'billed' | 'name'
 
@@ -56,6 +67,9 @@ export function CustomersPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const [f, setF] = useState<{ q: string; owner: string; source: string; pay: Pay; sort: Sort; range: Range }>({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })
   const [book, setBook] = useState<{ lead: LeadRow; service: boolean; copy: BookingRow | null } | null>(null)
+  // Paid Podcast: List / Board; a payment is recorded on the customer's booking (its Payments)
+  const [view, setView] = useBoardView('pod-customers')
+  const [payOn, setPayOn] = useState<{ lead: LeadRow; booking: BookingRow } | null>(null)
 
   const load = useCallback(() => {
     Promise.all([listLeads(tenant.id, undefined, { cached: leadsFirst.current }).finally(() => (leadsFirst.current = false)), listCustomerRevenue(tenant.id, businesses), listSources(tenant.id), listMemberOptions(tenant.id)])
@@ -74,6 +88,7 @@ export function CustomersPage() {
     return l.sub_business_id ? b?.subs.find((x) => x.id === l.sub_business_id)?.type : !b?.subs.length ? b?.type : null
   }
   const w = words(activeType(selected, sub))
+  const isPod = activeType(selected, sub) === BT.PAID_PODCAST
   const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
 
@@ -141,6 +156,15 @@ export function CustomersPage() {
       owing: visible.filter((x) => x.balance > 0.01).length,
     }
   }, [visible])
+
+  /** Record payment: the customer's booking with a balance (else the latest); none yet → a new booking */
+  async function recordPayment(l: LeadRow) {
+    const list = (await listBookings(tenant.id, { leadId: l.id }).catch(() => [] as BookingRow[])).filter((b) => b.status !== 'cancelled')
+    const due = list.find((b) => Number(b.total_amount) - Number(b.paid_amount) > 0.01)
+    const bk = due ?? list[0]
+    if (bk) setPayOn({ lead: l, booking: bk })
+    else void addBooking(l)
+  }
 
   async function addBooking(l: LeadRow) {
     const service = isOrderType(typeOf(l))
@@ -241,6 +265,16 @@ export function CustomersPage() {
             <option value="name">Name A–Z</option>
           </Select>
           <DateRangePicker value={f.range} onChange={(r) => setF((x) => ({ ...x, range: r }))} allDates />
+          {isPod && (
+            <div className="seg" role="group" aria-label="View">
+              <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
+                <List size={15} /> List
+              </button>
+              <button type="button" className={view === 'board' ? 'is-active' : undefined} onClick={() => setView('board')} title="Board">
+                <KanbanSquare size={15} /> Board
+              </button>
+            </div>
+          )}
           {filtered && (
             <button type="button" className="clear-btn" onClick={() => setF({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })}>
               Reset
@@ -252,6 +286,36 @@ export function CustomersPage() {
           <div className="empty">Loading customers…</div>
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{rows.length ? 'No customers match these filters.' : 'No customers yet. A lead becomes a customer with its first booking.'}</Empty>
+        ) : isPod && view === 'board' ? (
+          <Kanban
+            cols={POD_CUST_COLS}
+            items={visible}
+            keyOf={(x) => x.l.id}
+            colOf={custCol}
+            emptyText="No customers here"
+            onOpen={(x) => navigate(`/customers/${x.l.id}`)}
+            canDrop={(_, to) => (to === 'podcast' ? can('bookings', 'add') : can('bookings', 'edit') || can('bookings', 'add'))}
+            onDrop={(x, to) => (to === 'podcast' ? void addBooking(x.l) : void recordPayment(x.l))}
+            card={({ l, r, balance }) => (
+              <>
+                <b className="cell-clip">{fullName(l)}</b>
+                <small className="muted">{l.phone}</small>
+                <small className="muted cell-clip">{ownerName(l.owner_id) ?? 'Unassigned'}</small>
+                {r.count > 0 && (
+                  <small>
+                    {r.count} {r.count === 1 ? w.one : w.many.toLowerCase()}
+                    {r.next ? ` · next ${day(r.next)}` : r.lastPast ? ` · last ${day(r.lastPast)}` : ''}
+                  </small>
+                )}
+                {r.billed > 0 && (
+                  <div className="row-between small" style={{ gap: 6 }}>
+                    <span className="tone-success">{money(r.paid)} paid</span>
+                    {balance > 0.01 ? <b className="tone-danger">{money(balance)} due</b> : <span className="badge badge-success">Paid ✓</span>}
+                  </div>
+                )}
+              </>
+            )}
+          />
         ) : (
           <Paged rows={visible} reset={[f, selected?.id, sub?.id]}>
             {(paged) => (
@@ -334,6 +398,24 @@ export function CustomersPage() {
         )}
       </div>
 
+      {payOn && (
+        <BookingDrawer
+          key={payOn.booking.id}
+          booking={payOn.booking}
+          noun={orderNoun(typeOf(payOn.lead)).one}
+          lead={{ id: payOn.lead.id, name: fullName(payOn.lead), phone: payOn.lead.phone, purpose: payOn.lead.purpose, business_id: payOn.lead.business_id, sub_business_id: payOn.lead.sub_business_id }}
+          refs={refs}
+          onClose={() => {
+            setPayOn(null)
+            load()
+          }}
+          onSaved={(msg) => {
+            setPayOn(null)
+            setNotice(msg)
+            load()
+          }}
+        />
+      )}
       {book && (
         <BookingDrawer
           key={book.lead.id}
