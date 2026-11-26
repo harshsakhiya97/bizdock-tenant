@@ -13,6 +13,23 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.38',
+    date: '2026-11-26',
+    title: 'Ads insights dashboard, lead Source from UTMs, faster WhatsApp chats',
+    summary: 'Funnel → Facebook / Google Ads is now an insights dashboard (KPIs, insights, lead quality, Date / Campaign / Ad set / Ads Performance); each lead’s Source and ad come from its UTMs; WhatsApp chats load 20 at a time.',
+    new: [
+      'Funnel → Facebook Ads / Google Ads → Ads insights: KPI tiles (Spend, Leads, Cost per lead, Warm %, Not interested %, Closed, Cost per closed) with ▲ ▼ against the period before; Insights (cheapest ad, ads spending with no leads, costly ads, ad sets with many not interested, warmest campaign, where the spend goes, cost per lead trend); Lead quality.',
+      'Date Performance (Day / Week Sun–Sat / Month: spend bars with leads and warm lines), Campaign Performance (share of spend donut + each campaign’s lead quality), Ad set Performance (share of spend vs share of leads: Efficient / Average / Costly / No leads), Ads Performance (ranked leaderboard with tags). Each has a Table with Spend, Leads, Cost / lead, Warm, Not Interested, Closed; a day opens its ads with their leads; every lead number opens those leads.',
+      'Lead Source from utm_source: ig → Instagram, fb → Facebook, wa → WhatsApp, … (the form’s “Website” is ignored); a new code is named by the AI once (e.g. meta → Facebook, th → Threads) and kept for the workspace. Google Sheet leads: Source Google Sheet.',
+      'Lead page → More Fields: Source, Campaign Name, Adset Name, Ad Name, fbclid, gclid always shown — the names looked up from the IDs in the page URL (else the UTMs); Google Sheet leads show the sheet’s name as the campaign. Every lead filled once.',
+    ],
+    improved: [
+      'Funnel → Facebook Ads / Google Ads: the linked campaigns as chips (status dot, name, spend; details on hover).',
+      'WhatsApp → Individual chat: 20 chats at a time with Show more; search asks the server (by name or number).',
+      'Lead page → Lead Information: Role instead of Tags.',
+    ],
+  },
+  {
     version: '0.37',
     date: '2026-11-26',
     title: 'Several Razorpay accounts, Funnel payments from leads, campaigns by tags, faster funnel leads',
