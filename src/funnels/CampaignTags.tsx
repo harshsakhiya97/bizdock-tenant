@@ -71,7 +71,7 @@ export function CampaignTags({
       {tags === null ? (
         <div className="muted small">Loading…</div>
       ) : canEdit ? (
-        <TagInput value={tags} onChange={(t) => void save(t)} disabled={busy} placeholder="e.g. VSL — press Enter after each" />
+        <TagInput comma={false} value={tags} onChange={(t) => void save(t)} disabled={busy} placeholder="e.g. VSL — press Enter after each" />
       ) : (
         <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
           {tags.length ? tags.map((t) => <span key={t} className="badge badge-muted">{t}</span>) : <span className="muted small">No tags yet.</span>}

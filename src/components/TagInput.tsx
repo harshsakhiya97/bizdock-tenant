@@ -1,24 +1,26 @@
 import { useState, type KeyboardEvent } from 'react'
 import { X } from 'lucide-react'
 
-/** Type a tag and press Enter (or comma) to add it; × removes it. */
+/** Type a tag and press Enter (or comma) to add it; × removes it. comma={false}: a comma is part of the tag (₹30,000). */
 export function TagInput({
   id,
   value,
   onChange,
   placeholder = 'Type a tag and press Enter',
   disabled,
+  comma = true,
 }: {
   id?: string
   value: string[]
   onChange: (tags: string[]) => void
   placeholder?: string
   disabled?: boolean
+  comma?: boolean
 }) {
   const [text, setText] = useState('')
 
   function add(raw: string) {
-    const parts = raw.split(',').map((t) => t.trim()).filter(Boolean)
+    const parts = (comma ? raw.split(',') : [raw]).map((t) => t.trim()).filter(Boolean)
     if (!parts.length) return
     const have = new Set(value.map((t) => t.toLowerCase()))
     const next = [...value]
@@ -28,7 +30,7 @@ export function TagInput({
   }
 
   function onKey(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter' || e.key === ',') {
+    if (e.key === 'Enter' || (comma && e.key === ',')) {
       e.preventDefault()
       add(text)
     } else if (e.key === 'Backspace' && !text && value.length) {
