@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp, ChartLine, ChevronDown, ChevronRight, Columns3, List } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChartLine, ChevronDown, ChevronRight, List } from 'lucide-react'
 import { useTenant } from '@/tenant/useTenant'
 import { funnelDaySpend, type AdAccount, type AdSet, type Campaign } from '@/meta/api'
 import { SpendLines, type Line } from './SpendLines'
@@ -27,11 +27,6 @@ const BY: { key: By; label: string }[] = [
   { key: 'campaign', label: 'Campaign' },
   { key: 'adset', label: 'Ad set' },
   { key: 'ad', label: 'Ad' },
-]
-const COLS: { key: Col; label: string }[] = [
-  { key: 'ads', label: 'Ads' },
-  { key: 'spend', label: 'Spend (without GST)' },
-  { key: 'gst', label: 'Spend + GST' },
 ]
 
 /** the period a day falls in: the day, its week (Sunday–Saturday: the Sunday) or its month (the 1st) */
@@ -67,7 +62,7 @@ function store(key: string, v: unknown) {
 
 /**
  * Funnel → Facebook / Google Ads: the linked campaigns' spend report. View by Date (day / week Sun–Sat / month, each
- * row opens its ads), Campaign, Ad set or Ad; graph or list; sortable; columns can be hidden (remembered here).
+ * row opens its ads), Campaign, Ad set or Ad; graph or list; sortable.
  */
 export function FunnelDaySpend({
   links,
@@ -95,7 +90,8 @@ export function FunnelDaySpend({
   const [view, setView] = useState<'graph' | 'list'>(() => stored('spend:view', 'list'))
   const [by, setBy] = useState<By>(() => stored('spend:by', 'date'))
   const [period, setPeriod] = useState<Period>(() => stored('spend:period', 'day'))
-  const [cols, setCols] = useState<Record<Col, boolean>>(() => ({ ads: true, spend: true, gst: false, ...stored('spend:cols', {}) }))
+  // the columns shown: Ads and Spend (hover a spend: + GST)
+  const cols: Record<Col, boolean> = { ads: true, spend: true, gst: false }
   const [sort, setSort] = useState<{ k: SortKey; desc: boolean } | null>(null)
   const [data, setData] = useState<{ days: { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }[]; ads: Map<string, string>; objs?: Map<string, GAd> } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -277,29 +273,6 @@ export function FunnelDaySpend({
             </div>
           )}
         </div>
-        {view === 'list' && (
-          <details className="col-menu">
-            <summary className="btn btn-ghost btn-sm">
-              <Columns3 size={14} /> Columns
-            </summary>
-            <div className="col-menu-pop card">
-              {COLS.map((c) => (
-                <label key={c.key} className="row" style={{ gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={cols[c.key]}
-                    onChange={() => {
-                      const n = { ...cols, [c.key]: !cols[c.key] }
-                      setCols(n)
-                      store('spend:cols', n)
-                    }}
-                  />
-                  {c.label}
-                </label>
-              ))}
-            </div>
-          </details>
-        )}
       </div>
 
       {error && <div className="alert alert-error">{error}</div>}
