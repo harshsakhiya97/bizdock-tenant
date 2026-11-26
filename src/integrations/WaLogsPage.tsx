@@ -8,7 +8,7 @@ import { cn } from '@/lib/cn'
 import { DateRangePicker, type Range } from '@/components/DateRange'
 import { useTenant } from '@/tenant/useTenant'
 import { templateOptions, useWatiTemplates, watiVars } from '@/workflows/WhatsAppFields'
-import { at, leadName, listChat, listWaLogs, nicePhone, sendWaTemplate, STATUS_META, type WaLog, type WaLogStatus } from './waLogs'
+import { at, leadName, listChat, listWaChats, listWaLogs, nicePhone, sendWaTemplate, STATUS_META, type WaChat, type WaLog, type WaLogStatus } from './waLogs'
 
 const day = (d: Date) => d.toLocaleDateString('en-CA')
 const ago = (n: number) => {
@@ -33,8 +33,10 @@ export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
 
   const load = useCallback(() => {
     setError(null)
+    // Individual chat loads its own list (20 at a time)
+    if (view === 'chats') return
     listWaLogs(tenant.id, from, to).then(setRows, (e: Error) => setError(e.message))
-  }, [tenant.id, from, to])
+  }, [tenant.id, from, to, view])
   useEffect(load, [load])
 
   return (
@@ -51,7 +53,7 @@ export function WaLogsPage({ view }: { view: 'logs' | 'chats' }) {
       {view === 'logs' ? (
         <LogsTab rows={rows} range={range} setRange={setRange} reload={load} openChat={(p) => navigate(`/whatsapp/chats?phone=${p}`)} />
       ) : (
-        <ChatsTab rows={rows} phone={params.get('phone')} pick={(p) => setParams({ phone: p }, { replace: true })} reload={load} />
+        <ChatsTab from={from} to={to} phone={params.get('phone')} pick={(p) => setParams({ phone: p }, { replace: true })} />
       )}
     </>
   )
@@ -187,24 +189,44 @@ function LogsTab({
   )
 }
 
-function ChatsTab({ rows, phone, pick, reload }: { rows: WaLog[] | null; phone: string | null; pick: (p: string) => void; reload: () => void }) {
+const CHAT_PAGE = 20
+
+/** Individual chat: the numbers 20 at a time (Show more); search asks the server, then 20 at a time too */
+function ChatsTab({ from, to, phone, pick }: { from: string; to: string; phone: string | null; pick: (p: string) => void }) {
   const tenant = useTenant()
   const [q, setQ] = useState('')
-  // one row per number, newest first
-  const chats = useMemo(() => {
-    const m = new Map<string, { phone: string; name: string; last: WaLog; replies: number }>()
-    for (const r of rows ?? []) {
-      const c = m.get(r.phone)
-      if (!c) m.set(r.phone, { phone: r.phone, name: leadName(r), last: r, replies: r.direction === 'in' ? 1 : 0 })
-      else {
-        if (!c.name && leadName(r)) c.name = leadName(r)
-        if (r.direction === 'in') c.replies++
-      }
-    }
-    const s = q.trim().toLowerCase()
-    return [...m.values()].filter((c) => !s || c.name.toLowerCase().includes(s) || c.phone.includes(s.replace(/\D/g, '') || '~'))
-  }, [rows, q])
-  const active = phone ?? chats[0]?.phone ?? null
+  const [term, setTerm] = useState('')
+  const [chats, setChats] = useState<WaChat[] | null>(null)
+  const [more, setMore] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // search after a short pause in typing
+  useEffect(() => {
+    const t = window.setTimeout(() => setTerm(q.trim()), 300)
+    return () => window.clearTimeout(t)
+  }, [q])
+  const page = useCallback(
+    (offset: number) => {
+      setBusy(true)
+      setError(null)
+      // one extra row tells whether there are more
+      return listWaChats(tenant.id, from, to, term, offset, CHAT_PAGE + 1)
+        .then((r) => {
+          setMore(r.length > CHAT_PAGE)
+          const got = r.slice(0, CHAT_PAGE)
+          setChats((c) => (offset === 0 ? got : [...(c ?? []), ...got]))
+        })
+        .catch((e: Error) => setError(e.message))
+        .finally(() => setBusy(false))
+    },
+    [tenant.id, from, to, term],
+  )
+  useEffect(() => {
+    setChats(null)
+    void page(0)
+  }, [page])
+  const reload = () => void page(0)
+  const active = phone ?? chats?.[0]?.phone ?? null
 
   return (
     <div className="wa-chats">
@@ -212,13 +234,14 @@ function ChatsTab({ rows, phone, pick, reload }: { rows: WaLog[] | null; phone: 
         <div style={{ padding: 10 }}>
           <SearchInput placeholder="Search chats" value={q} onChange={setQ} />
         </div>
-        {!rows ? (
+        {error && <div className="alert alert-error" style={{ margin: 10 }}>{error}</div>}
+        {!chats ? (
           <div className="muted small" style={{ padding: 12 }}>
             Loading…
           </div>
         ) : !chats.length ? (
           <div className="muted small" style={{ padding: 12 }}>
-            No chats in these dates.
+            {term ? 'No chats match.' : 'No chats in these dates.'}
           </div>
         ) : (
           chats.map((c) => (
@@ -236,6 +259,13 @@ function ChatsTab({ rows, phone, pick, reload }: { rows: WaLog[] | null; phone: 
               </span>
             </button>
           ))
+        )}
+        {chats && more && (
+          <div style={{ padding: 10 }}>
+            <button type="button" className="btn btn-ghost btn-sm" style={{ width: '100%' }} disabled={busy} onClick={() => void page(chats.length)}>
+              {busy ? 'Loading…' : 'Show more'}
+            </button>
+          </div>
         )}
       </aside>
       <section className="wa-chat-pane">

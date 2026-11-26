@@ -41,6 +41,14 @@ export async function listWaLogs(tenantId: string, from: string, to: string): Pr
   return (data ?? []) as unknown as WaLog[]
 }
 
+/** Individual chat list: one row per number (newest message first), a page at a time, searched on the server */
+export type WaChat = { phone: string; name: string; last: WaLog; replies: number }
+export async function listWaChats(tenantId: string, from: string, to: string, q: string, offset: number, limit: number): Promise<WaChat[]> {
+  const { data, error } = await db().rpc('wa_chat_list', { p_tenant: tenantId, p_from: from || null, p_to: to || null, p_q: q || null, p_offset: offset, p_limit: limit })
+  if (error) throw error
+  return (data ?? []) as WaChat[]
+}
+
 /** one number's whole conversation, oldest first */
 export async function listChat(tenantId: string, phone: string | string[]): Promise<WaLog[]> {
   const { data, error } = await db()
