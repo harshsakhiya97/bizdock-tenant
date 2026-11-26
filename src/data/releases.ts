@@ -13,6 +13,26 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.36',
+    date: '2026-11-26',
+    title: 'Paid Podcast boards, Bill to with GST No., standard row buttons, speaker check',
+    summary: 'Paid Podcast Leads and Customers as a board; Bill to asks only company, address and GST No.; At a glance rows open their tabs; every list’s row buttons the same; Claude checks who said what in call transcripts.',
+    new: [
+      'Paid Podcast → Leads: List / Board. Leads → Follow-ups → Meetings → Closed → Not Interested; each lead in the step it has reached. Dragging a card to a later step opens that step (Log follow-up, Book meeting, mark Closed, mark Lost with a reason). Each column shows its details and order: lead date (newest first); last and next follow-up (today first); meeting date, time and status (today, needs update, upcoming, then done); podcast date and payment (upcoming first); reason (latest first).',
+      'Paid Podcast → Customers: List / Board. Customer → Podcast → Partial Payment → Payment Done; dragging opens New booking or the booking’s Payments.',
+      'Callyzer transcripts: Claude checks who said what (Team / Customer) after Gemini writes each transcript, and on Regenerate — the same words, right speakers. Sync transcripts → Check who said what fixes the saved ones.',
+    ],
+    improved: [
+      'Bill to: Company name, Address and (with GST) GST No. only — the state and state code come from the GST No.’s first 2 digits.',
+      'Lead page: the Billing Details section is gone; At a glance → Bill to opens the billing details, and Next follow-up, Calls, WhatsApp open Follow-ups, Meetings opens Meetings.',
+      'Row buttons are the same on every list: 32px icon buttons with their name on hover, the main action filled, delete in red (Leads, Customers, Follow-ups, Bookings, Orders, Invoices, Workflows, Businesses and the rest). Customers: no Open button (the row opens it).',
+      'Board columns are taller (to the bottom of the screen).',
+    ],
+    fixed: [
+      'The AI fail-over to Claude (and Claude’s speaker check) was refused by the newer Claude models.',
+    ],
+  },
+  {
     version: '0.35',
     date: '2026-11-24',
     title: 'New lead page, AI lead summaries, AI order, Funnel Report',
