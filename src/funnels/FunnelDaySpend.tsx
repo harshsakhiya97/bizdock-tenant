@@ -38,7 +38,7 @@ type Fact = { day: string; account_id: string; campaign_id: string; adset_id: st
 type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number; list?: LeadRef[] } & Partial<Counts>
 type Counts = { leads: number; warm: number; ni: number; closed: number }
 /** one report row: a period (Date) or a campaign / ad set / ad */
-type Row = Counts & { key: string; name: string; sub: string; spend: number; gst: number; items: Ad[]; ad?: Ad; list: LeadRef[] }
+type Row = Counts & { key: string; name: string; sub: string; spend: number; gst: number; items: Ad[]; ad?: Ad; list: LeadRef[]; /** Ads: the ad set, on a second grey line */ sub2?: string }
 /** one of the funnel's leads (funnel_ad_leads) */
 type LeadRef = { id: string; name: string; phone: string | null; created_at: string; day: string; temperature: string | null; campaign: string | null; adset: string | null; ad: string | null; warm: boolean; not_interested: boolean; closed: boolean }
 /** a lead as counts, for adding up */
@@ -117,10 +117,11 @@ function buildRows(by: By, period: Period, facts: Fact[], counts: LeadCount[]) {
       blank(
         k,
         by === 'date' ? periodLabel(k, period) : by === 'campaign' ? f.campaign : by === 'adset' ? f.adset : f.name,
-        by === 'campaign' ? f.account : by === 'adset' ? [f.account, f.campaign].filter(Boolean).join(' · ') : by === 'ad' ? [f.account, f.campaign, f.adset].filter(Boolean).join(' · ') : '',
+        by === 'campaign' ? f.account : by === 'adset' ? [f.account, f.campaign].filter(Boolean).join(' · ') : by === 'ad' ? [f.account, f.campaign].filter(Boolean).join(' · ') : '',
       )
     r.spend += f.spend
     r.gst += f.gst
+    if (by === 'ad' && f.adset) r.sub2 = f.adset
     if (by === 'ad') r.ad = { ad_id: f.ad_id, name: f.name, account: f.account, campaign: f.campaign, adset: f.adset, spend: 0, gst: 0 }
     if (by === 'date') {
       const a = r.items.find((x) => x.ad_id === f.ad_id)
@@ -847,6 +848,7 @@ function Leaderboard({ rows, openAd }: { rows: Row[]; openAd: (a: Ad) => void })
                   {costly && <span className="adsd-tag is-warn">Costly</span>}
                 </span>
                 <span className="muted small adsd-ellipsis">{r.sub}</span>
+                {r.sub2 && <span className="muted small adsd-ellipsis">· {r.sub2}</span>}
                 <span style={{ width: `${Math.max(r.leads ? 3 : 0, (r.leads / maxL) * 100)}%`, display: 'block' }}>
                   <QualityStack r={r} />
                 </span>
@@ -969,6 +971,7 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
                       {by === 'date' ? <b>{r.name}</b> : <span>{r.name}</span>}
                     </span>
                     {r.sub && <div className="muted small">{r.sub}</div>}
+                    {r.sub2 && <div className="muted small">· {r.sub2}</div>}
                   </td>
                   <td className="num nowrap">
                     <b>{money(r.spend, r.gst)}</b>
@@ -984,7 +987,8 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
                     <tr key={`${r.key}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => openAd(a)}>
                       <td style={{ paddingLeft: 32 }}>
                         {a.name}
-                        <div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>
+                        <div className="muted small">{[a.account, a.campaign].filter(Boolean).join(' · ')}</div>
+                        {a.adset && <div className="muted small">· {a.adset}</div>}
                       </td>
                       <td className="num nowrap">{money(a.spend, a.gst)}</td>
                       <td className="num"><N list={a.list} title={`${a.name} · ${r.name} · Leads`}>{a.leads ?? 0}</N></td>
