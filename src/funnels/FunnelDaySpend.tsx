@@ -11,7 +11,7 @@ import { DateRangePicker, presetRange, type Range } from '@/components/DateRange
 const inr = (n: number) => `₹${Number(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const day = (d: Date) => d.toLocaleDateString('en-CA')
 
-type Ad = { ad_id: string; name: string; campaign: string; adset: string; spend: number; gst: number }
+type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number }
 type Day = { day: string; spend: number; gst: number; ads: Ad[] }
 
 /** Funnel → Facebook Ads: the linked campaigns' spend per day (without GST, hover with), and each day's ads with their spend. */
@@ -23,7 +23,8 @@ export function FunnelDaySpend({
   google,
 }: {
   links: { campaign_id: string; adset_id: string | null }[]
-  accounts: Pick<AdAccount, 'id' | 'gst_rate'>[]
+  /** name: shown before the campaign (account · campaign · ad set) */
+  accounts: (Pick<AdAccount, 'id' | 'gst_rate'> & { name?: string | null })[]
   campaigns: Pick<Campaign, 'campaign_id' | 'name'>[]
   adsets: Pick<AdSet, 'adset_id' | 'name'>[]
   /** Google Ads (Funnel → Google Ads): its ads (for the preview); else Facebook */
@@ -57,6 +58,7 @@ export function FunnelDaySpend({
 
   const days = useMemo(() => {
     const gst = new Map(accounts.map((a) => [a.id, Number(a.gst_rate)]))
+    const aName = new Map(accounts.map((a) => [a.id, a.name ?? '']))
     const cName = new Map(campaigns.map((c) => [c.campaign_id, c.name ?? c.campaign_id]))
     const sName = new Map(adsets.map((s) => [s.adset_id, s.name ?? s.adset_id]))
     const byDay = new Map<string, Day>()
@@ -70,7 +72,7 @@ export function FunnelDaySpend({
       if (ad) {
         ad.spend += sp
         ad.gst += g
-      } else d.ads.push({ ad_id: r.ad_id, name: data?.ads.get(r.ad_id) ?? r.ad_id, campaign: cName.get(r.campaign_id) ?? r.campaign_id, adset: sName.get(r.adset_id) ?? r.adset_id, spend: sp, gst: g })
+      } else d.ads.push({ ad_id: r.ad_id, name: data?.ads.get(r.ad_id) ?? r.ad_id, account: aName.get(r.account_id) ?? '', campaign: cName.get(r.campaign_id) ?? r.campaign_id, adset: sName.get(r.adset_id) ?? r.adset_id, spend: sp, gst: g })
       byDay.set(r.day, d)
     }
     return [...byDay.values()].filter((d) => d.spend > 0).map((d) => ({ ...d, ads: d.ads.filter((a) => a.spend > 0).sort((a, b) => b.spend - a.spend) })).sort((a, b) => b.day.localeCompare(a.day))
@@ -196,9 +198,9 @@ export function FunnelDaySpend({
                         {isOpen &&
                           d.ads.map((a) => (
                             <tr key={`${d.day}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => {
-                              if (!google) return setPreview({ id: a.ad_id, name: a.name, sub: `${a.campaign} · ${a.adset}` })
+                              if (!google) return setPreview({ id: a.ad_id, name: a.name, sub: [a.account, a.campaign, a.adset].filter(Boolean).join(' · ') })
                               const o = data?.objs?.get(a.ad_id)
-                              if (o) return setGPreview({ ad: o, sub: `${a.campaign} · ${a.adset}` })
+                              if (o) return setGPreview({ ad: o, sub: [a.account, a.campaign, a.adset].filter(Boolean).join(' · ') })
                               // Performance Max (no ads): the campaign's panel (its type, status and Open in Google Ads)
                               const r = data?.days.find((x) => x.ad_id === a.ad_id)
                               const c = google.campaigns?.find((x) => x.campaign_id === r?.campaign_id)
@@ -211,9 +213,7 @@ export function FunnelDaySpend({
                               <td />
                               <td>
                                 {a.name}
-                                <div className="muted small">
-                                  {a.campaign} · {a.adset}
-                                </div>
+                                <div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>
                               </td>
                               <td className="num nowrap">{money(a.spend, a.gst)}</td>
                             </tr>
