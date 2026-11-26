@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Building2, CalendarClock, ChevronDown, ClipboardList, Clock3, CreditCard, FileText, GraduationCap, Handshake, History, Layers, Link2, Mail, MapPin, Package, Phone, Route, Tag, Target, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarClock, ChevronDown, ClipboardList, Clock3, FileText, GraduationCap, Handshake, History, Layers, Link2, Mail, MapPin, Package, Phone, Route, Tag, Target, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -25,7 +25,7 @@ import { ExtraFields, extraOf, LeadOrigin } from './LeadOrigin'
 import { LeadGlance } from './LeadGlance'
 import { LeadInsightCard } from './LeadInsightCard'
 import { Modal } from '@/components/Modal'
-import { BillingCard } from '@/invoices/Billing'
+import { BillingDrawer, buyerOfLead } from '@/invoices/Billing'
 import { fullName, money } from './labels'
 import type { LeadRow, MemberOption, Option } from './types'
 import { Flash } from '@/components/Flash'
@@ -86,6 +86,8 @@ export function LeadPage() {
   const [removing, setRemoving] = useState(false)
   // the activity timeline, in a pop-up (header → History)
   const [history, setHistory] = useState(false)
+  // At a glance → Bill to: edit the billing details
+  const [billTo, setBillTo] = useState(false)
   const [wa, setWa] = useState(false)
   // AI Calling: Call from AI (the drawer) and the AI Calls tab's count
   const [aiCall, setAiCall] = useState(false)
@@ -426,6 +428,7 @@ export function LeadPage() {
                   gstin: lead.bill_gstin ?? null,
                 }}
                 onBilling={canInv || canPay ? toMoneyTab : undefined}
+                onBillTo={canEdit ? () => setBillTo(true) : undefined}
                 refreshKey={refresh}
               />
               <section className="card lead-sec">
@@ -434,11 +437,6 @@ export function LeadPage() {
                 </h3>
                 <LeadDescription key={lead.id} leadId={lead.id} value={lead.notes} canEdit={canEdit} onSaved={(v) => setLead({ ...lead, notes: v })} />
               </section>
-              <div className="acc-list">
-                  <Acc title="Billing Details" icon={CreditCard}>
-                    <BillingCard bare lead={lead} canEdit={canEdit} onSaved={(b) => setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })} />
-                  </Acc>
-              </div>
             </aside>
           </div>
         )}
@@ -608,6 +606,17 @@ export function LeadPage() {
           onSaved={(msg) => {
             setBk(null)
             done(msg)
+          }}
+        />
+      )}
+      {billTo && (
+        <BillingDrawer
+          leadId={lead.id}
+          value={buyerOfLead(lead)}
+          onClose={() => setBillTo(false)}
+          onSaved={(b) => {
+            setBillTo(false)
+            setLead({ ...lead, bill_company: b.company || null, bill_address: b.address || null, bill_state: b.state || null, bill_state_code: b.state_code || null, bill_gstin: b.gstin || null })
           }}
         />
       )}

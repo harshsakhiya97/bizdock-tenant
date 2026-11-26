@@ -38,6 +38,7 @@ export function LeadGlance({
   owner,
   billing: m,
   onBilling,
+  onBillTo,
   refreshKey,
 }: {
   leadId: string
@@ -48,6 +49,8 @@ export function LeadGlance({
   billing: { billed: number; received: number; overdue: number; invoices: number | null; company: string | null; gstin: string | null }
   /** opens Payments */
   onBilling?: () => void
+  /** edits the billing details (Bill to) */
+  onBillTo?: () => void
   refreshKey?: number
 }) {
   const [g, setG] = useState<Glance | null>(null)
@@ -146,7 +149,7 @@ export function LeadGlance({
         )}
         {m.invoices ? <div className="muted small">{m.invoices} invoice{m.invoices === 1 ? '' : 's'}</div> : null}
       </Item>
-      <Item icon={Receipt} label="Bill to">
+      <Item icon={Receipt} label="Bill to" onClick={onBillTo}>
         {m.company || m.gstin ? (
           <>
             {m.company || '—'}

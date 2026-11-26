@@ -147,7 +147,7 @@ export function BillingCard({
   )
 }
 
-function BillingDrawer({ leadId, value, onClose, onSaved }: { leadId: string; value: Buyer; onClose: () => void; onSaved: (b: Buyer) => void }) {
+export function BillingDrawer({ leadId, value, onClose, onSaved }: { leadId: string; value: Buyer; onClose: () => void; onSaved: (b: Buyer) => void }) {
   const [b, setB] = useState<Buyer>(value)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
