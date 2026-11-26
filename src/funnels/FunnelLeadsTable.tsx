@@ -51,8 +51,8 @@ export function FunnelLeadsTable({
   const [notice, setNotice] = useState<{ ok?: string; error?: string } | null>(null)
 
   const loadExtras = useCallback(() => {
-    listLeadExtras(tenant.id, funnel.sub_business_id ?? null).then(setExtras, (e: Error) => setNotice({ error: e.message }))
-  }, [tenant.id, funnel.sub_business_id])
+    listLeadExtras(tenant.id, funnel.sub_business_id ?? null, funnel.id).then(setExtras, (e: Error) => setNotice({ error: e.message }))
+  }, [tenant.id, funnel.sub_business_id, funnel.id])
   useEffect(loadExtras, [loadExtras])
   useEffect(() => {
     listOutcomes(tenant.id).then(setOutcomes, () => setOutcomes([]))

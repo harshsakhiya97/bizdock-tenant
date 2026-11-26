@@ -227,9 +227,10 @@ export type LeadExtras = {
   meeting_date: string | null
   meeting_time: string | null
 }
-/** last comment, follow-ups done, connected calls and meeting per lead (subId null: every lead the caller can see) */
-export async function listLeadExtras(tenantId: string, subId: string | null): Promise<Map<string, LeadExtras>> {
-  const { data, error } = await db().rpc('lead_list_extras_v2', { p_tenant: tenantId, p_sub: subId })
+/** last comment, follow-ups done, connected calls and meeting per lead (subId null: every lead the caller can see;
+ *  funnelId: only that funnel's leads) */
+export async function listLeadExtras(tenantId: string, subId: string | null, funnelId: string | null = null): Promise<Map<string, LeadExtras>> {
+  const { data, error } = await db().rpc('lead_list_extras_v3', { p_tenant: tenantId, p_sub: subId, p_funnel: funnelId })
   if (error) throw new Error(error.message)
   return new Map(((data ?? []) as LeadExtras[]).map((r) => [r.lead_id, r]))
 }
