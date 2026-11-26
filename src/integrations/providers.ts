@@ -173,8 +173,10 @@ export const PROVIDERS: Provider[] = [
     name: 'Razorpay',
     icon: CreditCard,
     color: '#0c2451',
-    description: 'Your Razorpay account’s payments, brought in every 5 minutes and matched to leads by phone / email.',
-    usedFor: 'Payments → History logs',
+    description: 'Your Razorpay accounts’ payments, brought in every 5 minutes and matched to leads by phone / email. Add as many accounts as you use.',
+    usedFor: 'Payments → Razorpay',
+    multiple: true,
+    accountHint: 'e.g. Pride Creative Studio, Paid Podcast',
     guide: [
       'Sign in at dashboard.razorpay.com. Pick Test or Live mode at the top (the keys differ).',
       'Account & Settings → API keys → Generate key (or Regenerate). Razorpay shows the Key ID and the Key Secret once — copy both into the boxes below.',

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { SearchSelect } from '@/components/SearchSelect'
 import { useNavigate } from 'react-router'
 import { BadgeIndianRupee, CircleCheck, CircleX, CreditCard, RefreshCw, Undo2 } from 'lucide-react'
 import { ConfirmModal, Empty, PageHead, Paged, SearchInput, StatCard } from '@/components/ui'
@@ -30,6 +31,7 @@ type Pay = {
   paid_at: string
   capture_error: string | null
   lead_id: string | null
+  integration_id: string | null
   leads: { first_name: string; last_name: string | null } | null
 }
 
@@ -69,6 +71,15 @@ export function PaymentsLogsPage() {
   const [status, setStatus] = useState('')
   const [method, setMethod] = useState('')
   const [matched, setMatched] = useState('')
+  // Razorpay accounts: Account column and filter
+  const [account, setAccount] = useState('')
+  const [accounts, setAccounts] = useState<{ id: string; label: string }[]>([])
+  useEffect(() => {
+    db()
+      .rpc('razorpay_accounts', { p_tenant: tenant.id })
+      .then(({ data }) => setAccounts((data ?? []) as { id: string; label: string }[]))
+  }, [tenant.id])
+  const accountName = (id: string | null) => accounts.find((a) => a.id === id)?.label ?? (id ? 'Razorpay' : 'Removed account')
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
@@ -78,7 +89,7 @@ export function PaymentsLogsPage() {
     setError(null)
     let q = db()
       .from('razorpay_payments')
-      .select('id, payment_id, order_id, amount, status, method, email, phone, description, notes, amount_refunded, error_description, vpa, bank, wallet, paid_at, capture_error, lead_id, leads(first_name, last_name)')
+      .select('id, payment_id, order_id, amount, status, method, email, phone, description, notes, amount_refunded, error_description, vpa, bank, wallet, paid_at, capture_error, lead_id, integration_id, leads(first_name, last_name)')
       .eq('tenant_id', tenant.id)
     // All dates: no date limits
     if (from && to) q = q.gte('paid_at', new Date(`${from}T00:00:00`).toISOString()).lte('paid_at', new Date(`${to}T23:59:59.999`).toISOString())
@@ -120,9 +131,10 @@ export function PaymentsLogsPage() {
         (!status || r.status === status) &&
         (!method || r.method === method) &&
         (!matched || (matched === 'yes' ? !!r.lead_id : !r.lead_id)) &&
+        (!account || r.integration_id === account) &&
         (!s || `${name(r)} ${r.phone ?? ''} ${r.email ?? ''} ${r.payment_id} ${r.order_id ?? ''} ${r.description ?? ''}`.toLowerCase().includes(s)),
     )
-  }, [rows, q, status, method, matched])
+  }, [rows, q, status, method, matched, account])
   const n = (f: (r: Pay) => boolean) => (rows ?? []).filter(f).length
 
   // the cards follow the filters
@@ -204,8 +216,20 @@ export function PaymentsLogsPage() {
             <option value="yes">Matched to a lead ({n((r) => !!r.lead_id)})</option>
             <option value="no">No lead ({n((r) => !r.lead_id)})</option>
           </Select>
+          {accounts.length > 0 && (
+            <div className="filter-ss">
+              <SearchSelect
+                value={account || null}
+                onChange={(v) => setAccount(v ?? '')}
+                options={[{ value: '', label: 'All accounts' }, ...accounts.map((a) => ({ value: a.id, label: `${a.label} (${n((r) => r.integration_id === a.id)})` }))]}
+                placeholder="Account"
+                searchPlaceholder="Search accounts…"
+                ariaLabel="Razorpay account"
+              />
+            </div>
+          )}
           <DateRangePicker value={range} onChange={setRange} allDates />
-          {(q || status || method || matched) && (
+          {(q || status || method || matched || account) && (
             <button
               type="button"
               className="clear-btn"
@@ -214,6 +238,7 @@ export function PaymentsLogsPage() {
                 setStatus('')
                 setMethod('')
                 setMatched('')
+                setAccount('')
               }}
             >
               Reset
@@ -235,6 +260,7 @@ export function PaymentsLogsPage() {
                   <thead>
                     <tr>
                       <th>Paid on</th>
+                      {accounts.length > 0 && <th>Account</th>}
                       <th>Payer</th>
                       <th className="num">Amount</th>
                       <th>Status</th>
@@ -252,6 +278,7 @@ export function PaymentsLogsPage() {
                       return (
                         <tr key={r.id} className={cn(r.lead_id && 'is-clickable')} onClick={() => r.lead_id && navigate(`/leads/${r.lead_id}`)} title={r.lead_id ? 'Open the lead' : undefined}>
                           <td className="nowrap">{when(r.paid_at)}</td>
+                          {accounts.length > 0 && <td className="nowrap">{accountName(r.integration_id)}</td>}
                           <td>
                             <b>{name(r) || nicePhone(r.phone) || r.email || '—'}</b>
                             {name(r) && r.phone && <div className="muted small">{nicePhone(r.phone)}</div>}

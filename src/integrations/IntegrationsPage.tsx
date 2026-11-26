@@ -466,7 +466,7 @@ export function IntegrationsPage() {
                 <button type="button" className="int-summary" onClick={() => setListFor(p.id)}>
                   <span>
                     <b>
-                      {accounts.length} {p.id === 'zoom' ? 'Zoom' : ''} account{accounts.length === 1 ? '' : 's'}
+                      {accounts.length} {p.id === 'zoom' ? 'Zoom' : p.id === 'razorpay' ? 'Razorpay' : ''} account{accounts.length === 1 ? '' : 's'}
                     </b>
                     {p.id === 'zoom' && accounts.find((a) => a.config.is_default === 'Yes') && <> · default: {accounts.find((a) => a.config.is_default === 'Yes')?.label}</>}
                     {accounts.some((a) => a.status === 'error') && <span className="int-summary-err"> · {accounts.filter((a) => a.status === 'error').length} need attention</span>}
@@ -491,11 +491,17 @@ export function IntegrationsPage() {
                       )}
                       <div className="int-account-main">
                         <b>
-                          {a.label || a.config.ad_account_id}
+                          {a.label || (p.id === 'razorpay' ? 'Razorpay (no name yet)' : a.config.ad_account_id)}
                           {p.id === 'zoom' && a.config.is_default === 'Yes' && <span className="badge badge-muted" style={{ marginLeft: 6 }}>Default</span>}
                         </b>
                         <span className="muted small">
-                          {p.id === 'zoom' ? (a.config.auth === 'oauth' ? `${a.config.zoom_email || 'Zoom user'} · Connected with Zoom` : a.config.host_email || 'Connected with keys') : a.config.ad_account_id}
+                          {p.id === 'zoom'
+                            ? a.config.auth === 'oauth'
+                              ? `${a.config.zoom_email || 'Zoom user'} · Connected with Zoom`
+                              : a.config.host_email || 'Connected with keys'
+                            : p.id === 'razorpay'
+                              ? `${String(a.config.key_id ?? '').slice(0, 9)}… · ${a.config.last_sync_at ? `checked ${ago(a.config.last_sync_at)}` : 'first check within 5 minutes'}${String(a.config.auto_capture ?? '').toLowerCase() === 'off' ? '' : ' · auto-capture on'}`
+                              : a.config.ad_account_id}
                           {a.status === 'error' && a.last_error ? ` · ${a.last_error}` : ''}
                         </span>
                       </div>
@@ -543,11 +549,15 @@ export function IntegrationsPage() {
                   <CircleAlert size={14} /> {r.last_error}
                 </div>
               )}
-              {p.id === 'razorpay' && r?.config.last_capture_error && Date.now() - new Date(r.config.last_capture_error_at ?? 0).getTime() < 7 * 864e5 && (
-                <div className="int-err">
-                  <CircleAlert size={14} /> {r.config.last_capture_error} ({ago(r.config.last_capture_error_at ?? null)})
-                </div>
-              )}
+              {p.id === 'razorpay' &&
+                accounts
+                  .filter((a) => a.config.last_capture_error && Date.now() - new Date(a.config.last_capture_error_at ?? 0).getTime() < 7 * 864e5)
+                  .map((a) => (
+                    <div key={a.id} className="int-err">
+                      <CircleAlert size={14} /> {a.label ? `${a.label}: ` : ''}
+                      {a.config.last_capture_error} ({ago(a.config.last_capture_error_at ?? null)})
+                    </div>
+                  ))}
               <div className="int-foot">
                 <span className="muted small">
                   {p.id === 'callyzer' && r && !off
@@ -566,7 +576,7 @@ export function IntegrationsPage() {
                       : 'Connected · first check within 5 minutes'
                     : (p.id === 'facebook_ads' && !off && accounts.length) || (p.id === 'google_ads' && !off && r && r.status === 'connected')
                       ? 'Numbers every 3 hours · last 7 days again every night'
-                    : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
+                    : off ? 'Turned off by BizDock' : p.multiple ? (accounts.length ? (p.id === 'zoom' ? 'Add as many Zoom accounts as you use' : p.id === 'razorpay' ? 'Payments checked every 5 min · add as many accounts as you use' : 'Add as many ad accounts as you run') : 'Not set up yet') : r ? `Connected ${ago(r.connected_at)}${r.connected_by ? ` by ${members.find((m) => m.id === r.connected_by)?.name ?? 'someone'}` : ''}` : 'Not set up yet'}
                 </span>
                 <div className="row">
                   {p.id === 'zoom' && !off && (
