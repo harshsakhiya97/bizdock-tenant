@@ -133,7 +133,7 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         </div>
       )}
 
-      {mine.length > 0 && <FunnelDaySpend links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />}
+      {mine.length > 0 && <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />}
 
     </div>
   )

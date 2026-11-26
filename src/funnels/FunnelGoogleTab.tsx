@@ -121,6 +121,7 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
 
       {mine.length > 0 && (
         <FunnelDaySpend
+          funnelId={funnelId}
           links={mine.map((l) => ({ campaign_id: l.campaign_id, adset_id: null }))}
           accounts={accounts}
           campaigns={tree.campaigns}
