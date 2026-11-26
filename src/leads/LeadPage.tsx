@@ -21,7 +21,7 @@ import { CategorySelect } from './CategorySelect'
 import { LeadDescription } from './LeadDescription'
 import { deleteLeads, getLead, listLostReasons, listMemberOptions } from './api'
 import { LeadDrawer } from './LeadDrawer'
-import { ExtraFields, extraOf, LeadOrigin } from './LeadOrigin'
+import { ExtraFields, LeadOrigin } from './LeadOrigin'
 import { LeadGlance } from './LeadGlance'
 import { LeadInsightCard } from './LeadInsightCard'
 import { Modal } from '@/components/Modal'
@@ -255,7 +255,15 @@ export function LeadPage() {
     ...(lead.referred_by ? ([['Referred by', lead.referred_by]] as [string, React.ReactNode][]) : []),
     ...(lead.whatsapp && lead.whatsapp !== lead.phone ? ([['WhatsApp', lead.whatsapp]] as [string, React.ReactNode][]) : []),
   ]
-  const hasMore = more.length > 0 || extraOf(lead).length > 0
+  // always shown: where the lead saw the ad
+  const adInfo: [string, React.ReactNode][] = [
+    ['Source', sourceName ?? '—'],
+    ['Campaign Name', lead.ad_campaign || '—'],
+    ['Adset Name', lead.ad_adset || '—'],
+    ['Ad Name', lead.ad_name || '—'],
+    ['fbclid', lead.fbclid ? <span className="small" style={{ wordBreak: 'break-all' }}>{lead.fbclid}</span> : '—'],
+    ['gclid', lead.gclid ? <span className="small" style={{ wordBreak: 'break-all' }}>{lead.gclid}</span> : '—'],
+  ]
 
   const TABS: { id: Tab; label: string; count?: number }[] = [
     { id: 'details', label: 'Details' },
@@ -394,9 +402,16 @@ export function LeadPage() {
                 <Acc title="Source & Form Submissions" icon={ClipboardList}>
                   <LeadOrigin lead={lead} part="source" funnelName={funnel?.name ?? null} />
                 </Acc>
-                {hasMore && (
                   <Acc title="More Fields" icon={Layers}>
                     <div className="stack">
+                      <dl className="info-grid">
+                        {adInfo.map(([k, v]) => (
+                          <div key={k}>
+                            <dt>{k}</dt>
+                            <dd>{v}</dd>
+                          </div>
+                        ))}
+                      </dl>
                       {more.length > 0 && (
                         <dl className="info-grid">
                           {more.map(([k, v]) => (
@@ -410,7 +425,6 @@ export function LeadPage() {
                       <ExtraFields lead={lead} />
                     </div>
                   </Acc>
-                )}
               </div>
             </div>
             <aside className="stack lead-side">

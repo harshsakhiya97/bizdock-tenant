@@ -3,7 +3,7 @@ import { db } from '@/lib/supabase'
 import type { ActivityRow, LeadInput, LeadRow, MemberOption, Option, Temperature } from './types'
 
 const COLS =
-  'id, tenant_id, business_id, sub_business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, webhook_id, sheet_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra, purpose, required_on, required_hours, webinar_category'
+  'id, tenant_id, business_id, sub_business_id, funnel_id, stage_id, first_name, last_name, phone, whatsapp, email, city, source_id, referred_by, temperature, estimated_amount, owner_id, tags, notes, next_follow_up_at, lost_reason_id, is_archived, archive_reason, stage_changed_at, created_at, updated_at, landing_page_id, webhook_id, sheet_id, utm_source, utm_medium, utm_campaign, utm_term, utm_content, extra, purpose, required_on, required_hours, webinar_category, ad_campaign, ad_adset, ad_name, fbclid, gclid'
 
 /** every field of a lead that can be empty, as null (list_leads_lite leaves empty fields out) */
 const LEAD_NULLS = Object.fromEntries(

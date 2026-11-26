@@ -51,6 +51,12 @@ export type LeadRow = {
   bill_state?: string | null
   bill_state_code?: string | null
   bill_gstin?: string | null
+  /** the ad the lead came from (from its UTMs / page URL: names looked up by ID) */
+  ad_campaign?: string | null
+  ad_adset?: string | null
+  ad_name?: string | null
+  fbclid?: string | null
+  gclid?: string | null
 }
 
 export type ActivityRow = {
