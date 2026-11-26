@@ -56,7 +56,8 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
   const accName = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name ?? a.act_id])), [accounts])
   const campById = useMemo(() => new Map(campaigns.map((c) => [c.campaign_id, c])), [campaigns])
   const setById = useMemo(() => new Map(adsets.map((s) => [s.adset_id, s])), [adsets])
-  const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId), [links, funnelId])
+  // only the campaigns whose name has one of the funnel's tags
+  const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId && tagHit(campById.get(l.campaign_id)?.name, tags)), [links, funnelId, campById, tags])
 
   async function refresh() {
     setBusy(true)
@@ -122,7 +123,7 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
                       {c?.objective ? ` · ${statusLabel(c.objective.replace(/^OUTCOME_/, ''))}` : ''}
                     </span>
                   </div>
-                  {tagHit(c?.name, tags) && <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>}
+                  <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>
                   <span className={cn('badge', statusTone(st))}>{statusLabel(st)}</span>
                   <span className="num ad-tree-spend">{sp ? inr(sp) : '—'}</span>
                 </div>

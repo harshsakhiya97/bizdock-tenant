@@ -45,7 +45,8 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
   const accName = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name ?? cidText(a.customer_id)])), [accounts])
   const campById = useMemo(() => new Map((tree?.campaigns ?? []).map((c) => [c.campaign_id, c])), [tree])
   const links = useMemo(() => tree?.links ?? [], [tree])
-  const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId), [links, funnelId])
+  // only the campaigns whose name has one of the funnel's tags
+  const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId && tagHit(campById.get(l.campaign_id)?.name, tags)), [links, funnelId, campById, tags])
 
   async function refresh() {
     setBusy(true)
@@ -108,7 +109,7 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
                       {c?.channel ? ` · ${gWord(c.channel)}` : ''}
                     </span>
                   </div>
-                  {tagHit(c?.name, tags) && <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>}
+                  <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>
                   <span className={cn('badge', gTone(c?.status ?? null))}>{gWord(c?.status ?? null)}</span>
                   <span className="num ad-tree-spend">{sp ? inr(sp) : '—'}</span>
                 </div>
