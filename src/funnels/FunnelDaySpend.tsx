@@ -33,7 +33,7 @@ type Period = 'day' | 'week' | 'month'
 type SortKey = 'name' | 'spend' | 'leads' | 'cpl' | 'warm' | 'ni' | 'closed'
 
 type Fact = { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number; gst: number; account: string; campaign: string; adset: string; name: string }
-type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number }
+type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number } & Partial<Counts>
 type Counts = { leads: number; warm: number; ni: number; closed: number }
 /** one report row: a period (Date) or a campaign / ad set / ad */
 type Row = Counts & { key: string; name: string; sub: string; spend: number; gst: number; items: Ad[]; ad?: Ad }
@@ -134,6 +134,18 @@ function buildRows(by: By, period: Period, facts: Fact[], counts: LeadCount[]) {
     r.warm += x.warm
     r.ni += x.not_interested
     r.closed += x.closed
+    // Date: the day's ad the lead came from (same names)
+    if (by === 'date' && a) {
+      const hit =
+        r.items.find((i) => norm(i.name) === a && norm(i.campaign) === c && norm(i.adset) === s) ??
+        r.items.find((i) => norm(i.name) === a && (!c || norm(i.campaign) === c) && (!s || norm(i.adset) === s))
+      if (hit) {
+        hit.leads = (hit.leads ?? 0) + x.leads
+        hit.warm = (hit.warm ?? 0) + x.warm
+        hit.ni = (hit.ni ?? 0) + x.not_interested
+        hit.closed = (hit.closed ?? 0) + x.closed
+      }
+    }
   }
   const list = [...m.values()].filter((r) => r.spend > 0 || r.leads > 0)
   for (const r of list) r.items.sort((a, b) => b.spend - a.spend)
@@ -927,7 +939,11 @@ function PerfTable({ rows, by, openAd }: { rows: Row[]; by: By; openAd: (a: Ad) 
                         <div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>
                       </td>
                       <td className="num nowrap">{money(a.spend, a.gst)}</td>
-                      <td colSpan={5} />
+                      <td className="num">{a.leads ?? 0}</td>
+                      <td className="num nowrap">{a.leads ? inr0(a.spend / a.leads) : '—'}</td>
+                      <td className="num">{a.warm ?? 0}</td>
+                      <td className="num">{a.ni ?? 0}</td>
+                      <td className="num">{a.closed ?? 0}</td>
                     </tr>
                   ))}
               </Fragment>
