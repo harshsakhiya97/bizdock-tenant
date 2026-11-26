@@ -2063,3 +2063,14 @@ details.rec-section summary { cursor: pointer; }
 .ai-side-item.is-ask .ai-side-ic { color: var(--success, #16a34a); }
 .ai-side .ai-list { margin-top: 2px; }
 @media (max-width: 900px) { .ai-side { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 12px; } }
+/* Funnel → Sheets: a sheet's numbers */
+.sheet-stats { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.sheet-stat { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2, var(--surface)); text-align: left; font: inherit; color: inherit; }
+.sheet-stat b { font-size: 17px; }
+.sheet-stat span { font-size: 12px; color: var(--text-muted); }
+.sheet-stat.is-link { cursor: pointer; }
+.sheet-stat.is-link:hover { border-color: var(--danger, #dc2626); }
+.sheet-stat.is-good b { color: var(--success, #16a34a); }
+.sheet-stat.is-warn b { color: var(--warning, #d97706); }
+.sheet-stat.is-bad b { color: var(--danger, #dc2626); }
+@media (max-width: 900px) { .sheet-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

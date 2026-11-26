@@ -1,6 +1,5 @@
 import { db } from '@/lib/supabase'
-import { SHEET_FIELD_MAP, type PerisclawSetup } from './perisclaw'
-import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook, WebhookInput } from './types'
+import type { FunnelInput, FunnelRow, FunnelSheet, SheetInput, SkippedRow, LandingPage, LandingPageInput, StageDraft, SubmissionRow, UtmInput, UtmLink, FunnelWebhook, WebhookInput } from './types'
 
 export async function listFunnels(tenantId: string): Promise<FunnelRow[]> {
   const { data, error } = await db()
@@ -248,7 +247,7 @@ export function matchesUtm(s: Pick<SubmissionRow, 'utm_source' | 'utm_medium' | 
   )
 }
 
-// ---------- WhatsApp tab: Google Sheet links ----------
+// ---------- Sheets tab: Google Sheet links ----------
 
 /** "https://docs.google.com/spreadsheets/d/<id>/edit#gid=<gid>" → { spreadsheet_id, gid } */
 export function parseSheetUrl(url: string): { spreadsheet_id: string; gid: string | null } | null {
@@ -278,7 +277,7 @@ export async function saveSheet(tenantId: string, funnelId: string, existing: Fu
   }
   const { data, error } = existing
     ? await db().from('funnel_sheets').update(row).eq('id', existing.id).select('id').single()
-    : await db().from('funnel_sheets').insert({ ...row, field_map: SHEET_FIELD_MAP, tenant_id: tenantId, funnel_id: funnelId }).select('id').single()
+    : await db().from('funnel_sheets').insert({ ...row, field_map: {}, tenant_id: tenantId, funnel_id: funnelId }).select('id').single()
   if (error) throw error
   return data.id as string
 }
@@ -293,11 +292,6 @@ export async function deleteSheet(id: string) {
   if (error) throw error
 }
 
-/** saves the Perisclaw setup and the sheet columns it asks for (column → lead field) */
-export async function savePerisclaw(id: string, setup: PerisclawSetup, fieldMap: Record<string, string>) {
-  const { error } = await db().from('funnel_sheets').update({ perisclaw: setup, field_map: fieldMap }).eq('id', id)
-  if (error) throw error
-}
 
 export async function saveSheetMap(id: string, map: Record<string, string>) {
   const { error } = await db().from('funnel_sheets').update({ field_map: map }).eq('id', id)
@@ -321,6 +315,23 @@ async function sheetsCall<T>(body: Record<string, unknown>): Promise<T> {
 
 /** reads the sheet now: its columns, and any new rows become leads */
 export const syncSheetNow = (id: string) => sheetsCall<{ added: number; updated: number; skipped: number }>({ action: 'sync', sheet_id: id })
+type Again = { added: number; updated: number; skipped: number; existing: number; rows: number }
+/** the skipped rows again (or these row numbers) */
+export const retrySheetRows = (id: string, rows?: number[]) => sheetsCall<Again>({ action: 'retry', sheet_id: id, rows })
+/** every row already handled again: phones not yet a lead of the funnel are added */
+export const recheckSheet = (id: string) => sheetsCall<Again>({ action: 'recheck', sheet_id: id })
+/** the rows of a sheet that didn't become a lead (not synced again yet) */
+export async function listSkippedRows(sheetId: string): Promise<SkippedRow[]> {
+  const { data, error } = await db().from('sheet_skipped_rows').select('id, sheet_id, row_no, data, reason, skipped_at').eq('sheet_id', sheetId).is('resolved_at', null).order('row_no')
+  if (error) throw error
+  return (data ?? []) as SkippedRow[]
+}
+/** every Google Sheet of the workspace (Leads → Sheet filter and source) */
+export async function listTenantSheets(tenantId: string): Promise<{ id: string; name: string; funnel_id: string }[]> {
+  const { data, error } = await db().from('funnel_sheets').select('id, name, funnel_id').eq('tenant_id', tenantId).order('name')
+  if (error) throw error
+  return (data ?? []) as { id: string; name: string; funnel_id: string }[]
+}
 
 /** the Google service account email the sheets must be shared with (null = not set up yet) */
 export const sheetsAccount = () => sheetsCall<{ email: string | null }>({ action: 'info' })

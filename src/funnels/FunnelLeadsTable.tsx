@@ -7,7 +7,7 @@ import { getFollowUp, listOutcomes, pendingFollowUpId } from '@/followups/api'
 import { CompleteModal } from '@/followups/CompleteModal'
 import type { FollowUpRow } from '@/followups/types'
 import { listLeadExtras, listLostReasons, logActivity, updateLeads, type LeadExtras } from '@/leads/api'
-import { followUp, fullName } from '@/leads/labels'
+import { followUp, fullName, leadSource } from '@/leads/labels'
 import { LeadCells } from '@/leads/LeadsPage'
 import { StageMoveModal } from '@/leads/StageMoveModal'
 import type { LeadRow, MemberOption, Option } from '@/leads/types'
@@ -21,6 +21,7 @@ export function FunnelLeadsTable({
   type,
   leads,
   sources,
+  sheetName,
   members,
   resetKey,
   onOpen,
@@ -30,6 +31,8 @@ export function FunnelLeadsTable({
   type: SubBusinessType | null
   leads: LeadRow[]
   sources: Option[]
+  /** the Google Sheet's name (a lead from a sheet: “Google Sheet · name”) */
+  sheetName?: (id: string) => string | undefined
   members: MemberOption[]
   resetKey: unknown
   onOpen: (id: string) => void
@@ -151,7 +154,7 @@ export function FunnelLeadsTable({
                       kind={kind}
                       l={l}
                       x={extras.get(l.id)}
-                      source={sources.find((x) => x.id === l.source_id)?.name}
+                      source={leadSource(sources.find((x) => x.id === l.source_id)?.name, l.sheet_id ? sheetName?.(l.sheet_id) : undefined)}
                       owner={members.find((m) => m.id === l.owner_id)?.name}
                       stage={stageById.get(l.stage_id ?? '') ?? null}
                       fu={followUp(l.next_follow_up_at)}

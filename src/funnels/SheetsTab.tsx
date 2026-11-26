@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Bot, Check, ChevronDown, ChevronRight, Columns3, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { AlertTriangle, Check, ChevronDown, ChevronRight, Columns3, Copy, ExternalLink, FileSpreadsheet, Pencil, Plus, Power, RefreshCw, Save, ScanSearch, Trash2 } from 'lucide-react'
 import { Button } from '@/components/Button'
-import { Hint, Label, TextInput, Select } from '@/components/Field'
+import { Hint, Label, TextInput } from '@/components/Field'
+import { SearchSelect } from '@/components/SearchSelect'
 import { Modal } from '@/components/Modal'
 import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteSheet, parseSheetUrl, savePerisclaw, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
-import { LEAD_FIELDS, SHEET_FIELD_MAP, extraName, fieldMapFor, fromSaved, guessField, isExtra, parseExample, perisclawMessage, sheetColumns } from './perisclaw'
+import { deleteSheet, listSkippedRows, parseSheetUrl, recheckSheet, retrySheetRows, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
 import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
-import type { FunnelSheet, SheetInput } from './types'
+import type { FunnelSheet, SheetInput, SkippedRow } from './types'
 import { useCopy } from './useCopy'
 
-/** A funnel's WhatsApp tab: Google Sheet links; new rows become leads every minute. */
-export function WhatsAppTab({
+/** A funnel's Sheets tab: Google Sheet links; new rows become leads every minute (only the phone is needed). */
+export function SheetsTab({
   funnelId,
   sheets,
   canEdit,
@@ -32,6 +32,8 @@ export function WhatsAppTab({
   const [removing, setRemoving] = useState<FunnelSheet | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [account, setAccount] = useState<string | null | undefined>(undefined)
+  const [skippedOf, setSkippedOf] = useState<FunnelSheet | null>(null)
+  const [rechecking, setRechecking] = useState<FunnelSheet | null>(null)
   const { copied, copy } = useCopy()
 
   useEffect(() => {
@@ -55,14 +57,19 @@ export function WhatsAppTab({
       const r = await syncSheetNow(s.id)
       return `${s.name} synced: ${r.added} new lead${r.added === 1 ? '' : 's'}, ${r.updated} updated${r.skipped ? `, ${r.skipped} row${r.skipped === 1 ? '' : 's'} skipped` : ''}.`
     })
+  const recheck = (s: FunnelSheet) =>
+    run(`re-${s.id}`, async () => {
+      const r = await recheckSheet(s.id)
+      return `${s.name} checked again (${r.rows} rows): ${r.added} new lead${r.added === 1 ? '' : 's'}, ${r.existing} already leads${r.skipped ? `, ${r.skipped} skipped` : ''}.`
+    })
 
   if (!sheets) return <div className="empty">Loading sheets…</div>
 
   return (
     <>
       <p className="muted small" style={{ margin: '0 0 12px' }}>
-        Google Sheets your WhatsApp leads are written to. Every minute new rows become leads in the funnel’s first stage (source WhatsApp, with the funnel’s tags). Row 1 must hold the
-        column names. The same phone again updates that lead.
+        Google Sheets with leads. Every minute new rows become leads in the funnel’s first stage (source Google Sheet, with the funnel’s tags). Row 1 must hold the column names;
+        only the phone number is needed. The same phone again updates that lead.
       </p>
       <div className="row-between" style={{ marginBottom: 14, alignItems: 'center', gap: 12 }}>
         {canEdit ? (
@@ -105,23 +112,19 @@ export function WhatsAppTab({
                     Open sheet <ExternalLink size={12} />
                   </a>
                 </div>
-                <div className="lp-counts">
-                  <span>
-                    <b>{s.leads_added}</b> new lead{s.leads_added === 1 ? '' : 's'}
-                  </span>
-                  <span>
-                    <b>{s.leads_updated}</b> updated
-                  </span>
-                  {s.rows_skipped > 0 && (
-                    <span>
-                      <b>{s.rows_skipped}</b> skipped
-                    </span>
-                  )}
-                </div>
                 {canEdit && (
                   <div className="row-actions">
-                    <button type="button" className="btn btn-ghost btn-icon" title="Sync now" aria-label={`Sync ${s.name} now`} disabled={!!busy} onClick={() => syncNow(s)}>
-                      <RefreshCw size={15} className={cn(busy === `sync-${s.id}` && 'spin')} />
+                    {waitingOf(s) > 0 ? (
+                      <button type="button" className="btn btn-primary btn-sm" disabled={!!busy} onClick={() => syncNow(s)}>
+                        <RefreshCw size={14} className={cn(busy === `sync-${s.id}` && 'spin')} /> Sync now
+                      </button>
+                    ) : (
+                      <button type="button" className="btn btn-ghost btn-icon" title="Sync now" aria-label={`Sync ${s.name} now`} disabled={!!busy} onClick={() => syncNow(s)}>
+                        <RefreshCw size={15} className={cn(busy === `sync-${s.id}` && 'spin')} />
+                      </button>
+                    )}
+                    <button type="button" className="btn btn-ghost btn-icon" title="Re-check sheet: add rows whose phone isn’t a lead yet" aria-label={`Re-check ${s.name}`} disabled={!!busy || s.synced_rows == null} onClick={() => setRechecking(s)}>
+                      <ScanSearch size={15} className={cn(busy === `re-${s.id}` && 'spin')} />
                     </button>
                     <button type="button" className="btn btn-ghost btn-icon" title="Edit" aria-label={`Edit ${s.name}`} onClick={() => setEditing({ sheet: s })}>
                       <Pencil size={15} />
@@ -143,11 +146,7 @@ export function WhatsAppTab({
                 )}
               </div>
 
-              <div className="muted small">
-                {s.synced_rows == null
-                  ? `Waiting for the first sync · ${s.import_existing ? 'rows already in the sheet will be imported' : 'only rows added from now come in'}`
-                  : `${s.synced_rows} row${s.synced_rows === 1 ? '' : 's'} handled · last checked ${s.last_synced_at ? ago(s.last_synced_at) : '—'}`}
-              </div>
+              <SheetStats sheet={s} onSkipped={() => setSkippedOf(s)} />
               {s.last_error && (
                 <div className="alert alert-warning small">
                   <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
@@ -156,12 +155,7 @@ export function WhatsAppTab({
                 </div>
               )}
 
-              <PerisclawSetupBlock key={`p-${s.id}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
-              {s.perisclaw ? (
-                <RowOneCheck sheet={s} />
-              ) : (
-                <SheetColumns key={`${s.id}-${(s.headers ?? []).join('|')}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
-              )}
+              <SheetColumns key={`${s.id}-${(s.headers ?? []).join('|')}`} sheet={s} canEdit={canEdit} onChanged={onChanged} onError={onError} />
             </section>
           ))}
         </div>
@@ -186,6 +180,21 @@ export function WhatsAppTab({
           }}
         />
       )}
+      {skippedOf && <SkippedModal sheet={skippedOf} canEdit={canEdit} onClose={() => setSkippedOf(null)} onChanged={onChanged} onError={onError} />}
+      <ConfirmModal
+        open={!!rechecking}
+        icon={ScanSearch}
+        title={`Re-check ${rechecking?.name ?? ''}?`}
+        message="Every row already handled is read again. Rows whose phone isn’t a lead of this funnel yet are added; existing leads aren’t changed or duplicated."
+        confirmLabel="Re-check"
+        busy={!!busy}
+        onCancel={() => setRechecking(null)}
+        onConfirm={() => {
+          const s = rechecking
+          setRechecking(null)
+          if (s) void recheck(s)
+        }}
+      />
       <ConfirmModal
         open={!!removing}
         icon={Trash2}
@@ -214,9 +223,9 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
   const cols = useMemo(() => sheet.headers ?? [], [sheet.headers])
   // "Full Name" / "WhatsApp Number" are guessed like full_name / whatsapp_number (same as the sync)
   const norm = (k: string) => k.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
-  const target = (k: string) => map[k] ?? SHEET_FIELD_MAP[k] ?? guessTarget(norm(k))
+  const target = (k: string) => map[k] ?? guessTarget(norm(k))
   const chosen = new Set(cols.map(target))
-  const missing = [!chosen.has('name') && !chosen.has('first_name') ? 'Name' : null, !chosen.has('phone') ? 'Phone' : null, !chosen.has('email') ? 'Email' : null].filter(Boolean)
+  const missing = [!chosen.has('phone') ? 'Phone' : null].filter(Boolean)
 
   if (!cols.length) return <div className="muted small">The column mapping shows here after the first sync (Sync now, or within a minute once the sheet is shared).</div>
 
@@ -268,21 +277,17 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
                 </td>
                 <td>
                   {canEdit ? (
-                    <Select
-                      className="input input-sm"
-                      aria-label={`${k} saved as`}
+                    <SearchSelect
+                      className="input-sm"
+                      ariaLabel={`${k} saved as`}
                       value={target(k)}
-                      onChange={(e) => {
-                        setMap((m) => ({ ...m, [k]: e.target.value }))
+                      options={LEAD_TARGETS.map((t) => ({ value: t.value, label: t.value === 'extra' ? `Extra field (${k})` : t.label }))}
+                      onChange={(v) => {
+                        if (!v) return
+                        setMap((m) => ({ ...m, [k]: v }))
                         setDirty(true)
                       }}
-                    >
-                      {LEAD_TARGETS.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.value === 'extra' ? `Extra field (${k})` : t.label}
-                        </option>
-                      ))}
-                    </Select>
+                    />
                   ) : (
                     targetLabel(target(k))
                   )}
@@ -294,7 +299,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
       </div>
       {missing.length > 0 && (
         <div className="alert alert-warning small">
-          <AlertTriangle size={14} /> No column is matched to {missing.join(', ')}. Rows without {missing.length > 1 ? 'them' : 'it'} are skipped.
+          <AlertTriangle size={14} /> No column is matched to the phone number: every row is skipped until one is.
         </div>
       )}
       {canEdit && (
@@ -355,7 +360,7 @@ function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onC
           <Label htmlFor="sh-name" required>
             Name
           </Label>
-          <TextInput id="sh-name" autoFocus placeholder="e.g. WhatsApp ads – October" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput id="sh-name" autoFocus placeholder="e.g. Ads leads – October" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         </div>
         <div>
           <Label htmlFor="sh-url" required>
@@ -380,177 +385,140 @@ function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onC
   )
 }
 
-/** Perisclaw setup: paste one example lead message, match its parts to our columns, copy the message for Perisclaw. */
-function PerisclawSetupBlock({ sheet, canEdit, onChanged, onError }: { sheet: FunnelSheet; canEdit: boolean; onChanged: (m: string) => void; onError: (m: string) => void }) {
-  const [open, setOpen] = useState(!sheet.perisclaw)
-  const [example, setExample] = useState(sheet.perisclaw?.example ?? '')
-  const savedMap = useMemo(() => Object.fromEntries(Object.entries(sheet.perisclaw?.map ?? {}).map(([k, v]) => [k, fromSaved(v)])), [sheet.perisclaw])
-  const [map, setMap] = useState<Record<string, string>>(savedMap)
-  const [busy, setBusy] = useState(false)
-  const { copied, copy } = useCopy()
-  const parts = useMemo(() => parseExample(example), [example])
-  const col = (label: string) => (label in map ? map[label] : guessField(label))
-  const fullMap = Object.fromEntries(parts.map((p) => [p.label, col(p.label)]))
-  const message = parts.length ? perisclawMessage(sheet.sheet_url, parts, fullMap, example) : ''
-  const columns = sheetColumns(fullMap)
-  // compare key by key (the saved map comes back with its keys in another order)
-  const dirty =
-    example.trim() !== (sheet.perisclaw?.example ?? '').trim() ||
-    Object.keys(fullMap).length !== Object.keys(savedMap).length ||
-    Object.entries(fullMap).some(([k, v]) => savedMap[k] !== v)
-  const used = new Set(Object.values(fullMap))
-  const missing = [['name', 'Full name'], ['email', 'Email'], ['phone', 'Phone']].filter(([v]) => !used.has(v)).map(([, l]) => l)
-  const badExtra = Object.values(fullMap).some((v) => isExtra(v) && !extraName(v))
+/** rows that haven't been synced yet */
+const waitingOf = (s: FunnelSheet) => (s.total_rows != null && s.synced_rows != null ? Math.max(0, s.total_rows - s.synced_rows) : 0)
 
-  async function save() {
-    setBusy(true)
-    try {
-      if (badExtra) throw new Error('Give every extra field a column name.')
-      await savePerisclaw(sheet.id, { example: example.trim(), map: fullMap }, fieldMapFor(fullMap))
-      onChanged(`Perisclaw setup for ${sheet.name} saved.`)
-    } catch (e) {
-      onError((e as Error).message)
-    } finally {
-      setBusy(false)
-    }
-  }
-
+/** the sheet's numbers: rows in the sheet, synced, waiting, new leads, updated, skipped (opens the list) */
+function SheetStats({ sheet: s, onSkipped }: { sheet: FunnelSheet; onSkipped: () => void }) {
+  if (s.synced_rows == null)
+    return <div className="muted small">Waiting for the first sync · {s.import_existing ? 'rows already in the sheet will be imported' : 'only rows added from now come in'}</div>
+  const waiting = waitingOf(s)
+  const tiles: { label: string; value: number | string; tone?: string; onClick?: () => void }[] = [
+    { label: 'Rows in sheet', value: s.total_rows ?? '—' },
+    { label: 'Synced', value: s.synced_rows },
+    { label: 'Waiting', value: waiting, tone: waiting ? 'is-warn' : undefined },
+    { label: 'New leads', value: s.leads_added, tone: 'is-good' },
+    { label: 'Updated', value: s.leads_updated },
+    { label: 'Skipped', value: s.rows_skipped, tone: s.rows_skipped ? 'is-bad' : undefined, onClick: s.rows_skipped ? onSkipped : undefined },
+  ]
   return (
-    <div className="lp-block">
-      <button type="button" className="link-btn lp-label" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => setOpen((o) => !o)}>
-        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />} <Bot size={14} /> Perisclaw setup
-        {sheet.perisclaw && <span className="badge badge-success">Done</span>}
-      </button>
-      {open && (
-        <div className="stack" style={{ gap: 10 }}>
-          <div>
-            <Label htmlFor={`pc-ex-${sheet.id}`}>1. Paste one lead message exactly as you get it on WhatsApp</Label>
-            <textarea
-              id={`pc-ex-${sheet.id}`}
-              className="input"
-              rows={6}
-              disabled={!canEdit}
-              placeholder={'e.g.\nName: Rahul Mehta\nMobile: 98250 41002\nEmail: rahul@example.com\nCity: Surat\nRequirement: Podcast shoot'}
-              value={example}
-              onChange={(e) => setExample(e.target.value)}
-            />
-            <Hint>Each detail on its own line as “Label: value”.</Hint>
-          </div>
-
-          {example.trim() && !parts.length && <div className="alert alert-warning small">No “Label: value” lines found in this message.</div>}
-
-          {parts.length > 0 && (
-            <>
-              <span className="field-label">2. Match each part to a lead field</span>
-              <div className="table-wrap">
-                <table className="table table-compact">
-                  <thead>
-                    <tr>
-                      <th>In the message</th>
-                      <th>Example</th>
-                      <th>Saved on the lead as</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {parts.map((p) => (
-                      <tr key={p.label}>
-                        <td>
-                          <code className="code-chip">{p.label}</code>
-                        </td>
-                        <td className="muted small">
-                          <span className="cell-clip" style={{ maxWidth: 240 }}>
-                            {p.value}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                            <Select
-                              className="input input-sm"
-                              aria-label={`${p.label} goes to`}
-                              disabled={!canEdit}
-                              value={isExtra(col(p.label)) ? 'extra' : col(p.label)}
-                              onChange={(e) => setMap((m) => ({ ...m, [p.label]: e.target.value === 'extra' ? `extra:${p.label}` : e.target.value }))}
-                            >
-                              <option value="">— leave out —</option>
-                              {LEAD_FIELDS.map((f) => (
-                                <option key={f.value} value={f.value}>
-                                  {f.label}
-                                </option>
-                              ))}
-                              <option value="extra">Other / extra field…</option>
-                            </Select>
-                            {isExtra(col(p.label)) && (
-                              <input
-                                className="input input-sm"
-                                aria-label={`Column name for ${p.label}`}
-                                placeholder="Column name"
-                                disabled={!canEdit}
-                                value={extraName(col(p.label))}
-                                onChange={(e) => setMap((m) => ({ ...m, [p.label]: `extra:${e.target.value}` }))}
-                              />
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {missing.length > 0 && (
-                <div className="alert alert-warning small">
-                  <span className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
-                    <AlertTriangle size={14} /> Nothing goes to {missing.join(', ')}. Rows without {missing.length > 1 ? 'them' : 'it'} are skipped.
-                  </span>
-                </div>
-              )}
-
-              <div className="row-between">
-                <span className="field-label">3. Send this to Perisclaw on WhatsApp</span>
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => copy(`pc-${sheet.id}`, message)}>
-                  {copied === `pc-${sheet.id}` ? <Check size={14} /> : <Copy size={14} />} {copied === `pc-${sheet.id}` ? 'Copied' : 'Copy message'}
-                </button>
-              </div>
-              <div className="snippet">
-                <pre style={{ whiteSpace: 'pre-wrap' }}>{message}</pre>
-              </div>
-              <Hint>
-                Put these column names in row 1 of the sheet first: <b>{columns.map((c) => c.name).join(' | ')}</b>. Extra fields show on the lead page under “Source & form
-                submissions”.
-              </Hint>
-              {canEdit && (
-                <div className="row" style={{ justifyContent: 'flex-end' }}>
-                  {dirty && <span className="muted small">Not saved</span>}
-                  <button type="button" className="btn btn-primary btn-sm" onClick={save} disabled={busy || !dirty}>
-                    <Save size={14} /> Save setup
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="sheet-stats">
+        {tiles.map((t) =>
+          t.onClick ? (
+            <button key={t.label} type="button" className={cn('sheet-stat is-link', t.tone)} onClick={t.onClick} title="See the skipped rows">
+              <b>{t.value}</b>
+              <span>{t.label}</span>
+            </button>
+          ) : (
+            <div key={t.label} className={cn('sheet-stat', t.tone)}>
+              <b>{t.value}</b>
+              <span>{t.label}</span>
+            </div>
+          ),
+        )}
+      </div>
+      <div className="muted small">Last checked {s.last_synced_at ? ago(s.last_synced_at) : '—'}</div>
     </div>
   )
 }
 
-/** with a Perisclaw setup the columns come from the setup: warn when row 1 of the sheet doesn't match it */
-function RowOneCheck({ sheet }: { sheet: FunnelSheet }) {
-  const map = Object.fromEntries(Object.entries(sheet.perisclaw?.map ?? {}).map(([k, v]) => [k, fromSaved(v)]))
-  const expected = sheetColumns(map).map((c) => c.name)
-  const actual = (sheet.headers ?? []).filter((h) => !/^Column \d+$/.test(h))
-  if (!sheet.headers) return null
-  const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
-  if (expected.length === actual.length && expected.every((e, i) => same(e, actual[i]))) return null
+/** the rows that didn't become a lead: row number, its data, why; sync them again (after fixing the sheet) */
+function SkippedModal({ sheet, canEdit, onClose, onChanged, onError }: { sheet: FunnelSheet; canEdit: boolean; onClose: () => void; onChanged: (m: string) => void; onError: (m: string) => void }) {
+  const [rows, setRows] = useState<SkippedRow[] | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const load = () =>
+    listSkippedRows(sheet.id).then(setRows, (e: Error) => {
+      onError(e.message)
+      setRows([])
+    })
+  useEffect(() => {
+    void load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet.id])
+  const cols = (sheet.headers ?? []).filter((h) => (rows ?? []).some((r) => r.data?.[h]))
+
+  async function again(nos?: number[]) {
+    setBusy(nos ? `r-${nos[0]}` : 'all')
+    try {
+      const r = await retrySheetRows(sheet.id, nos)
+      onChanged(`${r.rows} row${r.rows === 1 ? '' : 's'} synced again: ${r.added} new lead${r.added === 1 ? '' : 's'}, ${r.updated} updated${r.skipped ? `, ${r.skipped} still skipped` : ''}.`)
+      await load()
+    } catch (e) {
+      onError((e as Error).message)
+    } finally {
+      setBusy(null)
+    }
+  }
+
   return (
-    <div className="alert alert-warning small">
-      <span className="row" style={{ gap: 6, flexWrap: 'nowrap', alignItems: 'flex-start' }}>
-        <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-        <span>
-          Row 1 of the sheet doesn’t match the Perisclaw setup. It should be: <b>{expected.join(' | ')}</b>
-          <br />
-          The sheet has: <b>{actual.length ? actual.join(' | ') : 'nothing'}</b>
-        </span>
-      </span>
-    </div>
+    <Modal
+      open
+      onClose={onClose}
+      width={980}
+      title={`Skipped rows · ${sheet.name}`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+          {canEdit && !!rows?.length && (
+            <div className="foot-end">
+              <Button onClick={() => void again()} disabled={!!busy}>
+                <RefreshCw size={14} className={cn(busy === 'all' && 'spin')} /> Sync all again
+              </Button>
+            </div>
+          )}
+        </>
+      }
+    >
+      <p className="muted small" style={{ marginTop: 0 }}>
+        These rows didn’t become a lead. Fix them in the sheet (e.g. add the phone number), then sync them again.
+      </p>
+      {!rows ? (
+        <Empty>Loading…</Empty>
+      ) : !rows.length ? (
+        <Empty>No skipped rows.</Empty>
+      ) : (
+        <div className="table-wrap">
+          <table className="table table-compact">
+            <thead>
+              <tr>
+                <th>Row</th>
+                <th>Why</th>
+                {cols.map((c) => (
+                  <th key={c}>{c}</th>
+                ))}
+                {canEdit && <th />}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <b>{r.row_no}</b>
+                  </td>
+                  <td className="danger-text small">{r.reason ?? '—'}</td>
+                  {cols.map((c) => (
+                    <td key={c} className="small">
+                      <span className="cell-clip" style={{ maxWidth: 180 }}>
+                        {r.data?.[c] || '—'}
+                      </span>
+                    </td>
+                  ))}
+                  {canEdit && (
+                    <td>
+                      <button type="button" className="btn btn-ghost btn-sm" disabled={!!busy} onClick={() => void again([r.row_no])}>
+                        <RefreshCw size={13} className={cn(busy === `r-${r.row_no}` && 'spin')} /> Sync again
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Modal>
   )
 }

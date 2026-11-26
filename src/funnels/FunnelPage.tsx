@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { ArrowLeft, CalendarDays, ChartLine, List, Pencil, Tag, UserCheck, Users, Workflow } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty } from '@/components/ui'
+import { SearchSelect } from '@/components/SearchSelect'
 import { listEvents, type EventRow } from '@/calendar/api'
 import { listFunnelLeads, listMemberOptions, listSources } from '@/leads/api'
 import type { LeadRow, MemberOption, Option } from '@/leads/types'
@@ -14,7 +15,7 @@ import { FunnelLeadsTable } from './FunnelLeadsTable'
 import { activeType } from '@/business/activeType'
 import { LandingPagesTab } from './LandingPagesTab'
 import { WebhooksTab } from './WebhooksTab'
-import { WhatsAppTab } from './WhatsAppTab'
+import { SheetsTab } from './SheetsTab'
 import { FunnelWorkflowsTab } from './FunnelWorkflowsTab'
 import { FunnelAdsTab } from './FunnelAdsTab'
 import { FunnelGoogleTab } from './FunnelGoogleTab'
@@ -40,7 +41,7 @@ const TABS = [
   { key: 'webhooks', label: 'Webhooks' },
   { key: 'workflows', label: 'Workflows' },
   { key: 'pages', label: 'Landing pages' },
-  { key: 'whatsapp', label: 'WhatsApp' },
+  { key: 'whatsapp', label: 'Sheets' },
 ] as const
 type TabKey = (typeof TABS)[number]['key']
 
@@ -66,13 +67,20 @@ export function FunnelPage() {
   const [leadRange, setLeadRange] = useState<Range>(() => presetRange('last30'))
   const [leadView, setLeadView] = useState<'graph' | 'list'>('graph')
   const [leadTemp, setLeadTemp] = useState('')
+  // Leads tab: the Google Sheet a lead came from
+  const [leadSheet, setLeadSheet] = useState('')
   const rangedLeads = useMemo(
     () =>
       (leads ?? []).filter((l) => {
         const d = isoDay(new Date(l.created_at))
-        return d >= leadRange.from && d <= leadRange.to && (!leadTemp || (leadTemp === 'none' ? !l.temperature : l.temperature === leadTemp))
+        return (
+          d >= leadRange.from &&
+          d <= leadRange.to &&
+          (!leadTemp || (leadTemp === 'none' ? !l.temperature : l.temperature === leadTemp)) &&
+          (!leadSheet || (leadSheet === 'none' ? !l.sheet_id : l.sheet_id === leadSheet))
+        )
       }),
-    [leads, leadRange, leadTemp],
+    [leads, leadRange, leadTemp, leadSheet],
   )
   const leadChart = useMemo(() => {
     if (!rangedLeads.length) return { days: [] as string[], lines: [] as Line[] }
@@ -302,7 +310,7 @@ export function FunnelPage() {
           )}
 
           {tab === 'whatsapp' && (
-            <WhatsAppTab
+            <SheetsTab
               funnelId={funnel.id}
               sheets={sheets}
               canEdit={can('funnels', 'edit')}
@@ -345,6 +353,18 @@ export function FunnelPage() {
                     </option>
                   ))}
                 </Select>
+                {!!sheets?.length && (
+                  <div className="filter-ss">
+                    <SearchSelect
+                      value={leadSheet || null}
+                      onChange={(v) => setLeadSheet(v ?? '')}
+                      options={[{ value: '', label: 'All sheets' }, ...sheets.map((x) => ({ value: x.id, label: x.name })), { value: 'none', label: 'Not from a sheet' }]}
+                      placeholder="Sheet"
+                      searchPlaceholder="Search sheets…"
+                      ariaLabel="Google Sheet"
+                    />
+                  </div>
+                )}
                 <DateRangePicker value={leadRange} onChange={setLeadRange} />
                 <div className="seg" role="group" aria-label="View">
                   <button type="button" className={leadView === 'graph' ? 'is-active' : undefined} onClick={() => setLeadView('graph')} title="Graph">
@@ -363,7 +383,7 @@ export function FunnelPage() {
             ) : leads.length === 0 ? (
               <Empty icon={Users}>No leads in this funnel yet.</Empty>
             ) : rangedLeads.length === 0 ? (
-              <Empty icon={Users}>No leads in these dates{leadTemp ? ' in this category' : ''}.</Empty>
+              <Empty icon={Users}>No leads in these dates{leadTemp ? ' in this category' : ''}{leadSheet ? ' from this sheet' : ''}.</Empty>
             ) : leadView === 'graph' ? (
               <div className="stack" style={{ gap: 8 }}>
                 <span className="muted small">Leads per day, and by category (each lead’s category now) · click a name below to hide / show its line</span>
@@ -375,8 +395,9 @@ export function FunnelPage() {
                 type={activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null)}
                 leads={rangedLeads}
                 sources={sources}
+                sheetName={(sid) => sheets?.find((x) => x.id === sid)?.name}
                 members={members}
-                resetKey={[leadRange, leadTemp]}
+                resetKey={[leadRange, leadTemp, leadSheet]}
                 onOpen={openLead}
                 onChanged={() => listFunnelLeads(funnel.id).then(setLeads)}
               />

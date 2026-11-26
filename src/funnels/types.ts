@@ -172,7 +172,7 @@ export type SubmissionRow = {
   created_at: string
 }
 
-/** A Google Sheet link on a funnel's WhatsApp tab: new rows become leads (synced every minute). */
+/** A Google Sheet link on a funnel's Sheets tab: new rows become leads (synced every minute). */
 export type FunnelSheet = {
   id: string
   tenant_id: string
@@ -194,10 +194,13 @@ export type FunnelSheet = {
   leads_added: number
   leads_updated: number
   rows_skipped: number
-  /** Perisclaw setup: example lead message + which part goes to which sheet column */
-  perisclaw: { example: string; map: Record<string, string> } | null
+  /** data rows in the sheet at the last read */
+  total_rows: number | null
   is_active: boolean
   created_at: string
 }
 
 export type SheetInput = { name: string; sheet_url: string; import_existing: boolean }
+
+/** a sheet row that didn't become a lead (row number, its data, why) */
+export type SkippedRow = { id: number; sheet_id: string; row_no: number; data: Record<string, string>; reason: string | null; skipped_at: string }

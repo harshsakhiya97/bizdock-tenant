@@ -46,3 +46,6 @@ export function toLocalInput(iso: string | null) {
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
+/** a lead's source; from a Google Sheet: “Google Sheet · <sheet name>” */
+export const leadSource = (source: string | undefined, sheet: string | undefined) => (sheet ? `Google Sheet · ${sheet}` : source)

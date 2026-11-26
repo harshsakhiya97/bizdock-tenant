@@ -13,7 +13,7 @@ import { POD_STEPS, listPodFacts, type PodFacts } from '@/funnels/podSteps'
 import { useAiRows } from '@/ai/insights'
 import { ConfirmModal, Empty, PageFoot, PageHead, SearchInput, StatCard } from '@/components/ui'
 import { SearchSelect } from '@/components/SearchSelect'
-import { listFunnels } from '@/funnels/api'
+import { listFunnels, listTenantSheets } from '@/funnels/api'
 import type { FunnelRow, StageRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
@@ -21,7 +21,7 @@ import { useTenant } from '@/tenant/useTenant'
 import { deleteLeads, listLeadExtras, listLeads, listLostReasons, listMemberOptions, listSources, logActivity, updateLeads, type LeadExtras } from './api'
 import { QuickAddLead } from './QuickAddLead'
 import { ImportLeadsModal } from './ImportLeadsModal'
-import { TEMPERATURES, followUp, fullName, money, tempOf } from './labels'
+import { TEMPERATURES, followUp, fullName, leadSource, money, tempOf } from './labels'
 import { StageMoveModal } from './StageMoveModal'
 import type { LeadRow, MemberOption, Option, Temperature } from './types'
 import { Flash } from '@/components/Flash'
@@ -31,8 +31,8 @@ import { ALL_DATES, DateRangePicker, isoDay, type Range } from '@/components/Dat
 import { listCustomerRevenue, type Revenue } from './customers'
 import { Select } from '@/components/Field'
 
-type Filters = { q: string; funnel: string; source: string; temp: string; owner: string; followUp: string; form: string; step: string; archived: boolean; sort: string; range: Range }
-const EMPTY: Filters = { q: '', funnel: '', source: '', temp: '', owner: '', followUp: '', form: '', step: '', archived: false, sort: 'newest', range: ALL_DATES }
+type Filters = { q: string; funnel: string; sheet: string; source: string; temp: string; owner: string; followUp: string; form: string; step: string; archived: boolean; sort: string; range: Range }
+const EMPTY: Filters = { q: '', funnel: '', sheet: '', source: '', temp: '', owner: '', followUp: '', form: '', step: '', archived: false, sort: 'newest', range: ALL_DATES }
 // the lead's creation date in the picked range
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
 
@@ -98,6 +98,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const Word = customers ? 'Customer' : 'Lead'
   const [funnels, setFunnels] = useState<FunnelRow[]>([])
   const [sources, setSources] = useState<Option[]>([])
+  // Google Sheets (Sheet filter and “Google Sheet · name” as the source)
+  const [sheets, setSheets] = useState<{ id: string; name: string; funnel_id: string }[]>([])
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [stageTab] = useState<string>('all')
@@ -135,6 +137,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id, businesses])
   useEffect(load, [load])
+  useEffect(() => {
+    listTenantSheets(tenant.id).then(setSheets, () => setSheets([]))
+  }, [tenant.id])
   // the cards' quick count, for the business picked in the top bar
   useEffect(() => {
     if (customers) return
@@ -205,6 +210,11 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   )
   // no Funnel / Source filter in any business: all funnels (Studio Rental with one funnel: that one)
   const funnel = studio && scopedFunnels.length === 1 ? scopedFunnels[0] : null
+  // the Sheet filter: the sheets of the funnels in view (one funnel open: its sheets)
+  const sheetOpts = useMemo(() => {
+    const ids = new Set((funnel ? [funnel] : scopedFunnels).map((f) => f.id))
+    return sheets.filter((x) => ids.has(x.funnel_id)).map((x) => ({ value: x.id, label: x.name }))
+  }, [sheets, scopedFunnels, funnel])
   const stageById = useMemo(() => {
     const m = new Map<string, StageRow>()
     for (const f of funnels) for (const s of f.funnel_stages) m.set(s.id, s)
@@ -212,7 +222,8 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   }, [funnels])
   const funnelName = (id: string | null) => (id ? (funnels.find((f) => f.id === id)?.name ?? '—') : 'No funnel')
   const noFunnel = false
-  const sourceName = (id: string | null) => sources.find((s) => s.id === id)?.name
+  const sheetName = (id: string | null) => (id ? sheets.find((x) => x.id === id)?.name : undefined)
+  const sourceOf = (l: LeadRow) => leadSource(sources.find((s) => s.id === l.source_id)?.name, sheetName(l.sheet_id))
   const ownerName = (id: string | null) => members.find((m) => m.id === id)?.name
   const wonStages = useMemo(() => new Set([...stageById.values()].filter((x) => x.kind === 'won').map((x) => x.id)), [stageById])
 
@@ -249,6 +260,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       )
       .filter((l) => !filters.funnel || (filters.funnel === 'none' ? !l.funnel_id : l.funnel_id === filters.funnel))
       .filter((l) => studio || !filters.source || l.source_id === filters.source)
+      .filter((l) => !filters.sheet || (filters.sheet === 'none' ? !l.sheet_id : l.sheet_id === filters.sheet))
       .filter((l) => !filters.temp || l.temperature === filters.temp)
       .filter((l) => inRange(l.created_at, filters.range))
       .filter((l) => !pp || !filters.form || formStep(l, extras.get(l.id)) === filters.form)
@@ -400,7 +412,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         funnelName(l.funnel_id),
         stageById.get(l.stage_id ?? '')?.name ?? '',
         tempOf(l.temperature)?.label ?? '',
-        sourceName(l.source_id) ?? '',
+        sourceOf(l) ?? '',
         ownerName(l.owner_id) ?? '',
         l.estimated_amount ?? '',
         l.next_follow_up_at ? new Date(l.next_follow_up_at).toLocaleString('en-IN') : '',
@@ -488,6 +500,18 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               searchPlaceholder="Search funnels…"
             />
           </div>
+          {sheetOpts.length > 0 && (
+            <div className="filter-ss">
+              <SearchSelect
+                value={filters.sheet || null}
+                onChange={(v) => setF('sheet', v ?? '')}
+                options={[{ value: '', label: 'All sheets' }, ...sheetOpts, { value: 'none', label: 'Not from a sheet' }]}
+                placeholder="Sheet"
+                searchPlaceholder="Search sheets…"
+                ariaLabel="Google Sheet"
+              />
+            </div>
+          )}
           <Select className="input input-sm filter-select" value={filters.owner} onChange={(e) => setF('owner', e.target.value)} aria-label="Owner">
             <option value="">Owner</option>
             <option value="none">Unassigned</option>
@@ -761,7 +785,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           kind={pp ? 'pp' : studio ? 'studio' : 'default'}
                           l={l}
                           x={extras.get(l.id)}
-                          source={sourceName(l.source_id)}
+                          source={sourceOf(l)}
                           funnel={funnelName(l.funnel_id)}
                           owner={ownerName(l.owner_id)}
                           stage={stageById.get(l.stage_id ?? '') ?? null}
@@ -778,7 +802,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                         />
                       ) : (
                       <>
-                      <td>{sourceName(l.source_id) ?? <span className="muted">—</span>}</td>
+                      <td>{sourceOf(l) ?? <span className="muted">—</span>}</td>
                       {!funnel && !studio && <td className="muted">{funnelName(l.funnel_id)}</td>}
                       <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
                       <td className={cn('nowrap', `fu-${fu.state}`)}>{fu.text}</td>
