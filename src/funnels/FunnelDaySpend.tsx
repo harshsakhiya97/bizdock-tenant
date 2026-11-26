@@ -892,9 +892,14 @@ function PerfCard({ title, platform, rows, by, openAd, tools, children }: { titl
         </div>
         <div className="row" style={{ gap: 8 }}>
           {tools}
-          <button type="button" className={`btn btn-sm ${table ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTable((t) => !t)} title={table ? 'Back to the chart' : 'See the table'}>
-            {table ? <ChartNoAxesColumn size={14} /> : <Table2 size={14} />} {table ? 'Chart' : 'Table'}
-          </button>
+          <div className="seg seg-sm" role="group" aria-label="View">
+            <button type="button" className={!table ? 'is-active' : undefined} onClick={() => setTable(false)}>
+              <ChartNoAxesColumn size={14} /> Chart
+            </button>
+            <button type="button" className={table ? 'is-active' : undefined} onClick={() => setTable(true)}>
+              <Table2 size={14} /> Table
+            </button>
+          </div>
         </div>
       </div>
       {!rows.length ? <div className="muted small">No spend or leads in these dates.</div> : table ? <PerfTable rows={rows} by={by} openAd={openAd} /> : children}

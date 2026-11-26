@@ -24,7 +24,7 @@ export const releases: Release[] = [
       'Lead page → More Fields: Source, Campaign Name, Adset Name, Ad Name, fbclid, gclid always shown — the names looked up from the IDs in the page URL (else the UTMs); Google Sheet leads show the sheet’s name as the campaign. Every lead filled once.',
     ],
     improved: [
-      'Funnel → Facebook Ads / Google Ads: the linked campaigns as chips (status dot, name, spend; details on hover).',
+      'Funnel → Facebook Ads / Google Ads: the linked campaigns as chips (status dot, name, spend; details on hover). Each report has a Chart / Table switch.',
       'WhatsApp → Individual chat: 20 chats at a time with Show more; search asks the server (by name or number).',
       'Lead page → Lead Information: Role instead of Tags.',
     ],
