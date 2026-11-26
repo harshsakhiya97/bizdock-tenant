@@ -23,7 +23,6 @@ import { db } from '@/lib/supabase'
 import { FunnelPaymentsTab } from './FunnelPaymentsTab'
 import { FunnelOverviewReport } from './FunnelOverviewReport'
 import { listWorkflows } from '@/workflows/api'
-import { funnelCampaignCount } from '@/meta/api'
 import { typeLabel } from './templates'
 import type { FunnelRow, FunnelSheet, FunnelWebhook, LandingPage, SubmissionRow } from './types'
 import { Flash } from '@/components/Flash'
@@ -104,12 +103,14 @@ export function FunnelPage() {
   // Google campaigns added to this funnel
   const [gCount, setGCount] = useState<number | null>(null)
   const loadAds = useCallback(() => {
-    funnelCampaignCount(id).then(setAdCount, () => setAdCount(null))
+    // only the campaigns that match the funnel's tags (as the tabs list them)
     db()
-      .from('funnel_google_links')
-      .select('id', { count: 'exact', head: true })
-      .eq('funnel_id', id)
-      .then(({ count }) => setGCount(count ?? 0))
+      .rpc('funnel_campaign_counts', { p_funnel: id })
+      .then(({ data }) => {
+        const c = data as { meta: number; google: number } | null
+        setAdCount(c?.meta ?? null)
+        setGCount(c?.google ?? null)
+      })
   }, [id])
   const [sources, setSources] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
