@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { AlertTriangle, CalendarCheck, Download, ExternalLink, KanbanSquare, List, Plus, Users, Wallet } from 'lucide-react'
+import { AlertTriangle, CalendarCheck, Download, KanbanSquare, List, Plus, Users, Wallet } from 'lucide-react'
 import { Act, Acts } from '@/components/Acts'
 import { useAuth } from '@/auth/useAuth'
 import { BT, isOrderType, type SubBusinessType } from '@/auth/auth-context'
@@ -380,7 +380,6 @@ export function CustomersPage() {
                           <td className="nowrap">{ownerName(l.owner_id) ?? <span className="muted">Unassigned</span>}</td>
                           <td className="nowrap">
                             <Acts>
-                              <Act icon={ExternalLink} label="Open" onClick={() => navigate(`/customers/${l.id}`)} />
                               {canBook && <Act icon={Plus} label={`Add ${isOrderType(t) ? orderNoun(t).one.toLowerCase() : 'booking'}`} onClick={() => void addBooking(l)} />}
                             </Acts>
                           </td>
