@@ -13,6 +13,9 @@ import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelSheet, SheetInput, SkippedRow } from './types'
 import { useCopy } from './useCopy'
 
+/** the lead fields a sheet column can go into: the form fields, and Lead date (a new lead's date, India time) */
+const SHEET_TARGETS: { value: string; label: string }[] = LEAD_TARGETS.flatMap((t) => (t.value === 'email' ? [t, { value: 'lead_date', label: 'Lead date' }] : [t]))
+
 /** A funnel's Sheets tab: Google Sheet links; new rows become leads every minute (only the phone is needed). */
 export function SheetsTab({
   funnelId,
@@ -281,7 +284,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
                       className="input-sm"
                       ariaLabel={`${k} saved as`}
                       value={target(k)}
-                      options={LEAD_TARGETS.map((t) => ({ value: t.value, label: t.value === 'extra' ? `Extra field (${k})` : t.label }))}
+                      options={SHEET_TARGETS.map((t) => ({ value: t.value, label: t.value === 'extra' ? `Extra field (${k})` : t.label }))}
                       onChange={(v) => {
                         if (!v) return
                         setMap((m) => ({ ...m, [k]: v }))
@@ -289,7 +292,7 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
                       }}
                     />
                   ) : (
-                    targetLabel(target(k))
+                    (SHEET_TARGETS.find((t) => t.value === target(k))?.label ?? targetLabel(target(k)))
                   )}
                 </td>
               </tr>
