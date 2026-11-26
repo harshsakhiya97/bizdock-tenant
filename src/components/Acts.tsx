@@ -4,8 +4,8 @@ import { Link } from 'react-router'
 import { cn } from '@/lib/cn'
 
 /**
- * A list row's actions, the same everywhere: one line at the end of the row, 32px buttons. Each action is an icon
- * with its name as a tooltip; the row's main action (at most one) is a small labelled button; delete is red.
+ * A list row's actions, the same everywhere: one line at the end of the row, 32px icon buttons, each with its name as a
+ * tooltip; the row's main action (at most one) is filled in the brand colour; delete is red.
  * Clicks don't open the row.
  */
 export function Acts({ children, className }: { children: ReactNode; className?: string }) {
@@ -23,7 +23,7 @@ type ActProps = {
   onClick?: (e: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   tone?: 'danger' | 'success'
-  /** the row's main action: a small labelled button */
+  /** the row's main action: filled in the brand colour */
   main?: boolean
   /** spinning icon (busy) */
   spin?: boolean
@@ -35,13 +35,9 @@ type ActProps = {
 }
 
 export function Act({ icon: Icon, label, onClick, disabled, tone, main, spin, to, href, target }: ActProps) {
-  const cls = cn(main ? 'act-main' : 'act', tone && `is-${tone}`)
-  const inner = (
-    <>
-      <Icon size={main ? 14 : 16} className={cn(spin && 'spin')} />
-      {main && <span>{label}</span>}
-    </>
-  )
+  // every action the same: a 32px icon button with its name as a tooltip; the row's main action is filled (brand colour)
+  const cls = cn('act', main ? 'is-main' : tone && `is-${tone}`)
+  const inner = <Icon size={16} className={cn(spin && 'spin')} />
   if (to)
     return (
       <Link className={cls} to={to} target={target} title={label} aria-label={label} onClick={(e) => e.stopPropagation()}>

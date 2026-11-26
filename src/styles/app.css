@@ -2100,3 +2100,5 @@ details.rec-section summary { cursor: pointer; }
 .table td .btn-icon.danger-text { color: var(--danger); }
 .table td .btn-icon.danger-text:hover:not(:disabled) { background: var(--danger-soft); border-color: var(--danger-soft); }
 .table td .btn-sm { height: 32px; }
+.act.is-main { background: var(--brand); border-color: var(--brand); color: #fff; }
+.act.is-main:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); color: #fff; }
