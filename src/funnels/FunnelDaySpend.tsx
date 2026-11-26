@@ -15,7 +15,7 @@ const short = (s: string) => dt(s).toLocaleDateString('en-IN', { day: 'numeric',
 
 type By = 'date' | 'campaign' | 'adset' | 'ad'
 type Period = 'day' | 'week' | 'month'
-type Col = 'ads' | 'spend' | 'gst' | 'sub'
+type Col = 'ads' | 'spend' | 'gst'
 type SortKey = 'name' | 'ads' | 'spend'
 
 type Ad = { ad_id: string; name: string; account: string; campaign: string; adset: string; spend: number; gst: number }
@@ -29,7 +29,6 @@ const BY: { key: By; label: string }[] = [
   { key: 'ad', label: 'Ad' },
 ]
 const COLS: { key: Col; label: string }[] = [
-  { key: 'sub', label: 'Account · campaign · ad set (grey line)' },
   { key: 'ads', label: 'Ads' },
   { key: 'spend', label: 'Spend (without GST)' },
   { key: 'gst', label: 'Spend + GST' },
@@ -96,7 +95,7 @@ export function FunnelDaySpend({
   const [view, setView] = useState<'graph' | 'list'>(() => stored('spend:view', 'list'))
   const [by, setBy] = useState<By>(() => stored('spend:by', 'date'))
   const [period, setPeriod] = useState<Period>(() => stored('spend:period', 'day'))
-  const [cols, setCols] = useState<Record<Col, boolean>>(() => ({ ads: true, spend: true, gst: false, sub: true, ...stored('spend:cols', {}) }))
+  const [cols, setCols] = useState<Record<Col, boolean>>(() => ({ ads: true, spend: true, gst: false, ...stored('spend:cols', {}) }))
   const [sort, setSort] = useState<{ k: SortKey; desc: boolean } | null>(null)
   const [data, setData] = useState<{ days: { day: string; account_id: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }[]; ads: Map<string, string>; objs?: Map<string, GAd> } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -366,7 +365,7 @@ export function FunnelDaySpend({
                           {by === 'date' && (isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
                           {by === 'date' ? <b>{r.name}</b> : <span>{r.name}</span>}
                         </span>
-                        {cols.sub && r.sub && <div className="muted small">{r.sub}</div>}
+                        {r.sub && <div className="muted small">{r.sub}</div>}
                       </td>
                       {cols.ads && <td className="num muted">{r.ads.size}</td>}
                       {cols.spend && (
@@ -381,7 +380,7 @@ export function FunnelDaySpend({
                         <tr key={`${r.key}-${a.ad_id}`} className="is-clickable" title="See the ad" onClick={() => openAd(a)}>
                           <td style={{ paddingLeft: 32 }}>
                             {a.name}
-                            {cols.sub && <div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>}
+                            {<div className="muted small">{[a.account, a.campaign, a.adset].filter(Boolean).join(' · ')}</div>}
                           </td>
                           {cols.ads && <td />}
                           {cols.spend && <td className="num nowrap">{money(a.spend, a.gst)}</td>}
