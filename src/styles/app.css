@@ -2172,3 +2172,12 @@ details.rec-section summary { cursor: pointer; }
 .adsd-tag.is-bad { background: var(--danger-soft); color: var(--danger); }
 .adsd-tag.is-warn { background: var(--warning-soft); color: var(--warning); }
 @media (max-width: 640px) { .adsd-board-row { grid-template-columns: 30px minmax(0, 1fr) 70px; } .adsd-board-row > :nth-child(n+4) { display: none; } }
+/* Funnel ads tabs: linked campaigns as chips (status dot · name · spend; hover: account, objective, status, tag) */
+.camp-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.camp-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 6px 12px 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 13px; cursor: default; }
+.camp-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.camp-chip b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.camp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: var(--text-muted); padding: 0; }
+.camp-dot.badge-success { background: var(--success); }
+.camp-dot.badge-warning { background: var(--warning); }
+.camp-dot.badge-danger { background: var(--danger); }

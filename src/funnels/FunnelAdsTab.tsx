@@ -106,30 +106,23 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
       {!mine.length ? (
         <Empty icon={Megaphone}>No campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
       ) : (
-        <div className="card ad-tree">
-          {mine.map((l) => {
-            const c = campById.get(l.campaign_id)
-            const s = l.adset_id ? setById.get(l.adset_id) : null
-            const st = s ? s.effective_status : (c?.effective_status ?? null)
-            const sp = l.adset_id ? spend.s.get(l.adset_id) : spend.c.get(l.campaign_id)
-            return (
-              <div key={l.id} className="ad-tree-item">
-                <div className="ad-tree-row">
-                  <div className="ad-tree-main">
-                    <b>{c?.name ?? l.campaign_id}</b>
-                    <span className="muted small">
-                      {c ? accName.get(c.account_id) : ''}
-                      {s ? ` · only ad set ${s.name ?? s.adset_id}` : ''}
-                      {c?.objective ? ` · ${statusLabel(c.objective.replace(/^OUTCOME_/, ''))}` : ''}
-                    </span>
-                  </div>
-                  <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>
-                  <span className={cn('badge', statusTone(st))}>{statusLabel(st)}</span>
-                  <span className="num ad-tree-spend">{sp ? inr(sp) : '—'}</span>
-                </div>
-              </div>
-            )
-          })}
+        <div className="camp-chips">
+          {[...mine]
+            .sort((a, b) => (spend.c.get(b.campaign_id) ?? 0) - (spend.c.get(a.campaign_id) ?? 0))
+            .map((l) => {
+              const c = campById.get(l.campaign_id)
+              const s = l.adset_id ? setById.get(l.adset_id) : null
+              const st = s ? s.effective_status : (c?.effective_status ?? null)
+              const sp = l.adset_id ? spend.s.get(l.adset_id) : spend.c.get(l.campaign_id)
+              const info = [c ? accName.get(c.account_id) : '', s ? `only ad set ${s.name ?? s.adset_id}` : '', c?.objective ? statusLabel(c.objective.replace(/^OUTCOME_/, '')) : '', statusLabel(st), `tag ${tagHit(c?.name, tags) ?? ''}`]
+              return (
+                <span key={l.id} className="camp-chip" title={info.filter(Boolean).join(' · ')}>
+                  <i className={cn('camp-dot', statusTone(st))} />
+                  <span className="camp-chip-name">{c?.name ?? l.campaign_id}</span>
+                  <b>{sp ? inr(sp) : '—'}</b>
+                </span>
+              )
+            })}
         </div>
       )}
 

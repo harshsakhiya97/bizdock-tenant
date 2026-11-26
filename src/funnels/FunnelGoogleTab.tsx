@@ -95,27 +95,21 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
       {!mine.length ? (
         <Empty icon={ChartNoAxesColumn}>No Google campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
       ) : (
-        <div className="card ad-tree">
-          {mine.map((l) => {
-            const c = campById.get(l.campaign_id)
-            const sp = spend.get(l.campaign_id)
-            return (
-              <div key={l.id} className="ad-tree-item">
-                <div className="ad-tree-row">
-                  <div className="ad-tree-main">
-                    <b>{c?.name ?? l.campaign_id}</b>
-                    <span className="muted small">
-                      {c ? accName.get(c.account_id) : ''}
-                      {c?.channel ? ` · ${gWord(c.channel)}` : ''}
-                    </span>
-                  </div>
-                  <span className="tag-chip ad-tree-tag" title="Matched tag">{tagHit(c?.name, tags)}</span>
-                  <span className={cn('badge', gTone(c?.status ?? null))}>{gWord(c?.status ?? null)}</span>
-                  <span className="num ad-tree-spend">{sp ? inr(sp) : '—'}</span>
-                </div>
-              </div>
-            )
-          })}
+        <div className="camp-chips">
+          {[...mine]
+            .sort((a, b) => (spend.get(b.campaign_id) ?? 0) - (spend.get(a.campaign_id) ?? 0))
+            .map((l) => {
+              const c = campById.get(l.campaign_id)
+              const sp = spend.get(l.campaign_id)
+              const info = [c ? accName.get(c.account_id) : '', c?.channel ? gWord(c.channel) : '', gWord(c?.status ?? null), `tag ${tagHit(c?.name, tags) ?? ''}`]
+              return (
+                <span key={l.id} className="camp-chip" title={info.filter(Boolean).join(' · ')}>
+                  <i className={cn('camp-dot', gTone(c?.status ?? null))} />
+                  <span className="camp-chip-name">{c?.name ?? l.campaign_id}</span>
+                  <b>{sp ? inr(sp) : '—'}</b>
+                </span>
+              )
+            })}
         </div>
       )}
 
