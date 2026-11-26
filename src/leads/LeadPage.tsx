@@ -2,7 +2,7 @@ import { orderNoun } from '@/business/activeType'
 import { BT, isOrderType } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
-import { ArrowLeft, Building2, CalendarClock, ChevronDown, ClipboardList, Clock3, FileText, GraduationCap, Handshake, History, Layers, Link2, Mail, MapPin, Package, Phone, Route, Tag, Target, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet, type LucideIcon } from 'lucide-react'
+import { ArrowLeft, Briefcase, Building2, CalendarClock, ChevronDown, ClipboardList, Clock3, FileText, GraduationCap, Handshake, History, Layers, Link2, Mail, MapPin, Package, Phone, Route, Tag, Target, UserRound, Video, Pencil, Receipt, Star, Trash2, Wallet, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { listBookings } from '@/bookings/api'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
@@ -231,20 +231,7 @@ export function LeadPage() {
     ['Source', sourceName ?? '—'],
     ['Purpose', lead.purpose || '—'],
     ...(lead.webinar_category ? ([['Webinar category', lead.webinar_category]] as [string, React.ReactNode][]) : []),
-    [
-      'Tags',
-      lead.tags.length ? (
-        <span className="row" style={{ gap: 4, flexWrap: 'wrap' }}>
-          {lead.tags.map((t) => (
-            <span key={t} className="tag-chip">
-              {t}
-            </span>
-          ))}
-        </span>
-      ) : (
-        '—'
-      ),
-    ],
+    ['Role', String(lead.extra?.role ?? '').trim() || '—'],
     ['Business', biz ? (subName ? `${biz} · ${subName}` : biz) : '—'],
     ['Owner', ownerName ?? '—'],
   ]
@@ -672,6 +659,7 @@ const FIELD_ICON: Record<string, LucideIcon> = {
   Purpose: Target,
   'Webinar category': GraduationCap,
   Tags: Tag,
+  Role: Briefcase,
   Business: Building2,
   Owner: UserRound,
 }
