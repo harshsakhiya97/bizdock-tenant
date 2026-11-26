@@ -429,6 +429,10 @@ export function LeadPage() {
                 }}
                 onBilling={canInv || canPay ? toMoneyTab : undefined}
                 onBillTo={canEdit ? () => setBillTo(true) : undefined}
+                onTab={(t) => {
+                  setTab(t)
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
                 refreshKey={refresh}
               />
               <section className="card lead-sec">

@@ -39,6 +39,7 @@ export function LeadGlance({
   billing: m,
   onBilling,
   onBillTo,
+  onTab,
   refreshKey,
 }: {
   leadId: string
@@ -51,6 +52,8 @@ export function LeadGlance({
   onBilling?: () => void
   /** edits the billing details (Bill to) */
   onBillTo?: () => void
+  /** opens the lead page's tab: Follow-ups (next follow-up, calls, WhatsApp) or Meetings */
+  onTab?: (tab: 'followups' | 'meetings') => void
   refreshKey?: number
 }) {
   const [g, setG] = useState<Glance | null>(null)
@@ -72,7 +75,7 @@ export function LeadGlance({
         {t ? <span className={cn('badge', t.tone)}>{t.label}</span> : '—'}
         {g?.category_since && <span className="muted small"> · since {at(g.category_since)}</span>}
       </Item>
-      <Item icon={CalendarClock} label="Next follow-up" tone={late ? 'danger' : undefined}>
+      <Item icon={CalendarClock} label="Next follow-up" tone={late ? 'danger' : undefined} onClick={onTab && (() => onTab('followups'))}>
         {nf ? (
           <>
             <b>{at(nf.due_at)}</b>
@@ -89,7 +92,7 @@ export function LeadGlance({
           </div>
         )}
       </Item>
-      <Item icon={PhoneCall} label="Calls">
+      <Item icon={PhoneCall} label="Calls" onClick={onTab && (() => onTab('followups'))}>
         {g?.calls.total ? (
           <>
             <b>{g.calls.total}</b> total · <b>{g.calls.connected}</b> connected
@@ -105,7 +108,7 @@ export function LeadGlance({
           <span className="muted">No calls yet</span>
         )}
       </Item>
-      <Item icon={Handshake} label="Meetings">
+      <Item icon={Handshake} label="Meetings" onClick={onTab && (() => onTab('meetings'))}>
         {g?.next_meeting || g?.last_meeting ? (
           <>
             {g.next_meeting && (
@@ -159,7 +162,7 @@ export function LeadGlance({
           <span className="muted">Billing details not added</span>
         )}
       </Item>
-      <Item icon={MessageCircle} label="WhatsApp">
+      <Item icon={MessageCircle} label="WhatsApp" onClick={onTab && (() => onTab('followups'))}>
         {g?.whatsapp ? (
           <>
             {g.whatsapp.direction === 'in' ? 'Received' : cap(g.whatsapp.status) || 'Sent'} · {at(g.whatsapp.at)}
