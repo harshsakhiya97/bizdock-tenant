@@ -15,6 +15,7 @@ export function Kanban<T>({
   keyOf,
   colOf,
   card,
+  sortIn,
   canDrop,
   onDrop,
   onOpen,
@@ -24,7 +25,9 @@ export function Kanban<T>({
   items: T[]
   keyOf: (x: T) => string
   colOf: (x: T) => string
-  card: (x: T) => ReactNode
+  card: (x: T, col: string) => ReactNode
+  /** each column's own order */
+  sortIn?: (col: string, a: T, b: T) => number
   /** may this card be dropped on that column (a later one, and the person may do that step) */
   canDrop: (x: T, to: string) => boolean
   onDrop: (x: T, to: string) => void
@@ -41,6 +44,7 @@ export function Kanban<T>({
     <div className="board">
       {cols.map((c) => {
         const list = items.filter((x) => colOf(x) === c.key)
+        if (sortIn) list.sort((a, b) => sortIn(c.key, a, b))
         const n = shown[c.key] ?? PAGE
         return (
           <section
@@ -81,7 +85,7 @@ export function Kanban<T>({
                   }}
                   onClick={() => onOpen(x)}
                 >
-                  {card(x)}
+                  {card(x, c.key)}
                 </article>
               ))}
               {list.length > n && (

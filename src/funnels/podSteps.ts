@@ -33,7 +33,22 @@ export async function listPodFacts(tenantId: string): Promise<Map<string, PodFac
 }
 
 /** Paid Podcast board: per lead — follow-up calls done, meetings (booked / done / no-show, its date), the shoot and its money */
-export type PodBoardFacts = { fu_done: number; m_booked: boolean; m_done: boolean; m_noshow: boolean; meeting_on: string | null; shoot: boolean; shoot_on: string | null; billed: number; paid: number }
+export type PodBoardFacts = {
+  fu_done: number
+  last_fu_at: string | null
+  last_fu_outcome: string | null
+  m_booked: boolean
+  m_done: boolean
+  m_noshow: boolean
+  /** the meeting shown: the next one, else the latest */
+  meeting_on: string | null
+  meeting_at: string | null
+  meeting_status: string | null
+  shoot: boolean
+  shoot_on: string | null
+  billed: number
+  paid: number
+}
 export async function listPodBoard(tenantId: string): Promise<Map<string, PodBoardFacts>> {
   const { data, error } = await db().rpc('pod_board', { p_tenant: tenantId })
   if (error) throw error

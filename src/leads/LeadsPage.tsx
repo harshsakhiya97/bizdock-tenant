@@ -336,6 +336,42 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     if (b && b.fu_done > 0) return 'followups'
     return 'leads'
   }
+  const today = isoDay(new Date())
+  const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+  const dayOf = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+  const timeOf = (t: string) => new Date(`2000-01-01T${t}`).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })
+  /** each column's order: Leads newest; Follow-ups today, overdue, upcoming, none; Meetings today, needs update,
+   *  upcoming, then done / no-show; Closed by podcast date (upcoming first); Not Interested latest first */
+  const podSort = (col: string, a: LeadRow, b: LeadRow) => {
+    const fa = board?.get(a.id)
+    const fb = board?.get(b.id)
+    if (col === 'followups') {
+      const rank = (l: LeadRow) => {
+        if (!l.next_follow_up_at) return 3
+        const d = isoDay(new Date(l.next_follow_up_at))
+        return d === today ? 0 : d < today ? 1 : 2
+      }
+      return rank(a) - rank(b) || (a.next_follow_up_at ?? '').localeCompare(b.next_follow_up_at ?? '') || (fb?.last_fu_at ?? '').localeCompare(fa?.last_fu_at ?? '')
+    }
+    if (col === 'meetings') {
+      const rank = (f: PodBoardFacts | undefined) => {
+        const d = f?.meeting_on
+        if (!d) return 4
+        if (f.meeting_status === 'done' || f.meeting_status === 'no_show') return 3
+        return d === today ? 0 : d < today ? 1 : 2
+      }
+      const ra = rank(fa)
+      const key = (f: PodBoardFacts | undefined) => `${f?.meeting_on ?? ''} ${f?.meeting_at ?? ''}`
+      return ra - rank(fb) || (ra === 3 ? key(fb).localeCompare(key(fa)) : key(fa).localeCompare(key(fb)))
+    }
+    if (col === 'closed') {
+      const rank = (f: PodBoardFacts | undefined) => (!f?.shoot_on ? 2 : f.shoot_on >= today ? 0 : 1)
+      const ra = rank(fa)
+      return ra - rank(fb) || (ra === 0 ? (fa?.shoot_on ?? '').localeCompare(fb?.shoot_on ?? '') : (fb?.shoot_on ?? '').localeCompare(fa?.shoot_on ?? ''))
+    }
+    if (col === 'not_interested') return b.updated_at.localeCompare(a.updated_at)
+    return b.created_at.localeCompare(a.created_at)
+  }
   // a stat card's records
   const [statShow, setStatShow] = useState<StatShow<LeadRow> | null>(null)
   const showLeads = (title: string, f: (l: LeadRow) => boolean) => () => setStatShow({ title, rows: base.filter(f), cols: leadCols(members) })
@@ -777,20 +813,63 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   if (st) requestMove([l.id], st)
                 }
               }}
-              card={(l) => {
+              sortIn={podSort}
+              card={(l, col) => {
                 const t = tempOf(l.temperature)
                 const fu = followUp(l.next_follow_up_at)
                 const b = board.get(l.id)
+                const ms = b?.meeting_status ?? ''
                 return (
                   <>
                     <div className="row-between" style={{ gap: 6 }}>
                       <b className="cell-clip">{fullName(l)}</b>
                       {t && <span className={cn('badge', t.tone)}>{t.label}</span>}
                     </div>
-                    <small className="muted">{l.phone}</small>
-                    <small className="muted cell-clip">{ownerName(l.owner_id) ?? 'Unassigned'}</small>
-                    {b?.meeting_on && <small>Meeting {new Date(`${b.meeting_on}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</small>}
-                    {fu.state !== 'none' && <span className={cn('small fu', `fu-${fu.state}`)}>Follow-up {fu.text}</span>}
+                    <small className="muted">
+                      {l.phone} · {ownerName(l.owner_id) ?? 'Unassigned'}
+                    </small>
+                    {col === 'leads' && <small>Lead date {when(l.created_at)}</small>}
+                    {col === 'followups' && (
+                      <>
+                        {b?.last_fu_at && (
+                          <small className="muted cell-clip">
+                            Last {when(b.last_fu_at)}
+                            {b.last_fu_outcome ? ` · ${b.last_fu_outcome}` : ''}
+                          </small>
+                        )}
+                        <span className={cn('small fu', `fu-${fu.state}`)}>{fu.state === 'none' ? 'No next follow-up' : `Next ${fu.text}`}</span>
+                      </>
+                    )}
+                    {col === 'meetings' && b?.meeting_on && (
+                      <div className="row-between small" style={{ gap: 6 }}>
+                        <span>
+                          {dayOf(b.meeting_on)}
+                          {b.meeting_at ? `, ${timeOf(b.meeting_at)}` : ''}
+                        </span>
+                        <span className={cn('badge', ms === 'done' ? 'badge-success' : ms === 'no_show' ? 'badge-danger' : b.meeting_on < today ? 'badge-warning' : 'badge-info')}>
+                          {ms === 'done' ? 'Done' : ms === 'no_show' ? 'No-show' : b.meeting_on < today ? 'Needs update' : b.meeting_on === today ? 'Today' : 'Booked'}
+                        </span>
+                      </div>
+                    )}
+                    {col === 'closed' &&
+                      (b?.shoot_on ? (
+                        <>
+                          <small>Podcast {dayOf(b.shoot_on)}</small>
+                          {b.billed > 0 && (
+                            <div className="row-between small" style={{ gap: 6 }}>
+                              <span className="tone-success">{money(b.paid)} paid</span>
+                              {b.billed - b.paid > 0.01 ? <b className="tone-danger">{money(b.billed - b.paid)} due</b> : <span className="badge badge-success">Paid ✓</span>}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <small className="muted">No podcast booked yet</small>
+                      ))}
+                    {col === 'not_interested' && (
+                      <small className="muted cell-clip">
+                        {lostReasons.find((r) => r.id === l.lost_reason_id)?.name ?? 'No reason'} · {when(l.updated_at)}
+                      </small>
+                    )}
                   </>
                 )
               }}
