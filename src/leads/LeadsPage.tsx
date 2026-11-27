@@ -318,6 +318,21 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       })
   }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras, stepped, STEPS, factsOf, wonStages])
 
+  // Step column: the furthest step the lead has reached (Paid Podcast / Creative Studio)
+  const stepOf = useCallback(
+    (l: LeadRow): { label: string; tone: string } => {
+      const order = pod ? ['closed', 'not_interested', 'done', 'noshow', 'booked', 'vsl'] : ['closed', 'not_interested', 'followup']
+      const f = factsOf(l.id)
+      for (const k of order) {
+        const st = STEPS.find((x) => x.key === k)
+        if (st && st.pick(l, f, wonStages))
+          return { label: st.label, tone: k === 'closed' ? 'badge-success' : k === 'not_interested' ? 'badge-danger' : k === 'noshow' ? 'badge-warning' : 'badge-info' }
+      }
+      return { label: pod ? 'Opted in' : 'No follow-up yet', tone: 'badge-muted' }
+    },
+    [pod, STEPS, factsOf, wonStages],
+  )
+
   // Funnel step filter: how many of this business's leads are at each step
   const stepCounts = useMemo(() => {
     const m = new Map<string, number>()
@@ -914,7 +929,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                       <th>Category</th>
                       <th>Source</th>
                       <th>Funnel</th>
-                      <th>Owner</th>
+                      <th>{stepped ? 'Step' : 'Owner'}</th>
                       {pp && <th>Form</th>}
                       {studio && (
                         <>
@@ -975,6 +990,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           source={sourceOf(l)}
                           funnel={funnelName(l.funnel_id)}
                           owner={ownerName(l.owner_id)}
+                          funnelStep={stepped ? stepOf(l) : undefined}
                           stage={stageById.get(l.stage_id ?? '') ?? null}
                           fu={fu}
                           canFollowUp={can('follow_ups', 'add') || can('leads', 'edit')}
@@ -1137,6 +1153,7 @@ export function LeadCells({
   source,
   funnel,
   owner,
+  funnelStep,
   stage,
   fu,
   canFollowUp,
@@ -1153,6 +1170,8 @@ export function LeadCells({
   /** the Leads list shows the funnel's name (a funnel's own table doesn't) */
   funnel?: string
   owner: string | undefined
+  /** Paid Podcast / Creative Studio lists: the lead's funnel step instead of the owner */
+  funnelStep?: { label: string; tone: string }
   stage: StageRow | null
   fu: { text: string; state: string }
   canFollowUp: boolean
@@ -1174,7 +1193,13 @@ export function LeadCells({
       <td>{t ? <span className={cn('badge', t.tone)}>{t.label}</span> : <span className="muted">—</span>}</td>
       <td>{source ?? <span className="muted">—</span>}</td>
       {funnel !== undefined && <td>{l.funnel_id ? funnel : <span className="muted">No funnel</span>}</td>}
-      <td className="nowrap">{owner ?? <span className="muted">Unassigned</span>}</td>
+      {funnelStep ? (
+        <td>
+          <span className={cn('badge', funnelStep.tone)}>{funnelStep.label}</span>
+        </td>
+      ) : (
+        <td className="nowrap">{owner ?? <span className="muted">Unassigned</span>}</td>
+      )}
       {kind === 'studio' && (
         <>
           <td>{l.purpose || extraOf(l, 'purpose') || <span className="muted">—</span>}</td>
