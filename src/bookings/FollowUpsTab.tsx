@@ -331,7 +331,7 @@ export function FollowUpsTab({
                   <tr>
                     <th>Date</th>
                     <th>Outcome</th>
-                    <th>Conversation</th>
+                    <th>Comments</th>
                     <th>By</th>
                   </tr>
                 </thead>
