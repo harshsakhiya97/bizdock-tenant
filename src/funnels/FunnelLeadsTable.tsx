@@ -121,7 +121,6 @@ export function FunnelLeadsTable({
                     <>
                       <th>Purpose</th>
                       <th>Time</th>
-                      <th>Description</th>
                     </>
                   )}
                   <th>Last comment</th>

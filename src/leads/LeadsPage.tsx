@@ -924,7 +924,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                   </th>
                   <th>{Word}</th>
                   {!customers ? (
-                    // the same columns in every business, plus Form (Paid Podcast) or Purpose / Time / Description (Studio Rental)
+                    // the same columns in every business, plus Form (Paid Podcast) or Purpose / Time (Studio Rental)
                     <>
                       <th>Category</th>
                       <th>Source</th>
@@ -935,7 +935,6 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                         <>
                           <th>Purpose</th>
                           <th>Time</th>
-                          <th>Description</th>
                         </>
                       )}
                       <th>Last comment</th>
@@ -1144,7 +1143,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   )
 }
 
-/** A lead row (every business): Category, Source, Owner, then Form (Paid Podcast) or Purpose / Time / Description
+/** A lead row (every business): Category, Source, Owner, then Form (Paid Podcast) or Purpose / Time
  *  (Studio Rental), Last comment, Follow-ups done, Next follow-up, Lead date and the Follow-up / Meeting / ✕ buttons */
 export function LeadCells({
   kind,
@@ -1204,7 +1203,6 @@ export function LeadCells({
         <>
           <td>{l.purpose || extraOf(l, 'purpose') || <span className="muted">—</span>}</td>
           <td className="nowrap">{extraOf(l, 'time') || <span className="muted">—</span>}</td>
-          <td>{extraOf(l, 'describes') || <span className="muted">—</span>}</td>
         </>
       )}
       {kind === 'pp' && <td className="nowrap">
