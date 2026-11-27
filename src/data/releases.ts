@@ -13,6 +13,28 @@ export type Release = {
 // Newest first. The first entry is shown as "Current".
 export const releases: Release[] = [
   {
+    version: '0.39',
+    date: '2026-11-27',
+    title: 'Creative Studio steps and board, sheets tied to ad campaigns, much faster pages',
+    summary: 'Creative Studio gets its own funnel steps (Scorecard, Funnel step filter, Step column, Board); a Google Sheet can be tied to a Facebook / Google campaign; access checks are worked out once per request, so lists no longer time out.',
+    new: [
+      'Creative Studio funnels: Scorecard Funnel rows Opt-in → Follow-up done / No follow-up yet → Closed / Not interested; the same steps as a Funnel step filter (with counts) in its lead list.',
+      'Creative Studio → Leads: List / Board (Leads → Follow-ups → Closed / Not Interested), like Paid Podcast without meetings.',
+      'Paid Podcast and Creative Studio lead lists: a Step column (the furthest step the lead has reached) instead of Owner.',
+      'Funnel → Sheets → Edit: Leads come from ads on None / Facebook / Google, then one of this funnel’s campaigns — the sheet’s leads (already in and new) get that campaign and Source Facebook / Google.',
+    ],
+    improved: [
+      'Much faster lists for everyone (leads, follow-ups, calls, WhatsApp, meetings, submissions, boards): each access check is worked out once per request instead of for every row — the “canceling statement due to statement timeout” error is gone. Who sees what is unchanged.',
+      'Lead list: the extra columns, board and steps try again once by themselves and never block the list.',
+      'Funnel → Facebook / Google Ads: campaign chips show the ad account first; each report has a Chart / Table switch; the ad’s grey line in 2 lines (account · campaign, then ad set); lead numbers open those leads.',
+      'Boards: every column the same width; long notes wrap to 3 lines.',
+      'Creative Studio lead list: no Description column.',
+    ],
+    fixed: [
+      'Ads insights: a lead whose page sent the ad set name in utm_term (utm_medium “paid_social”) now counts under its ad.',
+    ],
+  },
+  {
     version: '0.38',
     date: '2026-11-26',
     title: 'Ads insights dashboard, lead Source from UTMs, faster WhatsApp chats',
