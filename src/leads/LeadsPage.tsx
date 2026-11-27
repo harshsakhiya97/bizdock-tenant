@@ -9,7 +9,7 @@ import { BadgeIndianRupee, CalendarCheck, CalendarClock, Download, KanbanSquare,
 import { useAuth } from '@/auth/useAuth'
 import { useBusiness } from '@/business/useBusiness'
 import { activeType } from '@/business/activeType'
-import { POD_STEPS, listPodBoard, listPodFacts, type PodBoardFacts, type PodFacts } from '@/funnels/podSteps'
+import { POD_STEPS, STUDIO_STEPS, listPodBoard, listPodFacts, type PodBoardFacts, type PodFacts } from '@/funnels/podSteps'
 import { Kanban, useBoardView, type KanbanCol } from '@/components/Kanban'
 import { Act, Acts } from '@/components/Acts'
 import { useAiRows } from '@/ai/insights'
@@ -92,6 +92,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const pp = !customers && !!sub && activeType(selected, sub) === BT.PAID_PODCAST
   // Paid Podcast (business or sub-business): the Funnel step filter (the Scorecard's steps) instead of Follow-up
   const pod = !customers && activeType(selected, sub) === BT.PAID_PODCAST
+  // Creative Studio (Studio Rental): the same Funnel step filter with its own steps (Opt-in → Follow-ups → Closed / Not interested)
+  const stepped = pod || (!customers && studio)
+  const STEPS = pod ? POD_STEPS : STUDIO_STEPS
 
   const [allLeads, setLeads] = useState<LeadRow[] | null>(null)
   const first = useRef(true)
@@ -177,6 +180,19 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     if (!pod) return
     listPodFacts(tenant.id).then(setPodFacts, () => setPodFacts(new Map()))
   }, [pod, tenant.id])
+  // Creative Studio: the leads with a follow-up done (its Follow-up step)
+  const [fuDone, setFuDone] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    if (!stepped || pod) return
+    listPodBoard(tenant.id).then(
+      (m) => setFuDone(new Set([...m].filter(([, f]) => f.fu_done > 0).map(([id]) => id))),
+      () => setFuDone(new Set()),
+    )
+  }, [stepped, pod, tenant.id])
+  const factsOf = useCallback(
+    (id: string): PodFacts | undefined => (pod ? podFacts.get(id) : { vsl: false, booked: false, done: false, noshow: false, fu: fuDone.has(id) }),
+    [pod, podFacts, fuDone],
+  )
 
   /** the row's Follow-up button: mark the pending follow-up done (or record one done now) */
   async function openLogFollowUp(l: LeadRow) {
@@ -280,12 +296,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       .filter((l) => !pp || !filters.form || formStep(l, extras.get(l.id)) === filters.form)
       .filter((l) => !filters.owner || (filters.owner === 'none' ? !l.owner_id : l.owner_id === filters.owner))
       .filter((l) => {
-        if (!pod || !filters.step) return true
-        const st = POD_STEPS.find((x) => x.key === filters.step)
-        return !st || st.pick(l, podFacts.get(l.id), wonStages)
+        if (!stepped || !filters.step) return true
+        const st = STEPS.find((x) => x.key === filters.step)
+        return !st || st.pick(l, factsOf(l.id), wonStages)
       })
       .filter((l) => {
-        if (pod || !filters.followUp) return true
+        if (stepped || !filters.followUp) return true
         const d = l.next_follow_up_at ? new Date(l.next_follow_up_at) : null
         if (filters.followUp === 'none') return !d
         if (!d) return false
@@ -300,16 +316,16 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           return (a.next_follow_up_at ?? '9999').localeCompare(b.next_follow_up_at ?? '9999')
         return b.created_at.localeCompare(a.created_at)
       })
-  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras, pod, podFacts, wonStages])
+  }, [leads, filters, funnel, funnels, noFunnel, selected, sub, inScope, pp, extras, stepped, STEPS, factsOf, wonStages])
 
   // Funnel step filter: how many of this business's leads are at each step
   const stepCounts = useMemo(() => {
     const m = new Map<string, number>()
-    if (!pod) return m
+    if (!stepped) return m
     const mine = (leads ?? []).filter((l) => (!selected || l.business_id === selected.id) && (!sub || inScope(l.business_id, l.sub_business_id)))
-    for (const st of POD_STEPS) m.set(st.key, mine.filter((l) => st.pick(l, podFacts.get(l.id), wonStages)).length)
+    for (const st of STEPS) m.set(st.key, mine.filter((l) => st.pick(l, factsOf(l.id), wonStages)).length)
     return m
-  }, [pod, leads, selected, sub, inScope, podFacts, wonStages])
+  }, [stepped, STEPS, leads, selected, sub, inScope, factsOf, wonStages])
   const kindOf = (l: LeadRow) => stageById.get(l.stage_id ?? '')?.kind ?? 'open'
   const visible =
     stageTab === 'all'
@@ -612,10 +628,10 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
               ))}
             </Select>
           )}
-          {pod ? (
+          {stepped ? (
             <Select className="input input-sm filter-select" value={filters.step} onChange={(e) => setF('step', e.target.value)} aria-label="Funnel step">
               <option value="">Funnel step</option>
-              {POD_STEPS.filter((x) => x.key !== 'optin').map((x) => (
+              {STEPS.filter((x) => x.key !== 'optin').map((x) => (
                 <option key={x.key} value={x.key}>
                   {x.label} ({(stepCounts.get(x.key) ?? 0).toLocaleString('en-IN')})
                 </option>
