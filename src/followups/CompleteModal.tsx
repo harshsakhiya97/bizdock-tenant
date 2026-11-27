@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { getLead } from '@/leads/api'
+import type { LeadRow } from '@/leads/types'
+import { MeetingDrawer } from '@/meetings/MeetingDrawer'
 import { useAuth } from '@/auth/useAuth'
 import { Button } from '@/components/Button'
 import { Hint, Label, Select, TextArea, TextInput } from '@/components/Field'
@@ -13,8 +16,10 @@ import { MODES } from './labels'
 import type { FollowUpMode, FollowUpRow } from './types'
 
 /**
- * Mark a follow-up done: outcome, note and the lead's category. Hot / Warm / Cold need the next follow-up's date;
- * Not interested / Closed end the follow-ups (no next one, any pending one is cancelled).
+ * Mark a follow-up done: outcome, note and the lead's category. Hot / Warm / Cold need the next follow-up's date
+ * (quick picks; a time already past or within 5 minutes asks again); Not interested / Closed end the follow-ups.
+ * An outcome about a meeting ("Meeting fixed", …) books the meeting instead of a next follow-up: Mark complete opens
+ * the meeting booking, and the follow-up is marked done once the meeting is saved.
  */
 export function CompleteModal({
   followUp,
@@ -28,7 +33,7 @@ export function CompleteModal({
   onSaved: (msg: string) => void
 }) {
   const tenant = useTenant()
-  const { membership } = useAuth()
+  const { membership, can } = useAuth()
   const me = membership?.id
   const [outcome, setOutcome] = useState('')
   const [note, setNote] = useState('')
@@ -38,12 +43,52 @@ export function CompleteModal({
   const [next, setNext] = useState({ due_at: '', mode: followUp.mode as FollowUpMode, purpose: '' })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // a meeting outcome: the meeting is booked instead of a next follow-up
+  const outcomeName = outcomes.find((o) => o.id === outcome)?.name ?? ''
+  const meeting = /meeting/i.test(outcomeName) && can('meetings', 'add') && !ends
+  const [meetLead, setMeetLead] = useState<LeadRow | null>(null)
+  // a next time already past / within 5 minutes: asked once more
+  const [soonOk, setSoonOk] = useState(false)
+  const soon = !!next.due_at && new Date(next.due_at).getTime() < Date.now() + 5 * 60_000
+  const pick = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    setSoonOk(false)
+    setNext((n) => ({ ...n, due_at: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T11:00` }))
+  }
+
+  /** the follow-up marked done (no next one) once the meeting is booked */
+  async function finishWithMeeting(msg: string) {
+    try {
+      await completeFollowUp(tenant.id, me, followUp, { outcome_id: outcome, outcome_name: outcomeName, note }, null)
+      if (cat && cat !== current) await setLeadCategory(tenant.id, me, followUp.lead_id, cat)
+      onSaved(`${msg} Follow-up with ${name} marked done.`)
+    } catch (e) {
+      setMeetLead(null)
+      setError((e as Error).message)
+    }
+  }
   const name = followUp.leads ? [followUp.leads.first_name, followUp.leads.last_name].filter(Boolean).join(' ') : 'lead'
 
   async function save() {
     if (!outcome) return setError('Pick an outcome.')
     if (!cat) return setError('Pick the lead’s category.')
+    if (meeting) {
+      setError(null)
+      const l = await getLead(followUp.lead_id).catch(() => null)
+      if (!l) return setError('Couldn’t open the lead to book the meeting.')
+      return setMeetLead(l)
+    }
     if (!ends && !next.due_at) return setError('Pick the next follow-up date & time.')
+    if (!ends && soon && !soonOk) {
+      setSoonOk(true)
+      return setError(
+        new Date(next.due_at).getTime() < Date.now()
+          ? 'That time has already passed — pick when the next call should happen. Press Mark complete again to keep it.'
+          : 'That is right now — pick when the next call should happen. Press Mark complete again to keep it.',
+      )
+    }
     setBusy(true)
     setError(null)
     try {
@@ -63,6 +108,17 @@ export function CompleteModal({
     }
   }
 
+  if (meetLead)
+    return (
+      <MeetingDrawer
+        meeting={null}
+        lead={meetLead}
+        leads={[meetLead]}
+        onClose={() => setMeetLead(null)}
+        onSaved={(msg) => void finishWithMeeting(msg)}
+      />
+    )
+
   return (
     <Modal
       open
@@ -77,7 +133,7 @@ export function CompleteModal({
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             <Button onClick={save} disabled={busy}>
-              {busy ? 'Saving…' : 'Mark complete'}
+              {busy ? 'Saving…' : meeting ? 'Book the meeting' : 'Mark complete'}
             </Button>
           </div>
         </>
@@ -121,14 +177,40 @@ export function CompleteModal({
           </Select>
           {ends && <Hint>No next follow-up is needed; any pending one for this lead is cancelled.</Hint>}
         </div>
-        <div className="span-2 check-box">
-          {!ends && (
+        {meeting && (
+          <div className="span-2 note">
+            <b>Book the meeting</b>
+            The next step is the meeting, not another call: “Book the meeting” opens the booking (date, time, link, team). The follow-up is marked done once
+            the meeting is saved.
+          </div>
+        )}
+        <div className="span-2 check-box" hidden={meeting}>
+          {!ends && !meeting && (
             <div className="form-grid">
               <div>
                 <Label htmlFor="c-due" required>
                   Next follow-up date & time
                 </Label>
-                <TextInput id="c-due" type="datetime-local" value={next.due_at} onChange={(e) => setNext((n) => ({ ...n, due_at: e.target.value }))} />
+                <TextInput
+                  id="c-due"
+                  type="datetime-local"
+                  value={next.due_at}
+                  onChange={(e) => (setSoonOk(false), setNext((n) => ({ ...n, due_at: e.target.value })))}
+                />
+                <div className="row small" style={{ gap: 8, marginTop: 6 }}>
+                  <button type="button" className="link" onClick={() => pick(1)}>
+                    Tomorrow 11 am
+                  </button>
+                  ·
+                  <button type="button" className="link" onClick={() => pick(3)}>
+                    +3 days
+                  </button>
+                  ·
+                  <button type="button" className="link" onClick={() => pick(7)}>
+                    +7 days
+                  </button>
+                </div>
+                {soon && <Hint>{new Date(next.due_at).getTime() < Date.now() ? 'This time has already passed.' : 'This is right now.'}</Hint>}
               </div>
               <div>
                 <Label htmlFor="c-mode">Mode</Label>
