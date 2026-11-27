@@ -41,8 +41,8 @@ export function SheetsTab({
   // Ad campaign names (the sheet cards, the edit pop-up)
   const [camps, setCamps] = useState<AdCampaignOption[]>([])
   useEffect(() => {
-    listAdCampaignOptions(tenant.id).then(setCamps, () => setCamps([]))
-  }, [tenant.id])
+    listAdCampaignOptions(tenant.id, funnelId).then(setCamps, () => setCamps([]))
+  }, [tenant.id, funnelId])
   const campOf = (s: FunnelSheet) => (s.ad_campaign_id ? camps.find((c) => c.platform === s.ad_platform && c.id === s.ad_campaign_id) : undefined)
 
   useEffect(() => {
@@ -345,6 +345,7 @@ function SheetModal({ sheet, camps, onClose, onSave }: { sheet: FunnelSheet | nu
 
   async function submit() {
     if (!f.name.trim()) return setError('Give the sheet a name.')
+    if (f.ad_platform && !f.ad_campaign_id) return setError('Pick the campaign, or choose None.')
     if (!parseSheetUrl(f.sheet_url)) return setError('Paste the full Google Sheet link (https://docs.google.com/spreadsheets/d/…).')
     setBusy(true)
     setError(null)
@@ -390,21 +391,36 @@ function SheetModal({ sheet, camps, onClose, onSave }: { sheet: FunnelSheet | nu
           <TextInput id="sh-url" placeholder="https://docs.google.com/spreadsheets/d/…" value={f.sheet_url} onChange={(e) => setF({ ...f, sheet_url: e.target.value })} />
           <Hint>Open the tab with the leads and copy the link from the address bar; that tab is read.</Hint>
         </div>
-        <div>
-          <Label htmlFor="sh-camp">Ad campaign</Label>
-          <SearchSelect
-            id="sh-camp"
-            value={f.ad_campaign_id ? `${f.ad_platform}:${f.ad_campaign_id}` : null}
-            onChange={(v) => {
-              const [p, ...id] = (v ?? '').split(':')
-              setF({ ...f, ad_platform: v ? (p as 'meta' | 'google') : null, ad_campaign_id: v ? id.join(':') : null })
-            }}
-            options={[
-              { value: '', label: 'None' },
-              ...camps.map((c) => ({ value: `${c.platform}:${c.id}`, label: c.name, group: c.platform === 'google' ? 'Google Ads' : 'Facebook Ads' })),
-            ]}
-            placeholder="None"
-          />
+        <div className="stack" style={{ gap: 8 }}>
+          <span className="field-label">Leads come from ads on</span>
+          <div className="seg" role="group" aria-label="Ad platform">
+            {([
+              [null, 'None'],
+              ['meta', 'Facebook'],
+              ['google', 'Google'],
+            ] as const).map(([p, label]) => (
+              <button key={label} type="button" className={f.ad_platform === p ? 'is-active' : undefined} onClick={() => setF({ ...f, ad_platform: p, ad_campaign_id: p === f.ad_platform ? f.ad_campaign_id : null })}>
+                {label}
+              </button>
+            ))}
+          </div>
+          {f.ad_platform && (
+            <div>
+              <Label htmlFor="sh-camp" required>
+                {f.ad_platform === 'google' ? 'Google' : 'Facebook'} campaign
+              </Label>
+              <SearchSelect
+                id="sh-camp"
+                value={f.ad_campaign_id}
+                onChange={(v) => setF({ ...f, ad_campaign_id: v || null })}
+                options={camps.filter((c) => c.platform === f.ad_platform).map((c) => ({ value: c.id, label: c.account ? `${c.account} · ${c.name}` : c.name }))}
+                placeholder="Select a campaign"
+              />
+              {!camps.some((c) => c.platform === f.ad_platform) && (
+                <Hint>No {f.ad_platform === 'google' ? 'Google' : 'Facebook'} campaigns on this funnel yet — add its campaign tags on the {f.ad_platform === 'google' ? 'Google Ads' : 'Facebook Ads'} tab.</Hint>
+              )}
+            </div>
+          )}
           <Hint>The sheet’s leads (the ones already in and new rows) get this campaign as Campaign Name and Source Facebook / Google. None: Source Google Sheet.</Hint>
         </div>
         {(!sheet || linkChanged) && (

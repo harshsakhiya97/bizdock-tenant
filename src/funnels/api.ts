@@ -295,18 +295,32 @@ export async function deleteSheet(id: string) {
 }
 
 
-/** Sheets → Ad campaign: every Facebook and Google campaign of the workspace */
-export type AdCampaignOption = { platform: 'meta' | 'google'; id: string; name: string; status: string | null }
-export async function listAdCampaignOptions(tenantId: string): Promise<AdCampaignOption[]> {
-  const [m, g] = await Promise.all([
-    db().from('meta_campaigns').select('campaign_id, name, effective_status').eq('tenant_id', tenantId),
-    db().from('google_campaigns').select('campaign_id, name, status').eq('tenant_id', tenantId),
+/** Sheets → Ad campaign: the Facebook and Google campaigns of this funnel (linked and matching its tags), with their ad account */
+export type AdCampaignOption = { platform: 'meta' | 'google'; id: string; name: string; account: string; status: string | null }
+export async function listAdCampaignOptions(tenantId: string, funnelId: string): Promise<AdCampaignOption[]> {
+  const [f, ml, gl, m, g, ma, ga] = await Promise.all([
+    db().from('funnels').select('meta_tags, google_tags').eq('id', funnelId).single(),
+    db().from('funnel_ad_links').select('campaign_id').eq('funnel_id', funnelId),
+    db().from('funnel_google_links').select('campaign_id').eq('funnel_id', funnelId),
+    db().from('meta_campaigns').select('campaign_id, name, effective_status, account_id').eq('tenant_id', tenantId),
+    db().from('google_campaigns').select('campaign_id, name, status, account_id').eq('tenant_id', tenantId),
+    db().from('meta_ad_accounts').select('id, name').eq('tenant_id', tenantId),
+    db().from('google_ad_accounts').select('id, name').eq('tenant_id', tenantId),
   ])
-  if (m.error) throw m.error
-  if (g.error) throw g.error
+  for (const r of [f, ml, gl, m, g]) if (r.error) throw r.error
+  const tags = (f.data ?? {}) as { meta_tags?: string[]; google_tags?: string[] }
+  const hit = (name: string, t: string[] | undefined) => (t ?? []).some((x) => x.trim() && name.toLowerCase().includes(x.trim().toLowerCase()))
+  const mIds = new Set(((ml.data ?? []) as { campaign_id: string }[]).map((x) => x.campaign_id))
+  const gIds = new Set(((gl.data ?? []) as { campaign_id: string }[]).map((x) => x.campaign_id))
+  const acc = new Map([...((ma.data ?? []) as { id: string; name: string | null }[]), ...((ga.data ?? []) as { id: string; name: string | null }[])].map((a) => [a.id, a.name ?? '']))
+  type C = { campaign_id: string; name: string | null; account_id: string }
   return [
-    ...((m.data ?? []) as { campaign_id: string; name: string | null; effective_status: string | null }[]).map((c) => ({ platform: 'meta' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, status: c.effective_status })),
-    ...((g.data ?? []) as { campaign_id: string; name: string | null; status: string | null }[]).map((c) => ({ platform: 'google' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, status: c.status })),
+    ...((m.data ?? []) as (C & { effective_status: string | null })[])
+      .filter((c) => mIds.has(c.campaign_id) && hit(c.name ?? '', tags.meta_tags))
+      .map((c) => ({ platform: 'meta' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, account: acc.get(c.account_id) ?? '', status: c.effective_status })),
+    ...((g.data ?? []) as (C & { status: string | null })[])
+      .filter((c) => gIds.has(c.campaign_id) && hit(c.name ?? '', tags.google_tags))
+      .map((c) => ({ platform: 'google' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, account: acc.get(c.account_id) ?? '', status: c.status })),
   ].sort((a, b) => a.name.localeCompare(b.name))
 }
 
