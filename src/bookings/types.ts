@@ -1,4 +1,5 @@
-export type BookingStatus = 'tentative' | 'confirmed' | 'completed' | 'cancelled'
+/** a studio booking: Confirmed when booked, Completed by itself once it ends, Cancelled only before it starts */
+export type BookingStatus = 'confirmed' | 'completed' | 'cancelled'
 /** an order's status (Default businesses: a booking without a time is an order) */
 export type OrderStatus = 'not_started' | 'active' | 'completed' | 'cancelled'
 export const ORDER_STATUS: Record<OrderStatus, { label: string; tone: string }> = {
@@ -137,7 +138,6 @@ export type LeadMessage = {
 }
 
 export const STATUS_META: Record<BookingStatus, { label: string; tone: string; color: string }> = {
-  tentative: { label: 'Tentative', tone: 'badge-warning', color: '#d97706' },
   confirmed: { label: 'Confirmed', tone: 'badge-info', color: '#2563eb' },
   completed: { label: 'Completed', tone: 'badge-success', color: '#16a34a' },
   cancelled: { label: 'Cancelled', tone: 'badge-muted', color: '#94a3b8' },

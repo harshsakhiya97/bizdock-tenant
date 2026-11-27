@@ -195,7 +195,9 @@ export function BookingDrawer({
   }
   // a new one: pay now (unticked); an existing one without an invoice: as it was (pay later) until unticked
   const [payLater, setPayLater] = useState(!!booking)
-  const tentative = !service && input.status === 'tentative'
+  const tentative = false
+  // the booking's start (India time) has passed: it can't be cancelled any more
+  const started = !service && !!input.booking_date && new Date(`${input.booking_date}T${(input.start_time || '00:00').slice(0, 5)}:00+05:30`).getTime() <= Date.now()
   const cancelled = !service && input.status === 'cancelled'
   const canInvoice = !booking?.invoice_id && !cancelled && !locked
   const invoiceNow = canInvoice && !payLater && !tentative
@@ -429,13 +431,26 @@ export function BookingDrawer({
                   ))}
                 </Select>
               ) : (
-                <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit}>
-                  {(Object.keys(STATUS_META) as BookingStatus[]).map((st) => (
-                    <option key={st} value={st}>
-                      {STATUS_META[st].label}
-                    </option>
-                  ))}
-                </Select>
+                <>
+                  <Select id="bk-status" value={input.status} onChange={(e) => set('status', e.target.value as BookingStatus)} disabled={!canEdit || input.status === 'completed' || (started && input.status !== 'cancelled')}>
+                    {input.status === 'completed' ? (
+                      <option value="completed">{STATUS_META.completed.label}</option>
+                    ) : (
+                      (['confirmed', 'cancelled'] as BookingStatus[]).map((st) => (
+                        <option key={st} value={st}>
+                          {STATUS_META[st].label}
+                        </option>
+                      ))
+                    )}
+                  </Select>
+                  <Hint>
+                    {input.status === 'completed'
+                      ? 'Completed by itself once it ended.'
+                      : started
+                        ? 'Started — it can no longer be cancelled; it turns Completed once it ends.'
+                        : 'Turns Completed by itself once it ends; can be cancelled before it starts.'}
+                  </Hint>
+                </>
               )}
             </div>
             <div className="span-2">

@@ -80,7 +80,7 @@ export function BookingCalendarPage() {
     const value = inMonth.reduce((a, b) => a + Number(b.total_amount), 0)
     const paid = inMonth.reduce((a, b) => a + Number(b.paid_amount), 0)
     const todays = visible.filter((b) => b.booking_date === today)
-    return { count: inMonth.length, tentative: inMonth.filter((b) => b.status === 'tentative').length, hours, value, due: Math.max(0, value - paid), todays: todays.length }
+    return { count: inMonth.length, hours, value, due: Math.max(0, value - paid), todays: todays.length }
   }, [visible, month, today])
 
   // a stat card's records: those bookings (click one to open it)
@@ -117,7 +117,6 @@ export function BookingCalendarPage() {
             detail: b.purpose,
             meta: `${clock(b.start_time)} – ${clock(b.end_time)}${b.purpose ? ` · ${b.purpose}` : ''}${shared && b.studio_id ? ` · ${studioName(b.studio_id)}` : ''} · ${STATUS_META[b.status].label}`,
             color: STATUS_META[b.status].color,
-            faded: b.status === 'tentative',
             side: (
               <>
                 {money(b.total_amount)}
@@ -170,7 +169,7 @@ export function BookingCalendarPage() {
       <Flash msg={notice.ok} dep={notice} />
 
       <div className="stat-grid">
-        <StatCard icon={CalendarCheck} tone="brand" value={stats.count} label={`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`} hint={stats.tentative ? `${stats.tentative} tentative` : undefined} onClick={showBk(`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`, inMon)} />
+        <StatCard icon={CalendarCheck} tone="brand" value={stats.count} label={`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`} onClick={showBk(`Bookings in ${fmt(`${month}-01`, { month: 'short' })}`, inMon)} />
         <StatCard icon={Clock3} tone="info" value={`${Math.round(stats.hours * 10) / 10} h`} label="Hours booked" hint={`${stats.todays} today`} onClick={showBk('Hours booked', inMon)} />
         <StatCard icon={IndianRupee} tone="success" value={money(stats.value)} label="Booked value" hint="incl. GST" onClick={showBk('Booked value', (b) => inMon(b) && Number(b.total_amount) > 0)} />
         <StatCard icon={Wallet} tone="danger" value={money(stats.due)} label="Balance to collect" onClick={showBk('Balance to collect', (b) => inMon(b) && Number(b.total_amount) - Number(b.paid_amount) > 0.01)} />
