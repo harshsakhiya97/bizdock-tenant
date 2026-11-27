@@ -1,6 +1,7 @@
 import { BT } from '@/auth/auth-context'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { freshRange, useKept } from '@/lib/useKept'
 import { getFollowUp, listOutcomes, pendingFollowUpId, scheduleFollowUp } from '@/followups/api'
 import { CompleteModal } from '@/followups/CompleteModal'
 import type { FollowUpRow } from '@/followups/types'
@@ -118,11 +119,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [lostReasons, setLostReasons] = useState<Option[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   const [stageTab] = useState<string>('all')
-  const [filters, setFilters] = useState<Filters>(EMPTY)
+  // kept for this tab: back from a lead, the same filters (and page)
+  const keep = `${customers ? 'customers' : 'leads'}.${tenant.id}`
+  const [filters, setFilters] = useKept<Filters>(`${keep}.filters`, EMPTY, (f) => ({ ...f, range: freshRange(f.range) }))
   const [picked, setPicked] = useState<Set<string>>(new Set())
   // the list: 20 a page by default
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(20)
+  const [page, setPage] = useKept(`${keep}.page`, 1)
+  const [perPage, setPerPage] = useKept(`${keep}.perPage`, 20)
   const [pendingMove, setPendingMove] = useState<PendingMove | null>(null)
   const [bulk, setBulk] = useState({ owner: '', temp: '', followUp: '', stage: '', reason: '' })
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})
@@ -450,7 +453,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
       : stats
 
   // back to page 1 when the list changes (tab, filters, funnel, business)
-  useEffect(() => setPage(1), [stageTab, filters, selected, sub])
+  // a filter / business change: back to page 1 (not on opening the page — the kept page stays)
+  const pageReset = useRef(false)
+  useEffect(() => {
+    if (pageReset.current) setPage(1)
+    pageReset.current = true
+  }, [stageTab, filters, selected, sub, setPage])
   const pages = Math.max(1, Math.ceil(visible.length / perPage))
   const current = Math.min(page, pages)
   // AI Insights reads every filtered lead, not only this page

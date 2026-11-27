@@ -11,6 +11,7 @@ import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
 import { dueText, tempOf } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
+import { freshRange, useKept } from '@/lib/useKept'
 import { Box, PersonCard, dayLabel, time, when } from './parts'
 
 type Mem = {
@@ -99,7 +100,8 @@ const COLS: Record<'done' | 'pending' | 'leads', StatCol<Item>[]> = {
 export function TeamReportPage() {
   const tenant = useTenant()
   const navigate = useNavigate()
-  const [range, setRange] = useState<Range>(() => presetRange('thisMonth'))
+  // kept for this tab: back from a lead, the same dates, funnel and view
+  const [range, setRange] = useKept<Range>(`team-report.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const { from, to } = range
   const oneDay = from === to
   // a time on one day, else the date and time
@@ -111,9 +113,9 @@ export function TeamReportPage() {
   const [show, setShow] = useState<StatShow<Item> | null>(null)
   const [busy, setBusy] = useState(false)
   // A: one funnel (or the leads with no funnel); C: the numbers per funnel
-  const [funnel, setFunnel] = useState<string | null>(null)
-  const [byFunnel, setByFunnel] = useState(false)
-  const [funnels, setFunnels] = useState<FunnelRow[]>([])
+  const [funnel, setFunnel] = useKept<string | null>(`team-report.${tenant.id}.funnel`, null)
+  const [byFunnel, setByFunnel] = useKept(`team-report.${tenant.id}.byFunnel`, false)
+  const [funnels, setFunnels] = useState<FunnelRow[] | null>(null)
   useEffect(() => {
     listFunnels(tenant.id).then(setFunnels, () => setFunnels([]))
   }, [tenant.id])
@@ -121,15 +123,15 @@ export function TeamReportPage() {
   const funnelOpts = useMemo(
     () => [
       { value: '', label: 'All funnels' },
-      ...funnels.filter((f) => !selected || inScope(f.business_id, f.sub_business_id)).map((f) => ({ value: f.id, label: f.name })),
+      ...(funnels ?? []).filter((f) => !selected || inScope(f.business_id, f.sub_business_id)).map((f) => ({ value: f.id, label: f.name })),
       { value: NO_FUNNEL, label: 'No funnel' },
     ],
     [funnels, selected, inScope],
   )
   // a funnel of another business: back to all funnels
   useEffect(() => {
-    if (funnel && !funnelOpts.some((o) => o.value === funnel)) setFunnel(null)
-  }, [funnel, funnelOpts])
+    if (funnels && funnel && !funnelOpts.some((o) => o.value === funnel)) setFunnel(null)
+  }, [funnels, funnel, funnelOpts, setFunnel])
   const business = selected?.id ?? null
   const funnelName = funnel ? funnelOpts.find((o) => o.value === funnel)?.label : null
 

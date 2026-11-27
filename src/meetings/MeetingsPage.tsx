@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useKept } from '@/lib/useKept'
 import { Link } from 'react-router'
 import { CalendarClock, CircleCheck, Handshake, Pencil, Plus, Presentation, Trash2, UserX } from 'lucide-react'
 import { BT } from '@/auth/auth-context'
@@ -54,10 +55,12 @@ export function MeetingsPage() {
   const [leads, setLeads] = useState<LeadRow[]>([])
   const [members, setMembers] = useState<MemberOption[]>([])
   // filters: team member (me; '' = all team members) → type → category (lead meetings) → status
-  const [memberF, setMemberF] = useState(me)
-  const [typeF, setTypeF] = useState<TypeF>('')
-  const [catF, setCatF] = useState('')
-  const [status, setStatus] = useState<'' | MeetingStatus>('')
+  // kept for this tab: back from a lead, the same filters
+  const kk = `meetings.${tenant.id}`
+  const [memberF, setMemberF] = useKept(`${kk}.member`, me)
+  const [typeF, setTypeF] = useKept<TypeF>(`${kk}.type`, '')
+  const [catF, setCatF] = useKept(`${kk}.cat`, '')
+  const [status, setStatus] = useKept<'' | MeetingStatus>(`${kk}.status`, '')
   const [drawer, setDrawer] = useState<{ meeting: MeetingRow | null; date?: string; start?: string; end?: string; kind?: MeetingKind } | null>(null)
   const [book, setBook] = useState<LeadRow | null>(null)
   const [notice, setNotice] = useState<{ ok?: string; error?: string }>({})

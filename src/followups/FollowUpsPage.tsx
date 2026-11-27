@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { freshRange, useKept } from '@/lib/useKept'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { AlarmClock, CalendarCheck, CalendarDays, Download, ListTodo, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -30,12 +31,14 @@ type Tab = (typeof TABS)[number]['id']
 export function FollowUpsPage() {
   const { can, membership } = useAuth()
   const data = useFollowUpData()
-  const [tab, setTab] = useState<Tab>('pending')
-  const [q, setQ] = useState('')
-  const [assigned, setAssigned] = useState('')
-  const [mode, setMode] = useState('')
-  const [cat, setCat] = useState('')
-  const [range, setRange] = useState<Range>(ALL_DATES)
+  // kept for this tab: back from a lead, the same tab and filters
+  const kk = `followups.${membership?.id ?? ''}`
+  const [tab, setTab] = useKept<Tab>(`${kk}.tab`, 'pending')
+  const [q, setQ] = useKept(`${kk}.q`, '')
+  const [assigned, setAssigned] = useKept(`${kk}.assigned`, '')
+  const [mode, setMode] = useKept(`${kk}.mode`, '')
+  const [cat, setCat] = useKept(`${kk}.cat`, '')
+  const [range, setRange] = useKept<Range>(`${kk}.range`, ALL_DATES, freshRange)
   const { from, to } = range
   const [done, setDone] = useState<FollowUpRow | null>(null)
   const [schedule, setSchedule] = useState<{ f: FollowUpRow | null } | null>(null)
