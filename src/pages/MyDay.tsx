@@ -10,7 +10,7 @@ import { dayBounds, modeOf } from '@/followups/labels'
 import { ScheduleModal } from '@/followups/ScheduleModal'
 import type { FollowUpRow } from '@/followups/types'
 import { useFollowUpData } from '@/followups/useFollowUpData'
-import { fullName } from '@/leads/labels'
+import { dueText, fullName, isDayOnly } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { Flash } from '@/components/Flash'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
@@ -52,7 +52,7 @@ export function MyDayPage() {
       title,
       rows: [...rows].sort((a, b) => a.due_at.localeCompare(b.due_at)),
       cols: [
-        { label: 'Due', render: (f) => <span className="nowrap">{new Date(f.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span> },
+        { label: 'Due', render: (f) => <span className="nowrap">{dueText(f.due_at)}</span> },
         {
           label: 'Lead',
           render: (f) => (
@@ -208,7 +208,7 @@ export function MyDayPage() {
                       <div key={f.id} className="day-item">
                         <M.icon size={14} className="muted" />
                         <span className="nowrap muted small">
-                          {new Date(f.due_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
+                          {isDayOnly(f.due_at) ? 'Any time' : new Date(f.due_at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}
                         </span>
                         <Link to={`/leads?open=${f.lead_id}`} className="link cell-clip">
                           {f.leads ? fullName(f.leads) : 'Lead'}

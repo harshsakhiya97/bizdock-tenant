@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { CalendarClock, ChartColumnBig, ChevronRight, Handshake, MessageCircle, PhoneCall, Receipt, Tag, UserRound, Wallet } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
-import { money, tempOf } from './labels'
+import { dueText, money, tempOf } from './labels'
 import type { Temperature } from './types'
 import { getLeadGlance, type Glance } from './insights'
 
@@ -78,7 +78,7 @@ export function LeadGlance({
       <Item icon={CalendarClock} label="Next follow-up" tone={late ? 'danger' : undefined} onClick={onTab && (() => onTab('followups'))}>
         {nf ? (
           <>
-            <b>{at(nf.due_at)}</b>
+            <b>{dueText(nf.due_at)}</b>
             {late && <span className="small"> · overdue{g && g.overdue > 1 ? ` (${g.overdue})` : ''}</span>}
             {nf.purpose && <div className="muted small">{nf.purpose}</div>}
           </>

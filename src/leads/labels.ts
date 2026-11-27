@@ -22,6 +22,25 @@ export const money = (n: number | null) =>
   n == null ? '—' : `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
 
 /** "Today, 11:00 AM", "Tomorrow, …", "15 Oct, 11:00 AM" + whether it is overdue / today */
+/** a follow-up picked by date only is kept at 11:59 pm India time: due all that day, overdue from the next day */
+export const DAY_ONLY_TIME = '23:59'
+export const isDayOnly = (iso: string | null | undefined) =>
+  !!iso && new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' }) === DAY_ONLY_TIME
+/** a follow-up's due: "28 Nov" for a date-only one, else "28 Nov, 11:00 am" */
+export const dueText = (iso: string | null | undefined) =>
+  !iso
+    ? '—'
+    : isDayOnly(iso)
+      ? new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })
+      : new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+/** today + n days as yyyy-mm-dd (this computer's date) */
+export function dayFromToday(n = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  const pad = (x: number) => String(x).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export function followUp(iso: string | null): { text: string; state: 'none' | 'overdue' | 'today' | 'later' } {
   if (!iso) return { text: '—', state: 'none' }
   const d = new Date(iso)
@@ -36,7 +55,7 @@ export function followUp(iso: string | null): { text: string; state: 'none' | 'o
         ? 'Tomorrow'
         : d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   const state = d < now ? 'overdue' : d < startTomorrow ? 'today' : 'later'
-  return { text: `${day}, ${time}`, state }
+  return { text: isDayOnly(iso) ? day : `${day}, ${time}`, state }
 }
 
 /** ISO -> value for <input type="datetime-local"> */

@@ -9,7 +9,7 @@ import { listFunnels } from '@/funnels/api'
 import type { FunnelRow } from '@/funnels/types'
 import { cn } from '@/lib/cn'
 import { db } from '@/lib/supabase'
-import { tempOf } from '@/leads/labels'
+import { dueText, tempOf } from '@/leads/labels'
 import { useTenant } from '@/tenant/useTenant'
 import { Box, PersonCard, dayLabel, time, when } from './parts'
 
@@ -76,11 +76,11 @@ const COLS: Record<'done' | 'pending' | 'leads', StatCol<Item>[]> = {
   done: [
     lead,
     { label: 'Done at', render: (r) => <span className="nowrap">{when(r.completed_at)}</span> },
-    { label: 'Was due', render: (r) => <span className="nowrap">{when(r.due_at)}</span> },
+    { label: 'Was due', render: (r) => <span className="nowrap">{dueText(r.due_at)}</span> },
     { label: 'Outcome', render: (r) => r.outcome ?? none },
     { label: 'Note', render: (r) => r.note || none },
   ],
-  pending: [lead, { label: 'Due', render: (r) => <span className="nowrap">{when(r.due_at)}</span> }],
+  pending: [lead, { label: 'Due', render: (r) => <span className="nowrap">{dueText(r.due_at)}</span> }],
   leads: [
     lead,
     { label: 'Stage', render: (r) => r.stage ?? none },

@@ -8,7 +8,7 @@ import { Hint, Label, Select } from '@/components/Field'
 import { clearLeadFollowUps, listOutcomes, scheduleFollowUp } from '@/followups/api'
 import { logActivity } from '@/leads/api'
 import { setLeadCategory } from '@/leads/CategorySelect'
-import { CALL_CATEGORIES, ENDS_FOLLOW_UPS } from '@/leads/labels'
+import { CALL_CATEGORIES, DAY_ONLY_TIME, ENDS_FOLLOW_UPS, dayFromToday, dueText } from '@/leads/labels'
 import type { MemberOption, Option, Temperature } from '@/leads/types'
 import { db } from '@/lib/supabase'
 import { cn } from '@/lib/cn'
@@ -50,11 +50,7 @@ type WaLog = { id: string; direction: string; template: string | null; body: str
 const secs = (n: number | null) => (!n ? '0s' : n >= 60 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${n}s`)
 const DIR: Record<string, string> = { incoming: 'Incoming', outgoing: 'Outgoing', missed: 'Missed', rejected: 'Rejected', unknown: '—' }
 
-const dayPlus = (n: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
+const dayPlus = dayFromToday
 const when = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
 
 /** Follow-ups of one lead: Calls (log a call + next follow-up) and WhatsApp (messages sent). */
@@ -99,7 +95,6 @@ export function FollowUpsTab({
   const [outcome, setOutcome] = useState('')
   const [summary, setSummary] = useState('')
   const [next, setNext] = useState('')
-  const [nextTime, setNextTime] = useState('11:00')
   // the lead's category with the call: Hot / Warm / Cold need the next call; Not interested / Closed end the follow-ups
   const [leadCat, setLeadCat] = useState<Temperature | null>(null)
   const [cat, setCat] = useState<Temperature | ''>('')
@@ -151,7 +146,8 @@ export function FollowUpsTab({
   const outcomeName = (id: string | null) => outcomes.find((o) => o.id === id)?.name
   const calls = (fus ?? []).filter((f) => f.mode === 'call' && f.status !== 'rescheduled' && f.status !== 'cancelled')
   const pending = calls.filter((f) => f.status === 'pending').sort((a, b) => a.due_at.localeCompare(b.due_at))
-  const done = calls.filter((f) => f.status === 'done')
+  // newest saved first (when the call was logged)
+  const done = calls.filter((f) => f.status === 'done').sort((a, b) => (b.completed_at ?? b.due_at).localeCompare(a.completed_at ?? a.due_at))
   const waPending = (fus ?? []).filter((f) => f.mode === 'whatsapp' && f.status === 'pending')
   // a workflow's WhatsApp is kept twice (WATI's log and a copy on the lead): show it once
   const ownMsgs = (msgs ?? []).filter(
@@ -163,6 +159,7 @@ export function FollowUpsTab({
     if (!outcome) return setError('Pick the call outcome.')
     if (!cat) return setError('Pick the lead’s category.')
     if (!ends && !next) return setError('Pick the next call date.')
+    if (!ends && next < dayPlus(0)) return setError('That date has passed — pick today or a later date.')
     setBusy(true)
     setError(null)
     try {
@@ -173,7 +170,7 @@ export function FollowUpsTab({
         : await db().from('follow_ups').insert({ ...patch, tenant_id: tenant.id, lead_id: leadId, due_at: now, mode: 'call', assigned_to: me ?? null, created_by: me ?? null })
       if (e) throw new Error(e.message)
       await logActivity(tenant.id, me, [leadId], { kind: 'note', note: `Call · ${outcomeName(outcome) ?? ''} · ${summary.trim()}` })
-      if (!ends) await scheduleFollowUp(tenant.id, me, { lead_id: leadId, due_at: `${next}T${nextTime || '11:00'}`, mode: 'call', purpose: '', assigned_to: me ?? '' }, true)
+      if (!ends) await scheduleFollowUp(tenant.id, me, { lead_id: leadId, due_at: `${next}T${DAY_ONLY_TIME}`, mode: 'call', purpose: '', assigned_to: me ?? '' }, true)
       if (cat !== leadCat) await setLeadCategory(tenant.id, me, leadId, cat)
       // Not interested / Closed: no more follow-ups
       if (ends) await clearLeadFollowUps(leadId)
@@ -228,7 +225,7 @@ export function FollowUpsTab({
           {canEdit && (
             <section className="card card-pad stack" style={{ gap: 12 }}>
               <div className="row-between">
-                <b>{completing ? `Close the follow-up due ${when(completing.due_at)}` : 'Log a call'}</b>
+                <b>{completing ? `Close the follow-up due ${dueText(completing.due_at)}` : 'Log a call'}</b>
                 {completing && (
                   <button type="button" className="btn btn-ghost btn-sm" onClick={() => setCompleting(null)}>
                     <X size={14} /> Not this one
@@ -272,18 +269,12 @@ export function FollowUpsTab({
                       <Label htmlFor="fc-next" required>
                         Next call date
                       </Label>
-                      <input id="fc-next" className="input" type="date" value={next} onChange={(e) => setNext(e.target.value)} />
+                      <input id="fc-next" className="input" type="date" min={dayPlus(0)} value={next} onChange={(e) => setNext(e.target.value)} />
                       <div className="quick-links">
                         <button type="button" onClick={() => setNext(dayPlus(1))}>Tomorrow</button>·
                         <button type="button" onClick={() => setNext(dayPlus(3))}>+3 days</button>·
                         <button type="button" onClick={() => setNext(dayPlus(7))}>+7 days</button>
                       </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="fc-time" required>
-                        Time
-                      </Label>
-                      <input id="fc-time" className="input" type="time" value={nextTime} onChange={(e) => setNextTime(e.target.value)} />
                     </div>
                   </>
                 )}
@@ -312,7 +303,7 @@ export function FollowUpsTab({
                   <div key={f.id} className="fu-item is-pending">
                     <div>
                       <b className={cn(overdue && 'text-danger')}>
-                        Next call {when(f.due_at)}
+                        Next call {dueText(f.due_at)}
                         {overdue ? ' · overdue' : ''}
                       </b>
                       <div className="muted small">
@@ -415,7 +406,7 @@ export function FollowUpsTab({
           {waPending.map((f) => (
             <div key={f.id} className="fu-item is-pending">
               <div>
-                <b>WhatsApp due {when(f.due_at)}</b>
+                <b>WhatsApp due {dueText(f.due_at)}</b>
                 <div className="muted small">{f.purpose ?? 'Follow-up'}</div>
               </div>
             </div>

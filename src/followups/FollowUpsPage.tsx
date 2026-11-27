@@ -4,7 +4,7 @@ import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { AlarmClock, CalendarCheck, CalendarDays, Download, ListTodo, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Empty, PageHead, SearchInput, StatCard } from '@/components/ui'
-import { fullName, TEMPERATURES } from '@/leads/labels'
+import { dueText, fullName, TEMPERATURES } from '@/leads/labels'
 import { cn } from '@/lib/cn'
 import { CompleteModal } from './CompleteModal'
 import { FollowUpTable } from './FollowUpTable'
@@ -92,7 +92,7 @@ export function FollowUpsPage() {
       title,
       rows: filtered.filter((f) => inTab(f, t)).sort((a, b) => a.due_at.localeCompare(b.due_at)),
       cols: [
-        { label: 'Due', render: (f) => <span className="nowrap">{new Date(f.due_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</span> },
+        { label: 'Due', render: (f) => <span className="nowrap">{dueText(f.due_at)}</span> },
         {
           label: 'Lead',
           render: (f) => (
