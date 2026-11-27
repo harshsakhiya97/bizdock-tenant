@@ -146,7 +146,7 @@ export function CompleteModal({
           </Select>
         </div>
         <div className="span-2">
-          <Label htmlFor="c-note">What happened</Label>
+          <Label htmlFor="c-note">Comments</Label>
           <TextArea id="c-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Wants 2 days next month, sending the price list" />
         </div>
         <div className="span-2">
@@ -207,10 +207,6 @@ export function CompleteModal({
                     </option>
                   ))}
                 </Select>
-              </div>
-              <div className="span-2">
-                <Label htmlFor="c-purpose">Purpose</Label>
-                <TextInput id="c-purpose" value={next.purpose} onChange={(e) => setNext((n) => ({ ...n, purpose: e.target.value }))} />
               </div>
             </div>
           )}

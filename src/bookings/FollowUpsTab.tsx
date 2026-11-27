@@ -155,7 +155,7 @@ export function FollowUpsTab({
   )
 
   async function logCall() {
-    if (!summary.trim()) return setError('Write what was discussed.')
+    if (!summary.trim()) return setError('Write the comments.')
     if (!outcome) return setError('Pick the call outcome.')
     if (!cat) return setError('Pick the lead’s category.')
     if (!ends && !next) return setError('Pick the next call date.')
@@ -280,7 +280,7 @@ export function FollowUpsTab({
                 )}
                 <div className="fc-full">
                   <Label htmlFor="fc-sum" required>
-                    Conversation summary
+                    Comments
                   </Label>
                   <textarea id="fc-sum" className="input" rows={2} placeholder="What was discussed, rate quoted, client response" value={summary} onChange={(e) => setSummary(e.target.value)} />
                 </div>
