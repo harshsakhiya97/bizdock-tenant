@@ -255,9 +255,10 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .board-card:hover { border-color: var(--line-strong); }
 .board-card b { font-size: 13px; }
 .board-card small { font-size: 12px; }
-/* every column the same width: long text in a card is cut with … instead of widening its column */
+/* every column the same width: long text in a card wraps (notes: up to 3 lines, then …) instead of widening its column */
 .board-card > * { min-width: 0; }
 .board-card .cell-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-card small.cell-clip { white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
 .board-empty { padding: 18px 8px; text-align: center; font-size: 12px; color: var(--text-faint); border: 1.5px dashed var(--line-strong); border-radius: var(--radius); }
 .timeline { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 12px; }
 .timeline li { display: flex; gap: 10px; position: relative; }
