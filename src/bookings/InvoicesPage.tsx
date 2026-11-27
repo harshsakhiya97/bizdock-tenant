@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useKept } from '@/lib/useKept'
 import { Act, Acts } from '@/components/Acts'
 import { Link, useSearchParams } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, Printer, Wallet } from 'lucide-react'
@@ -42,7 +43,7 @@ export function InvoicesPage() {
   const { selected, sub, inScope } = useBusiness()
   const [rows, setRows] = useState<BookingRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', state: '' })
+  const [f, setF] = useKept(`invoices.${tenant.id}`, { q: '', state: '' })
   // the invoice date (or the booking's date before an invoice no.); All dates by default
   const [range, setRange] = useState<Range>(ALL_DATES)
   // invoices of orders (Default / Brand Deals): their order numbers, by invoice id

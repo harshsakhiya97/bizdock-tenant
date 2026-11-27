@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { freshRange, useKept } from '@/lib/useKept'
 import { Act, Acts } from '@/components/Acts'
 import { Link } from 'react-router'
 import { AlertTriangle, BadgeIndianRupee, FileText, PackageCheck, Plus, Repeat, Trash2, Wallet } from 'lucide-react'
@@ -66,7 +67,7 @@ export function OrdersPage({ bookings = false }: { bookings?: boolean }) {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', status: '', pay: '', overdue: false, member: '', range: ALL_DATES })
+  const [f, setF] = useKept(`orders.${tenant.id}`, { q: '', status: '', pay: '', overdue: false, member: '', range: ALL_DATES }, (x) => ({ ...x, range: freshRange(x.range) }))
   const [open, setOpen] = useState<{ booking: BookingRow | null; copy?: BookingRow } | null>(null)
   const [invoices, setInvoices] = useState<Map<string, InvoiceRow>>(new Map())
   // orders ticked for one invoice

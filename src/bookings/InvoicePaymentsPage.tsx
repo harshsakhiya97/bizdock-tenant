@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useKept } from '@/lib/useKept'
 import { Link, useNavigate } from 'react-router'
 import { AlertTriangle, Clock, Wallet } from 'lucide-react'
 import { useBusiness } from '@/business/useBusiness'
@@ -53,7 +54,7 @@ export function InvoicePaymentsPage() {
   const [error, setError] = useState<string | null>(null)
   // default: all dates
   const [range, setRange] = useState<Range>(ALL_DATES)
-  const [f, setF] = useState({ q: '', state: '', mode: '', by: '' })
+  const [f, setF] = useKept(`invoice-payments.${tenant.id}`, { q: '', state: '', mode: '', by: '' })
 
   const load = useCallback(() => {
     Promise.all([listBookings(tenant.id), listInvoices(tenant.id)])

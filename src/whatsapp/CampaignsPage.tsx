@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useKept } from '@/lib/useKept'
 import { Link } from 'react-router'
 import { Ban, CheckCheck, Eye, Megaphone, MessageCircleReply, Plus, RefreshCw, Send, XCircle } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
@@ -38,7 +39,7 @@ export function CampaignsPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [f, setF] = useState({ q: '', status: '' })
+  const [f, setF] = useKept(`wa-campaigns.${tenant.id}`, { q: '', status: '' })
   const [adding, setAdding] = useState(false)
   const [open, setOpen] = useState<Campaign | null>(null)
   const [cancelling, setCancelling] = useState<Campaign | null>(null)

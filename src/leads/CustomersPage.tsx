@@ -15,6 +15,7 @@ import { BookingDrawer } from '@/bookings/BookingDrawer'
 import { useBookingRefs } from '@/bookings/useBookingRefs'
 import type { BookingRow } from '@/bookings/types'
 import { useTenant } from '@/tenant/useTenant'
+import { freshRange, useKept } from '@/lib/useKept'
 import { listLeads, listMemberOptions, listSources } from './api'
 import { empty, listCustomerRevenue, type Revenue } from './customers'
 import { fullName, money } from './labels'
@@ -66,7 +67,12 @@ export function CustomersPage() {
   const leadsFirst = useRef(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
-  const [f, setF] = useState<{ q: string; owner: string; source: string; pay: Pay; sort: Sort; range: Range }>({ q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES })
+  // kept for this tab: back from a customer, the same filters
+  const [f, setF] = useKept<{ q: string; owner: string; source: string; pay: Pay; sort: Sort; range: Range }>(
+    `customers-list.${tenant.id}`,
+    { q: '', owner: '', source: '', pay: '', sort: 'newest', range: ALL_DATES },
+    (x) => ({ ...x, range: freshRange(x.range) }),
+  )
   const [book, setBook] = useState<{ lead: LeadRow; service: boolean; copy: BookingRow | null } | null>(null)
   // Paid Podcast: List / Board; a payment is recorded on the customer's booking (its Payments)
   const [view, setView] = useBoardView('pod-customers')
