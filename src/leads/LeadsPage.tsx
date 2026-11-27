@@ -42,6 +42,8 @@ const POD_COLS: KanbanCol[] = [
   { key: 'closed', label: 'Closed', color: '#22c55e' },
   { key: 'not_interested', label: 'Not Interested', color: '#ef4444' },
 ]
+/** Creative Studio → Leads board: no meetings */
+const STUDIO_COLS: KanbanCol[] = POD_COLS.filter((c) => c.key !== 'meetings')
 const EMPTY: Filters = { q: '', funnel: '', sheet: '', source: '', temp: '', owner: '', followUp: '', form: '', step: '', archived: false, sort: 'newest', range: ALL_DATES }
 // the lead's creation date in the picked range
 const inRange = (iso: string, r: Range) => r.key === 'all' || ((d) => d >= r.from && d <= r.to)(isoDay(new Date(iso)))
@@ -350,7 +352,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
         ? base.filter((l) => l.stage_id === stageTab)
         : base.filter((l) => kindOf(l) === stageTab)
   useEffect(() => {
-    if (!pod || view !== 'board') return
+    if (!stepped || view !== 'board') return
     let live = true
     retryOnce(() => listPodBoard(tenant.id)).then(
       (m) => live && setBoard(m),
@@ -359,13 +361,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
     return () => {
       live = false
     }
-  }, [pod, view, tenant.id, leads])
+  }, [stepped, view, tenant.id, leads])
   const podCol = (l: LeadRow) => {
     const k = stageById.get(l.stage_id ?? '')?.kind
     if (l.temperature === 'not_interested' || k === 'lost') return 'not_interested'
     if (l.temperature === 'closed' || k === 'won') return 'closed'
     const b = board?.get(l.id)
-    if (b && (b.m_booked || b.m_done || b.m_noshow)) return 'meetings'
+    if (pod && b && (b.m_booked || b.m_done || b.m_noshow)) return 'meetings'
     if (b && b.fu_done > 0) return 'followups'
     return 'leads'
   }
@@ -669,7 +671,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
             <option value="name">Name</option>
           </Select>
           <DateRangePicker value={filters.range} onChange={(r) => setF('range', r)} allDates />
-          {pod && (
+          {stepped && (
             <div className="seg" role="group" aria-label="View">
               <button type="button" className={view === 'list' ? 'is-active' : undefined} onClick={() => setView('list')} title="List">
                 <List size={15} /> List
@@ -817,12 +819,12 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
           <Empty icon={Users}>Your access doesn’t include {word}s.</Empty>
         ) : visible.length === 0 ? (
           <Empty icon={Users}>{filters.archived ? `No archived ${word}s.` : customers ? 'No customers yet. A lead becomes a customer once a booking is confirmed (Paid Podcast: once a payment is received).' : 'No leads here yet.'}</Empty>
-        ) : pod && view === 'board' ? (
+        ) : stepped && view === 'board' ? (
           !board ? (
             <div className="empty">Loading the board…</div>
           ) : (
             <Kanban
-              cols={POD_COLS}
+              cols={pod ? POD_COLS : STUDIO_COLS}
               items={visible}
               keyOf={(l) => l.id}
               colOf={podCol}
@@ -887,7 +889,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                     {col === 'closed' &&
                       (b?.shoot_on ? (
                         <>
-                          <small>Podcast {dayOf(b.shoot_on)}</small>
+                          <small>
+                            {pod ? 'Podcast' : 'Booking'} {dayOf(b.shoot_on)}
+                          </small>
                           {b.billed > 0 && (
                             <div className="row-between small" style={{ gap: 6 }}>
                               <span className="tone-success">{money(b.paid)} paid</span>
@@ -896,7 +900,7 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
                           )}
                         </>
                       ) : (
-                        <small className="muted">No podcast booked yet</small>
+                        <small className="muted">{pod ? 'No podcast booked yet' : 'No booking yet'}</small>
                       ))}
                     {col === 'not_interested' && (
                       <small className="muted cell-clip">
