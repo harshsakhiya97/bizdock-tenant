@@ -29,6 +29,7 @@ export const POD_STEPS: PodStep[] = [
 export const STUDIO_STEPS: PodStep[] = [
   { key: 'optin', label: 'Opt-in form filled', pick: () => true },
   { key: 'followup', label: 'Follow-up done', pick: (_, f) => !!f?.fu },
+  { key: 'no_followup', label: 'No follow-up yet', pick: (_, f) => !f?.fu },
   { key: 'closed', label: 'Closed', pick: (l, _, won) => l.temperature === 'closed' || won.has(l.stage_id ?? '') },
   { key: 'not_interested', label: 'Not interested', pick: (l) => l.temperature === 'not_interested' },
 ]
