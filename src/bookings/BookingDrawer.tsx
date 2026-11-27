@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { FileText, Plus, Trash2 } from 'lucide-react'
 import { db } from '@/lib/supabase'
 import { formatInvoiceNo } from '@/masters/types'
 import { createInvoice } from '@/invoices/api'
 import { BuyerFields, buyerError, buyerOfLead, emptyBuyer } from '@/invoices/Billing'
-import { PaymentPlan, planError } from '@/invoices/PaymentPlan'
+import { PaymentPlan, newPart, planError } from '@/invoices/PaymentPlan'
 import type { InvoiceInput } from '@/invoices/types'
 import { BT } from '@/auth/auth-context'
 import { cn } from '@/lib/cn'
@@ -23,7 +23,7 @@ import { saveBooking, studioBusy, studioClash, type BusySlot } from './api'
 import { isStudioType } from '@/business/activeType'
 import type { BookingRefs } from './useBookingRefs'
 import { saveDealSteps, toggleStep, useDealSteps, type DealStep } from './dealSteps'
-import { ORDER_STATUS, STATUS_META, invoiceNo, type PartDraft, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
+import { ORDER_STATUS, STATUS_META, invoiceNo, type BookingInput, type BookingRow, type BookingStatus, type ItemDraft, type OrderStatus } from './types'
 import { listMemberOptions } from '@/leads/api'
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -199,7 +199,9 @@ export function BookingDrawer({
   const cancelled = !service && input.status === 'cancelled'
   const canInvoice = !booking?.invoice_id && !cancelled && !locked
   const invoiceNow = canInvoice && !payLater && !tentative
-  const [inv, setInv] = useState<InvoiceInput>({ kind: 'gst', billing_company_id: '', gst_rate: '18', buyer: emptyBuyer, parts: [] as PartDraft[] })
+  // the payment plan starts with one part (key 'first') whose amount follows the total until it is changed by hand
+  const [inv, setInv] = useState<InvoiceInput>({ kind: 'gst', billing_company_id: '', gst_rate: '18', buyer: emptyBuyer, parts: [newPart([], 0, 'first')] })
+  const firstFollows = useRef(true)
   const [links, setLinks] = useState<{ biz: Links | null; sub: Links | null } | null>(null)
   const leadForBill = fixed ? input.lead_id : pickedLead || null
   useEffect(() => {
@@ -224,6 +226,11 @@ export function BookingDrawer({
   const invRate = Number(inv.gst_rate) || 0
   const invTax = invGst ? Math.round(amount * invRate) / 100 : 0
   const invTotal = amount + invTax
+  useEffect(() => {
+    if (!firstFollows.current) return
+    const amt = invTotal > 0 ? String(Math.round(invTotal * 100) / 100) : ''
+    setInv((d) => (d.parts.length === 1 && d.parts[0].key === 'first' && d.parts[0].amount !== amt ? { ...d, parts: [{ ...d.parts[0], amount: amt }] } : d))
+  }, [invTotal])
   const invCompany = refs.companies.find((c) => c.id === inv.billing_company_id) ?? null
   const pickKind = (kind: 'gst' | 'nongst') => setInv((d) => ({ ...d, kind, billing_company_id: links ? companyFor(kind, links.biz, links.sub) || d.billing_company_id : d.billing_company_id }))
 
@@ -557,7 +564,19 @@ export function BookingDrawer({
                 <div>
                   <Label>Payment plan</Label>
                   <Hint>Split the total into parts (advance, balance…); mark a part Paid when the money comes in.</Hint>
-                  <PaymentPlan parts={inv.parts} onChange={(parts) => setInv((d) => ({ ...d, parts }))} total={invTotal} canEdit modes={refs.modes} />
+                  <PaymentPlan
+                    parts={inv.parts}
+                    onChange={(parts) => {
+                      // the first part's amount typed by hand (or the plan changed): it stops following the total
+                      const before = inv.parts.find((p) => p.key === 'first')
+                      const after = parts.find((p) => p.key === 'first')
+                      if (!after || parts.length !== 1 || after.amount !== before?.amount) firstFollows.current = false
+                      setInv((d) => ({ ...d, parts }))
+                    }}
+                    total={invTotal}
+                    canEdit
+                    modes={refs.modes}
+                  />
                 </div>
               </>
             )}

@@ -10,6 +10,14 @@ export const num = (v: string) => Math.max(0, Number(v) || 0)
 /** payment parts offered as labels (any text can be typed) */
 const PART_LABELS = ['Advance', 'Pre-shoot', 'After shoot', 'After service', 'Final payment']
 
+/** a new payment part: the next unused label, due today, the amount still unplanned */
+export function newPart(parts: PartDraft[], total: number, k = key()): PartDraft {
+  const planned = parts.reduce((s, p) => s + num(p.amount), 0)
+  const left = Math.max(0, Math.round((total - planned) * 100) / 100)
+  const used = new Set(parts.map((p) => p.label))
+  return { key: k, label: PART_LABELS.find((l) => !used.has(l)) ?? 'Payment', due_on: today(), amount: left ? String(left) : '', mode: '', note: '', status: 'pending', paid_on: '' }
+}
+
 /** The payment parts of an invoice: label, due date, amount, Pending / Paid (received on, mode, comment). */
 export function PaymentPlan({
   parts,
@@ -28,9 +36,7 @@ export function PaymentPlan({
   const planned = parts.reduce((s, p) => s + num(p.amount), 0)
   const paidSum = parts.filter((p) => p.status === 'paid').reduce((s, p) => s + num(p.amount), 0)
   function addPart() {
-    const left = Math.max(0, Math.round((total - planned) * 100) / 100)
-    const used = new Set(parts.map((p) => p.label))
-    onChange([...parts, { key: key(), label: PART_LABELS.find((l) => !used.has(l)) ?? 'Payment', due_on: today(), amount: left ? String(left) : '', mode: '', note: '', status: 'pending', paid_on: '' }])
+    onChange([...parts, newPart(parts, total)])
   }
   return (
     <>
