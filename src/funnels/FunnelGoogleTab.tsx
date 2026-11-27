@@ -105,7 +105,10 @@ export function FunnelGoogleTab({ funnelId, canEdit, onSaved }: { funnelId: stri
               return (
                 <span key={l.id} className="camp-chip" title={info.filter(Boolean).join(' · ')}>
                   <i className={cn('camp-dot', gTone(c?.status ?? null))} />
-                  <span className="camp-chip-name">{c?.name ?? l.campaign_id}</span>
+                  <span className="camp-chip-name">
+                    {c && accName.get(c.account_id) && <span className="muted">{accName.get(c.account_id)} · </span>}
+                    {c?.name ?? l.campaign_id}
+                  </span>
                   <b>{sp ? inr(sp) : '—'}</b>
                 </span>
               )
