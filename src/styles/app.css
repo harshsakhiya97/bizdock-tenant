@@ -1907,6 +1907,16 @@ details.rec-section summary { cursor: pointer; }
 .tr-box b.tr-success { color: var(--success); }
 .tr-box b.tr-danger { color: var(--danger); }
 .tr-box b.tr-warning { color: var(--warning); }
+.trf-list { display: grid; gap: 14px; }
+.trf-card { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
+.trf-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 10px; }
+.trf-head b { font-size: 15px; }
+.trf-table tfoot td { border-top: 2px solid var(--line); background: var(--surface-muted); }
+.trf-n { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; }
+.trf-n:hover { color: var(--brand); text-decoration: underline; }
+.trf-n.tr-success { color: var(--success); }
+.trf-n.tr-danger { color: var(--danger); }
+.trf-n.tr-warning { color: var(--warning); }
 
 /* Funnel → Overview → Scorecard: one table in coloured sections */
 .sc-wrap { border: 1px solid var(--line); border-radius: var(--radius-lg); }
