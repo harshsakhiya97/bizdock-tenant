@@ -200,7 +200,7 @@ export function BookingDrawer({
   const canInvoice = !booking?.invoice_id && !cancelled && !locked
   const invoiceNow = canInvoice && !payLater && !tentative
   // the payment plan starts with one part (key 'first') whose amount follows the total until it is changed by hand
-  const [inv, setInv] = useState<InvoiceInput>({ kind: 'gst', billing_company_id: '', gst_rate: '18', buyer: emptyBuyer, parts: [newPart([], 0, 'first')] })
+  const [inv, setInv] = useState<InvoiceInput>({ kind: 'nongst', billing_company_id: '', gst_rate: '18', buyer: emptyBuyer, parts: [newPart([], 0, 'first')] })
   const firstFollows = useRef(true)
   const [links, setLinks] = useState<{ biz: Links | null; sub: Links | null } | null>(null)
   const leadForBill = fixed ? input.lead_id : pickedLead || null
@@ -515,11 +515,11 @@ export function BookingDrawer({
                   <div className="span-2">
                     <Label>Type</Label>
                     <div className="seg" role="group" aria-label="Invoice type">
-                      <button type="button" className={invGst ? 'is-active' : undefined} onClick={() => pickKind('gst')}>
-                        With GST
-                      </button>
                       <button type="button" className={!invGst ? 'is-active' : undefined} onClick={() => pickKind('nongst')}>
                         Without GST
+                      </button>
+                      <button type="button" className={invGst ? 'is-active' : undefined} onClick={() => pickKind('gst')}>
+                        With GST
                       </button>
                     </div>
                   </div>

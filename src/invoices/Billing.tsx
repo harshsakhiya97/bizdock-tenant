@@ -53,10 +53,6 @@ export function BuyerFields({ id, value, onChange, disabled, gst = true }: { id:
         <Label htmlFor={`${id}-co`}>Company name</Label>
         <TextInput id={`${id}-co`} placeholder="e.g. Exlytics Private Limited" value={value.company} onChange={set('company')} disabled={disabled} />
       </div>
-      <div className="span-2">
-        <Label htmlFor={`${id}-addr`}>Address</Label>
-        <TextArea id={`${id}-addr`} rows={3} value={value.address} onChange={set('address')} disabled={disabled} />
-      </div>
       {gst && (
         <div className="span-2">
           <Label htmlFor={`${id}-gst`}>GST No.</Label>
@@ -80,6 +76,10 @@ export function BuyerFields({ id, value, onChange, disabled, gst = true }: { id:
           )}
         </div>
       )}
+      <div className="span-2">
+        <Label htmlFor={`${id}-addr`}>Address</Label>
+        <TextArea id={`${id}-addr`} rows={3} value={value.address} onChange={set('address')} disabled={disabled} />
+      </div>
     </div>
   )
 }
