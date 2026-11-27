@@ -11,7 +11,7 @@ import type { Temperature } from '@/leads/types'
 import { Modal } from '@/components/Modal'
 import type { Option } from '@/leads/types'
 import { useTenant } from '@/tenant/useTenant'
-import { clearLeadFollowUps, completeFollowUp } from './api'
+import { clearLeadFollowUps, completeFollowUp, type Outcome } from './api'
 import { MODES } from './labels'
 import type { FollowUpMode, FollowUpRow } from './types'
 
@@ -45,6 +45,8 @@ export function CompleteModal({
   const [busy, setBusy] = useState(false)
   // a meeting outcome: the meeting is booked instead of a next follow-up
   const outcomeName = outcomes.find((o) => o.id === outcome)?.name ?? ''
+  // Masters → Follow-up outcomes → Comment required
+  const needNote = !!(outcomes.find((o) => o.id === outcome) as Outcome | undefined)?.comment_required
   const meeting = /meeting/i.test(outcomeName) && can('meetings', 'add') && !ends
   const [meetLead, setMeetLead] = useState<LeadRow | null>(null)
   // next.due_at: the picked date (yyyy-mm-dd); kept as that day's 11:59 pm
@@ -66,6 +68,7 @@ export function CompleteModal({
 
   async function save() {
     if (!outcome) return setError('Pick an outcome.')
+    if (needNote && !note.trim()) return setError(`Write the comments — needed for “${outcomeName}”.`)
     if (!cat) return setError('Pick the lead’s category.')
     if (meeting) {
       setError(null)
@@ -146,7 +149,9 @@ export function CompleteModal({
           </Select>
         </div>
         <div className="span-2">
-          <Label htmlFor="c-note">Comments</Label>
+          <Label htmlFor="c-note" required={needNote}>
+            Comments
+          </Label>
           <TextArea id="c-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Wants 2 days next month, sending the price list" />
         </div>
         <div className="span-2">

@@ -5,7 +5,7 @@ import { Paged } from '@/components/ui'
 import { Bot, MessageCircle, PhoneCall, PhoneIncoming, PhoneOutgoing, X } from 'lucide-react'
 import { useAuth } from '@/auth/useAuth'
 import { Hint, Label, Select } from '@/components/Field'
-import { clearLeadFollowUps, listOutcomes, scheduleFollowUp } from '@/followups/api'
+import { clearLeadFollowUps, listOutcomes, scheduleFollowUp, type Outcome } from '@/followups/api'
 import { logActivity } from '@/leads/api'
 import { setLeadCategory } from '@/leads/CategorySelect'
 import { CALL_CATEGORIES, DAY_ONLY_TIME, ENDS_FOLLOW_UPS, dayFromToday, dueText } from '@/leads/labels'
@@ -144,6 +144,8 @@ export function FollowUpsTab({
 
   const name = (id: string | null) => members.find((m) => m.id === id)?.name ?? '—'
   const outcomeName = (id: string | null) => outcomes.find((o) => o.id === id)?.name
+  // Masters → Follow-up outcomes → Comment required
+  const needNote = !!(outcomes.find((o) => o.id === outcome) as Outcome | undefined)?.comment_required
   const calls = (fus ?? []).filter((f) => f.mode === 'call' && f.status !== 'rescheduled' && f.status !== 'cancelled')
   const pending = calls.filter((f) => f.status === 'pending').sort((a, b) => a.due_at.localeCompare(b.due_at))
   // newest saved first (when the call was logged)
@@ -155,8 +157,8 @@ export function FollowUpsTab({
   )
 
   async function logCall() {
-    if (!summary.trim()) return setError('Write the comments.')
     if (!outcome) return setError('Pick the call outcome.')
+    if (needNote && !summary.trim()) return setError(`Write the comments — needed for “${outcomeName(outcome)}”.`)
     if (!cat) return setError('Pick the lead’s category.')
     if (!ends && !next) return setError('Pick the next call date.')
     if (!ends && next < dayPlus(0)) return setError('That date has passed — pick today or a later date.')
@@ -164,12 +166,12 @@ export function FollowUpsTab({
     setError(null)
     try {
       const now = new Date().toISOString()
-      const patch = { status: 'done', outcome_id: outcome, result_note: summary.trim(), completed_at: now, completed_by: me ?? null }
+      const patch = { status: 'done', outcome_id: outcome, result_note: summary.trim() || null, completed_at: now, completed_by: me ?? null }
       const { error: e } = completing
         ? await db().from('follow_ups').update(patch).eq('id', completing.id)
         : await db().from('follow_ups').insert({ ...patch, tenant_id: tenant.id, lead_id: leadId, due_at: now, mode: 'call', assigned_to: me ?? null, created_by: me ?? null })
       if (e) throw new Error(e.message)
-      await logActivity(tenant.id, me, [leadId], { kind: 'note', note: `Call · ${outcomeName(outcome) ?? ''} · ${summary.trim()}` })
+      await logActivity(tenant.id, me, [leadId], { kind: 'note', note: ["Call", outcomeName(outcome), summary.trim()].filter(Boolean).join(" · ") })
       if (!ends) await scheduleFollowUp(tenant.id, me, { lead_id: leadId, due_at: `${next}T${DAY_ONLY_TIME}`, mode: 'call', purpose: '', assigned_to: me ?? '' }, true)
       if (cat !== leadCat) await setLeadCategory(tenant.id, me, leadId, cat)
       // Not interested / Closed: no more follow-ups
@@ -279,7 +281,7 @@ export function FollowUpsTab({
                   </>
                 )}
                 <div className="fc-full">
-                  <Label htmlFor="fc-sum" required>
+                  <Label htmlFor="fc-sum" required={needNote}>
                     Comments
                   </Label>
                   <textarea id="fc-sum" className="input" rows={2} placeholder="What was discussed, rate quoted, client response" value={summary} onChange={(e) => setSummary(e.target.value)} />

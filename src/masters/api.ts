@@ -7,7 +7,9 @@ export async function listSimple(table: SimpleTable, tenantId: string): Promise<
       ? 'id, name, is_active, sort_order, color'
       : table === 'event_types'
         ? 'id, name, is_active, sort_order, color, kind'
-        : 'id, name, is_active, sort_order'
+        : table === 'follow_up_outcomes'
+          ? 'id, name, is_active, sort_order, comment_required'
+          : 'id, name, is_active, sort_order'
   const { data, error } = await db().from(table).select(cols).eq('tenant_id', tenantId).order('sort_order').order('name')
   if (error) throw error
   return (data ?? []) as unknown as SimpleRow[]
@@ -21,6 +23,7 @@ export async function saveSimple(table: SimpleTable, tenantId: string, row: Omit
   }
   if (table === 'customer_stages' || table === 'event_types') body.color = row.color ?? '#64748b'
   if (table === 'event_types') body.kind = row.kind ?? 'event'
+  if (table === 'follow_up_outcomes') body.comment_required = !!row.comment_required
   const q = row.id
     ? db().from(table).update(body).eq('id', row.id)
     : db().from(table).insert({ ...body, tenant_id: tenantId })

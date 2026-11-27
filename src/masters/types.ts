@@ -5,6 +5,8 @@ export type SimpleRow = {
   sort_order: number
   color?: string
   kind?: string
+  /** follow-up outcomes: Comments must be written when it is picked */
+  comment_required?: boolean
 }
 
 export type ProductRow = {

@@ -27,10 +27,11 @@ export function SimpleList({
 }) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Draft[] | null>(null)
-  const [adding, setAdding] = useState({ name: '', color: '#64748b', kind: 'event' })
+  const [adding, setAdding] = useState({ name: '', color: '#64748b', kind: 'event', comment_required: false })
   const [busy, setBusy] = useState<string | null>(null)
   const hasColor = table === 'customer_stages' || table === 'event_types'
   const hasKind = table === 'event_types'
+  const hasComment = table === 'follow_up_outcomes'
 
   const load = useCallback(() => {
     listSimple(table, tenant.id)
@@ -90,9 +91,9 @@ export function SimpleList({
     setBusy('new')
     try {
       const next = Math.max(0, ...(rows ?? []).map((r) => r.sort_order)) + 1
-      await saveSimple(table, tenant.id, { name: adding.name, color: adding.color, kind: adding.kind, is_active: true, sort_order: next })
+      await saveSimple(table, tenant.id, { name: adding.name, color: adding.color, kind: adding.kind, comment_required: adding.comment_required, is_active: true, sort_order: next })
       onNotice({ ok: `${adding.name.trim()} added.` })
-      setAdding({ name: '', color: '#64748b', kind: 'event' })
+      setAdding({ name: '', color: '#64748b', kind: 'event', comment_required: false })
       load()
     } catch (e) {
       onNotice({ error: (e as Error).message })
@@ -122,6 +123,7 @@ export function SimpleList({
                 <th>Name</th>
                 {hasKind && <th style={{ width: 170 }}>Kind</th>}
                 {hasColor && <th style={{ width: 80 }}>Colour</th>}
+                {hasComment && <th style={{ width: 150 }}>Comment required</th>}
                 <th style={{ width: 80 }}>Active</th>
                 {canEdit && <th style={{ width: 100 }} />}
               </tr>
@@ -206,6 +208,18 @@ export function SimpleList({
                       />
                     </td>
                   )}
+                  {hasComment && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        className="am-check"
+                        checked={!!r.comment_required}
+                        disabled={!canEdit}
+                        onChange={(e) => edit(r.id, { comment_required: e.target.checked })}
+                        aria-label={`${r.name}: comment required`}
+                      />
+                    </td>
+                  )}
                   <td>
                     <input
                       type="checkbox"
@@ -259,6 +273,17 @@ export function SimpleList({
                         value={adding.color}
                         onChange={(e) => setAdding((a) => ({ ...a, color: e.target.value }))}
                         aria-label="Colour of the new entry"
+                      />
+                    </td>
+                  )}
+                  {hasComment && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        className="am-check"
+                        checked={adding.comment_required}
+                        onChange={(e) => setAdding((a) => ({ ...a, comment_required: e.target.checked }))}
+                        aria-label="New entry: comment required"
                       />
                     </td>
                   )}

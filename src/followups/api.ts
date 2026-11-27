@@ -13,14 +13,16 @@ export async function listFollowUps(tenantId: string): Promise<FollowUpRow[]> {
   return rpcAll<FollowUpRow>((offset, limit) => db().rpc('list_follow_ups', { p_tenant: tenantId, p_offset: offset, p_limit: limit }), 1000, 3)
 }
 
-export async function listOutcomes(tenantId: string): Promise<Option[]> {
+/** an outcome; `comment_required`: Comments must be written when it is picked (Masters → Follow-up outcomes) */
+export type Outcome = Option & { comment_required?: boolean }
+export async function listOutcomes(tenantId: string): Promise<Outcome[]> {
   const { data } = await db()
     .from('follow_up_outcomes')
-    .select('id, name')
+    .select('id, name, comment_required')
     .eq('tenant_id', tenantId)
     .eq('is_active', true)
     .order('sort_order')
-  return (data ?? []) as Option[]
+  return (data ?? []) as Outcome[]
 }
 
 /**
