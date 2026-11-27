@@ -25,6 +25,9 @@ export const POD_STEPS: PodStep[] = [
   { key: 'not_interested', label: 'Not interested', pick: (l) => l.temperature === 'not_interested' },
 ]
 
+/** Creative Studio (Studio Rental) funnels: the same steps without the meeting ones */
+export const STUDIO_STEPS: PodStep[] = POD_STEPS.filter((s) => !['booked', 'done', 'noshow'].includes(s.key))
+
 /** every lead's VSL form / meetings (the caller's leads) */
 export async function listPodFacts(tenantId: string): Promise<Map<string, PodFacts>> {
   const { data, error } = await db().rpc('lead_pod_steps', { p_tenant: tenantId })

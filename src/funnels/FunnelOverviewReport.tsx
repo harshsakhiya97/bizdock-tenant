@@ -1,3 +1,4 @@
+import { STUDIO_STEPS } from './podSteps'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useAuth } from '@/auth/useAuth'
@@ -28,7 +29,10 @@ export function FunnelOverviewReport({ funnel, leads, subs, members }: { funnel:
   const wonIds = useMemo(() => new Set((funnel.funnel_stages ?? []).filter((s) => s.kind === 'won').map((s) => s.id)), [funnel])
   const leadName = useMemo(() => new Map((leads ?? []).map((l) => [l.id, [l.first_name, l.last_name].filter(Boolean).join(' ')])), [leads])
   const biz = businesses.find((b) => b.id === funnel.business_id)
-  const podcast = activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null) === BT.PAID_PODCAST
+  const bizType = activeType(biz ?? null, biz?.subs.find((x) => x.id === funnel.sub_business_id) ?? null)
+  const podcast = bizType === BT.PAID_PODCAST
+  // Creative Studio: the Paid Podcast steps without meetings
+  const studio = bizType === BT.STUDIO_RENTAL
 
   // the tiles: the leads created in the report's period, from its source (and their form posts)
   const inRep = (ts: string) => {
@@ -79,7 +83,7 @@ export function FunnelOverviewReport({ funnel, leads, subs, members }: { funnel:
       <StatRecords show={leadShow} onClose={() => setLeadShow(null)} rowKey={(l) => l.id} onRow={(l) => navigate(`/leads/${l.id}`)} />
       <StatRecords show={subShow} onClose={() => setSubShow(null)} rowKey={(x) => x.id} onRow={(x) => x.lead_id && navigate(`/leads/${x.lead_id}`)} />
 
-      <FunnelAdsReport key={funnel.id} funnelId={funnel.id} leads={leads} range={repRange} setRange={setRepRange} src={repSrc} setSrc={setRepSrc} podcast={podcast} wonIds={wonIds} />
+      <FunnelAdsReport key={funnel.id} funnelId={funnel.id} leads={leads} range={repRange} setRange={setRepRange} src={repSrc} setSrc={setRepSrc} podcast={podcast || studio} steps={studio ? STUDIO_STEPS : undefined} wonIds={wonIds} />
     </>
   )
 }

@@ -6,7 +6,7 @@ import { funnelAdsReport, funnelFlow, funnelFlowDetail, type AdsReport, type Flo
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { FunnelScorecard, type MarketingOpen, type PodRow } from './FunnelScorecard'
-import { POD_STEPS, type PodFacts } from './podSteps'
+import { POD_STEPS, type PodFacts, type PodStep } from './podSteps'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
 import { MetaSync } from './MetaSync'
@@ -69,10 +69,13 @@ export function FunnelAdsReport({
   src,
   setSrc,
   podcast,
+  steps: stepList,
   wonIds,
 }: {
   /** a Paid Podcast funnel: the Scorecard's Funnel section is opt-in → VSL → meetings → closed / not interested */
   podcast?: boolean
+  /** the Funnel rows (default: Paid Podcast's) */
+  steps?: PodStep[]
   /** the funnel's won stages */
   wonIds?: Set<string>
   funnelId: string
@@ -400,7 +403,7 @@ export function FunnelAdsReport({
     if (!podcast) return undefined
     const won = wonIds ?? new Set<string>()
     const facts = (l: Lead): PodFacts => ({ vsl: vsl.has(l.id), booked: meet.booked.has(l.id), done: meet.showed.has(l.id), noshow: !!meet.noshow?.has(l.id) })
-    const steps: [string, (l: Lead) => boolean][] = POD_STEPS.map((st) => [st.label, (l: Lead) => st.pick(l, facts(l), won)])
+    const steps: [string, (l: Lead) => boolean][] = (stepList ?? POD_STEPS).map((st) => [st.label, (l: Lead) => st.pick(l, facts(l), won)])
     const ads = periodLeads.filter((l) => isAds(l))
     const org = periodLeads.filter((l) => !isAds(l))
     const dt = (iso: string) => new Date(iso).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -421,7 +424,7 @@ export function FunnelAdsReport({
       }
       return { label, ads: cell(ads, 'Ads'), organic: cell(org, 'Organic'), total: cell(periodLeads, 'Total') }
     })
-  }, [podcast, wonIds, vsl, meet, periodLeads])
+  }, [podcast, stepList, wonIds, vsl, meet, periodLeads])
   // Scorecard → Marketing: the ads and the leads behind each number (loaded when the Scorecard is open)
   const [detail, setDetail] = useState<FlowDetail | null>(null)
   const [adShow, setAdShow] = useState<StatShow<FlowAd> | null>(null)
