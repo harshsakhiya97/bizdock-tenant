@@ -164,9 +164,10 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   // every business: last comment, follow-ups done (· connected calls), meeting
   const loadExtras = useCallback(() => {
     if (customers) return
-    listLeadExtras(tenant.id, sub?.id ?? null)
+    // the extra columns load after the leads: a slow moment is tried again once, and never blocks the list
+    retryOnce(() => listLeadExtras(tenant.id, sub?.id ?? null))
       .then(setExtras)
-      .catch((e: Error) => setNotice({ error: e.message }))
+      .catch(() => setNotice({ error: 'Some columns (last comment, follow-ups done) couldn’t load just now — reload to try again.' }))
     listOutcomes(tenant.id).then(setOutcomes)
   }, [customers, sub, tenant.id])
   useEffect(loadExtras, [loadExtras])
@@ -178,13 +179,13 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   const [closing, setClosing] = useState<LeadRow | null>(null)
   useEffect(() => {
     if (!pod) return
-    listPodFacts(tenant.id).then(setPodFacts, () => setPodFacts(new Map()))
+    retryOnce(() => listPodFacts(tenant.id)).then(setPodFacts, () => setPodFacts(new Map()))
   }, [pod, tenant.id])
   // Creative Studio: the leads with a follow-up done (its Follow-up step)
   const [fuDone, setFuDone] = useState<Set<string>>(new Set())
   useEffect(() => {
     if (!stepped || pod) return
-    listPodBoard(tenant.id).then(
+    retryOnce(() => listPodBoard(tenant.id)).then(
       (m) => setFuDone(new Set([...m].filter(([, f]) => f.fu_done > 0).map(([id]) => id))),
       () => setFuDone(new Set()),
     )
@@ -351,9 +352,9 @@ export function LeadsPage({ customers = false }: { customers?: boolean }) {
   useEffect(() => {
     if (!pod || view !== 'board') return
     let live = true
-    listPodBoard(tenant.id).then(
+    retryOnce(() => listPodBoard(tenant.id)).then(
       (m) => live && setBoard(m),
-      (e: Error) => live && setNotice({ error: e.message }),
+      () => live && setNotice({ error: 'The board couldn’t load just now — reload to try again.' }),
     )
     return () => {
       live = false
@@ -1267,4 +1268,9 @@ function RowActions({
       </Acts>
     </td>
   )
+}
+
+/** a request tried again once (after a short wait) when it fails — a busy moment on the server */
+function retryOnce<T>(fn: () => Promise<T>): Promise<T> {
+  return fn().catch(() => new Promise<T>((ok, fail) => window.setTimeout(() => fn().then(ok, fail), 1500)))
 }
