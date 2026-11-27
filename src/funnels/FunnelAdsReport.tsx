@@ -6,7 +6,7 @@ import { funnelAdsReport, funnelFlow, funnelFlowDetail, type AdsReport, type Flo
 import { funnelGoogleDays } from '@/google/api'
 import { FunnelFlow } from './FunnelFlow'
 import { FunnelScorecard, type MarketingOpen, type PodRow } from './FunnelScorecard'
-import { POD_STEPS, type PodFacts, type PodStep } from './podSteps'
+import { listPodBoard, POD_STEPS, type PodFacts, type PodStep } from './podSteps'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
 import { FunnelLeadFlow, type FlowLead } from './FunnelLeadFlow'
 import { MetaSync } from './MetaSync'
@@ -138,6 +138,20 @@ export function FunnelAdsReport({
   }, [ids, tenant.id, reload])
 
   // Paid Podcast: the leads that sent a VSL form (Webhooks → Form step: VSL)
+  // the leads with at least one follow-up done (Creative Studio's Follow-up step)
+  const [fuDone, setFuDone] = useState<Set<string>>(new Set())
+  const needFu = !!stepList?.some((s) => s.key === 'followup')
+  useEffect(() => {
+    if (!needFu) return
+    let live = true
+    listPodBoard(tenant.id).then(
+      (m) => live && setFuDone(new Set([...m].filter(([, f]) => f.fu_done > 0).map(([id]) => id))),
+      () => undefined,
+    )
+    return () => {
+      live = false
+    }
+  }, [needFu, tenant.id, reload])
   const [vsl, setVsl] = useState<Set<string>>(new Set())
   useEffect(() => {
     if (!podcast) return
@@ -402,7 +416,7 @@ export function FunnelAdsReport({
   const podRows = useMemo<PodRow[] | undefined>(() => {
     if (!podcast) return undefined
     const won = wonIds ?? new Set<string>()
-    const facts = (l: Lead): PodFacts => ({ vsl: vsl.has(l.id), booked: meet.booked.has(l.id), done: meet.showed.has(l.id), noshow: !!meet.noshow?.has(l.id) })
+    const facts = (l: Lead): PodFacts => ({ vsl: vsl.has(l.id), booked: meet.booked.has(l.id), done: meet.showed.has(l.id), noshow: !!meet.noshow?.has(l.id), fu: fuDone.has(l.id) })
     const steps: [string, (l: Lead) => boolean][] = (stepList ?? POD_STEPS).map((st) => [st.label, (l: Lead) => st.pick(l, facts(l), won)])
     const ads = periodLeads.filter((l) => isAds(l))
     const org = periodLeads.filter((l) => !isAds(l))
@@ -424,7 +438,7 @@ export function FunnelAdsReport({
       }
       return { label, ads: cell(ads, 'Ads'), organic: cell(org, 'Organic'), total: cell(periodLeads, 'Total') }
     })
-  }, [podcast, stepList, wonIds, vsl, meet, periodLeads])
+  }, [podcast, stepList, wonIds, vsl, meet, fuDone, periodLeads])
   // Scorecard → Marketing: the ads and the leads behind each number (loaded when the Scorecard is open)
   const [detail, setDetail] = useState<FlowDetail | null>(null)
   const [adShow, setAdShow] = useState<StatShow<FlowAd> | null>(null)

@@ -1,7 +1,7 @@
 import { db } from '@/lib/supabase'
 
 /** what a Paid Podcast lead did after the opt-in form: the VSL form (Webhooks → Form step: VSL) and its meetings */
-export type PodFacts = { vsl: boolean; booked: boolean; done: boolean; noshow: boolean }
+export type PodFacts = { vsl: boolean; booked: boolean; done: boolean; noshow: boolean; /** at least one follow-up done (Creative Studio) */ fu?: boolean }
 type PodLead = { id: string; temperature?: string | null; stage_id?: string | null }
 export type PodStep = { key: string; label: string; pick: (l: PodLead, f: PodFacts | undefined, won: Set<string>) => boolean }
 
@@ -25,8 +25,13 @@ export const POD_STEPS: PodStep[] = [
   { key: 'not_interested', label: 'Not interested', pick: (l) => l.temperature === 'not_interested' },
 ]
 
-/** Creative Studio (Studio Rental) funnels: the same steps without the meeting ones */
-export const STUDIO_STEPS: PodStep[] = POD_STEPS.filter((s) => !['booked', 'done', 'noshow'].includes(s.key))
+/** Creative Studio (Studio Rental) funnels: Opt-in → Follow-ups → Closed / Not interested */
+export const STUDIO_STEPS: PodStep[] = [
+  { key: 'optin', label: 'Opt-in form filled', pick: () => true },
+  { key: 'followup', label: 'Follow-up done', pick: (_, f) => !!f?.fu },
+  { key: 'closed', label: 'Closed', pick: (l, _, won) => l.temperature === 'closed' || won.has(l.stage_id ?? '') },
+  { key: 'not_interested', label: 'Not interested', pick: (l) => l.temperature === 'not_interested' },
+]
 
 /** every lead's VSL form / meetings (the caller's leads) */
 export async function listPodFacts(tenantId: string): Promise<Map<string, PodFacts>> {
