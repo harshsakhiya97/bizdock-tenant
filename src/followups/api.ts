@@ -88,7 +88,8 @@ export async function completeFollowUp(
         lead_id: f.lead_id,
         due_at: done.completed_at,
         mode: f.mode,
-        assigned_to: f.assigned_to || memberId || null,
+        // a call made now: it is the caller's
+        assigned_to: memberId || f.assigned_to || null,
         created_by: memberId ?? null,
         ...done,
       })
