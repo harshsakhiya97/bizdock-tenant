@@ -273,6 +273,8 @@ export async function saveSheet(tenantId: string, funnelId: string, existing: Fu
     sheet_url: input.sheet_url.trim(),
     ...parsed,
     import_existing: input.import_existing,
+    ad_platform: input.ad_campaign_id ? input.ad_platform : null,
+    ad_campaign_id: input.ad_campaign_id || null,
     ...(linkChanged ? { synced_rows: null, headers: null, sample: null, last_error: null, last_synced_at: null } : {}),
   }
   const { data, error } = existing
@@ -292,6 +294,21 @@ export async function deleteSheet(id: string) {
   if (error) throw error
 }
 
+
+/** Sheets → Ad campaign: every Facebook and Google campaign of the workspace */
+export type AdCampaignOption = { platform: 'meta' | 'google'; id: string; name: string; status: string | null }
+export async function listAdCampaignOptions(tenantId: string): Promise<AdCampaignOption[]> {
+  const [m, g] = await Promise.all([
+    db().from('meta_campaigns').select('campaign_id, name, effective_status').eq('tenant_id', tenantId),
+    db().from('google_campaigns').select('campaign_id, name, status').eq('tenant_id', tenantId),
+  ])
+  if (m.error) throw m.error
+  if (g.error) throw g.error
+  return [
+    ...((m.data ?? []) as { campaign_id: string; name: string | null; effective_status: string | null }[]).map((c) => ({ platform: 'meta' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, status: c.effective_status })),
+    ...((g.data ?? []) as { campaign_id: string; name: string | null; status: string | null }[]).map((c) => ({ platform: 'google' as const, id: c.campaign_id, name: c.name ?? c.campaign_id, status: c.status })),
+  ].sort((a, b) => a.name.localeCompare(b.name))
+}
 
 export async function saveSheetMap(id: string, map: Record<string, string>) {
   const { error } = await db().from('funnel_sheets').update({ field_map: map }).eq('id', id)

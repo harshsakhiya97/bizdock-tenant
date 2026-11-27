@@ -8,7 +8,7 @@ import { ConfirmModal, Empty } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { ago } from '@/team/time'
 import { useTenant } from '@/tenant/useTenant'
-import { deleteSheet, listSkippedRows, parseSheetUrl, recheckSheet, retrySheetRows, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
+import { deleteSheet, listAdCampaignOptions, listSkippedRows, type AdCampaignOption, parseSheetUrl, recheckSheet, retrySheetRows, saveSheet, saveSheetMap, setSheetActive, sheetsAccount, syncSheetNow } from './api'
 import { LEAD_TARGETS, guessTarget, targetLabel } from './fieldMap'
 import type { FunnelSheet, SheetInput, SkippedRow } from './types'
 import { useCopy } from './useCopy'
@@ -38,6 +38,12 @@ export function SheetsTab({
   const [skippedOf, setSkippedOf] = useState<FunnelSheet | null>(null)
   const [rechecking, setRechecking] = useState<FunnelSheet | null>(null)
   const { copied, copy } = useCopy()
+  // Ad campaign names (the sheet cards, the edit pop-up)
+  const [camps, setCamps] = useState<AdCampaignOption[]>([])
+  useEffect(() => {
+    listAdCampaignOptions(tenant.id).then(setCamps, () => setCamps([]))
+  }, [tenant.id])
+  const campOf = (s: FunnelSheet) => (s.ad_campaign_id ? camps.find((c) => c.platform === s.ad_platform && c.id === s.ad_campaign_id) : undefined)
 
   useEffect(() => {
     sheetsAccount()
@@ -114,6 +120,11 @@ export function SheetsTab({
                   <a href={s.sheet_url} target="_blank" rel="noreferrer" className="link small lp-url">
                     Open sheet <ExternalLink size={12} />
                   </a>
+                  {s.ad_campaign_id && (
+                    <span className="badge badge-info" title="Its leads: this campaign, Source Facebook / Google">
+                      {s.ad_platform === 'google' ? 'Google' : 'Facebook'} · {campOf(s)?.name ?? s.ad_campaign_id}
+                    </span>
+                  )}
                 </div>
                 {canEdit && (
                   <div className="row-actions">
@@ -166,6 +177,7 @@ export function SheetsTab({
 
       {editing && (
         <SheetModal
+          camps={camps}
           sheet={editing.sheet}
           onClose={() => setEditing(null)}
           onSave={async (input) => {
@@ -319,8 +331,14 @@ function SheetColumns({ sheet, canEdit, onChanged, onError }: { sheet: FunnelShe
   )
 }
 
-function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onClose: () => void; onSave: (input: SheetInput) => Promise<void> }) {
-  const [f, setF] = useState<SheetInput>({ name: sheet?.name ?? '', sheet_url: sheet?.sheet_url ?? '', import_existing: sheet?.import_existing ?? false })
+function SheetModal({ sheet, camps, onClose, onSave }: { sheet: FunnelSheet | null; camps: AdCampaignOption[]; onClose: () => void; onSave: (input: SheetInput) => Promise<void> }) {
+  const [f, setF] = useState<SheetInput>({
+    name: sheet?.name ?? '',
+    sheet_url: sheet?.sheet_url ?? '',
+    import_existing: sheet?.import_existing ?? false,
+    ad_platform: sheet?.ad_platform ?? null,
+    ad_campaign_id: sheet?.ad_campaign_id ?? null,
+  })
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const linkChanged = !!sheet && f.sheet_url.trim() !== sheet.sheet_url
@@ -371,6 +389,23 @@ function SheetModal({ sheet, onClose, onSave }: { sheet: FunnelSheet | null; onC
           </Label>
           <TextInput id="sh-url" placeholder="https://docs.google.com/spreadsheets/d/…" value={f.sheet_url} onChange={(e) => setF({ ...f, sheet_url: e.target.value })} />
           <Hint>Open the tab with the leads and copy the link from the address bar; that tab is read.</Hint>
+        </div>
+        <div>
+          <Label htmlFor="sh-camp">Ad campaign</Label>
+          <SearchSelect
+            id="sh-camp"
+            value={f.ad_campaign_id ? `${f.ad_platform}:${f.ad_campaign_id}` : null}
+            onChange={(v) => {
+              const [p, ...id] = (v ?? '').split(':')
+              setF({ ...f, ad_platform: v ? (p as 'meta' | 'google') : null, ad_campaign_id: v ? id.join(':') : null })
+            }}
+            options={[
+              { value: '', label: 'None' },
+              ...camps.map((c) => ({ value: `${c.platform}:${c.id}`, label: c.name, group: c.platform === 'google' ? 'Google Ads' : 'Facebook Ads' })),
+            ]}
+            placeholder="None"
+          />
+          <Hint>The sheet’s leads (the ones already in and new rows) get this campaign as Campaign Name and Source Facebook / Google. None: Source Google Sheet.</Hint>
         </div>
         {(!sheet || linkChanged) && (
           <div className="stack" style={{ gap: 8 }}>

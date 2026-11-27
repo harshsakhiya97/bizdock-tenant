@@ -198,9 +198,12 @@ export type FunnelSheet = {
   total_rows: number | null
   is_active: boolean
   created_at: string
+  /** Ad campaign: its leads get this campaign and Source Facebook / Google */
+  ad_platform?: 'meta' | 'google' | null
+  ad_campaign_id?: string | null
 }
 
-export type SheetInput = { name: string; sheet_url: string; import_existing: boolean }
+export type SheetInput = { name: string; sheet_url: string; import_existing: boolean; ad_platform: 'meta' | 'google' | null; ad_campaign_id: string | null }
 
 /** a sheet row that didn't become a lead (row number, its data, why) */
 export type SkippedRow = { id: number; sheet_id: string; row_no: number; data: Record<string, string>; reason: string | null; skipped_at: string }
