@@ -244,17 +244,20 @@ h1, h2, h3, h4, h5 { font-weight: 700; }
 .fu-today { color: var(--warning); font-weight: 600; }
 .seg button:disabled { opacity: .45; cursor: not-allowed; }
 .board { display: flex; gap: 12px; overflow-x: auto; padding: 16px; align-items: flex-start; min-height: calc(100vh - 120px); }
-.board-col { flex: 0 0 262px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; max-height: calc(100vh - 120px); transition: border-color .15s, background .15s; }
+.board-col { flex: 1 1 0; min-width: 250px; background: var(--surface-muted); border: 1px solid var(--line); border-radius: var(--radius-lg); display: flex; flex-direction: column; max-height: calc(100vh - 120px); transition: border-color .15s, background .15s; }
 .board-col.is-over { border-color: var(--brand); background: var(--brand-soft); }
 .board-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); border-top: 3px solid var(--c); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
 .board-title { font-weight: 700; font-size: 13px; }
 .board-head small { margin-left: auto; color: var(--text-muted); font-size: 11.5px; font-weight: 600; }
 .board-cards { display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; }
-.board-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; cursor: pointer; box-shadow: var(--shadow-card); }
+.board-card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 11px; display: flex; flex-direction: column; gap: 5px; cursor: pointer; box-shadow: var(--shadow-card); }
 .board-card[draggable='true'] { cursor: grab; }
 .board-card:hover { border-color: var(--line-strong); }
 .board-card b { font-size: 13px; }
 .board-card small { font-size: 12px; }
+/* every column the same width: long text in a card is cut with … instead of widening its column */
+.board-card > * { min-width: 0; }
+.board-card .cell-clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .board-empty { padding: 18px 8px; text-align: center; font-size: 12px; color: var(--text-faint); border: 1.5px dashed var(--line-strong); border-radius: var(--radius); }
 .timeline { list-style: none; margin: 0; padding: 0 0 0 4px; display: flex; flex-direction: column; gap: 12px; }
 .timeline li { display: flex; gap: 10px; position: relative; }
