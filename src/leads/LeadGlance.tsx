@@ -80,7 +80,6 @@ export function LeadGlance({
           <>
             <b>{dueText(nf.due_at)}</b>
             {late && <span className="small"> · overdue{g && g.overdue > 1 ? ` (${g.overdue})` : ''}</span>}
-            {nf.purpose && <div className="muted small">{nf.purpose}</div>}
           </>
         ) : (
           <span className="muted">None set</span>

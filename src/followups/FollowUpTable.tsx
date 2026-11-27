@@ -56,7 +56,7 @@ export function FollowUpTable({
             <th>Due</th>
             <th>Lead</th>
             <th>Mode</th>
-            <th>{compact ? 'Purpose' : 'Purpose / result'}</th>
+            <th>Result</th>
             {!compact && <th>Status</th>}
             {!hideAssigned && <th>Assigned to</th>}
             <th />
@@ -101,14 +101,13 @@ export function FollowUpTable({
                   </span>
                 </td>
                 <td style={{ maxWidth: 320 }}>
-                  {f.purpose && <div>{f.purpose}</div>}
                   {f.status === 'done' && (
                     <div className="small">
                       <b className="tone-success">{outcomes.find((o) => o.id === f.outcome_id)?.name ?? 'Done'}</b>
                       {f.result_note && <span className="muted"> · {f.result_note}</span>}
                     </div>
                   )}
-                  {!f.purpose && f.status !== 'done' && <span className="muted">—</span>}
+                  {f.status !== 'done' && <span className="muted">—</span>}
                 </td>
                 {!compact && (
                   <td>

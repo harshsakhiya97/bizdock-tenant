@@ -103,20 +103,18 @@ export function FollowUpsPage() {
           ),
         },
         { label: 'Mode', render: (f) => modeOf(f.mode).label },
-        { label: 'Purpose', render: (f) => f.purpose || <span className="muted">—</span> },
         { label: 'Assigned to', render: (f) => data.members.find((m) => m.id === f.assigned_to)?.name ?? <span className="muted">—</span> },
       ],
     })
 
   function exportCsv() {
     const out = [
-      ['Due', 'Lead', 'Phone', 'Mode', 'Purpose', 'Status', 'Outcome', 'Result', 'Assigned to'],
+      ['Due', 'Lead', 'Phone', 'Mode', 'Status', 'Outcome', 'Result', 'Assigned to'],
       ...rows.map((f) => [
         new Date(f.due_at).toLocaleString('en-IN'),
         f.leads ? fullName(f.leads) : '',
         f.leads?.phone ?? '',
         modeOf(f.mode).label,
-        f.purpose ?? '',
         f.status,
         data.outcomes.find((o) => o.id === f.outcome_id)?.name ?? '',
         f.result_note ?? '',

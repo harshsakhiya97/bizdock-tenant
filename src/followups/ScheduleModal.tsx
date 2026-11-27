@@ -115,15 +115,6 @@ export function ScheduleModal({
           </Select>
         </div>
         <div className="span-2">
-          <Label htmlFor="s-purpose">Purpose</Label>
-          <TextInput
-            id="s-purpose"
-            placeholder="e.g. Share the price list, confirm the booking"
-            value={input.purpose}
-            onChange={(e) => setInput((d) => ({ ...d, purpose: e.target.value }))}
-          />
-        </div>
-        <div className="span-2">
           <Label htmlFor="s-assign">Assigned to</Label>
           <Select
             id="s-assign"

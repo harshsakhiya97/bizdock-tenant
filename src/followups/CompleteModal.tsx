@@ -86,7 +86,7 @@ export function CompleteModal({
         me,
         followUp,
         { outcome_id: outcome, outcome_name: outcomes.find((o) => o.id === outcome)?.name ?? '', note },
-        ends ? null : { lead_id: followUp.lead_id, ...next, due_at: `${next.due_at}T${DAY_ONLY_TIME}`, assigned_to: followUp.assigned_to ?? '' },
+        ends ? null : { lead_id: followUp.lead_id, ...next, due_at: `${next.due_at}T${DAY_ONLY_TIME}`, assigned_to: me ?? followUp.assigned_to ?? '' },
       )
       if (cat !== current) await setLeadCategory(tenant.id, me, followUp.lead_id, cat)
       if (ends) await clearLeadFollowUps(followUp.lead_id)
@@ -129,12 +129,6 @@ export function CompleteModal({
       }
     >
       <div className="form-grid">
-        {followUp.purpose && (
-          <div className="span-2 note">
-            <b>Planned</b>
-            {followUp.purpose}
-          </div>
-        )}
         <div className="span-2">
           <Label htmlFor="c-outcome" required>
             Outcome

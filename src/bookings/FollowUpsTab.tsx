@@ -309,7 +309,7 @@ export function FollowUpsTab({
                         {overdue ? ' · overdue' : ''}
                       </b>
                       <div className="muted small">
-                        {f.purpose ? `${f.purpose} · ` : ''}for {name(f.assigned_to)}
+                        for {name(f.assigned_to)}
                       </div>
                     </div>
                   </div>
@@ -409,7 +409,7 @@ export function FollowUpsTab({
             <div key={f.id} className="fu-item is-pending">
               <div>
                 <b>WhatsApp due {dueText(f.due_at)}</b>
-                <div className="muted small">{f.purpose ?? 'Follow-up'}</div>
+                <div className="muted small">for {name(f.assigned_to)}</div>
               </div>
             </div>
           ))}

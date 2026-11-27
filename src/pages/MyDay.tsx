@@ -63,7 +63,6 @@ export function MyDayPage() {
           ),
         },
         { label: 'Mode', render: (f) => modeOf(f.mode).label },
-        { label: 'Purpose', render: (f) => f.purpose || <span className="muted">—</span> },
         { label: 'Assigned to', render: (f) => data.members.find((m) => m.id === f.assigned_to)?.name ?? <span className="muted">—</span> },
       ],
     })
