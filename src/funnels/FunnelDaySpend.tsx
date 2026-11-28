@@ -200,6 +200,7 @@ export function FunnelDaySpend({
   campaigns,
   adsets,
   google,
+  range: fixed,
 }: {
   funnelId: string
   links: { campaign_id: string; adset_id: string | null }[]
@@ -209,12 +210,15 @@ export function FunnelDaySpend({
   adsets: Pick<AdSet, 'adset_id' | 'name'>[]
   /** Google Ads (Funnel → Google Ads): its ads (for the preview); else Facebook */
   google?: { ads: GAd[]; customers?: Map<string, string>; campaigns?: GCampaign[] }
+  /** dates picked outside (Funnel → Facebook Ads): no picker here */
+  range?: Range
 }) {
   const platform = google ? 'Google' : 'Facebook'
   const setWord = google ? 'Ad group' : 'Ad set'
   const tenant = useTenant()
   // same presets as Facebook Ads Manager (Last 30 days ends yesterday)
-  const [range, setRange] = useState<Range>(() => presetRange('last30'))
+  const [own, setRange] = useState<Range>(() => presetRange('last30'))
+  const range = fixed ?? own
   const { from, to } = range
   // the period before, as long (for the ▲ ▼ on the tiles)
   const prevTo = addDays(from, -1)
@@ -335,7 +339,7 @@ export function FunnelDaySpend({
             {platform} spend of the linked campaigns (without GST) and the funnel’s leads by the ad they came from. ▲ ▼ compare with {short(prevFrom)} – {short(prevTo)}.
           </div>
         </div>
-        <DateRangePicker value={range} onChange={setRange} />
+        {!fixed && <DateRangePicker value={range} onChange={setRange} />}
       </section>
       {error && <div className="alert alert-error">{error}</div>}
       {!data && !error ? (

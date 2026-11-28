@@ -2,6 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ChevronRight, Megaphone, RefreshCw } from 'lucide-react'
 import { Empty } from '@/components/ui'
+import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
+import { freshRange, useKept } from '@/lib/useKept'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
 import { campaignSpend, campaignTreeSpend, listAdAccounts, listCampaignTree, syncMeta, type AdAccount, type AdLink, type AdSet, type Campaign } from '@/meta/api'
@@ -9,7 +11,6 @@ import { CampaignTags, tagHit } from './CampaignTags'
 import { FunnelDaySpend } from './FunnelDaySpend'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-const day = (d: Date) => d.toLocaleDateString('en-CA')
 const ACTIVE = new Set(['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES', 'PENDING_REVIEW'])
 const statusTone = (s: string | null) => (s && ACTIVE.has(s) ? 'badge-success' : s === 'PAUSED' || s === 'CAMPAIGN_PAUSED' || s === 'ADSET_PAUSED' ? 'badge-warning' : 'badge-muted')
 const statusLabel = (s: string | null) => (s ? s.charAt(0) + s.slice(1).toLowerCase().replace(/_/g, ' ') : '—')
@@ -27,14 +28,13 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
   const [tags, setTags] = useState<string[]>([])
   const [spend, setSpend] = useState<{ c: Map<string, number>; s: Map<string, number> }>({ c: new Map(), s: new Map() })
   const [busy, setBusy] = useState(false)
+  // same presets as Facebook Ads Manager (Last 30 days ends yesterday); spend in the tables and the report is for these dates
+  const [range, setRange] = useKept<Range>(`funnel-ads-range:${funnelId}`, () => presetRange('last30'), freshRange)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setError(null)
-    // Last 30 days as Facebook counts it: ending yesterday
-    const to = new Date(Date.now() - 86400_000)
-    const from = new Date(Date.now() - 30 * 86400_000)
-    Promise.all([listAdAccounts(tenant.id), listCampaignTree(tenant.id), campaignSpend(tenant.id, day(from), day(to))])
+    Promise.all([listAdAccounts(tenant.id), listCampaignTree(tenant.id), campaignSpend(tenant.id, range.from, range.to)])
       .then(([a, t, sp]) => {
         setAccounts(a)
         setCampaigns(t.campaigns)
@@ -50,7 +50,7 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         setSpend({ c, s })
       })
       .catch((e: Error) => setError(e.message))
-  }, [tenant.id])
+  }, [tenant.id, range.from, range.to])
   useEffect(load, [load])
 
   const accName = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name ?? a.act_id])), [accounts])
@@ -96,7 +96,7 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
     <div className="stack">
       {error && <div className="alert alert-error">{error}</div>}
       <div className="row-between" style={{ flexWrap: 'wrap', gap: 8 }}>
-        <div className="muted small">Campaigns whose leads and spend count for this funnel. Spend is the last 30 days, without GST.</div>
+        <div className="muted small">Campaigns whose leads and spend count for this funnel. Spend is without GST.</div>
         <div className="row" style={{ gap: 8 }}>
           <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => void refresh()} title="Bring in the latest campaigns and numbers">
             <RefreshCw size={14} /> Refresh from Facebook
@@ -115,23 +115,28 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         }}
       />
 
+      <section className="card card-pad row-between" style={{ flexWrap: 'wrap', gap: 10 }}>
+        <div className="muted small">Spend in Campaigns, Ads and the report is for these dates.</div>
+        <DateRangePicker value={range} onChange={setRange} />
+      </section>
+
       <Collapse title="Campaigns" count={mine.length}>
         {!mine.length ? (
           <Empty icon={Megaphone}>No campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
         ) : (
-          <CampaignTable links={mine} tree={tree} campById={campById} adsets={adsets} accName={accName} spend30={spend} />
+          <CampaignTable links={mine} tree={tree} campById={campById} adsets={adsets} accName={accName} spend30={spend} range={range} />
         )}
       </Collapse>
 
       {mine.length > 0 && (
         <Collapse title="Ads" count={tree ? adsIn(mine, tree.ads).length : undefined}>
-          <AdsTable links={mine} tree={tree} campById={campById} adsets={adsets} />
+          <AdsTable links={mine} tree={tree} campById={campById} adsets={adsets} range={range} />
         </Collapse>
       )}
 
       {mine.length > 0 && (
-        <Collapse title="Report">
-          <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />
+        <Collapse title="Insights">
+          <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} range={range} />
         </Collapse>
       )}
 
@@ -151,10 +156,10 @@ function Status({ s }: { s: string | null }) {
 }
 
 /** the funnel's campaigns as a table: campaign → ad sets → ads, with status, budget, spend for 30 days and all time */
-function CampaignTable({ links, tree, campById, adsets, accName, spend30 }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[]; accName: Map<string, string>; spend30: Sp }) {
+function CampaignTable({ links, tree, campById, adsets, accName, spend30, range }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[]; accName: Map<string, string>; spend30: Sp; range: Range }) {
   const [openC, setOpenC] = useState<Set<string>>(new Set())
   const [openS, setOpenS] = useState<Set<string>>(new Set())
-  const agg = useAgg(tree)
+  const agg = useAgg(tree, range)
 
   const toggle = (set: Set<string>, put: (s: Set<string>) => void, id: string) => {
     const n = new Set(set)
@@ -174,7 +179,7 @@ function CampaignTable({ links, tree, campById, adsets, accName, spend30 }: { li
             <th>Campaign / ad set / ad</th>
             <th>Status</th>
             <th className="num">Daily budget</th>
-            <th className="num">Spend · 30 days</th>
+            <th className="num">Spend</th>
             <th className="num">Total spend</th>
           </tr>
         </thead>
@@ -294,8 +299,8 @@ function Collapse({ title, count, children }: { title: string; count?: number; c
 
 type Tree = Awaited<ReturnType<typeof campaignTreeSpend>>
 /** spend by campaign / ad set / ad, all time, and by ad for the last 30 days */
-function useAgg(tree: Tree | null) {
-  const from30 = day(new Date(Date.now() - 30 * 86400_000))
+function useAgg(tree: Tree | null, range: Range) {
+  const { from, to } = range
   return useMemo(() => {
     const all = { c: new Map<string, number>(), s: new Map<string, number>(), a: new Map<string, number>() }
     const d30 = new Map<string, number>()
@@ -304,10 +309,10 @@ function useAgg(tree: Tree | null) {
       all.c.set(r.campaign_id, (all.c.get(r.campaign_id) ?? 0) + v)
       all.s.set(r.adset_id, (all.s.get(r.adset_id) ?? 0) + v)
       all.a.set(r.ad_id, (all.a.get(r.ad_id) ?? 0) + v)
-      if (r.day >= from30) d30.set(r.ad_id, (d30.get(r.ad_id) ?? 0) + v)
+      if (r.day >= from && r.day <= to) d30.set(r.ad_id, (d30.get(r.ad_id) ?? 0) + v)
     }
     return { all, d30 }
-  }, [tree, from30])
+  }, [tree, from, to])
 }
 /** the ads that count for these links (whole campaigns, or one ad set) */
 function adsIn(links: AdLink[], ads: Tree['ads']) {
@@ -317,8 +322,8 @@ function adsIn(links: AdLink[], ads: Tree['ads']) {
 }
 
 /** every ad of the funnel's campaigns, with its campaign / ad set, status and spend */
-function AdsTable({ links, tree, campById, adsets }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[] }) {
-  const agg = useAgg(tree)
+function AdsTable({ links, tree, campById, adsets, range }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[]; range: Range }) {
+  const agg = useAgg(tree, range)
   const setName = useMemo(() => new Map(adsets.map((s) => [s.adset_id, s.name])), [adsets])
   if (!tree) return <div className="muted small">Loading…</div>
   const ads = adsIn(links, tree.ads).sort((a, b) => (agg.all.a.get(b.ad_id) ?? 0) - (agg.all.a.get(a.ad_id) ?? 0))
@@ -333,7 +338,7 @@ function AdsTable({ links, tree, campById, adsets }: { links: AdLink[]; tree: Tr
             <th>Ad</th>
             <th>Campaign · ad set</th>
             <th>Status</th>
-            <th className="num">Spend · 30 days</th>
+            <th className="num">Spend</th>
             <th className="num">Total spend</th>
           </tr>
         </thead>
