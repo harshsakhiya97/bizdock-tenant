@@ -116,6 +116,21 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const { selected, select: selectBiz } = useBusiness()
   const [range, setRange] = useKept<Range>(`owner-dash.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const [data, setData] = useState<Data | null>(null)
+  // View details: back to the top once the picked business has loaded (the page height changes while it loads)
+  const toTop = useRef(false)
+  const goTop = () => {
+    // the page scrolls inside #root (html / body / #root are height 100% with overflow-x hidden)
+    for (const el of [document.getElementById('root'), document.body, document.documentElement]) if (el) el.scrollTop = 0
+  }
+  useLayoutEffect(() => {
+    if (toTop.current) goTop()
+  })
+  const pickBiz = (id: string | null) => {
+    toTop.current = true
+    goTop()
+    selectBiz(id)
+    window.setTimeout(() => (toTop.current = false), 1500)
+  }
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   // a number's leads, in a modal
@@ -236,8 +251,13 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           </b>
         </div>
         {b.id && !solo && (
-          <button type="button" className="link-btn small od-more" onClick={() => { selectBiz(b.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
+          <button type="button" className="link-btn small od-more" onClick={() => pickBiz(b.id)}>
             View details <ChevronRight size={13} />
+          </button>
+        )}
+        {solo && (
+          <button type="button" className="link-btn small od-more" onClick={() => pickBiz(null)}>
+            All businesses <ChevronRight size={13} />
           </button>
         )}
       </div>
