@@ -57,6 +57,19 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
   const campById = useMemo(() => new Map(campaigns.map((c) => [c.campaign_id, c])), [campaigns])
   // only the campaigns whose name has one of the funnel's tags
   const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId && tagHit(campById.get(l.campaign_id)?.name, tags)), [links, funnelId, campById, tags])
+  const ids = useMemo(() => [...new Set(mine.map((l) => l.campaign_id))].sort(), [mine])
+  const idKey = ids.join(',')
+  const [tree, setTree] = useState<Tree | null>(null)
+  useEffect(() => {
+    let live = true
+    setTree(null)
+    campaignTreeSpend(tenant.id, idKey ? idKey.split(',') : [])
+      .then((t) => live && setTree(t))
+      .catch(() => live && setTree({ ads: [], days: [] }))
+    return () => {
+      live = false
+    }
+  }, [tenant.id, idKey])
 
   async function refresh() {
     setBusy(true)
@@ -106,12 +119,18 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         {!mine.length ? (
           <Empty icon={Megaphone}>No campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
         ) : (
-          <CampaignTable links={mine} campById={campById} adsets={adsets} accName={accName} spend30={spend} />
+          <CampaignTable links={mine} tree={tree} campById={campById} adsets={adsets} accName={accName} spend30={spend} />
         )}
       </Collapse>
 
       {mine.length > 0 && (
-        <Collapse title="Ads">
+        <Collapse title="Ads" count={tree ? adsIn(mine, tree.ads).length : undefined}>
+          <AdsTable links={mine} tree={tree} campById={campById} adsets={adsets} />
+        </Collapse>
+      )}
+
+      {mine.length > 0 && (
+        <Collapse title="Report">
           <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />
         </Collapse>
       )}
@@ -132,36 +151,10 @@ function Status({ s }: { s: string | null }) {
 }
 
 /** the funnel's campaigns as a table: campaign → ad sets → ads, with status, budget, spend for 30 days and all time */
-function CampaignTable({ links, campById, adsets, accName, spend30 }: { links: AdLink[]; campById: Map<string, Campaign>; adsets: AdSet[]; accName: Map<string, string>; spend30: Sp }) {
-  const tenant = useTenant()
-  const ids = useMemo(() => [...new Set(links.map((l) => l.campaign_id))], [links])
-  const [tree, setTree] = useState<Awaited<ReturnType<typeof campaignTreeSpend>> | null>(null)
+function CampaignTable({ links, tree, campById, adsets, accName, spend30 }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[]; accName: Map<string, string>; spend30: Sp }) {
   const [openC, setOpenC] = useState<Set<string>>(new Set())
   const [openS, setOpenS] = useState<Set<string>>(new Set())
-  useEffect(() => {
-    let live = true
-    campaignTreeSpend(tenant.id, ids)
-      .then((t) => live && setTree(t))
-      .catch(() => live && setTree({ ads: [], days: [] }))
-    return () => {
-      live = false
-    }
-  }, [tenant.id, ids])
-
-  // spend: ad → 30 days / all time
-  const from30 = day(new Date(Date.now() - 30 * 86400_000))
-  const agg = useMemo(() => {
-    const all = { c: new Map<string, number>(), s: new Map<string, number>(), a: new Map<string, number>() }
-    const d30 = new Map<string, number>()
-    for (const r of tree?.days ?? []) {
-      const v = Number(r.spend) || 0
-      all.c.set(r.campaign_id, (all.c.get(r.campaign_id) ?? 0) + v)
-      all.s.set(r.adset_id, (all.s.get(r.adset_id) ?? 0) + v)
-      all.a.set(r.ad_id, (all.a.get(r.ad_id) ?? 0) + v)
-      if (r.day >= from30) d30.set(r.ad_id, (d30.get(r.ad_id) ?? 0) + v)
-    }
-    return { all, d30 }
-  }, [tree, from30])
+  const agg = useAgg(tree)
 
   const toggle = (set: Set<string>, put: (s: Set<string>) => void, id: string) => {
     const n = new Set(set)
@@ -296,5 +289,79 @@ function Collapse({ title, count, children }: { title: string; count?: number; c
       </button>
       {open && <div className="stack fat-body">{children}</div>}
     </section>
+  )
+}
+
+type Tree = Awaited<ReturnType<typeof campaignTreeSpend>>
+/** spend by campaign / ad set / ad, all time, and by ad for the last 30 days */
+function useAgg(tree: Tree | null) {
+  const from30 = day(new Date(Date.now() - 30 * 86400_000))
+  return useMemo(() => {
+    const all = { c: new Map<string, number>(), s: new Map<string, number>(), a: new Map<string, number>() }
+    const d30 = new Map<string, number>()
+    for (const r of tree?.days ?? []) {
+      const v = Number(r.spend) || 0
+      all.c.set(r.campaign_id, (all.c.get(r.campaign_id) ?? 0) + v)
+      all.s.set(r.adset_id, (all.s.get(r.adset_id) ?? 0) + v)
+      all.a.set(r.ad_id, (all.a.get(r.ad_id) ?? 0) + v)
+      if (r.day >= from30) d30.set(r.ad_id, (d30.get(r.ad_id) ?? 0) + v)
+    }
+    return { all, d30 }
+  }, [tree, from30])
+}
+/** the ads that count for these links (whole campaigns, or one ad set) */
+function adsIn(links: AdLink[], ads: Tree['ads']) {
+  const whole = new Set(links.filter((l) => !l.adset_id).map((l) => l.campaign_id))
+  const sets = new Set(links.filter((l) => l.adset_id).map((l) => l.adset_id as string))
+  return ads.filter((a) => whole.has(a.campaign_id) || sets.has(a.adset_id))
+}
+
+/** every ad of the funnel's campaigns, with its campaign / ad set, status and spend */
+function AdsTable({ links, tree, campById, adsets }: { links: AdLink[]; tree: Tree | null; campById: Map<string, Campaign>; adsets: AdSet[] }) {
+  const agg = useAgg(tree)
+  const setName = useMemo(() => new Map(adsets.map((s) => [s.adset_id, s.name])), [adsets])
+  if (!tree) return <div className="muted small">Loading…</div>
+  const ads = adsIn(links, tree.ads).sort((a, b) => (agg.all.a.get(b.ad_id) ?? 0) - (agg.all.a.get(a.ad_id) ?? 0))
+  if (!ads.length) return <div className="muted small">No ads yet.</div>
+  const t30 = ads.reduce((t, a) => t + (agg.d30.get(a.ad_id) ?? 0), 0)
+  const tAll = ads.reduce((t, a) => t + (agg.all.a.get(a.ad_id) ?? 0), 0)
+  return (
+    <div className="table-wrap">
+      <table className="table camp-tree">
+        <thead>
+          <tr>
+            <th>Ad</th>
+            <th>Campaign · ad set</th>
+            <th>Status</th>
+            <th className="num">Spend · 30 days</th>
+            <th className="num">Total spend</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ads.map((a) => (
+            <tr key={a.ad_id}>
+              <td>
+                <b>{a.name ?? a.ad_id}</b>
+              </td>
+              <td className="muted small">
+                {campById.get(a.campaign_id)?.name ?? a.campaign_id} · {setName.get(a.adset_id) ?? a.adset_id}
+              </td>
+              <td>
+                <Status s={a.effective_status} />
+              </td>
+              <td className="num nowrap">{money(agg.d30.get(a.ad_id))}</td>
+              <td className="num nowrap">{money(agg.all.a.get(a.ad_id))}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colSpan={3}>Total</th>
+            <th className="num">{money(t30)}</th>
+            <th className="num">{money(tAll)}</th>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
   )
 }
