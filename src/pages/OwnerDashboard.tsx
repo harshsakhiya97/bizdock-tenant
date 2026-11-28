@@ -346,8 +346,11 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                         <Fragment key={key}>
                           <tr className="is-clickable" onClick={() => void toggleCamp(c)}>
                             <td>
-                              <ChevronRight size={14} className={`od-chev${open ? ' is-open' : ''}`} />{' '}
-                              <span className={`od-plat is-${c.platform}`}>{c.platform === 'meta' ? 'FB' : 'G'}</span> {c.name}
+                              <span className="od-camp">
+                                <ChevronRight size={14} className={`od-chev${open ? ' is-open' : ''}`} />
+                                <span className={`od-plat is-${c.platform}`}>{c.platform === 'meta' ? 'FB' : 'G'}</span>
+                                <span>{c.name}</span>
+                              </span>
                             </td>
                             <td className="num">{inr(num(c.spend))}</td>
                             <td className="num" onClick={(e) => e.stopPropagation()}>

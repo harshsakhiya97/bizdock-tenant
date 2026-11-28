@@ -2284,3 +2284,7 @@ audio.watch-media { background: none; }
 .od-fun-row { grid-template-columns: 110px 1fr 84px; }
 .od-link { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
 .od-more { display: inline-flex; align-items: center; gap: 2px; }
+.od-camp { display: inline-flex; align-items: center; gap: 8px; }
+.od-camp .od-chev { flex: none; vertical-align: 0; }
+.od-camp .od-plat { flex: none; }
+.table tr.od-sub td:first-child { padding-left: 58px; }
