@@ -2293,7 +2293,7 @@ audio.watch-media { background: none; }
 .od-attn-row:disabled:hover { background: var(--bg); }
 .od-tile-btn { font: inherit; text-align: left; cursor: pointer; }
 /* the picked business */
-.od-focus { columns: 3 340px; column-gap: 16px; margin-bottom: -16px; }
+.od-focus { columns: 3 340px; column-gap: 16px; }
 .od-focus > .od-card { break-inside: avoid; margin-bottom: 16px; width: 100%; box-sizing: border-box; }
 .od-stack-bar { display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--bg); }
 .od-stack-bar i { display: block; height: 100%; }
