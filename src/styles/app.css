@@ -2268,3 +2268,6 @@ audio.watch-media { background: none; }
 .od-grid-even { align-items: stretch; }
 .od-grid-even > .od-card { align-content: start; }
 .od-more { justify-self: start; }
+.od-legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
+.od-legend button.is-off { opacity: .45; text-decoration: line-through; }
+.od-legend button:hover { border-color: var(--brand); }

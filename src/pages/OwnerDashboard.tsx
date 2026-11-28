@@ -469,10 +469,13 @@ function Spark({ values }: { values: number[] }) {
 function DailyChart({ rows }: { rows: Day[] }) {
   const [ref, W] = useWidth()
   const [hover, setHover] = useState<number | null>(null)
+  // the legend turns each series on / off (the scale follows what is shown)
+  const [show, setShow] = useState({ revenue: true, spend: true, leads: true })
+  const flip = (k: keyof typeof show) => setShow((v) => ({ ...v, [k]: !v[k] }))
   const H = 240
   const P = { l: 50, r: 34, t: 12, b: 26 }
   const n = rows.length
-  const maxM = Math.max(1, ...rows.map((r) => Math.max(num(r.revenue), num(r.spend))))
+  const maxM = Math.max(1, ...rows.map((r) => Math.max(show.revenue ? num(r.revenue) : 0, show.spend ? num(r.spend) : 0)))
   const maxL = Math.max(4, ...rows.map((r) => num(r.leads)))
   const bw = (W - P.l - P.r) / Math.max(1, n)
   const x = (i: number) => P.l + bw * i + bw / 2
@@ -483,37 +486,45 @@ function DailyChart({ rows }: { rows: Day[] }) {
   const h = hover != null ? rows[hover] : null
   return (
     <div className="stack" style={{ gap: 8 }}>
-      <div className="adsd-legend">
-        <span>
+      <div className="adsd-legend od-legend">
+        <button type="button" className={show.revenue ? undefined : 'is-off'} aria-pressed={show.revenue} onClick={() => flip('revenue')}>
           <i style={{ background: C.revenue }} /> Revenue
-        </span>
-        <span>
+        </button>
+        <button type="button" className={show.spend ? undefined : 'is-off'} aria-pressed={show.spend} onClick={() => flip('spend')}>
           <i style={{ background: C.spend }} /> Ad spend
-        </span>
-        <span>
+        </button>
+        <button type="button" className={show.leads ? undefined : 'is-off'} aria-pressed={show.leads} onClick={() => flip('leads')}>
           <i className="is-line" style={{ background: C.leads }} /> Leads
-        </span>
+        </button>
       </div>
       <div ref={ref} style={{ position: 'relative' }}>
         <svg width={W} height={H} style={{ display: 'block' }} onMouseLeave={() => setHover(null)}>
           {[0, 0.5, 1].map((f) => (
             <g key={f}>
               <line x1={P.l} x2={W - P.r} y1={yM(f * maxM)} y2={yM(f * maxM)} stroke="var(--line)" />
-              <text x={P.l - 6} y={yM(f * maxM) + 4} textAnchor="end" fontSize={10.5} fill="var(--text-muted)">
-                {short(f * maxM)}
-              </text>
-              <text x={W - P.r + 6} y={yL(f * maxL) + 4} fontSize={10.5} fill={C.leads}>
-                {Math.round(f * maxL)}
-              </text>
+              {(show.revenue || show.spend) && (
+                <text x={P.l - 6} y={yM(f * maxM) + 4} textAnchor="end" fontSize={10.5} fill="var(--text-muted)">
+                  {short(f * maxM)}
+                </text>
+              )}
+              {show.leads && (
+                <text x={W - P.r + 6} y={yL(f * maxL) + 4} fontSize={10.5} fill={C.leads}>
+                  {Math.round(f * maxL)}
+                </text>
+              )}
             </g>
           ))}
           {rows.map((r, i) => (
             <g key={r.day} opacity={hover == null || hover === i ? 1 : 0.4}>
-              <rect x={x(i) - bar - 1} y={yM(num(r.revenue))} width={bar} height={Math.max(0, H - P.b - yM(num(r.revenue)))} rx={2} fill={C.revenue} />
-              <rect x={x(i) + 1} y={yM(num(r.spend))} width={bar} height={Math.max(0, H - P.b - yM(num(r.spend)))} rx={2} fill={C.spend} />
+              {show.revenue && (
+                <rect x={show.spend ? x(i) - bar - 1 : x(i) - bar / 2} y={yM(num(r.revenue))} width={bar} height={Math.max(0, H - P.b - yM(num(r.revenue)))} rx={2} fill={C.revenue} />
+              )}
+              {show.spend && (
+                <rect x={show.revenue ? x(i) + 1 : x(i) - bar / 2} y={yM(num(r.spend))} width={bar} height={Math.max(0, H - P.b - yM(num(r.spend)))} rx={2} fill={C.spend} />
+              )}
             </g>
           ))}
-          <path d={rows.map((r, i) => `${i ? 'L' : 'M'}${x(i)},${yL(num(r.leads))}`).join(' ')} fill="none" stroke={C.leads} strokeWidth={2} />
+          {show.leads && <path d={rows.map((r, i) => `${i ? 'L' : 'M'}${x(i)},${yL(num(r.leads))}`).join(' ')} fill="none" stroke={C.leads} strokeWidth={2} />}
           {rows.map((r, i) =>
             i % every === 0 || i === n - 1 ? (
               <text key={r.day} x={x(i)} y={H - 8} textAnchor="middle" fontSize={10.5} fill="var(--text-muted)">
