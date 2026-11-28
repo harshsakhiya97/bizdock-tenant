@@ -150,7 +150,7 @@ export function FunnelsPage() {
                 : 'Add a business first, then its funnels.'}
           </Empty>
         ) : (
-          <div className="pl-grid funnel-grid">
+          <div className="pl-grid">
             {visible.map((f) => {
               const c = leadCount.get(f.id) ?? { total: 0, unassigned: 0, pipeline: 0, closed: 0 }
               return (
