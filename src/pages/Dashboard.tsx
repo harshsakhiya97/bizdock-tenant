@@ -10,7 +10,6 @@ import { activeType } from '@/business/activeType'
 import { PodcastDashboard } from './PodcastDashboard'
 import { CourseDashboard } from './CourseDashboard'
 import { OwnerDashboard } from './OwnerDashboard'
-import { useKept } from '@/lib/useKept'
 import { listInvoices, withInvoicePayments } from '@/invoices/api'
 import { BusinessCards } from './BusinessCards'
 import { listBookings } from '@/bookings/api'
@@ -38,33 +37,10 @@ const hoursOf = (b: BookingRow) => {
   return Math.max(0, (m(b.end_time) - m(b.start_time)) / 60)
 }
 
-/**
- * The owner / admins: the owner dashboard (everything at a glance), with a switch to the business dashboard.
- * Everyone else — and the business view: Paid Podcast has its own dashboard; everything else gets the month dashboard below.
- */
+/** The owner / admins: the owner dashboard (everything at a glance). Everyone else: their business's dashboard. */
 export function DashboardPage() {
   const { level } = useAuth()
-  const tenant = useTenant()
-  const [view, setView] = useKept<'owner' | 'business'>(`dash-view.${tenant.id}`, 'owner')
-  if (level > 1) return <BusinessDashboard />
-  const toggle = (
-    <div className="seg seg-sm" role="group" aria-label="Dashboard">
-      <button type="button" className={view === 'owner' ? 'is-active' : undefined} onClick={() => setView('owner')}>
-        Overview
-      </button>
-      <button type="button" className={view === 'business' ? 'is-active' : undefined} onClick={() => setView('business')}>
-        Business view
-      </button>
-    </div>
-  )
-  return view === 'owner' ? (
-    <OwnerDashboard toggle={toggle} />
-  ) : (
-    <div className="stack">
-      <div>{toggle}</div>
-      <BusinessDashboard />
-    </div>
-  )
+  return level > 1 ? <BusinessDashboard /> : <OwnerDashboard />
 }
 
 function BusinessDashboard() {
