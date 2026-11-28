@@ -396,7 +396,7 @@ a.link:not(.strong) { color: var(--brand); font-weight: 600; font-size: 12.5px; 
 .bell .count-pill { position: absolute; top: 2px; right: 0; min-width: 16px; height: 15px; font-size: 9px; padding: 0 4px; }
 .menu-btn { display: none; }
 
-.page { padding: 24px; display: flex; flex-direction: column; gap: 18px; max-width: 1400px; width: 100%; }
+.page { padding: 24px; display: flex; flex-direction: column; gap: 18px; width: 100%; }
 .page-head h2 { font-size: 16px; font-weight: 700; }
 .page-head p { color: var(--text-muted); font-size: 12.5px; margin-top: 3px; }
 
