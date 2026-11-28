@@ -158,6 +158,12 @@ function ZoomPanelInner({
     setBusy(null)
   }
 
+  // Refresh: attendance, Q&A, chat and the recording from Zoom again (beside Add recording; above the other tabs)
+  const refreshBtn = (
+    <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} onClick={() => void pull()}>
+      <RefreshCw size={14} /> {busy === 'pull' ? 'Refreshing…' : 'Refresh'}
+    </button>
+  )
   const qa = data?.comments.filter((c) => c.kind === 'qa') ?? []
   const chat = data?.comments.filter((c) => c.kind === 'chat') ?? []
   // Copy invite (the invitation as Zoom words it)
@@ -227,11 +233,6 @@ function ZoomPanelInner({
               <RefreshCw size={14} /> {busy === 'retry' ? 'Trying…' : 'Try again'}
             </button>
           )}
-          {zoomId && (
-            <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} onClick={() => void pull()}>
-              <RefreshCw size={14} /> {busy === 'pull' ? 'Refreshing…' : 'Refresh'}
-            </button>
-          )}
         </div>
       </div>
       {error && (
@@ -263,8 +264,9 @@ function ZoomPanelInner({
               </button>
             ))}
           </div>
+          {tab !== 'Recording' && <div className="row" style={{ justifyContent: 'flex-end' }}>{refreshBtn}</div>}
           {tab === 'Recording' ? (
-            <RecordingPanel key={recKey} target={target} onCount={setRecCount} />
+            <RecordingPanel key={recKey} target={target} onCount={setRecCount} actions={refreshBtn} />
           ) : !data ? (
             <div className="muted small">Loading…</div>
           ) : tab === 'Attendance' ? (

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Download, FileAudio, Link2, Plus, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Md } from '@/ai/AiInsights'
 import { Button } from '@/components/Button'
@@ -16,7 +16,7 @@ const mins = (s: number | null) => (s ? `${Math.round(s / 60)} min` : '')
  * A meeting's / webinar date's recordings: the Zoom cloud recording (copied into our storage a few minutes after it
  * ends), or one added by hand (a file or a link); its player and file path, then the summary and the transcript (AI).
  */
-export function RecordingPanel({ target, onCount }: { target: RecTarget; onCount?: (n: number) => void }) {
+export function RecordingPanel({ target, onCount, actions }: { target: RecTarget; onCount?: (n: number) => void; /** more buttons beside Add recording (the Zoom panel's Refresh) */ actions?: ReactNode }) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Recording[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -46,9 +46,12 @@ export function RecordingPanel({ target, onCount }: { target: RecTarget; onCount
     <div className="stack rec">
       <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <span className="muted small">The Zoom cloud recording is copied here about 30 minutes after the meeting ends, then its transcript and summary are written (Gemini AI).</span>
-        <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
-          <Plus size={14} /> Add recording
-        </Button>
+        <div className="row" style={{ gap: 8 }}>
+          {actions}
+          <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
+            <Plus size={14} /> Add recording
+          </Button>
+        </div>
       </div>
       {error && <div className="alert alert-error small">{error}</div>}
       {!rows ? (
