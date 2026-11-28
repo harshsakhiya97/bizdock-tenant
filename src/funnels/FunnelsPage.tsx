@@ -21,6 +21,8 @@ const typeTone: Record<FunnelType, string> = {
 }
 
 type Counts = { total: number; unassigned: number; pipeline: number; closed: number }
+type AdStats = { budget: number; has_ads: boolean; spend_today: number; leads_today: number; spend_30: number; leads_30: number }
+const rs = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
 
 export function FunnelsPage() {
   const tenant = useTenant()
@@ -35,11 +37,16 @@ export function FunnelsPage() {
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
   const [leadCount, setLeadCount] = useState<Map<string, Counts>>(new Map())
+  const [ads, setAds] = useState<Record<string, AdStats>>({})
 
   const load = useCallback(() => {
     listFunnels(tenant.id)
       .then((f) => {
         setFunnels(f)
+        // ads: running daily budget, today's spend / leads, last 30 days (Facebook + Google, without GST)
+        void db()
+          .rpc('funnel_card_stats', { p_tenant: tenant.id })
+          .then(({ data }) => setAds((data ?? {}) as Record<string, AdStats>))
         // leads this person can see, counted per funnel: total / unassigned / in pipeline / closed (won or lost)
         const kind = new Map(f.flatMap((x) => x.funnel_stages.map((st) => [st.id, st.kind] as const)))
         void db()
@@ -189,6 +196,34 @@ export function FunnelsPage() {
                       <div className="pl-tile-value tone-success">{c.closed}</div>
                     </div>
                   </div>
+                  {ads[f.id]?.has_ads && (
+                    <div className="pl-tiles funnel-ad-tiles" title="Facebook + Google ads, without GST. 30 days end yesterday.">
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Daily budget</div>
+                        <div className="pl-tile-value">{ads[f.id].budget ? rs(ads[f.id].budget) : '—'}</div>
+                      </div>
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Spend today</div>
+                        <div className="pl-tile-value">{rs(ads[f.id].spend_today)}</div>
+                      </div>
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Leads today</div>
+                        <div className="pl-tile-value">{ads[f.id].leads_today}</div>
+                      </div>
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Spend · 30 days</div>
+                        <div className="pl-tile-value">{rs(ads[f.id].spend_30)}</div>
+                      </div>
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Leads · 30 days</div>
+                        <div className="pl-tile-value">{ads[f.id].leads_30}</div>
+                      </div>
+                      <div className="pl-tile">
+                        <div className="pl-tile-label">Cost / lead · 30 days</div>
+                        <div className="pl-tile-value">{ads[f.id].leads_30 ? rs(ads[f.id].spend_30 / ads[f.id].leads_30) : '—'}</div>
+                      </div>
+                    </div>
+                  )}
                   <div className="pl-auto">
                     <Link to={`/funnels/${f.id}`} className="link">
                       Open funnel →

@@ -2325,3 +2325,8 @@ audio.watch-media { background: none; }
 .camp-tree tr.camp-tree-a td:first-child { padding-left: 74px; }
 .camp-tree tr.camp-tree-a td { font-size: 12.5px; }
 .camp-tree tfoot th { border-top: 1px solid var(--line); }
+/* funnels list: the ads tiles, three across and smaller */
+.funnel-ad-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 8px; }
+.funnel-ad-tiles .pl-tile { padding: 8px 10px; }
+.funnel-ad-tiles .pl-tile-label { font-size: 10px; }
+.funnel-ad-tiles .pl-tile-value { font-size: 17px; }
