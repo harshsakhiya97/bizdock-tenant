@@ -2265,3 +2265,6 @@ audio.watch-media { background: none; }
 .od-next-list li:last-child { border-bottom: 0; padding-bottom: 0; }
 .od-next-list li.is-bad .od-when { color: var(--danger); }
 .od-when { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.od-grid-even { align-items: stretch; }
+.od-grid-even > .od-card { align-content: start; }
+.od-more { justify-self: start; }

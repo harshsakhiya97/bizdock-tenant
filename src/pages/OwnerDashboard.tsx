@@ -64,6 +64,9 @@ const clock = (t: string | null) => {
 }
 const hours = (s: number) => (s >= 3600 ? `${Math.floor(s / 3600)}h ${Math.round((s % 3600) / 60)}m` : `${Math.round(s / 60)}m`)
 
+/** callers shown before Show all */
+const TOP = 6
+
 const C = { revenue: '#16a34a', spend: '#6366f1', expense: '#f59e0b', leads: '#0ea5e9', profit: '#16a34a', loss: '#dc2626' }
 
 function useWidth() {
@@ -91,6 +94,8 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const [range, setRange] = useKept<Range>(`owner-dash.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Calls: the top callers (as many rows as the Team card), the rest on Show all
+  const [allCallers, setAllCallers] = useState(false)
 
   const load = useCallback(() => {
     setError(null)
@@ -260,7 +265,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           </Card>
 
           {/* 5. team + callers */}
-          <div className="od-grid">
+          <div className="od-grid od-grid-even">
             <Card title="Team" icon={Users} link={{ to: '/reports/team', label: 'Team Report' }}>
               <div className="table-wrap">
                 <table className="table table-compact">
@@ -305,7 +310,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {data.callers.map((c) => (
+                      {(allCallers ? data.callers : data.callers.slice(0, TOP)).map((c) => (
                         <tr key={c.emp_number}>
                           <td>{c.name || c.emp_number}</td>
                           <td className="num">{num(c.calls).toLocaleString('en-IN')}</td>
@@ -318,7 +323,13 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                     </tbody>
                   </table>
                 </div>
-              ) : (
+              ) : null}
+              {data.callers.length > TOP && (
+                <button type="button" className="link-btn small od-more" onClick={() => setAllCallers((v) => !v)}>
+                  {allCallers ? 'Show fewer' : `Show all ${data.callers.length} callers`}
+                </button>
+              )}
+              {!data.callers.length && (
                 <div className="muted small">No calls in these dates.</div>
               )}
             </Card>
