@@ -537,7 +537,8 @@ export function MeetingDrawer({
           </FormSection>
         )}
 
-        {meeting && meeting.zoom_account_id && meeting.mode === 'online' && (
+        {/* a cancelled meeting's Zoom meeting is deleted: no Zoom section */}
+        {meeting && meeting.zoom_account_id && meeting.mode === 'online' && meeting.status !== 'cancelled' && (
           <FormSection title="Zoom" description="Attendance, Q&A, chat and the recording from Zoom.">
             <ZoomPanel
               target={{ kind: 'meeting', id: meeting.id }}
@@ -551,7 +552,7 @@ export function MeetingDrawer({
               topic={meeting.kind === 'team' ? (meeting.title ?? 'Team meeting') : meeting.title || `Meeting with ${guest ? fullName(guest) : 'us'}`}
               day={meeting.meeting_date}
               time={meeting.start_time}
-              ended={meeting.status !== 'scheduled'}
+              ended={meeting.status !== 'scheduled' || new Date(`${meeting.meeting_date}T${(meeting.end_time || meeting.start_time).slice(0, 5)}:00+05:30`).getTime() < Date.now()}
             />
           </FormSection>
         )}

@@ -252,12 +252,15 @@ function ZoomPanelInner({
       {zoomId && (
         <>
           {/* 1. Refresh + Add recording, 2. when it was fetched, 3. the tabs */}
-          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-            {refreshBtn}
-            <button type="button" className="btn btn-outline btn-sm" onClick={() => (setTab('Recording'), setAddRec((n) => n + 1))}>
-              <Plus size={14} /> Add recording
-            </button>
-          </div>
+          {/* Refresh once the details were fetched (after it ended); Add recording once it ended */}
+          {ended && (
+            <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+              {pulledAt && refreshBtn}
+              <button type="button" className="btn btn-outline btn-sm" onClick={() => (setTab('Recording'), setAddRec((n) => n + 1))}>
+                <Plus size={14} /> Add recording
+              </button>
+            </div>
+          )}
           <div className="muted small">
             {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance and Q&A come in 5 minutes after it ends (tried again every 5 minutes if Zoom isn’t ready); chat after 4 hours.'}
           </div>
