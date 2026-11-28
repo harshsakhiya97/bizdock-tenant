@@ -236,7 +236,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           </b>
         </div>
         {b.id && !solo && (
-          <button type="button" className="link-btn small od-more" onClick={() => selectBiz(b.id)}>
+          <button type="button" className="link-btn small od-more" onClick={() => { selectBiz(b.id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>
             View details <ChevronRight size={13} />
           </button>
         )}
