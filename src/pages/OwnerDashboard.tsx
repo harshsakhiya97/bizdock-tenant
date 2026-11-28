@@ -138,6 +138,24 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
     },
     [tenant.id, range.from, range.to, selected?.id],
   )
+  // follow-ups, meetings, calls, leads to call and overdue payments behind a number
+  const [recs, setRecs] = useState<StatShow<Rec> | null>(null)
+  const openRecords = useCallback(
+    async (title: string, kind: string, o: { p_member?: string; p_emp?: string } = {}) => {
+      const { data: d, error: e } = await db().rpc('owner_dash_records', {
+        p_tenant: tenant.id,
+        p_from: range.from,
+        p_to: range.to,
+        p_kind: kind,
+        p_member: o.p_member ?? null,
+        p_emp: o.p_emp ?? null,
+        p_business: selected?.id ?? null,
+      })
+      if (e) return setError(e.message)
+      setRecs({ title, rows: (d ?? []) as Rec[], cols: recCols(kind) })
+    },
+    [tenant.id, range.from, range.to, selected?.id],
+  )
   // Top campaigns: the opened one's ads
   const [openCamp, setOpenCamp] = useState<string | null>(null)
   const [ads, setAds] = useState<Record<string, Ad[] | 'loading'>>({})
@@ -222,7 +240,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
               tone={profit >= 0 ? C.profit : C.loss}
               hint={revenue ? `${pct(profit, revenue)}% margin` : undefined}
             />
-            <Tile label="Leads" value={num(k!.leads).toLocaleString('en-IN')} now={num(k!.leads)} was={num(k!.leads_prev)} good="up" tone={C.leads} hint={num(k!.leads) ? `${short(spend / num(k!.leads))} / lead` : undefined} />
+            <Tile label="Leads" value={num(k!.leads).toLocaleString('en-IN')} now={num(k!.leads)} was={num(k!.leads_prev)} good="up" tone={C.leads} hint={num(k!.leads) ? `${short(spend / num(k!.leads))} / lead` : undefined} onClick={() => void openLeads('Leads', {})} />
             <Tile
               label="Money due"
               value={short(num(k!.due))}
@@ -247,11 +265,21 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
             </Card>
             <Card title="Needs attention" icon={AlertTriangle}>
               <div className="od-attn">
-                <Attn n={data.attention.overdue_fu} label="Overdue follow-ups" tone="bad" to="/follow-ups" />
-                <Attn n={data.attention.due_today} label="Follow-ups due today" to="/follow-ups" />
-                <Attn n={data.attention.first_call_pending} label="First call pending" tone="warn" to="/leads" />
-                <Attn n={data.attention.no_follow_up} label="Open leads with no follow-up date" tone="warn" to="/leads" />
-                <Attn n={num(k!.overdue_parts)} label={`Overdue payments${num(k!.overdue) ? ` · ${inr(num(k!.overdue))}` : ''}`} tone="bad" to="/invoices" />
+                <Attn n={data.attention.overdue_fu} label="Overdue follow-ups" tone="bad" onClick={() => void openRecords('Overdue follow-ups', 'overdue')} />
+                <Attn n={data.attention.due_today} label="Follow-ups due today" onClick={() => void openRecords('Follow-ups due today', 'due_today')} />
+                <Attn n={data.attention.first_call_pending} label="First call pending" tone="warn" onClick={() => void openRecords('First call pending', 'first_call_pending')} />
+                <Attn
+                  n={data.attention.no_follow_up}
+                  label="Open leads with no follow-up date"
+                  tone="warn"
+                  onClick={() => void openRecords('No follow-up date', 'no_follow_up')}
+                />
+                <Attn
+                  n={num(k!.overdue_parts)}
+                  label={`Overdue payments${num(k!.overdue) ? ` · ${inr(num(k!.overdue))}` : ''}`}
+                  tone="bad"
+                  onClick={() => void openRecords('Overdue payments', 'overdue_payments')}
+                />
               </div>
             </Card>
           </div>
@@ -419,11 +447,21 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                           <b>{m.name}</b>
                           {m.role && <span className="muted small"> · {m.role}</span>}
                         </td>
-                        <td className="num">{num(m.fu_done)}</td>
-                        <td className={`num ${num(m.overdue) ? 'od-bad' : ''}`}>{num(m.overdue)}</td>
-                        <td className="num">{num(m.meetings)}</td>
-                        <td className="num">{num(m.leads)}</td>
-                        <td className="num">{num(m.closed)}</td>
+                        <td className="num">
+                          <N n={num(m.fu_done)} onClick={() => void openRecords(`Follow-ups · ${m.name}`, 'fu_done', { p_member: m.id })} />
+                        </td>
+                        <td className={`num ${num(m.overdue) ? 'od-bad' : ''}`}>
+                          <N n={num(m.overdue)} onClick={() => void openRecords(`Overdue · ${m.name}`, 'overdue', { p_member: m.id })} />
+                        </td>
+                        <td className="num">
+                          <N n={num(m.meetings)} onClick={() => void openRecords(`Meetings · ${m.name}`, 'meetings', { p_member: m.id })} />
+                        </td>
+                        <td className="num">
+                          <N n={num(m.leads)} onClick={() => void openRecords(`New leads · ${m.name}`, 'leads', { p_member: m.id })} />
+                        </td>
+                        <td className="num">
+                          <N n={num(m.closed)} onClick={() => void openRecords(`Closed · ${m.name}`, 'closed', { p_member: m.id })} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -446,9 +484,12 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       {(allCallers ? data.callers : data.callers.slice(0, TOP)).map((c) => (
                         <tr key={c.emp_number}>
                           <td>{c.name || c.emp_number}</td>
-                          <td className="num">{num(c.calls).toLocaleString('en-IN')}</td>
                           <td className="num">
-                            {num(c.connected).toLocaleString('en-IN')} <span className="muted small">{pct(num(c.connected), num(c.calls))}%</span>
+                            <N n={num(c.calls)} onClick={() => void openRecords(`Calls · ${c.name || c.emp_number}`, 'calls', { p_emp: c.emp_number })} />
+                          </td>
+                          <td className="num">
+                            <N n={num(c.connected)} onClick={() => void openRecords(`Connected · ${c.name || c.emp_number}`, 'connected', { p_emp: c.emp_number })} />{' '}
+                            <span className="muted small">{pct(num(c.connected), num(c.calls))}%</span>
                           </td>
                           <td className="num">{hours(num(c.talk_sec))}</td>
                         </tr>
@@ -509,6 +550,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
         </>
       )}
       <StatRecords show={show} onClose={() => setShow(null)} rowKey={(r) => r.id} onRow={(r) => navigate(`/leads/${r.id}`)} />
+      <StatRecords show={recs} onClose={() => setRecs(null)} rowKey={(r) => r.key} onRow={(r) => r.lead_id && navigate(`/leads/${r.lead_id}`)} />
     </div>
   )
 }
@@ -532,6 +574,38 @@ const LEAD_COLS: StatShow<LeadItem>['cols'] = [
   { label: 'Came in', render: (r) => <span className="nowrap">{when(r.created_at)}</span> },
 ]
 
+/** a row behind a Team / Calls / Needs attention number (owner_dash_records) */
+type Rec = { key: string; lead_id: string | null; name: string | null; phone: string | null; at: string | null; what: string | null; note: string | null; extra: string | null }
+const recCols = (kind: string): StatShow<Rec>['cols'] => [
+  {
+    label: kind === 'calls' || kind === 'connected' ? 'Number' : kind === 'overdue_payments' ? 'Client' : 'Lead',
+    render: (r) => (
+      <>
+        <b>{r.name ?? r.phone ?? '—'}</b>
+        {r.name && r.phone && <div className="muted small">{r.phone}</div>}
+      </>
+    ),
+  },
+  {
+    label:
+      kind === 'fu_done' ? 'Outcome' : kind === 'calls' || kind === 'connected' ? 'Call' : kind === 'overdue_payments' ? 'Invoice' : kind === 'meetings' ? 'Meeting' : 'Stage',
+    render: (r) => r.what ?? <span className="muted">—</span>,
+  },
+  ...(kind === 'fu_done' || kind === 'meetings'
+    ? [{ label: 'Comments', render: (r: Rec) => (r.note ? <span className="cell-clip">{r.note}</span> : <span className="muted">—</span>) }]
+    : kind === 'calls' || kind === 'connected'
+      ? [{ label: 'Talk time', render: (r: Rec) => r.note ?? '' }]
+      : kind === 'overdue_payments'
+        ? [{ label: 'Amount', num: true, render: (r: Rec) => r.note ?? '' }]
+        : kind === 'leads' || kind === 'closed'
+          ? [{ label: 'Category', render: (r: Rec) => tempOf(r.extra as Temperature)?.label ?? <span className="muted">—</span> }]
+          : [{ label: kind === 'overdue' || kind === 'due_today' ? 'Assigned to' : 'Owner', render: (r: Rec) => r.extra ?? <span className="muted">—</span> }]),
+  {
+    label: kind === 'fu_done' ? 'Logged' : kind === 'overdue' || kind === 'due_today' || kind === 'overdue_payments' ? 'Due' : kind === 'meetings' ? 'When' : kind === 'calls' || kind === 'connected' ? 'When' : 'Came in',
+    render: (r) => (r.at ? <span className="nowrap">{when(r.at)}</span> : ''),
+  },
+]
+
 // ---------- pieces ----------
 /** a number that opens its records (0: nothing to open) */
 function N({ n, onClick }: { n: number; onClick: () => void }) {
@@ -543,7 +617,27 @@ function N({ n, onClick }: { n: number; onClick: () => void }) {
   )
 }
 
-function Tile({ label, value, now, was, good, hint, tone, to }: { label: string; value: string; now: number; was: number | null; good: 'up' | 'down'; hint?: string; tone: string; to?: string }) {
+function Tile({
+  label,
+  value,
+  now,
+  was,
+  good,
+  hint,
+  tone,
+  to,
+  onClick,
+}: {
+  label: string
+  value: string
+  now: number
+  was: number | null
+  good: 'up' | 'down'
+  hint?: string
+  tone: string
+  to?: string
+  onClick?: () => void
+}) {
   const ch = was != null && was !== 0 ? ((now - was) / Math.abs(was)) * 100 : null
   const better = ch == null ? null : good === 'up' ? ch > 0 : ch < 0
   const body = (
@@ -561,7 +655,11 @@ function Tile({ label, value, now, was, good, hint, tone, to }: { label: string;
       </span>
     </>
   )
-  return to ? (
+  return onClick ? (
+    <button type="button" className="adsd-kpi od-tile-link od-tile-btn" style={{ ['--tone' as string]: tone }} onClick={onClick}>
+      {body}
+    </button>
+  ) : to ? (
     <Link to={to} className="adsd-kpi od-tile-link" style={{ ['--tone' as string]: tone }}>
       {body}
     </Link>
@@ -590,12 +688,12 @@ function Card({ title, icon: Icon, link, children }: { title: string; icon: type
   )
 }
 
-function Attn({ n, label, tone, to }: { n: number; label: string; tone?: 'bad' | 'warn'; to: string }) {
+function Attn({ n, label, tone, onClick }: { n: number; label: string; tone?: 'bad' | 'warn'; onClick: () => void }) {
   return (
-    <Link to={to} className={`od-attn-row ${n && tone ? `is-${tone}` : ''}`}>
+    <button type="button" className={`od-attn-row ${n && tone ? `is-${tone}` : ''}`} onClick={onClick} disabled={!n}>
       <b>{n.toLocaleString('en-IN')}</b>
       <span>{label}</span>
-    </Link>
+    </button>
   )
 }
 
