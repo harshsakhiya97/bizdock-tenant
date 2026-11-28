@@ -113,7 +113,7 @@ function useWidth() {
  */
 export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const tenant = useTenant()
-  const { selected } = useBusiness()
+  const { selected, select: selectBiz } = useBusiness()
   const [range, setRange] = useKept<Range>(`owner-dash.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -280,19 +280,12 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       <b>{b.name}</b>
                       <Spark values={(b.trend ?? []).map(num)} />
                     </div>
-                    <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
-                      <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
-                      <Delta now={p} was={num(b.revenue_prev) - num(b.ad_spend_prev) - num(b.expenses_prev)} good="up" />
-                    </div>
+                    <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
                     <div className="od-biz-rows">
                       <span>Revenue</span>
-                      <b>
-                        <Delta now={num(b.revenue)} was={num(b.revenue_prev)} good="up" /> {short(num(b.revenue))}
-                      </b>
+                      <b>{short(num(b.revenue))}</b>
                       <span>Ad spend</span>
-                      <b>
-                        <Delta now={num(b.ad_spend)} was={num(b.ad_spend_prev)} good="down" /> {short(num(b.ad_spend))}
-                      </b>
+                      <b>{short(num(b.ad_spend))}</b>
                       {num(b.expenses) > 0 && (
                         <>
                           <span>Expenses</span>
@@ -301,7 +294,6 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       )}
                       <span>Leads</span>
                       <b>
-                        <Delta now={num(b.leads)} was={num(b.leads_prev)} good="up" />{' '}
                         <N n={num(b.leads)} onClick={() => void openLeads(`Leads · ${b.name}`, { p_business: b.id })} />
                         {num(b.leads) > 0 && num(b.ad_spend) > 0 && <span className="muted"> · {short(num(b.ad_spend) / num(b.leads))}/lead</span>}
                       </b>
@@ -310,6 +302,11 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                         <N n={num(b.closed)} onClick={() => void openLeads(`Closed · ${b.name}`, { p_business: b.id, p_step: 'closed' })} />
                       </b>
                     </div>
+                    {b.id && !selected && (
+                      <button type="button" className="link-btn small od-more" onClick={() => selectBiz(b.id)}>
+                        View details <ChevronRight size={13} />
+                      </button>
+                    )}
                   </div>
                 )
               })}
@@ -543,19 +540,6 @@ function N({ n, onClick }: { n: number; onClick: () => void }) {
   )
 }
 
-/** ↑ / ↓ against the previous period of the same length (green when it's better) */
-function Delta({ now, was, good }: { now: number; was: number; good: 'up' | 'down' }) {
-  if (!was || !Number.isFinite(now)) return null
-  const ch = ((now - was) / Math.abs(was)) * 100
-  if (Math.abs(ch) < 0.5) return null
-  const better = good === 'up' ? ch > 0 : ch < 0
-  return (
-    <span className={`adsd-delta ${better ? 'is-good' : 'is-bad'}`} title="vs the previous period of the same length">
-      {ch > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-      {Math.abs(ch) > 999 ? '999+' : Math.abs(ch).toFixed(0)}%
-    </span>
-  )
-}
 function Tile({ label, value, now, was, good, hint, tone, to }: { label: string; value: string; now: number; was: number | null; good: 'up' | 'down'; hint?: string; tone: string; to?: string }) {
   const ch = was != null && was !== 0 ? ((now - was) / Math.abs(was)) * 100 : null
   const better = ch == null ? null : good === 'up' ? ch > 0 : ch < 0
@@ -742,11 +726,13 @@ function FunnelBars({ rows, onOpen }: { rows: Fun[]; onOpen: (f: Fun, step: stri
       {rows.map((f) => (
         <div key={f.id} className="od-fun">
           <div className="row-between">
-            <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <span className="row" style={{ gap: 8, alignItems: 'baseline' }}>
               <b>{f.name}</b>
-              <Delta now={num(f.leads)} was={num(f.leads_prev)} good="up" />
+              <span className="muted small">{f.business}</span>
             </span>
-            <span className="muted small">{f.business}</span>
+            <Link to={`/funnels/${f.id}`} className="small od-link">
+              View details <ChevronRight size={13} />
+            </Link>
           </div>
           {steps.map((s) => {
             const v = num(f[s.key])

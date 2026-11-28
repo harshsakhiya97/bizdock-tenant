@@ -2282,3 +2282,5 @@ audio.watch-media { background: none; }
 .table tr.od-sub td:first-child { padding-left: 34px; }
 .od-biz-rows .adsd-delta { font-size: 10.5px; padding: 1px 5px; }
 .od-fun-row { grid-template-columns: 110px 1fr 84px; }
+.od-link { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.od-more { display: inline-flex; align-items: center; gap: 2px; }
