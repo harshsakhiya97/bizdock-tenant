@@ -27,7 +27,6 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
   const [tags, setTags] = useState<string[]>([])
   const [spend, setSpend] = useState<{ c: Map<string, number>; s: Map<string, number> }>({ c: new Map(), s: new Map() })
   const [busy, setBusy] = useState(false)
-  const [open, setOpen] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
@@ -92,33 +91,30 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
         </div>
       </div>
 
-      <section className="card fat-card">
-        <button type="button" className="fat-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-          <ChevronRight size={16} className={cn('fat-chev', open && 'is-open')} />
-          <b>Campaigns</b>
-          <span className="tab-count">{mine.length}</span>
-          {open ? null : <span className="muted small">{tags.length ? `Tags: ${tags.join(', ')}` : ''}</span>}
-        </button>
-        <div className="stack fat-body" hidden={!open}>
-          <CampaignTags
-            funnelId={funnelId}
-            kind="meta"
-            canEdit={canEdit}
-            onChange={(t) => {
-              const first = !tags.length && !t.length
-              setTags(t)
-              if (!first) load()
-            }}
-          />
-          {!mine.length ? (
-            <Empty icon={Megaphone}>No campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
-          ) : (
-            <CampaignTable links={mine} campById={campById} adsets={adsets} accName={accName} spend30={spend} />
-          )}
-        </div>
-      </section>
+      <CampaignTags
+        funnelId={funnelId}
+        kind="meta"
+        canEdit={canEdit}
+        onChange={(t) => {
+          const first = !tags.length && !t.length
+          setTags(t)
+          if (!first) load()
+        }}
+      />
 
-      {mine.length > 0 && <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />}
+      <Collapse title="Campaigns" count={mine.length}>
+        {!mine.length ? (
+          <Empty icon={Megaphone}>No campaigns in this funnel yet{canEdit ? ': add a tag above.' : '.'}</Empty>
+        ) : (
+          <CampaignTable links={mine} campById={campById} adsets={adsets} accName={accName} spend30={spend} />
+        )}
+      </Collapse>
+
+      {mine.length > 0 && (
+        <Collapse title="Ads">
+          <FunnelDaySpend funnelId={funnelId} links={mine} accounts={accounts} campaigns={campaigns} adsets={adsets} />
+        </Collapse>
+      )}
 
     </div>
   )
@@ -285,5 +281,20 @@ function CampaignTable({ links, campById, adsets, accName, spend30 }: { links: A
         </tfoot>
       </table>
     </div>
+  )
+}
+
+/** a section that opens / closes from its header */
+function Collapse({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <section className="card fat-card">
+      <button type="button" className="fat-head" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+        <ChevronRight size={16} className={cn('fat-chev', open && 'is-open')} />
+        <b>{title}</b>
+        {count != null && <span className="tab-count">{count}</span>}
+      </button>
+      {open && <div className="stack fat-body">{children}</div>}
+    </section>
   )
 }
