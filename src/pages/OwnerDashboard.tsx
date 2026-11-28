@@ -344,35 +344,39 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
             </Card>
           </div>
 
-          {/* live alerts: connections, quiet team / callers, leads waiting, ads with no leads, WhatsApp, Zoom */}
-          {alerts && alerts.length > 0 && (
-            <Card title={`Alerts · ${alerts.length}`} icon={Bell}>
-              <div className="od-alert-grid">
-                {alerts.map((al, i) => (
-                  <Link key={i} to={al.to} className={`od-attn-row od-alert is-${al.level === 'bad' ? 'bad' : 'warn'}`}>
-                    <CircleAlert size={16} />
-                    <span>{al.text}</span>
-                  </Link>
-                ))}
-              </div>
-            </Card>
-          )}
-
-          {/* rule-based read of the numbers above (and the business focus when one is picked) */}
+          {/* live alerts (connections, quiet team / callers, leads waiting, ads with no leads, WhatsApp, Zoom) beside the AI Insights */}
           {(() => {
             const ins = makeOwnerInsights(data, selected ? focus : null, !selected)
-            return ins.length ? (
-              <Card title="AI Insights" icon={Lightbulb}>
-                <div className="adsd-insights od-insights">
-                  {ins.map((x, i) => (
-                    <div key={i} className={`adsd-insight is-${x.tone}`}>
-                      {x.tone === 'good' ? <CheckCircle2 size={15} /> : x.tone === 'bad' ? <AlertTriangle size={15} /> : <TrendingUp size={15} />}
-                      <span>{x.text}</span>
+            const hasAlerts = !!alerts && alerts.length > 0
+            if (!hasAlerts && !ins.length) return null
+            return (
+              <div className={hasAlerts && ins.length ? 'od-grid od-grid-half od-grid-even' : 'stack'}>
+                {hasAlerts && (
+                  <Card title={`Alerts · ${alerts!.length}`} icon={Bell}>
+                    <div className="od-alert-grid">
+                      {alerts!.map((al, i) => (
+                        <Link key={i} to={al.to} className={`od-attn-row od-alert is-${al.level === 'bad' ? 'bad' : 'warn'}`}>
+                          <CircleAlert size={16} />
+                          <span>{al.text}</span>
+                        </Link>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </Card>
-            ) : null
+                  </Card>
+                )}
+                {ins.length > 0 && (
+                  <Card title="AI Insights" icon={Lightbulb}>
+                    <div className="adsd-insights od-insights">
+                      {ins.map((x, i) => (
+                        <div key={i} className={`adsd-insight is-${x.tone}`}>
+                          {x.tone === 'good' ? <CheckCircle2 size={15} /> : x.tone === 'bad' ? <AlertTriangle size={15} /> : <TrendingUp size={15} />}
+                          <span>{x.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </div>
+            )
           })()}
 
           {/* one business picked: more about it */}

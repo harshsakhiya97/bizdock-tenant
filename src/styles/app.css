@@ -2307,3 +2307,6 @@ audio.watch-media { background: none; }
 .od-biz-solo .od-biz-profit { margin-top: 4px; }
 .od-insights { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
 @media (max-width: 640px) { .od-insights { grid-template-columns: 1fr; } }
+.od-grid-half { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.od-grid-half .od-alert-grid, .od-grid-half .od-insights { grid-template-columns: 1fr; }
+@media (max-width: 1000px) { .od-grid-half { grid-template-columns: 1fr; } }
