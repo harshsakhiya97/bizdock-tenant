@@ -116,15 +116,15 @@ export async function updateAdAccount(id: string, patch: { is_enabled?: boolean;
   if (error) throw new Error(error.message)
 }
 
-export type Campaign = { campaign_id: string; account_id: string; name: string | null; status: string | null; effective_status: string | null; objective: string | null; created_time: string | null }
-export type AdSet = { adset_id: string; campaign_id: string; name: string | null; effective_status: string | null }
+export type Campaign = { campaign_id: string; account_id: string; name: string | null; status: string | null; effective_status: string | null; objective: string | null; created_time: string | null; daily_budget?: number | null; lifetime_budget?: number | null }
+export type AdSet = { adset_id: string; campaign_id: string; name: string | null; effective_status: string | null; daily_budget?: number | null; lifetime_budget?: number | null }
 export type AdLink = { id: string; funnel_id: string; campaign_id: string; adset_id: string | null }
 
 /** every campaign and ad set of the workspace's ad accounts, and every funnel's links */
 export async function listCampaignTree(tenantId: string) {
   const [c, s, l] = await Promise.all([
-    db().from('meta_campaigns').select('campaign_id, account_id, name, status, effective_status, objective, created_time').eq('tenant_id', tenantId).order('created_time', { ascending: false }),
-    db().from('meta_adsets').select('adset_id, campaign_id, name, effective_status').eq('tenant_id', tenantId).order('name'),
+    db().from('meta_campaigns').select('campaign_id, account_id, name, status, effective_status, objective, created_time, daily_budget, lifetime_budget').eq('tenant_id', tenantId).order('created_time', { ascending: false }),
+    db().from('meta_adsets').select('adset_id, campaign_id, name, effective_status, daily_budget, lifetime_budget').eq('tenant_id', tenantId).order('name'),
     db().from('funnel_ad_links').select('id, funnel_id, campaign_id, adset_id').eq('tenant_id', tenantId),
   ])
   const err = c.error ?? s.error ?? l.error
@@ -359,4 +359,18 @@ export async function metaRefreshedAt(tenantId: string): Promise<string | null> 
   const { data, error } = await db().from('meta_insights').select('updated_at').eq('tenant_id', tenantId).order('updated_at', { ascending: false }).limit(1).maybeSingle()
   if (error) throw new Error(error.message)
   return (data as { updated_at: string } | null)?.updated_at ?? null
+}
+
+/** the ads of these campaigns, and every day of their spend we have (all time) */
+export async function campaignTreeSpend(tenantId: string, campaignIds: string[]) {
+  if (!campaignIds.length) return { ads: [] as { ad_id: string; adset_id: string; campaign_id: string; name: string | null; effective_status: string | null }[], days: [] as { day: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }[] }
+  const [ads, days] = await Promise.all([
+    every<{ ad_id: string; adset_id: string; campaign_id: string; name: string | null; effective_status: string | null }>((a, b) =>
+      db().from('meta_ads').select('ad_id, adset_id, campaign_id, name, effective_status').eq('tenant_id', tenantId).in('campaign_id', campaignIds).order('ad_id').range(a, b),
+    ),
+    every<{ day: string; campaign_id: string; adset_id: string; ad_id: string; spend: number }>((a, b) =>
+      db().from('meta_insights').select('day, campaign_id, adset_id, ad_id, spend').eq('tenant_id', tenantId).in('campaign_id', campaignIds).order('day').order('ad_id').range(a, b),
+    ),
+  ])
+  return { ads, days }
 }

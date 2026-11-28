@@ -2310,3 +2310,18 @@ audio.watch-media { background: none; }
 .od-grid-half { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 .od-grid-half .od-alert-grid, .od-grid-half .od-insights { grid-template-columns: 1fr; }
 @media (max-width: 1000px) { .od-grid-half { grid-template-columns: 1fr; } }
+/* funnel → Facebook Ads: collapsible campaigns section and campaign → ad set → ad table */
+.fat-card { padding: 0; }
+.fat-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 16px 20px; background: none; border: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.fat-body { padding: 0 20px 20px; }
+.fat-chev { flex-shrink: 0; transition: transform .15s; color: var(--text-muted); }
+.fat-chev.is-open { transform: rotate(90deg); }
+.camp-tree tr.camp-tree-c, .camp-tree tr.camp-tree-s { cursor: pointer; }
+.camp-tree tr.camp-tree-c:hover td, .camp-tree tr.camp-tree-s:hover td { background: var(--surface-muted); }
+.camp-tree-name { display: inline-flex; align-items: flex-start; gap: 6px; }
+.camp-tree-name .fat-chev { margin-top: 2px; }
+.camp-tree tr.camp-tree-s td:first-child { padding-left: 34px; }
+.camp-tree tr.camp-tree-s td { background: color-mix(in oklab, var(--surface-muted) 50%, transparent); }
+.camp-tree tr.camp-tree-a td:first-child { padding-left: 74px; }
+.camp-tree tr.camp-tree-a td { font-size: 12.5px; }
+.camp-tree tfoot th { border-top: 1px solid var(--line); }
