@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, ArrowDown, ArrowUp, CalendarClock, CalendarDays, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
 import { useBusiness } from '@/business/useBusiness'
@@ -30,6 +30,9 @@ type Fun = { id: string; name: string; business: string; leads: number; contacte
 type Camp = { platform: 'meta' | 'google'; campaign_id: string; name: string; spend: number; leads: number }
 type Member = { id: string; name: string; role: string | null; fu_done: number; overdue: number; meetings: number; leads: number; closed: number }
 type Caller = { emp_number: string; name: string | null; calls: number; connected: number; talk_sec: number }
+/** a live alert (owner_alerts) */
+type Alert = { level: 'bad' | 'warn'; kind: string; text: string; to: string }
+
 type Data = {
   kpi: Kpi
   businesses: Biz[]
@@ -109,6 +112,20 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   }, [tenant.id, range.from, range.to, selected?.id])
   useEffect(load, [load])
 
+  // Alerts (live, whatever the dates): connections with an error, quiet team members / callers, leads waiting, ads
+  // with no leads, failed WhatsApp messages, Zoom problems — looked at again every 5 minutes
+  const [alerts, setAlerts] = useState<Alert[] | null>(null)
+  const loadAlerts = useCallback(() => {
+    db()
+      .rpc('owner_alerts', { p_tenant: tenant.id, p_business: selected?.id ?? null })
+      .then(({ data: d }) => setAlerts((d ?? []) as Alert[]))
+  }, [tenant.id, selected?.id])
+  useEffect(() => {
+    loadAlerts()
+    const t = window.setInterval(loadAlerts, 5 * 60_000)
+    return () => window.clearInterval(t)
+  }, [loadAlerts])
+
   const k = data?.kpi
   const revenue = num(k?.revenue)
   const spend = num(k?.ad_spend)
@@ -128,6 +145,23 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
         !error && <div className="muted small">Loading…</div>
       ) : (
         <>
+          {/* alerts */}
+          {alerts && alerts.length > 0 && (
+            <section className="od-card od-alerts">
+              <h3 className="od-card-title">
+                <Bell size={16} /> Alerts <span className="tab-count">{alerts.length}</span>
+              </h3>
+              <ul>
+                {alerts.map((a, i) => (
+                  <li key={i} className={`is-${a.level}`}>
+                    <CircleAlert size={14} />
+                    <Link to={a.to}>{a.text}</Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* 1. money */}
           <div className="adsd-kpis od-kpis">
             <Tile label="Revenue" value={short(revenue)} now={revenue} was={num(k!.revenue_prev)} good="up" tone={C.revenue} hint="collected" />
