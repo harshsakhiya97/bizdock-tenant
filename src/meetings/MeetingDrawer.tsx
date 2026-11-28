@@ -128,6 +128,7 @@ export function MeetingDrawer({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
   // the upcoming meeting's action: Done / Reschedule / No-show
   const [act, setAct] = useState<'' | MeetingAction>(meeting?.status === 'scheduled' ? (initialAction ?? '') : '')
   const [note, setNote] = useState('')
@@ -143,7 +144,7 @@ export function MeetingDrawer({
     setCat('')
     if (a === 'reschedule' && meeting) setNd({ date: '', start: hm(meeting.start_time), end: hm(meeting.end_time) })
   }
-  async function runAct() {
+  async function runAct(sure = false) {
     if (!meeting || !act) return
     const name = team ? f.title || 'the team meeting' : guest ? fullName(guest) : 'the guest'
     if (act === 'reschedule') {
@@ -153,6 +154,9 @@ export function MeetingDrawer({
       if (nd.date < today() || (nd.date === today() && nd.start < nowHm())) return setError('Pick a date and time that hasn’t passed yet.')
     } else if (!note.trim()) return setError(act === 'done' ? (team ? 'Write the comments / description of the meeting.' : 'Write a comment about the meeting.') : 'Write the reason.')
     if (act === 'done' && !team && guest && !(cat || leadCat())) return setError('Pick the lead category.')
+    // cancelling removes its Zoom meeting: asked once more
+    if (act === 'cancelled' && !sure) return setConfirmCancel(true)
+    setConfirmCancel(false)
     setBusy(true)
     setError(null)
     try {
@@ -167,7 +171,7 @@ export function MeetingDrawer({
           act === 'done'
             ? `${team ? `Team meeting “${name}”` : `Meeting with ${name}`} marked done.`
             : act === 'cancelled'
-              ? `Team meeting “${name}” cancelled.`
+              ? `${team ? `Team meeting “${name}”` : `Meeting with ${name}`} cancelled.${meeting.zoom_meeting_id ? ' Its Zoom meeting is deleted.' : ''}`
               : `${name} marked no-show.`,
         )
       }
@@ -257,6 +261,17 @@ export function MeetingDrawer({
             onCancel={() => setConfirmDel(false)}
             onConfirm={() => void remove()}
           />
+          <ConfirmModal
+            open={confirmCancel}
+            icon={Ban}
+            danger
+            title="Cancel this meeting?"
+            message={`The ${team ? `team meeting${f.title ? ` “${f.title}”` : ''}` : `meeting${guest ? ` with ${fullName(guest)}` : ''}`} is marked Cancelled (it stays in the history with your reason)${meeting?.zoom_meeting_id ? ', and its Zoom meeting is deleted — its link stops working' : ''}.`}
+            confirmLabel={busy ? 'Cancelling…' : 'Cancel meeting'}
+            busy={busy}
+            onCancel={() => setConfirmCancel(false)}
+            onConfirm={() => void runAct(true)}
+          />
           <div className="foot-end">
             {error && <p className="err-text">{error}</p>}
             <Button variant="outline" onClick={onClose}>
@@ -268,7 +283,7 @@ export function MeetingDrawer({
               </Button>
             )}
             {canEdit && act && (
-              <Button onClick={runAct} disabled={busy}>
+              <Button onClick={() => void runAct()} disabled={busy}>
                 {busy ? 'Saving…' : act === 'done' ? 'Mark done' : act === 'no_show' ? 'Mark no-show' : act === 'cancelled' ? 'Cancel meeting' : 'Reschedule'}
               </Button>
             )}
@@ -414,23 +429,34 @@ export function MeetingDrawer({
         </FormSection>
 
         {meeting && upcoming && canEdit && (
-          <FormSection title="Outcome" description={team ? 'Done, Reschedule or Cancelled.' : 'Done, Reschedule or No-show. The lead’s stage doesn’t change.'}>
+          <FormSection
+            title="Outcome"
+            description={
+              meeting.zoom_meeting_id
+                ? `Marked Done by itself 5 minutes after it ends. Reschedule${team ? '' : ', No-show'} or Cancel (its Zoom meeting is deleted too).`
+                : team
+                  ? 'Done, Reschedule or Cancel.'
+                  : 'Done, Reschedule, No-show or Cancel. The lead’s stage doesn’t change.'
+            }
+          >
             <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-              <button type="button" className={`btn btn-sm ${act === 'done' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'done' ? '' : 'done')}>
-                <CircleCheck size={15} /> Done
-              </button>
+              {/* a Zoom meeting turns Done by itself after it ends */}
+              {!meeting.zoom_meeting_id && (
+                <button type="button" className={`btn btn-sm ${act === 'done' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'done' ? '' : 'done')}>
+                  <CircleCheck size={15} /> Done
+                </button>
+              )}
               <button type="button" className={`btn btn-sm ${act === 'reschedule' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'reschedule' ? '' : 'reschedule')}>
                 <CalendarClock size={15} /> Reschedule
               </button>
-              {team ? (
-                <button type="button" className={`btn btn-sm ${act === 'cancelled' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'cancelled' ? '' : 'cancelled')}>
-                  <Ban size={15} /> Cancelled
-                </button>
-              ) : (
+              {!team && (
                 <button type="button" className={`btn btn-sm ${act === 'no_show' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'no_show' ? '' : 'no_show')}>
                   <UserX size={15} /> No-show
                 </button>
               )}
+              <button type="button" className={`btn btn-sm ${act === 'cancelled' ? 'btn-primary' : 'btn-outline'}`} onClick={() => pickAct(act === 'cancelled' ? '' : 'cancelled')}>
+                <Ban size={15} /> Cancel
+              </button>
             </div>
             {act === 'done' && (
               <div className="form-grid" style={{ marginTop: 12 }}>
