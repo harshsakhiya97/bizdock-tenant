@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, CircleAlert, Copy, MessageCircleQuestion, MessageSquare, RefreshCw, Users, Video } from 'lucide-react'
+import { Check, CircleAlert, Copy, MessageCircleQuestion, Plus, MessageSquare, RefreshCw, Users, Video } from 'lucide-react'
 import { Link } from 'react-router'
 import { Paged } from '@/components/ui'
 import { cn } from '@/lib/cn'
@@ -96,6 +96,8 @@ function ZoomPanelInner({
   const [tab, setTab] = useState('Attendance')
   const [busy, setBusy] = useState<'pull' | 'retry' | 'join' | null>(null)
   const [hostKey, setHostKey] = useState<string | null>(null)
+  // Add recording (top row): opens the Recording tab's add form
+  const [addRec, setAddRec] = useState(0)
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
   const [recCount, setRecCount] = useState<number | undefined>(undefined)
   const [recKey, setRecKey] = useState(0)
@@ -245,10 +247,17 @@ function ZoomPanelInner({
 
       {zoomId && (
         <>
+          {/* 1. Refresh + Add recording, 2. when it was fetched, 3. the tabs */}
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+            {refreshBtn}
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => (setTab('Recording'), setAddRec((n) => n + 1))}>
+              <Plus size={14} /> Add recording
+            </button>
+          </div>
           <div className="muted small">
             {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance and Q&A come in 5 minutes after it ends (tried again every 5 minutes if Zoom isn’t ready); chat after 4 hours.'}
           </div>
-          <div className="rec-tabs zp-tabs" role="tablist">
+          <div className="tabs zp-tabs" role="tablist">
             {(
               [
                 ['Attendance', Users, data?.attendees.length],
@@ -257,16 +266,15 @@ function ZoomPanelInner({
                 ['Recording', Video, recCount],
               ] as const
             ).map(([t, Icon, n]) => (
-              <button key={t} type="button" role="tab" aria-selected={tab === t} className={cn('rec-tab', tab === t && 'is-active')} onClick={() => setTab(t)}>
-                <Icon size={15} />
+              <button key={t} type="button" role="tab" aria-selected={tab === t} className={cn('tab', tab === t && 'is-active')} onClick={() => setTab(t)}>
+                <Icon size={14} />
                 {t}
-                {n ? <span className="rec-tab-count">{n}</span> : null}
+                {n ? <span className="tab-count">{n}</span> : null}
               </button>
             ))}
           </div>
-          {tab !== 'Recording' && <div className="row" style={{ justifyContent: 'flex-end' }}>{refreshBtn}</div>}
           {tab === 'Recording' ? (
-            <RecordingPanel key={recKey} target={target} onCount={setRecCount} actions={refreshBtn} />
+            <RecordingPanel key={recKey} target={target} onCount={setRecCount} addSignal={addRec} toolbar={false} />
           ) : !data ? (
             <div className="muted small">Loading…</div>
           ) : tab === 'Attendance' ? (

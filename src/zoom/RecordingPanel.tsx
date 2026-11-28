@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Download, FileAudio, Link2, Plus, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Md } from '@/ai/AiInsights'
 import { Button } from '@/components/Button'
@@ -16,7 +16,19 @@ const mins = (s: number | null) => (s ? `${Math.round(s / 60)} min` : '')
  * A meeting's / webinar date's recordings: the Zoom cloud recording (copied into our storage a few minutes after it
  * ends), or one added by hand (a file or a link); its player and file path, then the summary and the transcript (AI).
  */
-export function RecordingPanel({ target, onCount, actions }: { target: RecTarget; onCount?: (n: number) => void; /** more buttons beside Add recording (the Zoom panel's Refresh) */ actions?: ReactNode }) {
+export function RecordingPanel({
+  target,
+  onCount,
+  addSignal = 0,
+  toolbar = true,
+}: {
+  target: RecTarget
+  onCount?: (n: number) => void
+  /** goes up: open the Add recording form (the Zoom panel's own button) */
+  addSignal?: number
+  /** false: no Add recording button here (the Zoom panel has it) */
+  toolbar?: boolean
+}) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Recording[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -34,6 +46,9 @@ export function RecordingPanel({ target, onCount, actions }: { target: RecTarget
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind, id])
   useEffect(load, [load])
+  useEffect(() => {
+    if (addSignal) setAdding(true)
+  }, [addSignal])
   // while something is being copied or summarised, look again every 20 seconds
   const working = rows?.some((r) => r.copy_status === 'waiting' || (r.copy_status === 'done' && r.ai_status === 'waiting'))
   useEffect(() => {
@@ -46,12 +61,11 @@ export function RecordingPanel({ target, onCount, actions }: { target: RecTarget
     <div className="stack rec">
       <div className="row" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <span className="muted small">The Zoom cloud recording is copied here about 30 minutes after the meeting ends, then its transcript and summary are written (Gemini AI).</span>
-        <div className="row" style={{ gap: 8 }}>
-          {actions}
+        {toolbar && (
           <Button size="sm" variant="outline" onClick={() => setAdding(true)}>
             <Plus size={14} /> Add recording
           </Button>
-        </div>
+        )}
       </div>
       {error && <div className="alert alert-error small">{error}</div>}
       {!rows ? (
@@ -187,7 +201,7 @@ function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: ()
         ) : tab === 'Summary' ? (
           r.summary ? <Md text={r.summary} /> : <div className="muted small">{r.ai_error || '—'}</div>
         ) : r.transcript ? (
-          <pre className="rec-transcript">{r.transcript}</pre>
+          <TranscriptList text={r.transcript} />
         ) : (
           <div className="muted small">{r.ai_error || 'No transcript yet.'}</div>
         )}
@@ -260,5 +274,34 @@ function AddRecordingDrawer({ onClose, onSave }: { onClose: () => void; onSave: 
         </div>
       </div>
     </Drawer>
+  )
+}
+
+/**
+ * A transcript as a list: "[01:24] Host: …" → one row per line (time · speaker · what was said). Text without the
+ * time marks is shown as it is.
+ */
+function TranscriptList({ text }: { text: string }) {
+  const re = /\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*/g
+  const parts = text.split(re)
+  // ["before", "00:16", "Host: Hello…", "00:23", "Speaker 2: …"]
+  if (parts.length < 3) return <pre className="rec-transcript">{text}</pre>
+  const rows: { at: string; who: string; said: string }[] = []
+  for (let i = 1; i < parts.length; i += 2) {
+    const line = (parts[i + 1] ?? '').trim()
+    const m = /^([^:\n]{1,30}):\s+([\s\S]*)$/.exec(line)
+    rows.push({ at: parts[i], who: m ? m[1].trim() : '', said: (m ? m[2] : line).trim() })
+  }
+  return (
+    <ol className="tr-list">
+      {parts[0].trim() && <li className="tr-row"><span /><span /><span>{parts[0].trim()}</span></li>}
+      {rows.map((r, i) => (
+        <li key={i} className="tr-row">
+          <span className="tr-at">{r.at}</span>
+          <b className="tr-who">{r.who}</b>
+          <span>{r.said}</span>
+        </li>
+      ))}
+    </ol>
   )
 }

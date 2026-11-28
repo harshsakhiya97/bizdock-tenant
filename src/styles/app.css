@@ -2204,6 +2204,14 @@ details.rec-section summary { cursor: pointer; }
 @media (max-width: 640px) { .adsd-share-row { grid-template-columns: minmax(0, 1fr) 70px; } .adsd-share-bars { grid-column: 1 / -1; grid-row: 2; } }
 .adsd-n { padding: 0 4px; margin: 0 -4px; border: 0; background: none; font: inherit; color: var(--brand); font-weight: 700; cursor: pointer; border-radius: 4px; text-decoration: underline dotted; text-underline-offset: 3px; }
 .adsd-n:hover { background: var(--brand-soft); }
-/* Zoom panel (meeting / event drawer): the lead page tabs, a size smaller */
-.zp-tabs { margin: 10px 0; box-shadow: none; }
-.zp-tabs .rec-tab { height: 34px; padding: 0 12px; font-size: 13px; }
+.zp-tabs { margin: 4px 0 6px; flex-wrap: wrap; }
+.zp-tabs .tab { display: inline-flex; align-items: center; gap: 6px; }
+.tab-count { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; background: color-mix(in oklab, var(--brand) 12%, white); color: var(--brand); }
+/* a transcript, one line per remark: time · speaker · text */
+.tr-list { list-style: none; margin: 0; padding: 0; max-height: 460px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+.tr-row { display: grid; grid-template-columns: 52px 96px 1fr; gap: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.5; border-bottom: 1px solid var(--line); }
+.tr-row:last-child { border-bottom: 0; }
+.tr-row:nth-child(even) { background: var(--bg); }
+.tr-at { font-variant-numeric: tabular-nums; color: var(--brand); font-weight: 600; }
+.tr-who { overflow-wrap: anywhere; }
+@media (max-width: 640px) { .tr-row { grid-template-columns: 46px 1fr; } .tr-row > span:last-child { grid-column: 1 / -1; } }
