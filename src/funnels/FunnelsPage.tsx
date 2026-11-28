@@ -40,36 +40,31 @@ export function FunnelsPage() {
   const [ads, setAds] = useState<Record<string, AdStats>>({})
 
   const load = useCallback(() => {
-    listFunnels(tenant.id)
-      .then((f) => {
-        setFunnels(f)
-        // ads: running daily budget, today's spend / leads, last 30 days (Facebook + Google, without GST)
-        void db()
-          .rpc('funnel_card_stats', { p_tenant: tenant.id })
-          .then(({ data }) => setAds((data ?? {}) as Record<string, AdStats>))
-        // leads this person can see, counted per funnel: total / unassigned / in pipeline / closed (won or lost)
+    // funnels, their lead counts and their ads numbers load together, so each card shows up whole (no jump)
+    Promise.all([
+      listFunnels(tenant.id),
+      // leads this person can see, per funnel; only leads in a funnel (keeps big workspaces fast)
+      db().from('leads').select('funnel_id, stage_id, owner_id').eq('tenant_id', tenant.id).eq('is_archived', false).not('funnel_id', 'is', null),
+      // ads: running daily budget, today's spend / leads, last 30 days (Facebook + Google, without GST)
+      db().rpc('funnel_card_stats', { p_tenant: tenant.id }),
+    ])
+      .then(([f, leads, stats]) => {
+        // counted per funnel: total / unassigned / in pipeline / closed (won or lost)
         const kind = new Map(f.flatMap((x) => x.funnel_stages.map((st) => [st.id, st.kind] as const)))
-        void db()
-          .from('leads')
-          .select('funnel_id, stage_id, owner_id')
-          .eq('tenant_id', tenant.id)
-          .eq('is_archived', false)
-          // only leads in a funnel are counted; asking for just those keeps big workspaces fast
-          .not('funnel_id', 'is', null)
-          .then(({ data }) => {
-            const m = new Map<string, Counts>()
-            for (const l of data ?? []) {
-              if (!l.funnel_id) continue
-              const c = m.get(l.funnel_id) ?? { total: 0, unassigned: 0, pipeline: 0, closed: 0 }
-              c.total++
-              if (!l.owner_id) c.unassigned++
-              const k = kind.get(l.stage_id)
-              if (k === 'won' || k === 'lost') c.closed++
-              else c.pipeline++
-              m.set(l.funnel_id, c)
-            }
-            setLeadCount(m)
-          })
+        const m = new Map<string, Counts>()
+        for (const l of leads.data ?? []) {
+          if (!l.funnel_id) continue
+          const c = m.get(l.funnel_id) ?? { total: 0, unassigned: 0, pipeline: 0, closed: 0 }
+          c.total++
+          if (!l.owner_id) c.unassigned++
+          const k = kind.get(l.stage_id)
+          if (k === 'won' || k === 'lost') c.closed++
+          else c.pipeline++
+          m.set(l.funnel_id, c)
+        }
+        setLeadCount(m)
+        setAds((stats.data ?? {}) as Record<string, AdStats>)
+        setFunnels(f)
       })
       .catch((e: Error) => setNotice({ error: e.message }))
   }, [tenant.id])
