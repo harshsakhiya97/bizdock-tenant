@@ -2271,10 +2271,8 @@ audio.watch-media { background: none; }
 .od-legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .od-legend button.is-off { opacity: .45; text-decoration: line-through; }
 .od-legend button:hover { border-color: var(--brand); }
-.od-alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
-.od-alerts li { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; border-radius: var(--radius); font-size: 13px; }
-.od-alerts li svg { flex: none; margin-top: 2px; }
-.od-alerts li a { color: inherit; text-decoration: none; }
-.od-alerts li a:hover { text-decoration: underline; }
-.od-alerts li.is-bad { background: var(--danger-soft); color: var(--danger); }
-.od-alerts li.is-warn { background: var(--warning-soft, #fef3c7); color: color-mix(in oklab, var(--warning) 75%, black); }
+.od-alert-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 6px; }
+.od-alert { align-items: center; }
+.od-alert svg { flex: none; }
+.od-alert.is-bad svg { color: var(--danger); }
+.od-alert.is-warn svg { color: var(--warning); }

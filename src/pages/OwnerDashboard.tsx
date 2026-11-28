@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, ArrowDown, ArrowUp, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
 import { useBusiness } from '@/business/useBusiness'
@@ -199,19 +199,22 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                 <Attn n={data.attention.no_follow_up} label="Open leads with no follow-up date" tone="warn" to="/leads" />
                 <Attn n={num(k!.overdue_parts)} label={`Overdue payments${num(k!.overdue) ? ` · ${inr(num(k!.overdue))}` : ''}`} tone="bad" to="/invoices" />
               </div>
-              {/* live alerts: connections, quiet team / callers, leads waiting, ads with no leads, WhatsApp, Zoom */}
-              {alerts && alerts.length > 0 && (
-                <ul className="od-alerts">
-                  {alerts.map((al, i) => (
-                    <li key={i} className={`is-${al.level}`}>
-                      <CircleAlert size={14} />
-                      <Link to={al.to}>{al.text}</Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </Card>
           </div>
+
+          {/* live alerts: connections, quiet team / callers, leads waiting, ads with no leads, WhatsApp, Zoom */}
+          {alerts && alerts.length > 0 && (
+            <Card title={`Alerts · ${alerts.length}`} icon={Bell}>
+              <div className="od-alert-grid">
+                {alerts.map((al, i) => (
+                  <Link key={i} to={al.to} className={`od-attn-row od-alert is-${al.level === 'bad' ? 'bad' : 'warn'}`}>
+                    <CircleAlert size={16} />
+                    <span>{al.text}</span>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
 
           <Card title="Profit by business" icon={CalendarDays}>
             <div className="od-biz">
