@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, ChevronRight, C
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
-import { tempOf } from '@/leads/labels'
+import { TEMPERATURES, tempOf } from '@/leads/labels'
 import type { Temperature } from '@/leads/types'
 import { useBusiness } from '@/business/useBusiness'
 import { db } from '@/lib/supabase'
@@ -297,6 +297,9 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
               </div>
             </Card>
           )}
+
+          {/* one business picked: more about it */}
+          {selected && <BusinessFocus tenantId={tenant.id} businessId={selected.id} from={range.from} to={range.to} onLeads={openLeads} />}
 
           <Card title="Profit by business" icon={CalendarDays}>
             <div className="od-biz">
@@ -857,7 +860,7 @@ function FunnelBars({ rows, onOpen }: { rows: Fun[]; onOpen: (f: Fun, step: stri
 }
 
 /** share of a total, as bars */
-function Share({ rows, onOpen }: { rows: { name: string; v: number }[]; onOpen: (name: string) => void }) {
+function Share({ rows, onOpen }: { rows: { name: string; v: number }[]; onOpen?: (name: string) => void }) {
   const total = rows.reduce((s, r) => s + r.v, 0)
   if (!total) return <div className="muted small">No leads in these dates.</div>
   const colors = ['#6366f1', '#0ea5e9', '#16a34a', '#f59e0b', '#ec4899', '#14b8a6', '#8b5cf6', '#64748b']
@@ -870,10 +873,213 @@ function Share({ rows, onOpen }: { rows: { name: string; v: number }[]; onOpen: 
             <i style={{ width: `${pct(r.v, total)}%`, background: colors[i % colors.length] }} />
           </span>
           <span className="small num">
-            <N n={r.v} onClick={() => onOpen(r.name)} /> <span className="muted">{pct(r.v, total)}%</span>
+            {onOpen ? <N n={r.v} onClick={() => onOpen(r.name)} /> : r.v} <span className="muted">{pct(r.v, total)}%</span>
           </span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ---------- one business ----------
+type Focus = {
+  categories: Partial<Record<Temperature, number>>
+  first_touch: { median_min: number | null; within_1h: number; touched: number; leads: number }
+  outcomes: { name: string; n: number }[]
+  invoices: { count: number; total: number; paid: number; top: { name: string; total: number; paid: number }[] }
+  meetings: { booked: number; done: number; no_show: number; cancelled: number; upcoming: number }
+  bookings: { count: number; cancelled: number; hours: number; value: number }
+  orders: Record<string, number>
+}
+const TEMP_COLOR: Record<Temperature, string> = { new: '#6366f1', hot: '#dc2626', warm: '#f59e0b', cold: '#0ea5e9', not_interested: '#94a3b8', closed: '#16a34a' }
+const ORDER_LABEL: Record<string, string> = { not_started: 'Not started', in_progress: 'In progress', review: 'In review', delivered: 'Delivered', completed: 'Completed', cancelled: 'Cancelled' }
+const ago = (min: number | null) => (min == null ? '—' : min < 60 ? `${min} min` : min < 60 * 48 ? `${(min / 60).toFixed(1)} h` : `${(min / 1440).toFixed(1)} days`)
+
+/** the picked business: lead quality, speed to the first call, call outcomes, meetings, billing, bookings / orders */
+function BusinessFocus({
+  tenantId,
+  businessId,
+  from,
+  to,
+  onLeads,
+}: {
+  tenantId: string
+  businessId: string
+  from: string
+  to: string
+  onLeads: (title: string, q: LeadQuery) => Promise<void>
+}) {
+  const [f, setF] = useState<Focus | null>(null)
+  useEffect(() => {
+    setF(null)
+    db()
+      .rpc('owner_business_focus', { p_tenant: tenantId, p_business: businessId, p_from: from, p_to: to })
+      .then(({ data }) => setF((data ?? null) as Focus | null))
+  }, [tenantId, businessId, from, to])
+  if (!f) return null
+  const cats = TEMPERATURES.map((t) => ({ ...t, n: num(f.categories[t.value]) }))
+  const totalLeads = cats.reduce((a, c) => a + c.n, 0)
+  const m = f.meetings
+  const showUp = m.done + m.no_show ? pct(m.done, m.done + m.no_show) : null
+  const ft = f.first_touch
+  const orders = Object.entries(f.orders ?? {})
+  return (
+    <div className="od-focus">
+      <Card title="Lead quality" icon={Users}>
+        {totalLeads ? (
+          <>
+            <div className="od-stack-bar">
+              {cats
+                .filter((c) => c.n)
+                .map((c) => (
+                  <i key={c.value} style={{ width: `${pct(c.n, totalLeads)}%`, background: TEMP_COLOR[c.value] }} title={`${c.label} ${c.n}`} />
+                ))}
+            </div>
+            <div className="od-chips">
+              {cats
+                .filter((c) => c.n)
+                .map((c) => (
+                  <span key={c.value} className="od-chip">
+                    <i style={{ background: TEMP_COLOR[c.value] }} /> {c.label}{' '}
+                    <N n={c.n} onClick={() => void onLeads(`${c.label} leads`, { p_business: businessId, p_step: `temp:${c.value}` })} />
+                    <span className="muted">{pct(c.n, totalLeads)}%</span>
+                  </span>
+                ))}
+            </div>
+          </>
+        ) : (
+          <div className="muted small">No leads in these dates.</div>
+        )}
+        <div className="od-mini">
+          <div>
+            <b>{ago(ft.median_min)}</b>
+            <span>typical time to the first call</span>
+          </div>
+          <div>
+            <b>{ft.leads ? `${pct(ft.within_1h, ft.leads)}%` : '—'}</b>
+            <span>called within 1 hour</span>
+          </div>
+          <div>
+            <b>{ft.leads ? `${pct(ft.touched, ft.leads)}%` : '—'}</b>
+            <span>contacted at all</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Call outcomes" icon={PhoneCall}>
+        <Share rows={f.outcomes.map((o) => ({ name: o.name, v: num(o.n) }))} />
+      </Card>
+
+      <Card title="Meetings" icon={Video}>
+        <div className="od-mini">
+          <div>
+            <b>{m.booked}</b>
+            <span>booked</span>
+          </div>
+          <div>
+            <b>{m.done}</b>
+            <span>held</span>
+          </div>
+          <div>
+            <b className={m.no_show ? 'od-bad' : undefined}>{m.no_show}</b>
+            <span>no-show</span>
+          </div>
+          <div>
+            <b>{showUp == null ? '—' : `${showUp}%`}</b>
+            <span>show-up rate</span>
+          </div>
+          {m.upcoming > 0 && (
+            <div>
+              <b>{m.upcoming}</b>
+              <span>still to come</span>
+            </div>
+          )}
+          {m.cancelled > 0 && (
+            <div>
+              <b>{m.cancelled}</b>
+              <span>cancelled</span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      <Card title="Billing" icon={IndianRupee}>
+        <div className="od-mini">
+          <div>
+            <b>{f.invoices.count}</b>
+            <span>invoices</span>
+          </div>
+          <div>
+            <b>{short(num(f.invoices.total))}</b>
+            <span>billed</span>
+          </div>
+          <div>
+            <b>{short(num(f.invoices.paid))}</b>
+            <span>collected</span>
+          </div>
+          <div>
+            <b className={num(f.invoices.total) - num(f.invoices.paid) > 0 ? 'od-bad' : undefined}>{short(num(f.invoices.total) - num(f.invoices.paid))}</b>
+            <span>pending</span>
+          </div>
+          <div>
+            <b>{f.invoices.count ? short(num(f.invoices.total) / f.invoices.count) : '—'}</b>
+            <span>average invoice</span>
+          </div>
+        </div>
+        {f.invoices.top.length > 0 && (
+          <ul className="od-next-list">
+            {f.invoices.top.map((t) => (
+              <li key={t.name}>
+                <span>{t.name}</span>
+                <span className="muted small">{num(t.paid) < num(t.total) ? `${short(num(t.paid))} paid` : 'paid'}</span>
+                <b>{inr(num(t.total))}</b>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {(f.bookings.count > 0 || f.bookings.cancelled > 0) && (
+        <Card title="Studio bookings" icon={CalendarClock}>
+          <div className="od-mini">
+            <div>
+              <b>{f.bookings.count}</b>
+              <span>bookings</span>
+            </div>
+            <div>
+              <b>{num(f.bookings.hours)} h</b>
+              <span>hours booked</span>
+            </div>
+            <div>
+              <b>{short(num(f.bookings.value))}</b>
+              <span>booked value</span>
+            </div>
+            <div>
+              <b>{f.bookings.count ? short(num(f.bookings.value) / f.bookings.count) : '—'}</b>
+              <span>per booking</span>
+            </div>
+            {f.bookings.cancelled > 0 && (
+              <div>
+                <b>{f.bookings.cancelled}</b>
+                <span>cancelled</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {orders.length > 0 && (
+        <Card title="Orders" icon={CalendarDays}>
+          <div className="od-mini">
+            {orders.map(([k, n]) => (
+              <div key={k}>
+                <b>{n}</b>
+                <span>{ORDER_LABEL[k] ?? k}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
