@@ -56,7 +56,6 @@ export function FunnelAdsTab({ funnelId, canEdit, onSaved }: { funnelId: string;
 
   const accName = useMemo(() => new Map((accounts ?? []).map((a) => [a.id, a.name ?? a.act_id])), [accounts])
   const campById = useMemo(() => new Map(campaigns.map((c) => [c.campaign_id, c])), [campaigns])
-  const setById = useMemo(() => new Map(adsets.map((s) => [s.adset_id, s])), [adsets])
   // only the campaigns whose name has one of the funnel's tags
   const mine = useMemo(() => links.filter((l) => l.funnel_id === funnelId && tagHit(campById.get(l.campaign_id)?.name, tags)), [links, funnelId, campById, tags])
 
