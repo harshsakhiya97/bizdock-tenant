@@ -4,6 +4,7 @@ import { RefreshCw } from 'lucide-react'
 import { Drawer } from '@/components/Drawer'
 import { cn } from '@/lib/cn'
 import { useTenant } from '@/tenant/useTenant'
+import { hasDevanagari, toHinglish } from '@/lib/hinglish'
 import { fieldLabel, hx, resultOf, rupees, secs, type AiCall } from './api'
 
 type Turn = { at?: string; speaker?: string; text?: string }
@@ -14,6 +15,8 @@ export function CallDrawer({ call: initial, memberName, onClose, onChanged }: { 
   const [call, setCall] = useState(initial)
   const [turns, setTurns] = useState<Turn[] | null>(null)
   const [busy, setBusy] = useState(false)
+  // the conversation in Hindi letters, or Hinglish (English letters): the call itself stays Hindi
+  const [hinglish, setHinglish] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const load = () => {
     setBusy(true)
@@ -98,7 +101,21 @@ export function CallDrawer({ call: initial, memberName, onClose, onChanged }: { 
           </div>
         )}
         <div>
-          <div className="ac-label">Conversation {turns ? `(${turns.length})` : ''}</div>
+          <div className="row-between" style={{ gap: 8, marginBottom: 4 }}>
+            <div className="ac-label" style={{ margin: 0 }}>
+              Conversation {turns ? `(${turns.length})` : ''}
+            </div>
+            {turns?.some((t) => hasDevanagari(t.text)) && (
+              <div className="seg seg-sm" role="group" aria-label="Script">
+                <button type="button" className={hinglish ? 'is-active' : undefined} onClick={() => setHinglish(true)}>
+                  Hinglish
+                </button>
+                <button type="button" className={!hinglish ? 'is-active' : undefined} onClick={() => setHinglish(false)}>
+                  Hindi
+                </button>
+              </div>
+            )}
+          </div>
           {!turns ? (
             <div className="muted small">Loading…</div>
           ) : !turns.length ? (
@@ -108,7 +125,7 @@ export function CallDrawer({ call: initial, memberName, onClose, onChanged }: { 
               {turns.map((t, i) => (
                 <div key={i} className={cn('ac-turn', t.speaker === 'agent' ? 'is-agent' : 'is-them')}>
                   <small>{t.speaker === 'agent' ? 'AI' : call.to_name || 'Them'}</small>
-                  <div>{t.text}</div>
+                  <div>{hinglish ? toHinglish(t.text) : t.text}</div>
                 </div>
               ))}
             </div>
