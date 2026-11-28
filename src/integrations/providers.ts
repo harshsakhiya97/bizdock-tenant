@@ -300,6 +300,7 @@ export const PROVIDERS: Provider[] = [
       { key: 'client_id', label: 'Client ID', required: true, hint: 'Just below the Account ID on the App credentials page.' },
       { key: 'client_secret', label: 'Client secret', secret: true, required: true, hint: 'Below the Client ID — click the copy icon next to it (or the eye to show it).' },
       { key: 'host_email', label: 'Host (Zoom user email)', placeholder: 'host@yourcompany.com', hint: 'Meetings are created under this Zoom user. Empty = the app’s owner.' },
+      { key: 'host_key', label: 'Host key', placeholder: '6-digit host key', hint: 'Zoom → Profile → Host key. Shown when someone joins, to claim host if Zoom opens them as a guest.' },
       { key: 'cloud_record', label: 'Cloud-record meetings', options: ['Yes', 'No'], hint: 'Needed to fetch the in-meeting chat afterwards.' },
       { key: 'is_default', label: 'Default account', options: ['No', 'Yes'], hint: 'Picked first for new meetings and workflow steps.' },
     ],

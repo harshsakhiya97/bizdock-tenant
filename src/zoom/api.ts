@@ -50,6 +50,9 @@ export const testZoom = (id: string) => call<{ ok: true; user: { name: string; e
 /** create the Zoom meeting again (after an error) */
 export const retryZoom = (t: ZoomTarget) => call<{ ok: true }>({ action: 'sync', ...t })
 
+/** Join as the host: a fresh start link (Zoom's lasts ~2 hours) and the account's host key */
+export const startZoom = (t: ZoomTarget) => call<{ start_url: string | null; join_url: string | null; host_key: string | null; error?: string }>({ action: 'start', ...t })
+
 /** fetch attendance, Q&A and chat now */
 export const pullZoom = (t: ZoomTarget) =>
   call<{ attendees: number; questions: number; chat: number; chat_found: boolean; recording?: boolean; notes: string[] }>({ action: 'pull', ...t })

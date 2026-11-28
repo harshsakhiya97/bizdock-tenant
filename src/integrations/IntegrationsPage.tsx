@@ -193,6 +193,8 @@ export function IntegrationsPage() {
 
   // Add with keys (a Zoom Server-to-Server app): only its three keys; recording on, default when it's the first
   const zoomKeys = (p: Provider): Provider => ({ ...p, fields: p.fields.filter((f) => ['account_id', 'client_id', 'client_secret'].includes(f.key)) })
+  // Settings of a Zoom account: its keys (a Server-to-Server app) and the host key; connected with Zoom: just the host key
+  const zoomSettings = (p: Provider, oauth: boolean): Provider => ({ ...p, fields: p.fields.filter((f) => (oauth ? [] : ['account_id', 'client_id', 'client_secret']).concat('host_key').includes(f.key)) })
 
   // the Zoom account picked first for new meetings and workflow steps (only one)
   async function makeDefault(r: IntegrationRow) {
@@ -517,10 +519,10 @@ export function IntegrationsPage() {
                           {a.config.auth === 'oauth' ? 'Reconnect' : 'Connect with Zoom'}
                         </button>
                       )}
-                      {!off && (p.id !== 'zoom' || a.config.auth !== 'oauth') && (
+                      {!off && (
                         <button type="button" className="btn btn-ghost btn-sm" onClick={() => {
                           setListFor(null)
-                          setOpen({ p: p.id === 'zoom' ? zoomKeys(p) : p, row: a })
+                          setOpen({ p: p.id === 'zoom' ? zoomSettings(p, a.config.auth === 'oauth') : p, row: a })
                         }}>
                           Settings
                         </button>

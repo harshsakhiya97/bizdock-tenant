@@ -3,7 +3,7 @@ import { Check, CircleAlert, Copy, RefreshCw, Video } from 'lucide-react'
 import { Link } from 'react-router'
 import { Tabs, Paged } from '@/components/ui'
 import { db } from '@/lib/supabase'
-import { listZoomData, pullZoom, retryZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
+import { listZoomData, pullZoom, retryZoom, startZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
 import { RecordingPanel } from './RecordingPanel'
 
 const time = (s: string | null) => (s ? new Date(s).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : '—')
@@ -92,7 +92,8 @@ function ZoomPanelInner({
 }) {
   const [data, setData] = useState<{ attendees: ZoomAttendee[]; comments: ZoomComment[] } | null>(null)
   const [tab, setTab] = useState('Attendance')
-  const [busy, setBusy] = useState<'pull' | 'retry' | null>(null)
+  const [busy, setBusy] = useState<'pull' | 'retry' | 'join' | null>(null)
+  const [hostKey, setHostKey] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
   const [recCount, setRecCount] = useState<number | undefined>(undefined)
   const [recKey, setRecKey] = useState(0)
@@ -119,6 +120,25 @@ function ZoomPanelInner({
     }
     setBusy(null)
   }
+  // Join = as the host: a fresh start link (the window opens first, so the browser doesn't block it); no start link → the join link
+  async function join() {
+    const w = window.open('about:blank', '_blank')
+    setBusy('join')
+    setMsg({})
+    try {
+      const r = await startZoom(target)
+      setHostKey(r.host_key)
+      const url = r.start_url || startUrl || r.join_url || joinUrl
+      if (url && w) w.location.href = url
+      else w?.close()
+      if (!r.start_url) setMsg({ error: `Couldn’t start as the host${r.error ? ` (${r.error})` : ''} — opened the join link${r.host_key ? '; claim host with the host key below' : ''}.` })
+    } catch (e) {
+      if (w && (startUrl || joinUrl)) w.location.href = (startUrl || joinUrl)!
+      else w?.close()
+      setMsg({ error: (e as Error).message })
+    }
+    setBusy(null)
+  }
   async function retry() {
     setBusy('retry')
     setMsg({})
@@ -134,9 +154,9 @@ function ZoomPanelInner({
 
   const qa = data?.comments.filter((c) => c.kind === 'qa') ?? []
   const chat = data?.comments.filter((c) => c.kind === 'chat') ?? []
-  // Copy link / Copy invite (the invitation as Zoom words it)
-  const [copied, setCopied] = useState<'' | 'link' | 'invite'>('')
-  const copy = (what: 'link' | 'invite', text: string) =>
+  // Copy invite (the invitation as Zoom words it)
+  const [copied, setCopied] = useState<'' | 'invite'>('')
+  const copy = (what: 'invite', text: string) =>
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(what)
       window.setTimeout(() => setCopied(''), 1500)
@@ -177,6 +197,7 @@ function ZoomPanelInner({
             Zoom {target.kind === 'event' ? '' : 'meeting '}
             <b>{zoomId.replace(/(\d{3})(\d{4})(\d+)/, '$1 $2 $3')}</b>
             {password ? <span className="muted"> · passcode {password}</span> : null}
+            {hostKey ? <span className="muted"> · host key {hostKey}</span> : null}
             {accountName ? <span className="muted"> · {accountName}</span> : null}
           </span>
         ) : error ? (
@@ -185,25 +206,15 @@ function ZoomPanelInner({
           <span className="muted">Creating the Zoom meeting…</span>
         )}
         <div className="zp-actions">
-          {joinUrl?.startsWith('http') && (
-            <a className="btn btn-outline btn-sm" href={joinUrl} target="_blank" rel="noreferrer">
-              Join
-            </a>
+          {zoomId && (joinUrl?.startsWith('http') || startUrl?.startsWith('http')) && (
+            <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} title="Opens Zoom as the host" onClick={() => void join()}>
+              {busy === 'join' ? 'Opening…' : 'Join'}
+            </button>
           )}
           {joinUrl?.startsWith('http') && (
-            <>
-              <button type="button" className="btn btn-outline btn-sm" title="Copy the join link" onClick={() => copy('link', joinUrl)}>
-                {copied === 'link' ? <Check size={14} /> : <Copy size={14} />} {copied === 'link' ? 'Copied' : 'Copy link'}
-              </button>
-              <button type="button" className="btn btn-outline btn-sm" title="Copy the invitation: topic, time, link, meeting ID and passcode" onClick={() => copy('invite', invite())}>
-                {copied === 'invite' ? <Check size={14} /> : <Copy size={14} />} {copied === 'invite' ? 'Copied' : 'Copy invite'}
-              </button>
-            </>
-          )}
-          {startUrl?.startsWith('http') && (
-            <a className="btn btn-outline btn-sm" href={startUrl} target="_blank" rel="noreferrer" title="Opens Zoom as the host">
-              Start as host
-            </a>
+            <button type="button" className="btn btn-outline btn-sm" title="Copy the invitation: topic, time, link, meeting ID and passcode" onClick={() => copy('invite', invite())}>
+              {copied === 'invite' ? <Check size={14} /> : <Copy size={14} />} {copied === 'invite' ? 'Copied' : 'Copy invite'}
+            </button>
           )}
           {!zoomId && error && (
             <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} onClick={() => void retry()}>
@@ -212,7 +223,7 @@ function ZoomPanelInner({
           )}
           {zoomId && (
             <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} onClick={() => void pull()}>
-              <RefreshCw size={14} /> {busy === 'pull' ? 'Fetching…' : 'Fetch attendance'}
+              <RefreshCw size={14} /> {busy === 'pull' ? 'Refreshing…' : 'Refresh'}
             </button>
           )}
         </div>
