@@ -56,6 +56,7 @@ import { BookingCalendarsPage } from '@/widgets/BookingCalendarsPage'
 import { WebinarDateWidgetsPage } from '@/widgets/WebinarDateWidgetsPage'
 import { EmbedPage } from '@/widgets/EmbedPage'
 import { AttendancePage } from '@/attendance/AttendancePage'
+import { ZoomWatchPage } from '@/pages/ZoomWatch'
 
 export default function App() {
   return (
@@ -72,6 +73,8 @@ export default function App() {
             <Route path="/privacy-policy" element={<PrivacyPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/support" element={<SupportPage />} />
+            {/* a Zoom meeting's recording, for anyone with the link: <app>/zoom/<meeting-id> */}
+            <Route path="/zoom/:id" element={<ZoomWatchPage />} />
             <Route path="/:code" element={<ShortLinkPage />} />
             <Route element={<RequireAuth />}>
               <Route

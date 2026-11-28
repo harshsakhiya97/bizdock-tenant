@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Download, FileAudio, Link2, Plus, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
+import { Check, Copy, Download, FileAudio, Link2, Plus, RefreshCw, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Md } from '@/ai/AiInsights'
 import { Button } from '@/components/Button'
 import { Drawer } from '@/components/Drawer'
@@ -21,6 +21,7 @@ export function RecordingPanel({
   onCount,
   addSignal = 0,
   toolbar = true,
+  shareUrl,
 }: {
   target: RecTarget
   onCount?: (n: number) => void
@@ -28,6 +29,8 @@ export function RecordingPanel({
   addSignal?: number
   /** false: no Add recording button here (the Zoom panel has it) */
   toolbar?: boolean
+  /** the link anyone can open (<app>/zoom/<meeting-id>), shown on a Zoom recording */
+  shareUrl?: string
 }) {
   const tenant = useTenant()
   const [rows, setRows] = useState<Recording[] | null>(null)
@@ -73,7 +76,7 @@ export function RecordingPanel({
       ) : !rows.length ? (
         <div className="muted small">No recording yet.</div>
       ) : (
-        rows.map((r) => <RecordingCard key={r.id} r={r} onChanged={load} onRemove={() => setRemoving(r)} />)
+        rows.map((r) => <RecordingCard key={r.id} r={r} onChanged={load} onRemove={() => setRemoving(r)} shareUrl={r.source === 'zoom' ? shareUrl : undefined} />)
       )}
 
       {adding && (
@@ -110,7 +113,8 @@ export function RecordingPanel({
   )
 }
 
-function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: () => void; onRemove: () => void }) {
+function RecordingCard({ r, onChanged, onRemove, shareUrl }: { r: Recording; onChanged: () => void; onRemove: () => void; shareUrl?: string }) {
+  const [copied, setCopied] = useState(false)
   const [url, setUrl] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
@@ -169,7 +173,28 @@ function RecordingCard({ r, onChanged, onRemove }: { r: Recording; onChanged: ()
         <div className="rec-file small">
           {path && (
             <>
-              <span className="muted">File:</span> <code>{`${REC_BUCKET}/${path}`}</code> {mb(isVideo ? r.video_size : r.audio_size)}
+              {shareUrl ? (
+                <>
+                  <span className="muted">Link (anyone with it can watch):</span> <code>{shareUrl}</code>{' '}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(shareUrl).then(() => {
+                        setCopied(true)
+                        window.setTimeout(() => setCopied(false), 1500)
+                      })
+                    }
+                  >
+                    {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied' : 'Copy link'}
+                  </button>{' '}
+                </>
+              ) : (
+                <>
+                  <span className="muted">File:</span> <code>{`${REC_BUCKET}/${path}`}</code>{' '}
+                </>
+              )}
+              {mb(isVideo ? r.video_size : r.audio_size)}
               {url && (
                 <a className="link-btn" href={url} target="_blank" rel="noreferrer" download>
                   <Download size={13} /> Download

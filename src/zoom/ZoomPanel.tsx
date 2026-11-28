@@ -274,7 +274,7 @@ function ZoomPanelInner({
             ))}
           </div>
           {tab === 'Recording' ? (
-            <RecordingPanel key={recKey} target={target} onCount={setRecCount} addSignal={addRec} toolbar={false} />
+            <RecordingPanel key={recKey} target={target} onCount={setRecCount} addSignal={addRec} toolbar={false} shareUrl={zoomId ? `${window.location.origin}${import.meta.env.BASE_URL}zoom/${zoomId}` : undefined} />
           ) : !data ? (
             <div className="muted small">Loading…</div>
           ) : tab === 'Attendance' ? (
