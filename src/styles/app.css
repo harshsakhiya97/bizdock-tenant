@@ -2271,8 +2271,7 @@ audio.watch-media { background: none; }
 .od-legend button { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; }
 .od-legend button.is-off { opacity: .45; text-decoration: line-through; }
 .od-legend button:hover { border-color: var(--brand); }
-.od-alerts { border-color: color-mix(in oklab, var(--danger) 30%, var(--line)); }
-.od-alerts ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.od-alerts { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
 .od-alerts li { display: flex; align-items: flex-start; gap: 8px; padding: 7px 10px; border-radius: var(--radius); font-size: 13px; }
 .od-alerts li svg { flex: none; margin-top: 2px; }
 .od-alerts li a { color: inherit; text-decoration: none; }

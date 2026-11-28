@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
 import { useBusiness } from '@/business/useBusiness'
@@ -145,23 +145,6 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
         !error && <div className="muted small">Loading…</div>
       ) : (
         <>
-          {/* alerts */}
-          {alerts && alerts.length > 0 && (
-            <section className="od-card od-alerts">
-              <h3 className="od-card-title">
-                <Bell size={16} /> Alerts <span className="tab-count">{alerts.length}</span>
-              </h3>
-              <ul>
-                {alerts.map((a, i) => (
-                  <li key={i} className={`is-${a.level}`}>
-                    <CircleAlert size={14} />
-                    <Link to={a.to}>{a.text}</Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {/* 1. money */}
           <div className="adsd-kpis od-kpis">
             <Tile label="Revenue" value={short(revenue)} now={revenue} was={num(k!.revenue_prev)} good="up" tone={C.revenue} hint="collected" />
@@ -216,6 +199,17 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                 <Attn n={data.attention.no_follow_up} label="Open leads with no follow-up date" tone="warn" to="/leads" />
                 <Attn n={num(k!.overdue_parts)} label={`Overdue payments${num(k!.overdue) ? ` · ${inr(num(k!.overdue))}` : ''}`} tone="bad" to="/invoices" />
               </div>
+              {/* live alerts: connections, quiet team / callers, leads waiting, ads with no leads, WhatsApp, Zoom */}
+              {alerts && alerts.length > 0 && (
+                <ul className="od-alerts">
+                  {alerts.map((al, i) => (
+                    <li key={i} className={`is-${al.level}`}>
+                      <CircleAlert size={14} />
+                      <Link to={al.to}>{al.text}</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </Card>
           </div>
 
