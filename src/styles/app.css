@@ -2330,3 +2330,5 @@ audio.watch-media { background: none; }
 .funnel-ad-tiles .pl-tile { padding: 8px 10px; }
 .funnel-ad-tiles .pl-tile-label { font-size: 10px; }
 .funnel-ad-tiles .pl-tile-value { font-size: 17px; }
+/* funnels list: the cards share the full row (no empty columns beside two cards) */
+.funnel-grid { grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); }
