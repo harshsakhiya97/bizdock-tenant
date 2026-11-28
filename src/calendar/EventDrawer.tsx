@@ -365,6 +365,10 @@ export function EventDrawer({
               topic={event.title}
               day={event.event_date}
               time={event.start_time}
+              ended={
+                event.is_cancelled ||
+                new Date(`${event.end_date || event.event_date}T${(event.end_time || event.start_time || '23:59').slice(0, 5)}:00+05:30`).getTime() < Date.now()
+              }
             />
           </FormSection>
         )}

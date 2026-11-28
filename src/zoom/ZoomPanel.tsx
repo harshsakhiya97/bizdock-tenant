@@ -29,6 +29,8 @@ export function ZoomPanel(props: {
   topic?: string
   day?: string | null
   time?: string | null
+  /** the meeting is done / over: no Join or Copy invite */
+  ended?: boolean
   onChanged?: () => void
 }) {
   // just saved: the Zoom meeting is made on the server in a few seconds; look for it every 3 seconds (up to a minute)
@@ -77,6 +79,7 @@ function ZoomPanelInner({
   topic,
   day: inviteDay,
   time: inviteTime,
+  ended,
   onChanged,
 }: {
   target: ZoomTarget
@@ -90,6 +93,7 @@ function ZoomPanelInner({
   topic?: string
   day?: string | null
   time?: string | null
+  ended?: boolean
   onChanged?: () => void
 }) {
   const [data, setData] = useState<{ attendees: ZoomAttendee[]; comments: ZoomComment[] } | null>(null)
@@ -220,12 +224,12 @@ function ZoomPanelInner({
           <span className="muted">Creating the Zoom meeting…</span>
         )}
         <div className="zp-actions">
-          {zoomId && (joinUrl?.startsWith('http') || startUrl?.startsWith('http')) && (
+          {!ended && zoomId && (joinUrl?.startsWith('http') || startUrl?.startsWith('http')) && (
             <button type="button" className="btn btn-outline btn-sm" disabled={!!busy} title="Opens Zoom as the host" onClick={() => void join()}>
               {busy === 'join' ? 'Opening…' : 'Join'}
             </button>
           )}
-          {joinUrl?.startsWith('http') && (
+          {!ended && joinUrl?.startsWith('http') && (
             <button type="button" className="btn btn-outline btn-sm" title="Copy the invitation: topic, time, link, meeting ID and passcode" onClick={() => copy('invite', invite())}>
               {copied === 'invite' ? <Check size={14} /> : <Copy size={14} />} {copied === 'invite' ? 'Copied' : 'Copy invite'}
             </button>

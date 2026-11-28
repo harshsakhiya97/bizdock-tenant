@@ -525,6 +525,7 @@ export function MeetingDrawer({
               topic={meeting.kind === 'team' ? (meeting.title ?? 'Team meeting') : meeting.title || `Meeting with ${guest ? fullName(guest) : 'us'}`}
               day={meeting.meeting_date}
               time={meeting.start_time}
+              ended={meeting.status !== 'scheduled'}
             />
           </FormSection>
         )}
