@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link } from 'react-router'
-import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, ChevronRight, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
+import { StatRecords, type StatShow } from '@/components/StatRecords'
+import { tempOf } from '@/leads/labels'
+import type { Temperature } from '@/leads/types'
 import { useBusiness } from '@/business/useBusiness'
 import { db } from '@/lib/supabase'
 import { freshRange, useKept } from '@/lib/useKept'
@@ -24,9 +27,26 @@ type Kpi = {
   overdue: number
   overdue_parts: number
 }
-type Biz = { id: string | null; name: string; revenue: number; ad_spend: number; expenses: number; leads: number; closed: number; trend: number[] }
+type Biz = {
+  id: string | null
+  name: string
+  revenue: number
+  ad_spend: number
+  expenses: number
+  leads: number
+  closed: number
+  trend: number[]
+  revenue_prev: number
+  ad_spend_prev: number
+  expenses_prev: number
+  leads_prev: number
+}
 type Day = { day: string; revenue: number; spend: number; leads: number }
-type Fun = { id: string; name: string; business: string; leads: number; contacted: number; met: number; closed: number; lost: number }
+type Fun = { id: string; name: string; business: string; leads: number; contacted: number; met: number; closed: number; lost: number; leads_prev: number }
+/** the leads behind a number (owner_dash_leads) */
+type LeadItem = { id: string; name: string | null; phone: string | null; created_at: string; temperature: string | null; stage: string | null; funnel: string | null; source: string | null; owner: string | null }
+type LeadQuery = { p_business?: string | null; p_funnel?: string; p_source?: string; p_campaign?: string; p_ad?: string; p_step?: string }
+type Ad = { name: string; adset: string | null; spend: number; leads: number }
 type Camp = { platform: 'meta' | 'google'; campaign_id: string; name: string; spend: number; leads: number }
 type Member = { id: string; name: string; role: string | null; fu_done: number; overdue: number; meetings: number; leads: number; closed: number }
 type Caller = { emp_number: string; name: string | null; calls: number; connected: number; talk_sec: number }
@@ -97,6 +117,40 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const [range, setRange] = useKept<Range>(`owner-dash.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const navigate = useNavigate()
+  // a number's leads, in a modal
+  const [show, setShow] = useState<StatShow<LeadItem> | null>(null)
+  const openLeads = useCallback(
+    async (title: string, q: LeadQuery) => {
+      const { data: d, error: e } = await db().rpc('owner_dash_leads', {
+        p_tenant: tenant.id,
+        p_from: range.from,
+        p_to: range.to,
+        p_business: q.p_business ?? selected?.id ?? null,
+        p_funnel: q.p_funnel ?? null,
+        p_source: q.p_source ?? null,
+        p_campaign: q.p_campaign ?? null,
+        p_ad: q.p_ad ?? null,
+        p_step: q.p_step ?? null,
+      })
+      if (e) return setError(e.message)
+      setShow({ title, rows: (d ?? []) as LeadItem[], cols: LEAD_COLS })
+    },
+    [tenant.id, range.from, range.to, selected?.id],
+  )
+  // Top campaigns: the opened one's ads
+  const [openCamp, setOpenCamp] = useState<string | null>(null)
+  const [ads, setAds] = useState<Record<string, Ad[] | 'loading'>>({})
+  async function toggleCamp(c: Camp) {
+    const key = `${c.platform}${c.campaign_id}`
+    if (openCamp === key) return setOpenCamp(null)
+    setOpenCamp(key)
+    if (ads[key] && ads[key] !== 'loading') return
+    setAds((m) => ({ ...m, [key]: 'loading' }))
+    const { data: d } = await db().rpc('owner_campaign_ads', { p_tenant: tenant.id, p_platform: c.platform, p_campaign: c.campaign_id, p_from: range.from, p_to: range.to })
+    setAds((m) => ({ ...m, [key]: (d ?? []) as Ad[] }))
+  }
+  useEffect(() => setAds({}), [range.from, range.to])
   // Calls: the top callers (as many rows as the Team card), the rest on Show all
   const [allCallers, setAllCallers] = useState(false)
 
@@ -226,12 +280,19 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       <b>{b.name}</b>
                       <Spark values={(b.trend ?? []).map(num)} />
                     </div>
-                    <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
+                    <div className="row" style={{ gap: 8, alignItems: 'baseline' }}>
+                      <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
+                      <Delta now={p} was={num(b.revenue_prev) - num(b.ad_spend_prev) - num(b.expenses_prev)} good="up" />
+                    </div>
                     <div className="od-biz-rows">
                       <span>Revenue</span>
-                      <b>{short(num(b.revenue))}</b>
+                      <b>
+                        <Delta now={num(b.revenue)} was={num(b.revenue_prev)} good="up" /> {short(num(b.revenue))}
+                      </b>
                       <span>Ad spend</span>
-                      <b>{short(num(b.ad_spend))}</b>
+                      <b>
+                        <Delta now={num(b.ad_spend)} was={num(b.ad_spend_prev)} good="down" /> {short(num(b.ad_spend))}
+                      </b>
                       {num(b.expenses) > 0 && (
                         <>
                           <span>Expenses</span>
@@ -240,11 +301,14 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                       )}
                       <span>Leads</span>
                       <b>
-                        {num(b.leads)}
+                        <Delta now={num(b.leads)} was={num(b.leads_prev)} good="up" />{' '}
+                        <N n={num(b.leads)} onClick={() => void openLeads(`Leads · ${b.name}`, { p_business: b.id })} />
                         {num(b.leads) > 0 && num(b.ad_spend) > 0 && <span className="muted"> · {short(num(b.ad_spend) / num(b.leads))}/lead</span>}
                       </b>
                       <span>Closed</span>
-                      <b>{num(b.closed)}</b>
+                      <b>
+                        <N n={num(b.closed)} onClick={() => void openLeads(`Closed · ${b.name}`, { p_business: b.id, p_step: 'closed' })} />
+                      </b>
                     </div>
                   </div>
                 )
@@ -256,10 +320,10 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           {/* 3. funnels + sources */}
           <div className="od-grid">
             <Card title="Funnels" icon={Users}>
-              {data.funnels.length ? <FunnelBars rows={data.funnels} /> : <div className="muted small">No leads in these dates.</div>}
+              {data.funnels.length ? <FunnelBars rows={data.funnels} onOpen={(f, step, label) => void openLeads(`${label} · ${f.name}`, { p_funnel: f.id, p_step: step })} /> : <div className="muted small">No leads in these dates.</div>}
             </Card>
             <Card title="Leads by source" icon={Users}>
-              <Share rows={data.sources.map((s) => ({ name: s.name, v: num(s.n) }))} />
+              <Share rows={data.sources.map((s) => ({ name: s.name, v: num(s.n) }))} onOpen={(name) => void openLeads(`Leads · ${name}`, { p_source: name })} />
             </Card>
           </div>
 
@@ -277,16 +341,54 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.campaigns.map((c) => (
-                      <tr key={`${c.platform}${c.campaign_id}`}>
-                        <td>
-                          <span className={`od-plat is-${c.platform}`}>{c.platform === 'meta' ? 'FB' : 'G'}</span> {c.name}
-                        </td>
-                        <td className="num">{inr(num(c.spend))}</td>
-                        <td className="num">{num(c.leads)}</td>
-                        <td className="num">{num(c.leads) ? inr(num(c.spend) / num(c.leads)) : <span className="muted">—</span>}</td>
-                      </tr>
-                    ))}
+                    {data.campaigns.map((c) => {
+                      const key = `${c.platform}${c.campaign_id}`
+                      const open = openCamp === key
+                      const list = ads[key]
+                      return (
+                        <Fragment key={key}>
+                          <tr className="is-clickable" onClick={() => void toggleCamp(c)}>
+                            <td>
+                              <ChevronRight size={14} className={`od-chev${open ? ' is-open' : ''}`} />{' '}
+                              <span className={`od-plat is-${c.platform}`}>{c.platform === 'meta' ? 'FB' : 'G'}</span> {c.name}
+                            </td>
+                            <td className="num">{inr(num(c.spend))}</td>
+                            <td className="num" onClick={(e) => e.stopPropagation()}>
+                              <N n={num(c.leads)} onClick={() => void openLeads(`Leads · ${c.name}`, { p_campaign: c.name })} />
+                            </td>
+                            <td className="num">{num(c.leads) ? inr(num(c.spend) / num(c.leads)) : <span className="muted">—</span>}</td>
+                          </tr>
+                          {open &&
+                            (list === 'loading' || !list ? (
+                              <tr className="od-sub">
+                                <td colSpan={4} className="muted small">
+                                  Loading the ads…
+                                </td>
+                              </tr>
+                            ) : !list.length ? (
+                              <tr className="od-sub">
+                                <td colSpan={4} className="muted small">
+                                  No ad-level spend for this campaign.
+                                </td>
+                              </tr>
+                            ) : (
+                              list.map((a) => (
+                                <tr key={`${key}-${a.name}-${a.adset}`} className="od-sub">
+                                  <td>
+                                    {a.name}
+                                    {a.adset && <div className="muted small">{a.adset}</div>}
+                                  </td>
+                                  <td className="num">{inr(num(a.spend))}</td>
+                                  <td className="num">
+                                    <N n={num(a.leads)} onClick={() => void openLeads(`Leads · ${a.name}`, { p_ad: a.name })} />
+                                  </td>
+                                  <td className="num">{num(a.leads) ? inr(num(a.spend) / num(a.leads)) : <span className="muted">—</span>}</td>
+                                </tr>
+                              ))
+                            ))}
+                        </Fragment>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -406,11 +508,54 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           </div>
         </>
       )}
+      <StatRecords show={show} onClose={() => setShow(null)} rowKey={(r) => r.id} onRow={(r) => navigate(`/leads/${r.id}`)} />
     </div>
   )
 }
 
+const when = (s: string) => new Date(s).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+const LEAD_COLS: StatShow<LeadItem>['cols'] = [
+  {
+    label: 'Lead',
+    render: (r) => (
+      <>
+        <b>{r.name ?? 'Lead'}</b>
+        {r.phone && <div className="muted small">{r.phone}</div>}
+      </>
+    ),
+  },
+  { label: 'Funnel', render: (r) => r.funnel ?? <span className="muted">—</span> },
+  { label: 'Source', render: (r) => r.source ?? <span className="muted">—</span> },
+  { label: 'Stage', render: (r) => r.stage ?? <span className="muted">—</span> },
+  { label: 'Category', render: (r) => tempOf(r.temperature as Temperature)?.label ?? <span className="muted">—</span> },
+  { label: 'Owner', render: (r) => r.owner ?? <span className="muted">—</span> },
+  { label: 'Came in', render: (r) => <span className="nowrap">{when(r.created_at)}</span> },
+]
+
 // ---------- pieces ----------
+/** a number that opens its records (0: nothing to open) */
+function N({ n, onClick }: { n: number; onClick: () => void }) {
+  if (!n) return <span className="muted">0</span>
+  return (
+    <button type="button" className="adsd-n" onClick={onClick} title="See the leads">
+      {n.toLocaleString('en-IN')}
+    </button>
+  )
+}
+
+/** ↑ / ↓ against the previous period of the same length (green when it's better) */
+function Delta({ now, was, good }: { now: number; was: number; good: 'up' | 'down' }) {
+  if (!was || !Number.isFinite(now)) return null
+  const ch = ((now - was) / Math.abs(was)) * 100
+  if (Math.abs(ch) < 0.5) return null
+  const better = good === 'up' ? ch > 0 : ch < 0
+  return (
+    <span className={`adsd-delta ${better ? 'is-good' : 'is-bad'}`} title="vs the previous period of the same length">
+      {ch > 0 ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+      {Math.abs(ch) > 999 ? '999+' : Math.abs(ch).toFixed(0)}%
+    </span>
+  )
+}
 function Tile({ label, value, now, was, good, hint, tone, to }: { label: string; value: string; now: number; was: number | null; good: 'up' | 'down'; hint?: string; tone: string; to?: string }) {
   const ch = was != null && was !== 0 ? ((now - was) / Math.abs(was)) * 100 : null
   const better = ch == null ? null : good === 'up' ? ch > 0 : ch < 0
@@ -584,8 +729,8 @@ function DailyChart({ rows }: { rows: Day[] }) {
 }
 
 /** each funnel: leads → contacted → meeting → closed (and not interested), as bars of the funnel's leads */
-function FunnelBars({ rows }: { rows: Fun[] }) {
-  const steps: { key: keyof Fun; label: string; color: string }[] = [
+function FunnelBars({ rows, onOpen }: { rows: Fun[]; onOpen: (f: Fun, step: string, label: string) => void }) {
+  const steps: { key: 'leads' | 'contacted' | 'met' | 'closed' | 'lost'; label: string; color: string }[] = [
     { key: 'leads', label: 'Leads', color: '#94a3b8' },
     { key: 'contacted', label: 'Contacted', color: '#0ea5e9' },
     { key: 'met', label: 'Meeting', color: '#6366f1' },
@@ -597,7 +742,10 @@ function FunnelBars({ rows }: { rows: Fun[] }) {
       {rows.map((f) => (
         <div key={f.id} className="od-fun">
           <div className="row-between">
-            <b>{f.name}</b>
+            <span className="row" style={{ gap: 8, alignItems: 'center' }}>
+              <b>{f.name}</b>
+              <Delta now={num(f.leads)} was={num(f.leads_prev)} good="up" />
+            </span>
             <span className="muted small">{f.business}</span>
           </div>
           {steps.map((s) => {
@@ -609,7 +757,8 @@ function FunnelBars({ rows }: { rows: Fun[] }) {
                   <i style={{ width: `${pct(v, num(f.leads))}%`, background: s.color }} />
                 </span>
                 <span className="small num">
-                  {v} {s.key !== 'leads' && <span className="muted">{pct(v, num(f.leads))}%</span>}
+                  <N n={v} onClick={() => onOpen(f, s.key === 'leads' ? '' : s.key, s.label)} />{' '}
+                  {s.key !== 'leads' && <span className="muted">{pct(v, num(f.leads))}%</span>}
                 </span>
               </div>
             )
@@ -621,7 +770,7 @@ function FunnelBars({ rows }: { rows: Fun[] }) {
 }
 
 /** share of a total, as bars */
-function Share({ rows }: { rows: { name: string; v: number }[] }) {
+function Share({ rows, onOpen }: { rows: { name: string; v: number }[]; onOpen: (name: string) => void }) {
   const total = rows.reduce((s, r) => s + r.v, 0)
   if (!total) return <div className="muted small">No leads in these dates.</div>
   const colors = ['#6366f1', '#0ea5e9', '#16a34a', '#f59e0b', '#ec4899', '#14b8a6', '#8b5cf6', '#64748b']
@@ -634,7 +783,7 @@ function Share({ rows }: { rows: { name: string; v: number }[] }) {
             <i style={{ width: `${pct(r.v, total)}%`, background: colors[i % colors.length] }} />
           </span>
           <span className="small num">
-            {r.v} <span className="muted">{pct(r.v, total)}%</span>
+            <N n={r.v} onClick={() => onOpen(r.name)} /> <span className="muted">{pct(r.v, total)}%</span>
           </span>
         </div>
       ))}

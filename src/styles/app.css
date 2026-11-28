@@ -2276,3 +2276,9 @@ audio.watch-media { background: none; }
 .od-alert svg { flex: none; }
 .od-alert.is-bad svg { color: var(--danger); }
 .od-alert.is-warn svg { color: var(--warning); }
+.od-chev { vertical-align: -2px; color: var(--text-muted); transition: transform .15s; }
+.od-chev.is-open { transform: rotate(90deg); }
+.table tr.od-sub td { background: var(--bg); font-size: 12.5px; }
+.table tr.od-sub td:first-child { padding-left: 34px; }
+.od-biz-rows .adsd-delta { font-size: 10.5px; padding: 1px 5px; }
+.od-fun-row { grid-template-columns: 110px 1fr 84px; }
