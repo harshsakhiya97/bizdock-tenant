@@ -205,6 +205,45 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const profit = revenue - spend - expenses
   const profitPrev = num(k?.revenue_prev) - num(k?.ad_spend_prev) - num(k?.expenses_prev)
 
+  const bizCard = (b: Biz, solo = false) => {
+    const p = num(b.revenue) - num(b.ad_spend) - num(b.expenses)
+    return (
+      <div key={b.id ?? 'none'} className={solo ? 'od-biz-solo' : 'od-biz-card'}>
+        <div className="row-between">
+          <b>{b.name}</b>
+          <Spark values={(b.trend ?? []).map(num)} />
+        </div>
+        <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
+        <div className="od-biz-rows">
+          <span>Revenue</span>
+          <b>{short(num(b.revenue))}</b>
+          <span>Ad spend</span>
+          <b>{short(num(b.ad_spend))}</b>
+          {num(b.expenses) > 0 && (
+            <>
+              <span>Expenses</span>
+              <b>{short(num(b.expenses))}</b>
+            </>
+          )}
+          <span>Leads</span>
+          <b>
+            <N n={num(b.leads)} onClick={() => void openLeads(`Leads · ${b.name}`, { p_business: b.id })} />
+            {num(b.leads) > 0 && num(b.ad_spend) > 0 && <span className="muted"> · {short(num(b.ad_spend) / num(b.leads))}/lead</span>}
+          </b>
+          <span>Closed</span>
+          <b>
+            <N n={num(b.closed)} onClick={() => void openLeads(`Closed · ${b.name}`, { p_business: b.id, p_step: 'closed' })} />
+          </b>
+        </div>
+        {b.id && !solo && (
+          <button type="button" className="link-btn small od-more" onClick={() => selectBiz(b.id)}>
+            View details <ChevronRight size={13} />
+          </button>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="stack od">
       <PageHead title="Dashboard" subtitle={`Everything at a glance${selected ? ` · ${selected.name}` : ' · all businesses'}`} />
@@ -299,51 +338,24 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
           )}
 
           {/* one business picked: more about it */}
-          {selected && <BusinessFocus tenantId={tenant.id} businessId={selected.id} from={range.from} to={range.to} onLeads={openLeads} />}
+          {selected && (
+            <BusinessFocus tenantId={tenant.id} businessId={selected.id} from={range.from} to={range.to} onLeads={openLeads}>
+              {data.businesses
+                .filter((b) => b.id === selected.id)
+                .map((b) => (
+                  <Card key="profit" title="Profit" icon={CalendarDays}>
+                    {bizCard(b, true)}
+                  </Card>
+                ))}
+            </BusinessFocus>
+          )}
 
-          <Card title="Profit by business" icon={CalendarDays}>
-            <div className="od-biz">
-              {data.businesses.map((b) => {
-                const p = num(b.revenue) - num(b.ad_spend) - num(b.expenses)
-                return (
-                  <div key={b.id ?? 'none'} className="od-biz-card">
-                    <div className="row-between">
-                      <b>{b.name}</b>
-                      <Spark values={(b.trend ?? []).map(num)} />
-                    </div>
-                    <div className={`od-biz-profit ${p < 0 ? 'is-loss' : ''}`}>{short(p)}</div>
-                    <div className="od-biz-rows">
-                      <span>Revenue</span>
-                      <b>{short(num(b.revenue))}</b>
-                      <span>Ad spend</span>
-                      <b>{short(num(b.ad_spend))}</b>
-                      {num(b.expenses) > 0 && (
-                        <>
-                          <span>Expenses</span>
-                          <b>{short(num(b.expenses))}</b>
-                        </>
-                      )}
-                      <span>Leads</span>
-                      <b>
-                        <N n={num(b.leads)} onClick={() => void openLeads(`Leads · ${b.name}`, { p_business: b.id })} />
-                        {num(b.leads) > 0 && num(b.ad_spend) > 0 && <span className="muted"> · {short(num(b.ad_spend) / num(b.leads))}/lead</span>}
-                      </b>
-                      <span>Closed</span>
-                      <b>
-                        <N n={num(b.closed)} onClick={() => void openLeads(`Closed · ${b.name}`, { p_business: b.id, p_step: 'closed' })} />
-                      </b>
-                    </div>
-                    {b.id && !selected && (
-                      <button type="button" className="link-btn small od-more" onClick={() => selectBiz(b.id)}>
-                        View details <ChevronRight size={13} />
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="muted small">Ad spend counts for the business of the funnel its campaign is linked to.</div>
-          </Card>
+          {!selected && (
+            <Card title="Profit by business" icon={CalendarDays}>
+              <div className="od-biz">{data.businesses.map((b) => bizCard(b))}</div>
+              <div className="muted small">Ad spend counts for the business of the funnel its campaign is linked to.</div>
+            </Card>
+          )}
 
           {/* 3. funnels + sources */}
           <div className="od-grid">
@@ -902,12 +914,14 @@ function BusinessFocus({
   from,
   to,
   onLeads,
+  children,
 }: {
   tenantId: string
   businessId: string
   from: string
   to: string
   onLeads: (title: string, q: LeadQuery) => Promise<void>
+  children?: React.ReactNode
 }) {
   const [f, setF] = useState<Focus | null>(null)
   useEffect(() => {
@@ -925,6 +939,7 @@ function BusinessFocus({
   const orders = Object.entries(f.orders ?? {})
   return (
     <div className="od-focus">
+      {children}
       <Card title="Lead quality" icon={Users}>
         {totalLeads ? (
           <>
