@@ -352,7 +352,7 @@ export function FunnelDaySpend({
             <section className="card card-pad stack" style={{ gap: 10 }}>
               <div className="row" style={{ gap: 8 }}>
                 <Lightbulb size={16} style={{ color: 'var(--brand)' }} />
-                <b>Insights</b>
+                <b>AI Insights</b>
               </div>
               {insights.length ? (
                 <div className="adsd-insights">
