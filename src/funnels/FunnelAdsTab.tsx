@@ -283,7 +283,7 @@ function CampaignTable({ links, tree, campById, adsets, accName, spend30, range 
 }
 
 /** a section that opens / closes from its header */
-function Collapse({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
+export function Collapse({ title, count, children }: { title: string; count?: number; children: React.ReactNode }) {
   const [open, setOpen] = useState(true)
   return (
     <section className="card fat-card">

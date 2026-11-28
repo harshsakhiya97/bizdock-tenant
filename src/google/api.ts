@@ -49,7 +49,7 @@ export async function updateGoogleAccount(id: string, patch: { is_enabled?: bool
 /** 123-456-7890 */
 export const cidText = (c: string) => (c.length === 10 ? `${c.slice(0, 3)}-${c.slice(3, 6)}-${c.slice(6)}` : c)
 
-export type GCampaign = { campaign_id: string; account_id: string; name: string | null; status: string | null; channel: string | null }
+export type GCampaign = { campaign_id: string; account_id: string; name: string | null; status: string | null; channel: string | null; daily_budget?: number | null; total_budget?: number | null }
 export type GAdGroup = { ad_group_id: string; campaign_id: string; account_id: string; name: string | null; status: string | null }
 export type GAd = {
   ad_id: string
@@ -69,7 +69,7 @@ export type GDay = { level: 'campaign' | 'ad_group' | 'ad'; day: string; account
 /** every campaign, ad group and ad of the workspace's Google Ads accounts */
 export async function googleStructure(tenantId: string) {
   const [campaigns, groups, ads, links] = await Promise.all([
-    every<GCampaign>((a, b) => db().from('google_campaigns').select('campaign_id, account_id, name, status, channel').eq('tenant_id', tenantId).order('name').range(a, b)),
+    every<GCampaign>((a, b) => db().from('google_campaigns').select('campaign_id, account_id, name, status, channel, daily_budget, total_budget').eq('tenant_id', tenantId).order('name').range(a, b)),
     every<GAdGroup>((a, b) => db().from('google_ad_groups').select('ad_group_id, campaign_id, account_id, name, status').eq('tenant_id', tenantId).order('name').range(a, b)),
     every<GAd>((a, b) => db().from('google_ads').select('ad_id, ad_group_id, campaign_id, account_id, name, type, status, final_urls, headlines, descriptions').eq('tenant_id', tenantId).order('ad_id').range(a, b)),
     every<GLink>((a, b) => db().from('funnel_google_links').select('id, funnel_id, campaign_id').eq('tenant_id', tenantId).range(a, b)),
