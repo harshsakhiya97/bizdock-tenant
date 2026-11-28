@@ -38,9 +38,12 @@ const hoursOf = (b: BookingRow) => {
 }
 
 /** The owner / admins: the owner dashboard (everything at a glance). Everyone else: their business's dashboard. */
+/** for now everyone gets the owner dashboard; set false to give level 2+ the business dashboard again */
+const OWNER_DASHBOARD_FOR_ALL = true
+
 export function DashboardPage() {
   const { level } = useAuth()
-  return level > 1 ? <BusinessDashboard /> : <OwnerDashboard />
+  return !OWNER_DASHBOARD_FOR_ALL && level > 1 ? <BusinessDashboard /> : <OwnerDashboard />
 }
 
 function BusinessDashboard() {
