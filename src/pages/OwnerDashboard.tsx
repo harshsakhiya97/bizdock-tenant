@@ -185,7 +185,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
               {data.businesses.map((b) => {
                 const p = num(b.revenue) - num(b.ad_spend) - num(b.expenses)
                 return (
-                  <div key={b.id ?? 'none'} className={`od-biz-card${b.id ? '' : ' is-muted'}`}>
+                  <div key={b.id ?? 'none'} className="od-biz-card">
                     <div className="row-between">
                       <b>{b.name}</b>
                       <Spark values={(b.trend ?? []).map(num)} />
@@ -214,7 +214,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
                 )
               })}
             </div>
-            <div className="muted small">Ad spend goes to the business of the funnel its campaign is linked to; Unassigned = not linked to a funnel (or a Razorpay payment without a lead).</div>
+            <div className="muted small">Ad spend counts for the business of the funnel its campaign is linked to.</div>
           </Card>
 
           {/* 3. funnels + sources */}
