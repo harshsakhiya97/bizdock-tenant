@@ -2,8 +2,11 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { db } from '@/lib/supabase'
 import { useTenant } from '@/tenant/useTenant'
+import { Md } from '@/ai/AiInsights'
+import { Tabs } from '@/components/ui'
+import { TranscriptList } from '@/zoom/RecordingPanel'
 
-type Watch = { title: string | null; recorded_at: string | null; duration_sec: number | null; video_url: string | null; audio_url: string | null }
+type Watch = { title: string | null; recorded_at: string | null; duration_sec: number | null; video_url: string | null; audio_url: string | null; summary: string | null; transcript: string | null }
 
 /** <app>/zoom/<meeting-id>: a Zoom meeting's / webinar's recording, for anyone with the link (no login) */
 export function ZoomWatchPage() {
@@ -11,6 +14,7 @@ export function ZoomWatchPage() {
   const { id = '' } = useParams()
   const [rec, setRec] = useState<Watch | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState('Summary')
 
   useEffect(() => {
     void (async () => {
@@ -41,11 +45,30 @@ export function ZoomWatchPage() {
             <p className="muted small">
               {[when, rec.duration_sec ? `${Math.round(rec.duration_sec / 60)} min` : '', tenant.app_name || tenant.name].filter(Boolean).join(' · ')}
             </p>
-            {rec.video_url ? (
-              <video className="watch-media" src={rec.video_url} controls playsInline preload="metadata" />
-            ) : rec.audio_url ? (
-              <audio className="watch-media" src={rec.audio_url} controls preload="metadata" />
-            ) : null}
+            {/* the video on the left; its summary / transcript on the right (below it on a phone) */}
+            <div className="watch-grid">
+              <div>
+                {rec.video_url ? (
+                  <video className="watch-media" src={rec.video_url} controls playsInline preload="metadata" />
+                ) : rec.audio_url ? (
+                  <audio className="watch-media" src={rec.audio_url} controls preload="metadata" />
+                ) : null}
+              </div>
+              {(rec.summary || rec.transcript) && (
+                <div className="watch-side">
+                  <Tabs tabs={['Summary', 'Transcript']} value={tab} onChange={setTab} />
+                  <div className="watch-side-body">
+                    {tab === 'Summary' ? (
+                      rec.summary ? <Md text={rec.summary} /> : <p className="muted small">No summary yet.</p>
+                    ) : rec.transcript ? (
+                      <TranscriptList text={rec.transcript} />
+                    ) : (
+                      <p className="muted small">No transcript yet.</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

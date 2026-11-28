@@ -306,7 +306,7 @@ function AddRecordingDrawer({ onClose, onSave }: { onClose: () => void; onSave: 
  * A transcript as a list: "[01:24] Host: …" → one row per line (time · speaker · what was said). Text without the
  * time marks is shown as it is.
  */
-function TranscriptList({ text }: { text: string }) {
+export function TranscriptList({ text }: { text: string }) {
   const re = /\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*/g
   const parts = text.split(re)
   // ["before", "00:16", "Host: Hello…", "00:23", "Speaker 2: …"]
