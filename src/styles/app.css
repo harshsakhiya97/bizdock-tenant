@@ -2305,3 +2305,5 @@ audio.watch-media { background: none; }
 .od-mini b { font-size: 18px; letter-spacing: -.01em; }
 .od-mini span { font-size: 11.5px; color: var(--text-muted); }
 .od-biz-solo .od-biz-profit { margin-top: 4px; }
+.od-insights { grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); }
+@media (max-width: 640px) { .od-insights { grid-template-columns: 1fr; } }

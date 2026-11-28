@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, ChevronRight, CalendarDays, CircleAlert, IndianRupee, PhoneCall, Users, Video } from 'lucide-react'
+import { AlertTriangle, ArrowDown, ArrowUp, Bell, CalendarClock, CheckCircle2, ChevronRight, CalendarDays, CircleAlert, IndianRupee, Lightbulb, PhoneCall, TrendingUp, Users, Video } from 'lucide-react'
 import { DateRangePicker, presetRange, type Range } from '@/components/DateRange'
 import { PageHead } from '@/components/ui'
 import { StatRecords, type StatShow } from '@/components/StatRecords'
@@ -116,6 +116,7 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
   const { selected, select: selectBiz } = useBusiness()
   const [range, setRange] = useKept<Range>(`owner-dash.${tenant.id}.range`, () => presetRange('thisMonth'), freshRange)
   const [data, setData] = useState<Data | null>(null)
+  const [focus, setFocus] = useState<Focus | null>(null)
   // View details: back to the top once the picked business has loaded (the page height changes while it loads)
   const toTop = useRef(false)
   const goTop = () => {
@@ -357,9 +358,26 @@ export function OwnerDashboard({ toggle }: { toggle?: React.ReactNode }) {
             </Card>
           )}
 
+          {/* rule-based read of the numbers above (and the business focus when one is picked) */}
+          {(() => {
+            const ins = makeOwnerInsights(data, selected ? focus : null, !selected)
+            return ins.length ? (
+              <Card title="AI Insights" icon={Lightbulb}>
+                <div className="adsd-insights od-insights">
+                  {ins.map((x, i) => (
+                    <div key={i} className={`adsd-insight is-${x.tone}`}>
+                      {x.tone === 'good' ? <CheckCircle2 size={15} /> : x.tone === 'bad' ? <AlertTriangle size={15} /> : <TrendingUp size={15} />}
+                      <span>{x.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ) : null
+          })()}
+
           {/* one business picked: more about it */}
           {selected && (
-            <BusinessFocus tenantId={tenant.id} businessId={selected.id} from={range.from} to={range.to} onLeads={openLeads}>
+            <BusinessFocus tenantId={tenant.id} businessId={selected.id} from={range.from} to={range.to} onLeads={openLeads} onLoad={setFocus}>
               {data.businesses
                 .filter((b) => b.id === selected.id)
                 .map((b) => (
@@ -934,6 +952,7 @@ function BusinessFocus({
   from,
   to,
   onLeads,
+  onLoad,
   children,
 }: {
   tenantId: string
@@ -942,13 +961,19 @@ function BusinessFocus({
   to: string
   onLeads: (title: string, q: LeadQuery) => Promise<void>
   children?: React.ReactNode
+  onLoad?: (f: Focus | null) => void
 }) {
   const [f, setF] = useState<Focus | null>(null)
   useEffect(() => {
     setF(null)
+    onLoad?.(null)
     db()
       .rpc('owner_business_focus', { p_tenant: tenantId, p_business: businessId, p_from: from, p_to: to })
-      .then(({ data }) => setF((data ?? null) as Focus | null))
+      .then(({ data }) => {
+        setF((data ?? null) as Focus | null)
+        onLoad?.((data ?? null) as Focus | null)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId, businessId, from, to])
   if (!f) return null
   const cats = TEMPERATURES.map((t) => ({ ...t, n: num(f.categories[t.value]) }))
@@ -1117,4 +1142,116 @@ function BusinessFocus({
       )}
     </div>
   )
+}
+
+// ---------- AI Insights: plain rules over the dashboard numbers ----------
+type Insight = { tone: 'good' | 'bad' | 'info'; text: string }
+const change = (now: number, was: number) => (was ? Math.round(((now - was) / was) * 100) : null)
+function makeOwnerInsights(d: Data, f: Focus | null, all: boolean): Insight[] {
+  const out: Insight[] = []
+  const k = d.kpi
+  const rev = num(k.revenue)
+  const spend = num(k.ad_spend)
+  const exp = num(k.expenses)
+  const profit = rev - spend - exp
+  const prevProfit = num(k.revenue_prev) - num(k.ad_spend_prev) - num(k.expenses_prev)
+  const leads = num(k.leads)
+
+  // money
+  if (rev || spend) {
+    if (profit < 0) out.push({ tone: 'bad', text: `Running at a loss of ${short(-profit)}: revenue ${short(rev)} against ${short(spend + exp)} of ad spend${exp ? ' and expenses' : ''}.` })
+    else out.push({ tone: 'good', text: `Profit ${short(profit)} on ${short(rev)} revenue — ${pct(profit, rev)}% margin.` })
+  }
+  if (spend && rev) {
+    const roas = rev / spend
+    out.push({ tone: roas >= 1 ? 'good' : 'bad', text: `Every ₹1 on ads brought back ₹${roas.toFixed(2)} in revenue.` })
+  }
+  const rc = change(rev, num(k.revenue_prev))
+  if (rc != null && Math.abs(rc) >= 10) out.push({ tone: rc > 0 ? 'good' : 'bad', text: `Revenue ${rc > 0 ? 'up' : 'down'} ${Math.abs(rc)}% on the period before (${short(num(k.revenue_prev))} → ${short(rev)}).` })
+  if (prevProfit < 0 && profit >= 0 && (rev || spend)) out.push({ tone: 'good', text: `Back in profit — the period before was a loss of ${short(-prevProfit)}.` })
+
+  // leads and their cost
+  const cpl = leads ? spend / leads : 0
+  const pl = num(k.leads_prev)
+  const cplPrev = pl ? num(k.ad_spend_prev) / pl : 0
+  if (cpl && cplPrev) {
+    const c = change(cpl, cplPrev)!
+    if (Math.abs(c) >= 10) out.push({ tone: c < 0 ? 'good' : 'bad', text: `Cost per lead ${c < 0 ? 'down' : 'up'} ${Math.abs(c)}% (${inr(cplPrev)} → ${inr(cpl)}): leads ${pl ? `${change(leads, pl)! >= 0 ? '+' : ''}${change(leads, pl)}%` : '—'}.` })
+  }
+  if (leads >= 20 && !num(k.closed)) out.push({ tone: 'info', text: `No closed leads yet from ${leads} leads in these dates.` })
+  else if (num(k.closed) && spend) out.push({ tone: 'good', text: `${num(k.closed)} closed — ${short(spend / num(k.closed))} of ad spend per closed lead.` })
+
+  // businesses (all)
+  if (all) {
+    const biz = d.businesses.filter((b) => b.id && (num(b.revenue) || num(b.ad_spend)))
+    if (biz.length > 1) {
+      const p = (b: Biz) => num(b.revenue) - num(b.ad_spend) - num(b.expenses)
+      const sorted = [...biz].sort((a, b) => p(b) - p(a))
+      const best = sorted[0]
+      const worst = sorted[sorted.length - 1]
+      if (p(best) > 0) out.push({ tone: 'good', text: `“${best.name}” earns the most: ${short(p(best))} profit.` })
+      if (p(worst) < 0) out.push({ tone: 'bad', text: `“${worst.name}” loses ${short(-p(worst))} — ${short(num(worst.ad_spend))} ad spend for ${short(num(worst.revenue))} revenue.` })
+    }
+  }
+
+  // campaigns
+  const camps = d.campaigns.filter((c) => num(c.spend) > 0)
+  const waste = camps.filter((c) => !num(c.leads) && num(c.spend) >= Math.max(500, cpl * 2)).sort((a, b) => num(b.spend) - num(a.spend))
+  if (waste.length)
+    out.push({
+      tone: 'bad',
+      text:
+        waste.length === 1
+          ? `Campaign “${waste[0].name}” spent ${inr(num(waste[0].spend))} with no leads.`
+          : `${waste.length} campaigns spent ${inr(waste.reduce((t, c) => t + num(c.spend), 0))} with no leads — biggest: “${waste[0].name}”.`,
+    })
+  const withLeads = camps.filter((c) => num(c.leads) >= 3)
+  const cheap = [...withLeads].sort((a, b) => num(a.spend) / num(a.leads) - num(b.spend) / num(b.leads))[0]
+  if (cheap && cpl && num(cheap.spend) / num(cheap.leads) < cpl * 0.8)
+    out.push({ tone: 'good', text: `“${cheap.name}” brings the cheapest leads: ${inr(num(cheap.spend) / num(cheap.leads))} per lead (${num(cheap.leads)} leads).` })
+  const costly = [...withLeads].sort((a, b) => num(b.spend) / num(b.leads) - num(a.spend) / num(a.leads))[0]
+  if (costly && cpl && costly !== cheap && num(costly.spend) / num(costly.leads) > cpl * 1.6)
+    out.push({ tone: 'bad', text: `“${costly.name}” costs ${inr(num(costly.spend) / num(costly.leads))} per lead — ${(num(costly.spend) / num(costly.leads) / cpl).toFixed(1)}× the average.` })
+
+  // funnels and sources
+  const fun = d.funnels.filter((x) => num(x.leads) >= 10)
+  const slow = [...fun].sort((a, b) => num(a.contacted) / num(a.leads) - num(b.contacted) / num(b.leads))[0]
+  if (slow && pct(num(slow.contacted), num(slow.leads)) < 60)
+    out.push({ tone: 'bad', text: `Funnel “${slow.name}”: only ${pct(num(slow.contacted), num(slow.leads))}% of ${num(slow.leads)} leads have been contacted.` })
+  const topSrc = [...d.sources].sort((a, b) => num(b.n) - num(a.n))[0]
+  if (topSrc && leads && d.sources.length > 1 && pct(num(topSrc.n), leads) >= 50)
+    out.push({ tone: 'info', text: `${pct(num(topSrc.n), leads)}% of leads come from ${topSrc.name} — one source carries most of the pipeline.` })
+
+  // team and calls
+  const late = [...d.team].sort((a, b) => num(b.overdue) - num(a.overdue))[0]
+  if (late && num(late.overdue) >= 5) out.push({ tone: 'bad', text: `${late.name} has ${num(late.overdue)} overdue follow-ups — the most in the team.` })
+  const closer = [...d.team].filter((m) => num(m.closed)).sort((a, b) => num(b.closed) - num(a.closed))[0]
+  if (closer) out.push({ tone: 'good', text: `${closer.name} closed the most: ${num(closer.closed)}.` })
+  const calls = d.callers.reduce((t, c) => t + num(c.calls), 0)
+  const conn = d.callers.reduce((t, c) => t + num(c.connected), 0)
+  if (calls >= 30 && pct(conn, calls) < 40) out.push({ tone: 'bad', text: `Only ${pct(conn, calls)}% of ${calls} calls connected — check calling times and numbers.` })
+
+  // the picked business
+  if (f) {
+    const ft = f.first_touch
+    if (ft.touched >= 5 && ft.median_min != null) {
+      const w = pct(ft.within_1h, ft.leads)
+      out.push({ tone: ft.median_min <= 60 ? 'good' : 'bad', text: `First call takes ${ago(ft.median_min)} (typical); ${w}% of leads are called within an hour.` })
+    }
+    const total = Object.values(f.categories).reduce((t, n) => t + num(n), 0)
+    const ni = num(f.categories.not_interested)
+    if (total >= 10 && pct(ni, total) >= 25) out.push({ tone: 'bad', text: `${pct(ni, total)}% of leads are not interested — look at the ad targeting.` })
+    const m = f.meetings
+    if (m.done + m.no_show >= 3) {
+      const s = pct(m.done, m.done + m.no_show)
+      out.push({ tone: s >= 70 ? 'good' : 'bad', text: `Meeting show-up ${s}% (${m.done} held, ${m.no_show} no-show).` })
+    }
+    const inv = f.invoices
+    if (num(inv.total)) {
+      const c = pct(num(inv.paid), num(inv.total))
+      if (c < 80) out.push({ tone: 'bad', text: `Only ${c}% of ${short(num(inv.total))} invoiced is collected — ${short(num(inv.total) - num(inv.paid))} still due.` })
+    }
+    if (f.bookings.cancelled >= 2 && f.bookings.count) out.push({ tone: 'info', text: `${f.bookings.cancelled} of ${f.bookings.count} studio bookings were cancelled.` })
+  }
+  return out.slice(0, 10)
 }
