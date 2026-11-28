@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Check, CircleAlert, Copy, RefreshCw, Video } from 'lucide-react'
+import { Check, CircleAlert, Copy, MessageCircleQuestion, MessageSquare, RefreshCw, Users, Video } from 'lucide-react'
 import { Link } from 'react-router'
-import { Tabs, Paged } from '@/components/ui'
+import { Paged } from '@/components/ui'
+import { cn } from '@/lib/cn'
+import { listRecordings } from './recordings'
 import { db } from '@/lib/supabase'
 import { listZoomData, pullZoom, retryZoom, startZoom, type ZoomAttendee, type ZoomComment, type ZoomTarget } from './api'
 import { RecordingPanel } from './RecordingPanel'
@@ -103,6 +105,10 @@ function ZoomPanelInner({
     listZoomData({ kind, id }).then(setData, (e: Error) => setMsg({ error: e.message }))
   }, [kind, id])
   useEffect(load, [load])
+  // the Recording tab's count before it is opened
+  useEffect(() => {
+    listRecordings({ kind, id }).then((r) => setRecCount(r.length), () => undefined)
+  }, [kind, id, recKey])
 
   async function pull() {
     setBusy('pull')
@@ -241,12 +247,22 @@ function ZoomPanelInner({
           <div className="muted small">
             {pulledAt ? `Last fetched ${when(pulledAt)}.` : 'Attendance and Q&A come in 5 minutes after it ends (tried again every 5 minutes if Zoom isn’t ready); chat after 4 hours.'}
           </div>
-          <Tabs
-            tabs={['Attendance', 'Q&A', 'Chat', 'Recording']}
-            value={tab}
-            onChange={setTab}
-            count={tab === 'Attendance' ? data?.attendees.length : tab === 'Q&A' ? qa.length : tab === 'Chat' ? chat.length : recCount}
-          />
+          <div className="rec-tabs zp-tabs" role="tablist">
+            {(
+              [
+                ['Attendance', Users, data?.attendees.length],
+                ['Q&A', MessageCircleQuestion, data ? qa.length : undefined],
+                ['Chat', MessageSquare, data ? chat.length : undefined],
+                ['Recording', Video, recCount],
+              ] as const
+            ).map(([t, Icon, n]) => (
+              <button key={t} type="button" role="tab" aria-selected={tab === t} className={cn('rec-tab', tab === t && 'is-active')} onClick={() => setTab(t)}>
+                <Icon size={15} />
+                {t}
+                {n ? <span className="rec-tab-count">{n}</span> : null}
+              </button>
+            ))}
+          </div>
           {tab === 'Recording' ? (
             <RecordingPanel key={recKey} target={target} onCount={setRecCount} />
           ) : !data ? (
